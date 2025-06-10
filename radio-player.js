@@ -1,11 +1,11 @@
-// rádio-jogador.js
+// rádio-player.js
 
-// Inicializa o Supabase
+// 1) Inicializa o Supabase
 const supabaseUrl = "https://yrlwyvvlgrjbwnoiwdxv.supabase.co";
 const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybHd5dnZsZ3JqYndub2l3ZHh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4MDk0OTMsImV4cCI6MjA2NDM4NTQ5M30.qrNDx8aqL2WtWPalhmjzeUY6bCNVnnK48L2Oi2DpkVI";
 const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-// Elementos da página
+// Elementos
 const audio = document.getElementById("audioPlayer");
 const volumeControl = document.getElementById("volumeControl");
 const albumNomeEl = document.getElementById("albumNome");
@@ -14,19 +14,15 @@ const relatorioEl = document.getElementById("relatorio");
 const listaArquivosEl = document.getElementById("listaArquivos");
 
 // Estado
-let fila = [];
-let filaHora = [];
-let filaAvisos = [];
-let tocadas = {};
-let albumAtivo = localStorage.getItem("albumAtivo") || null;
+let fila = [], filaHora = [], filaAvisos = [];
+let tocadas = {}, albumAtivo = localStorage.getItem("albumAtivo") || null;
 const senhaDev = "2007";
 
 // Ajusta volume
-volumeControl.addEventListener("input", () => {
-  audio.volume = volumeControl.value;
-});
+audio.volume = volumeControl.value;
+volumeControl.addEventListener("input", () => audio.volume = volumeControl.value);
 
-// Carrega todas as playlists (músicas, hora certa, avisos)
+// Inicia o rádio
 async function iniciarRadio() {
   await carregarPlaylist();
   await carregarHoraCerta();
@@ -35,7 +31,7 @@ async function iniciarRadio() {
   tocarProxima();
 }
 
-// 1) Carrega músicas
+// Carrega músicas
 async function carregarPlaylist() {
   const bucket = albumAtivo || "musicas";
   const { data, error } = await supabase.storage.from(bucket).list();
@@ -45,21 +41,21 @@ async function carregarPlaylist() {
   listarArquivos(bucket, data);
 }
 
-// 2) Carrega hora certa
+// Carrega hora certa
 async function carregarHoraCerta() {
   const { data, error } = await supabase.storage.from("hora_certa").list();
   if (error) return console.error(error);
   filaHora = data.map(f => f.name);
 }
 
-// 3) Carrega avisos
+// Carrega avisos
 async function carregarAvisos() {
   const { data, error } = await supabase.storage.from("avisos").list();
   if (error) return console.error(error);
   filaAvisos = data.map(f => f.name);
 }
 
-// Exibe banner e nome do álbum ativo
+// Atualiza banner e nome do álbum
 function atualizarBanner() {
   if (albumAtivo) {
     albumNomeEl.innerText = `Álbum Ativo: ${albumAtivo}`;
@@ -71,7 +67,7 @@ function atualizarBanner() {
   }
 }
 
-// Embaralha array in-place
+// Embaralha array
 function embaralhar(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -79,22 +75,17 @@ function embaralhar(arr) {
   }
 }
 
-// 4) Lógica de reprodução
+// Toca próxima faixa
 audio.addEventListener("ended", tocarProxima);
 async function tocarProxima() {
   let nome;
   const total = Object.values(tocadas).reduce((a, b) => a + b, 0);
-  
-  // A cada 6 músicas, toca aviso
+
   if (total > 0 && total % 6 === 0 && filaAvisos.length) {
     nome = filaAvisos[Math.floor(Math.random() * filaAvisos.length)];
-  }
-  // A cada 3 músicas, toca hora certa
-  else if (total > 0 && total % 3 === 0 && filaHora.length) {
+  } else if (total > 0 && total % 3 === 0 && filaHora.length) {
     nome = filaHora[Math.floor(Math.random() * filaHora.length)];
-  }
-  // Caso contrário, toca próxima música
-  else {
+  } else {
     if (!fila.length) {
       await carregarPlaylist();
       embaralhar(fila);
@@ -103,7 +94,6 @@ async function tocarProxima() {
     tocadas[nome] = (tocadas[nome] || 0) + 1;
   }
 
-  // Busca URL pública ou assinada
   const bucket = albumAtivo || "musicas";
   const { data: urlData, error } = await supabase.storage
     .from(bucket)
@@ -115,65 +105,70 @@ async function tocarProxima() {
   atualizarRelatorio();
 }
 
-// Atualiza relatório na tela
+// Atualiza relatório
 function atualizarRelatorio() {
   relatorioEl.innerHTML = "";
-  Object.entries(tocadas).forEach(([nome, qtd]) => {
+  Object.entries(tocadas).forEach(([n, c]) => {
     const li = document.createElement("li");
-    li.textContent = `${nome}: ${qtd}x`;
+    li.textContent = `${n}: ${c}x`;
     relatorioEl.appendChild(li);
   });
 }
 
-// Reseta relatório
-window.resetarRelatorio = function() {
+// Reset relatório
+window.resetarRelatorio = () => {
   tocadas = {};
   atualizarRelatorio();
 };
 
-// Funções de upload
-window.uploadArquivo = async function(bucket) {
+// Listar arquivos no painel dev
+function listarArquivos(bucket, data) {
+  listaArquivosEl.innerHTML = "";
+  data.forEach(f => {
+    const li = document.createElement("li");
+    li.textContent = f.name;
+    listaArquivosEl.appendChild(li);
+  });
+}
+
+// Upload genérico
+window.uploadArquivo = async bucket => {
   const input = document.getElementById(`upload${capitalize(bucket)}`);
   const file = input.files[0];
   if (!file) return alert("Selecione um arquivo");
   const destino = bucket === "musicas" && albumAtivo ? albumAtivo : bucket;
   const { error } = await supabase.storage.from(destino).upload(file.name, file, { upsert: true });
-  if (error) return alert("Erro no upload");
-  alert("Upload bem-sucedido!");
+  if (error) return alert("Upload falhou");
+  alert("Upload concluído");
   await iniciarRadio();
 };
 
-window.uploadParaAlbum = async function(album, inputId) {
-  const input = document.getElementById(inputId);
-  const file = input.files[0];
+// Upload em álbum
+window.uploadParaAlbum = async (alb, inputId) => {
+  const file = document.getElementById(inputId).files[0];
   if (!file) return alert("Selecione um arquivo");
-  const { error } = await supabase.storage.from(album).upload(file.name, file, { upsert: true });
-  if (error) return alert("Erro no upload");
-  alert(`Enviado ao álbum ${album}`);
+  const { error } = await supabase.storage.from(alb).upload(file.name, file, { upsert: true });
+  if (error) return alert("Upload falhou");
+  alert("Upload em álbum concluído");
   await iniciarRadio();
 };
 
-// Ativa e desativa álbuns
-window.ativarAlbum = function(nome) {
-  localStorage.setItem("albumAtivo", nome);
-  albumAtivo = nome;
+// Ativar / desativar álbum
+window.ativarAlbum = alb => {
+  localStorage.setItem("albumAtivo", alb);
+  albumAtivo = alb;
   atualizarBanner();
   iniciarRadio();
 };
-
-window.desativarAlbum = function() {
+window.desativarAlbum = () => {
   localStorage.removeItem("albumAtivo");
   albumAtivo = null;
   atualizarBanner();
   iniciarRadio();
 };
 
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-// Login modo dev
-window.entrarDev = function() {
+// Login dev
+window.entrarDev = () => {
   const s = document.getElementById("senhaDev").value;
   if (s === senhaDev) {
     document.getElementById("painelDev").classList.remove("hidden");
@@ -183,5 +178,10 @@ window.entrarDev = function() {
   }
 };
 
-// Inicialização
+// Capitaliza string
+function capitalize(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// Inicia tudo
 document.addEventListener("DOMContentLoaded", iniciarRadio);
