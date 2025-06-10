@@ -1,225 +1,165 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
+<!DOCTYPE html><html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rádio Supermercado do Louro</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-pOdfXW+5pzHqKXMK9v0eZfIuLgR9h0qI1bYb4MOpS6EdGD3T9znZedxosLsdK2NzNmpB3ahMjgrsB/9G4bNfug==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <style>
-    :root {
-      --bg: #1c1c1e;
-      --card: #2c2c2e;
-      --text: #f2f2f7;
-      --accent: #32d74b;
-    }
-    * {
-      margin: 0; padding: 0; box-sizing: border-box;
-    }
     body {
-      background: var(--bg);
-      color: var(--text);
       font-family: Arial, sans-serif;
-      padding: 20px;
+      background-color: #121212;
+      color: #fff;
+      margin: 0;
+      padding: 0;
     }
-    h1, h2 {
-      color: var(--accent);
+    header, nav, main, footer {
+      padding: 1rem;
     }
-    .container {
+    header {
+      background: #1f1f1f;
+      text-align: center;
+    }
+    .banner {
+      width: 100%;
+      max-height: 200px;
+      object-fit: cover;
+      margin-bottom: 1rem;
+    }
+    .player-controls {
       display: flex;
       flex-direction: column;
-      gap: 30px;
-      max-width: 800px;
-      margin: auto;
+      align-items: center;
     }
-    .card {
-      background: var(--card);
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    audio {
+      width: 90%;
+      margin: 1rem 0;
     }
-    button {
-      background: var(--accent);
-      color: black;
-      padding: 10px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
+    .volume-slider {
+      width: 80%;
     }
-    input[type="file"] {
-      margin-top: 10px;
-    }
-    .volume-control {
-      width: 100%;
-      margin-top: 10px;
-    }
-    #capaAlbum {
-      width: 100%;
-      border-radius: 12px;
-      margin-bottom: 10px;
-    }
-    #arquivos div {
-      display: flex;
-      justify-content: space-between;
-      margin: 5px 0;
-    }
-    .hidden {
+    .admin-login {
       display: none;
+      flex-direction: column;
+      max-width: 300px;
+      margin: 2rem auto;
+    }
+    .dashboard {
+      display: none;
+      padding: 2rem;
+      background: #1f1f1f;
+    }
+    input, button {
+      margin: 0.5rem 0;
+      padding: 0.5rem;
+    }
+    .dark {
+      background-color: #121212;
+      color: #fff;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div id="authCard" class="card">
-      <h2>🔒 Login do Admin</h2>
-      <input type="password" id="senha" placeholder="Digite a senha..." />
-      <button onclick="autenticar()">Entrar</button>
-    </div>
+  <header>
+    <h1>🎧 Rádio Supermercado do Louro</h1>
+    <img id="albumBanner" class="banner" src="" alt="Banner do álbum">
+  </header>  <main>
+    <section class="player-controls">
+      <audio id="audioPlayer" controls></audio>
+      <label for="volume">Volume:</label>
+      <input type="range" id="volume" class="volume-slider" min="0" max="1" step="0.01" value="0.5">
+      <button onclick="resetContador()">🔄 Resetar Contador</button>
+    </section><section class="admin-login" id="adminLogin">
+  <input type="password" id="adminPassword" placeholder="Senha de admin">
+  <button onclick="verificarSenha()">Entrar no Painel</button>
+</section>
 
-    <div id="devPanel" class="card hidden">
-      <h2>🎛️ Painel Administrador</h2>
-      <div>
-        <h3>🎵 Enviar Música</h3>
-        <input type="file" id="musica" />
-        <button onclick="upload('musicas', 'musica')">Enviar</button>
-      </div>
-      <div>
-        <h3>🕐 Hora Certa</h3>
-        <input type="file" id="hora" />
-        <button onclick="upload('hora-certa', 'hora')">Enviar</button>
-      </div>
-      <div>
-        <h3>📢 Avisos</h3>
-        <input type="file" id="aviso" />
-        <button onclick="upload('avisos', 'aviso')">Enviar</button>
-      </div>
-      <div>
-        <h3>🖼️ Imagem do Álbum</h3>
-        <input type="file" id="imagemAlbum" />
-        <button onclick="uploadImagem()">Enviar</button>
-      </div>
-      <div>
-        <h3>📂 Álbum Ativo: <span id="albumNome">Nenhum</span></h3>
-        <button onclick="setAlbum('sao-joao')">São João</button>
-        <button onclick="setAlbum('natal')">Natal</button>
-        <button onclick="setAlbum('pascoa')">Páscoa</button>
-        <button onclick="setAlbum('')">Desativar</button>
-      </div>
-      <div>
-        <h3>🧾 Relatório</h3>
-        <button onclick="resetRelatorio()">Resetar Contagem</button>
-        <div id="relatorio"></div>
-      </div>
-    </div>
+<section class="dashboard" id="dashboard">
+  <h2>Painel do Desenvolvedor</h2>
+  <input type="file" id="uploadFile">
+  <select id="uploadBucket">
+    <option value="musicas">Música</option>
+    <option value="hora-certa">Hora Certa</option>
+    <option value="avisos">Aviso</option>
+    <option value="imagens">Imagem/Álbum</option>
+  </select>
+  <button onclick="enviarArquivo()">📤 Enviar</button>
+  <h3>Logs de Reprodução:</h3>
+  <ul id="logs"></ul>
+</section>
 
-    <div class="card">
-      <h2>📻 Rádio Supermercado do Louro</h2>
-      <img id="capaAlbum" src="" alt="Capa do álbum" />
-      <audio id="player" controls onended="proximaMusica()"></audio>
-      <input type="range" id="volume" class="volume-control" min="0" max="1" step="0.01" value="1" />
-    </div>
-  </div>
-
-  <script type="module">
-    import { createClient } from 'https://esm.sh/@supabase/supabase-js';
-    const supabase = createClient(
+  </main>  <script>
+    const supabase = supabase.createClient(
       'https://yrlwyvvlgrjbwnoiwdxv.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybHd5dnZsZ3JqYndub2l3ZHh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4MDk0OTMsImV4cCI6MjA2NDM4NTQ5M30.qrNDx8aqL2WtWPalhmjzeUY6bCNVnnK48L2Oi2DpkVI'
     );
 
-    let album = localStorage.getItem('album') || 'musicas';
-    let musicas = [];
-    let index = 0;
-    let tocadas = JSON.parse(localStorage.getItem('relatorio')) || {};
+    const player = document.getElementById('audioPlayer');
+    const volumeSlider = document.getElementById('volume');
+    const banner = document.getElementById('albumBanner');
 
-    const player = document.getElementById('player');
-    const capa = document.getElementById('capaAlbum');
+    let contador = 0;
 
-    async function carregarMusicas() {
-      const { data, error } = await supabase.storage.from(album).list();
-      if (data) {
-        musicas = data.map(f => `https://yrlwyvvlgrjbwnoiwdxv.supabase.co/storage/v1/object/public/${album}/${f.name}`);
-        musicas = musicas.sort(() => Math.random() - 0.5);
-        tocar();
+    async function carregarMusica() {
+      const { data } = await supabase.storage.from('musicas').list('', { limit: 1 });
+      if (data.length > 0) {
+        const nomeArquivo = data[0].name;
+        const { data: urlData } = supabase.storage.from('musicas').getPublicUrl(nomeArquivo);
+        player.src = urlData.publicUrl;
+        carregarBanner();
+        registrarLog(`Tocando: ${nomeArquivo}`);
       }
-      exibirCapa();
-      atualizarRelatorio();
     }
 
-    function tocar() {
-      if (musicas.length === 0) return;
-      const src = musicas[index % musicas.length];
-      const nome = src.split('/').pop();
-      player.src = src;
-      tocadas[nome] = (tocadas[nome] || 0) + 1;
-      localStorage.setItem('relatorio', JSON.stringify(tocadas));
-      atualizarRelatorio();
-      player.play();
+    async function carregarBanner() {
+      const { data } = await supabase.storage.from('imagens').list('', { limit: 1 });
+      if (data.length > 0) {
+        const nomeBanner = data[0].name;
+        const { data: urlData } = supabase.storage.from('imagens').getPublicUrl(nomeBanner);
+        banner.src = urlData.publicUrl;
+      }
     }
 
-    function proximaMusica() {
-      index++;
-      tocar();
+    function resetContador() {
+      contador = 0;
+      registrarLog("Contador reiniciado.");
     }
 
-    function setAlbum(nome) {
-      album = nome || 'musicas';
-      localStorage.setItem('album', album);
-      document.getElementById('albumNome').textContent = nome || 'Nenhum';
-      carregarMusicas();
+    function registrarLog(msg) {
+      const li = document.createElement('li');
+      li.textContent = `${new Date().toLocaleTimeString()} - ${msg}`;
+      document.getElementById('logs').appendChild(li);
     }
 
-    function exibirCapa() {
-      capa.src = `https://yrlwyvvlgrjbwnoiwdxv.supabase.co/storage/v1/object/public/imagens/${album}.jpg`;
-    }
+    volumeSlider.addEventListener('input', () => {
+      player.volume = volumeSlider.value;
+    });
 
-    function atualizarRelatorio() {
-      const div = document.getElementById('relatorio');
-      div.innerHTML = Object.entries(tocadas).map(([nome, cont]) => `<div>${nome}: ${cont}</div>`).join('');
-    }
-
-    function resetRelatorio() {
-      tocadas = {};
-      localStorage.setItem('relatorio', '{}');
-      atualizarRelatorio();
-    }
-
-    window.proximaMusica = proximaMusica;
-    window.setAlbum = setAlbum;
-    window.resetRelatorio = resetRelatorio;
-
-    player.volume = 1;
-    document.getElementById('volume').addEventListener('input', e => player.volume = e.target.value);
-
-    async function upload(bucket, inputId) {
-      const file = document.getElementById(inputId).files[0];
-      if (!file) return alert('Selecione um arquivo');
-      await supabase.storage.from(bucket).upload(file.name, file, { upsert: true });
-      alert('Arquivo enviado!');
-    }
-
-    async function uploadImagem() {
-      const file = document.getElementById('imagemAlbum').files[0];
-      if (!file || !album) return alert('Selecione o álbum e a imagem');
-      await supabase.storage.from('imagens').upload(`${album}.jpg`, file, { upsert: true });
-      alert('Imagem enviada!');
-    }
-
-    window.upload = upload;
-    window.uploadImagem = uploadImagem;
-
-    function autenticar() {
-      const senha = document.getElementById('senha').value;
-      if (senha === '1234') {
-        document.getElementById('authCard').classList.add('hidden');
-        document.getElementById('devPanel').classList.remove('hidden');
+    function verificarSenha() {
+      const senha = document.getElementById('adminPassword').value;
+      if (senha === 'admin123') {
+        document.getElementById('dashboard').style.display = 'block';
+        document.getElementById('adminLogin').style.display = 'none';
       } else {
-        alert('Senha incorreta');
+        alert('Senha incorreta!');
       }
     }
-    window.autenticar = autenticar;
 
-    carregarMusicas();
-  </script>
-</body>
+    async function enviarArquivo() {
+      const fileInput = document.getElementById('uploadFile');
+      const bucket = document.getElementById('uploadBucket').value;
+      const file = fileInput.files[0];
+      if (!file) return alert('Selecione um arquivo!');
+      const { error } = await supabase.storage.from(bucket).upload(file.name, file, { upsert: true });
+      if (error) {
+        alert('Erro ao enviar: ' + error.message);
+      } else {
+        alert('Enviado com sucesso para ' + bucket);
+        registrarLog(`Arquivo enviado: ${file.name}`);
+      }
+    }
+
+    // Início
+    carregarMusica();
+    document.getElementById('adminLogin').style.display = 'flex';
+  </script></body>
 </html>
