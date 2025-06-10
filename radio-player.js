@@ -1,42 +1,125 @@
-// rádio-jogador.js - versão final com correções completas
+// radio-jogador.js
 
-const supabaseUrl = "https://yrlwyvvlgrjbwnoiwdxv.supabase.co"; const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybHd5dnZsZ3JqYndub2l3ZHh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4MDk0OTMsImV4cCI6MjA2NDM4NTQ5M30.qrNDx8aqL2WtWPalhmjzeUY6bCNVnnK48L2Oi2DpkVI";
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(
+  'https://yrlwyvvlgrjbwnoiwdxv.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybHd5dnZsZ3JqYndub2l3ZHh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4MDk0OTMsImV4cCI6MjA2NDM4NTQ5M30.qrNDx8aqL2WtWPalhmjzeUY6bCNVnnK48L2Oi2DpkVI'
+);
 
-const audio = new Audio(); let playlist = []; let currentIndex = 0; let musicasTocadas = 0; let modoDevAtivo = false;
+const audioPlayer = document.getElementById('audioPlayer');
+const volumeControl = document.getElementById('volumeControl');
+const albumBanner = document.getElementById('albumBanner');
+const albumNome = document.getElementById('albumNome');
+const relatorio = document.getElementById('relatorio');
 
-const albuns = ["geral", "hora_certa", "avisos"];
+let fila = [], filaOriginal = [], filaHoraCerta = [], filaAvisos = [], albumAtivo = null, tocadas = [];
+let contador = 0;
 
-async function carregarMusicas(bucket) { const { data, error } = await supabase.storage.from(bucket).list("", { limit: 100 }); if (error) { console.error(Erro ao carregar ${bucket}:, error); return []; } return data.map((file) => ({ nome: file.name, bucket })); }
+async function carregarAudios(path) {
+  const { data, error } = await supabase.storage.from('audios').list(path);
+  if (error) return [];
+  return data.map(file => `https://yrlwyvvlgrjbwnoiwdxv.supabase.co/storage/v1/object/public/audios/${path}/${file.name}`);
+}
 
-async function montarPlaylist() { playlist = []; const geral = await carregarMusicas("geral"); const horaCerta = await carregarMusicas("hora_certa"); const avisos = await carregarMusicas("avisos");
+async function inicializarPlayer() {
+  const musicas = await carregarAudios('musicas');
+  const horaCerta = await carregarAudios('hora_certa');
+  const avisos = await carregarAudios('avisos');
+  filaOriginal = embaralhar(musicas);
+  filaHoraCerta = horaCerta;
+  filaAvisos = avisos;
+  fila = [...filaOriginal];
+  tocarProxima();
+}
 
-for (let i = 0; i < geral.length; i++) { playlist.push(geral[i]); if ((i + 1) % 3 === 0 && horaCerta.length) { playlist.push(horaCerta[Math.floor(Math.random() * horaCerta.length)]); } if ((i + 1) % 6 === 0 && avisos.length) { playlist.push(avisos[Math.floor(Math.random() * avisos.length)]); } } }
+function embaralhar(lista) {
+  return lista.sort(() => Math.random() - 0.5);
+}
 
-async function tocarProxima() { if (currentIndex >= playlist.length) { currentIndex = 0; await montarPlaylist(); }
+function tocarProxima() {
+  let proxima;
+  contador++;
 
-const musica = playlist[currentIndex]; currentIndex++;
+  if (contador % 6 === 0 && filaAvisos.length) {
+    proxima = filaAvisos[Math.floor(Math.random() * filaAvisos.length)];
+  } else if (contador % 3 === 0 && filaHoraCerta.length) {
+    proxima = filaHoraCerta[Math.floor(Math.random() * filaHoraCerta.length)];
+  } else {
+    if (!fila.length) fila = embaralhar(albumAtivo || filaOriginal);
+    proxima = fila.shift();
+  }
 
-const { data, error } = supabase.storage.from(musica.bucket).getPublicUrl(musica.nome); if (error) { console.error("Erro ao obter URL pública:", error); tocarProxima(); return; }
+  audioPlayer.src = proxima;
+  audioPlayer.play();
+  registrarRelatorio(proxima);
+}
 
-audio.src = data.publicUrl; audio.load(); audio.play().catch((err) => { console.error("Erro ao reproduzir a música:", err); tocarProxima(); });
+audioPlayer.addEventListener('ended', tocarProxima);
 
-atualizarTitulo(musica); musicasTocadas++; }
+volumeControl.addEventListener('input', e => {
+  audioPlayer.volume = parseFloat(e.target.value);
+});
 
-audio.addEventListener("ended", tocarProxima);
+function registrarRelatorio(url) {
+  const nome = decodeURIComponent(url.split('/').pop());
+  tocadas.push(nome);
+  const li = document.createElement('li');
+  li.textContent = nome;
+  relatorio.appendChild(li);
+}
 
-function atualizarTitulo(musica) { const titulo = document.getElementById("titulo-musica"); if (titulo) { titulo.textContent = Tocando agora: ${musica.nome}; } }
+window.resetarRelatorio = function () {
+  relatorio.innerHTML = '';
+  tocadas = [];
+};
 
-// Login desenvolvedor async function loginDev() { const senha = document.getElementById("senha-dev").value; if (senha === "superlourosom") { modoDevAtivo = true; document.getElementById("modo-dev").style.display = "block"; document.getElementById("login-dev").style.display = "none"; } else { alert("Senha incorreta!"); } }
+window.entrarDev = function () {
+  const senha = document.getElementById('senhaDev').value;
+  if (senha === 'admin123') {
+    document.getElementById('painelDev').classList.remove('hidden');
+  } else {
+    alert('Senha incorreta!');
+  }
+};
 
-// Upload async function uploadArquivo(tipo) { const inputMap = { geral: "uploadGeral", hora_certa: "uploadHora", avisos: "uploadAviso" }; const inputId = inputMap[tipo]; const fileInput = document.getElementById(inputId); const file = fileInput.files[0];
+window.uploadArquivo = async function (pasta) {
+  const input = document.getElementById(`upload${capitalize(pasta)}`);
+  if (!input.files.length) return;
+  const file = input.files[0];
+  await supabase.storage.from('audios').upload(`${pasta}/${file.name}`, file);
+  alert('Enviado com sucesso!');
+};
 
-if (!file) return alert("Selecione um arquivo!");
+window.uploadParaAlbum = async function (album, inputId) {
+  const input = document.getElementById(inputId);
+  if (!input.files.length) return;
+  const file = input.files[0];
+  await supabase.storage.from('audios').upload(`${album}/${file.name}`, file);
+  alert('Música adicionada ao álbum!');
+};
 
-const { error } = await supabase.storage.from(tipo).upload(file.name, file, { cacheControl: "3600", upsert: true });
+window.ativarAlbum = async function (album) {
+  const musicas = await carregarAudios(album);
+  if (!musicas.length) return alert('Nenhuma música no álbum.');
+  albumAtivo = musicas;
+  const bannerURL = `https://yrlwyvvlgrjbwnoiwdxv.supabase.co/storage/v1/object/public/audios/${album}/banner.jpg`;
+  albumBanner.src = bannerURL;
+  albumBanner.style.display = 'block';
+  albumNome.textContent = `Álbum: ${album.replace('_', ' ').toUpperCase()}`;
+  fila = embaralhar(musicas);
+  tocarProxima();
+};
 
-if (error) { console.error("Erro no upload:", error); alert("Erro ao enviar o arquivo!"); } else { alert("Upload realizado com sucesso!"); await montarPlaylist(); } }
+window.desativarAlbum = function () {
+  albumAtivo = null;
+  albumBanner.style.display = 'none';
+  albumNome.textContent = '';
+  fila = embaralhar(filaOriginal);
+};
 
-// Inicialização automática window.addEventListener("DOMContentLoaded", async () => { const titulo = document.getElementById("titulo-musica"); if (titulo) titulo.textContent = "Carregando músicas..."; await montarPlaylist(); tocarProxima(); });
+inicializarPlayer();
 
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
