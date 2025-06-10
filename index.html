@@ -20,8 +20,8 @@
       animation: spin 1s linear infinite;
     }
     @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
     }
   </style>
 </head>
@@ -50,58 +50,63 @@
     <!-- Painel dev -->
     <div id="painelDev" class="hidden">
       <h3 class="text-2xl font-bold mt-4">Modo Desenvolvedor</h3>
+
+      <!-- Dashboard -->
+      <div class="mt-4 card bg-gray-800 p-4 rounded">
+        <h4 class="text-lg font-semibold text-white">Dashboard</h4>
+        <ul id="listaArquivos" class="list-disc pl-5 text-sm text-white"></ul>
+      </div>
+
       <!-- Upload geral -->
-      <div class="mt-4">
-        <label>Música:</label>
+      <div class="mt-4 card bg-gray-800 p-4 rounded">
+        <label class="text-white">Música:</label>
         <input type="file" id="uploadMusica" accept="audio/mp3">
         <button onclick="uploadArquivo('musicas')" class="ml-2 px-3 py-1 bg-blue-600 text-white rounded">Enviar</button>
-      </div>
-      <div class="mt-2">
-        <label>Hora certa:</label>
-        <input type="file" id="uploadHora" accept="audio/mp3">
+
+        <label class="text-white mt-2">Hora certa:</label>
+        <input type="file" id="uploadHora_certa" accept="audio/mp3">
         <button onclick="uploadArquivo('hora_certa')" class="ml-2 px-3 py-1 bg-blue-600 text-white rounded">Enviar</button>
-      </div>
-      <div class="mt-2">
-        <label>Avisos:</label>
-        <input type="file" id="uploadAviso" accept="audio/mp3">
+
+        <label class="text-white mt-2">Avisos:</label>
+        <input type="file" id="uploadAvisos" accept="audio/mp3">
         <button onclick="uploadArquivo('avisos')" class="ml-2 px-3 py-1 bg-blue-600 text-white rounded">Enviar</button>
       </div>
 
       <!-- Álbuns temáticos -->
-      <div class="mt-6">
-        <h4 class="text-lg font-semibold">Álbuns Temáticos</h4>
+      <div class="mt-6 card bg-gray-800 p-4 rounded">
+        <h4 class="text-lg font-semibold text-white">Álbuns Temáticos</h4>
         <div class="grid grid-cols-3 gap-4 mt-2">
           <div>
-            <h5 class="font-semibold">São João</h5>
+            <h5 class="font-semibold text-white">São João</h5>
             <button onclick="ativarAlbum('sao_joao')" class="mt-1 px-3 py-1 bg-yellow-600 text-white rounded">Ativar</button>
-            <input type="file" id="uploadSJ" accept="audio/mp3">
-            <button onclick="uploadParaAlbum('sao_joao', 'uploadSJ')" class="mt-1 px-3 py-1 bg-blue-600 text-white rounded">Enviar</button>
+            <input type="file" id="uploadSao_joao" accept="audio/mp3">
+            <button onclick="uploadParaAlbum('sao_joao','uploadSao_joao')" class="mt-1 px-3 py-1 bg-blue-600 text-white rounded">Enviar</button>
           </div>
           <div>
-            <h5 class="font-semibold">Natal</h5>
+            <h5 class="font-semibold text-white">Natal</h5>
             <button onclick="ativarAlbum('natal')" class="mt-1 px-3 py-1 bg-red-600 text-white rounded">Ativar</button>
             <input type="file" id="uploadNatal" accept="audio/mp3">
-            <button onclick="uploadParaAlbum('natal', 'uploadNatal')" class="mt-1 px-3 py-1 bg-blue-600 text-white rounded">Enviar</button>
+            <button onclick="uploadParaAlbum('natal','uploadNatal')" class="mt-1 px-3 py-1 bg-blue-600 text-white rounded">Enviar</button>
           </div>
           <div>
-            <h5 class="font-semibold">Páscoa</h5>
+            <h5 class="font-semibold text-white">Páscoa</h5>
             <button onclick="ativarAlbum('pascoa')" class="mt-1 px-3 py-1 bg-pink-600 text-white rounded">Ativar</button>
             <input type="file" id="uploadPascoa" accept="audio/mp3">
-            <button onclick="uploadParaAlbum('pascoa', 'uploadPascoa')" class="mt-1 px-3 py-1 bg-blue-600 text-white rounded">Enviar</button>
+            <button onclick="uploadParaAlbum('pascoa','uploadPascoa')" class="mt-1 px-3 py-1 bg-blue-600 text-white rounded">Enviar</button>
           </div>
         </div>
         <button onclick="desativarAlbum()" class="mt-4 px-4 py-2 bg-gray-700 text-white rounded">Desativar Álbum</button>
       </div>
 
       <!-- Relatório e controle -->
-      <div class="mt-6">
-        <h4 class="text-lg font-semibold">Relatório de Reprodução</h4>
-        <ul id="relatorio" class="list-disc pl-5"></ul>
+      <div class="mt-6 card bg-gray-800 p-4 rounded">
+        <h4 class="text-lg font-semibold text-white">Relatório de Reprodução</h4>
+        <ul id="relatorio" class="list-disc pl-5 text-white"></ul>
         <button onclick="resetarRelatorio()" class="mt-2 px-3 py-1 bg-orange-500 text-white rounded">Resetar</button>
       </div>
     </div>
   </div>
 
-  <script src="rádio-jogador.js"></script>
+  <script type="module" src="radio-player.js"></script>
 </body>
 </html>
