@@ -1,146 +1,138 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
+<!DOCTYPE html><html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rádio Supermercado do Louro</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body {
+      font-family: Arial, sans-serif;
       margin: 0;
-      font-family: sans-serif;
-      background-color: #111;
+      background-color: #121212;
       color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
     }
-    header, .admin, .dev, .player {
-      padding: 1rem;
-      margin: 1rem;
-      border-radius: 12px;
-      background-color: #222;
+    header {
+      text-align: center;
+      margin-bottom: 20px;
     }
-    button, input[type="password"], input[type="file"] {
-      margin-top: 1rem;
-      padding: 0.5rem;
+    .player, .admin {
+      background: #1e1e1e;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 500px;
+      width: 100%;
+      margin-bottom: 20px;
+      box-shadow: 0 0 10px #000;
+    }
+    input, button, select {
+      margin-top: 10px;
+      padding: 10px;
+      width: 100%;
       border: none;
-      border-radius: 8px;
+      border-radius: 5px;
+      font-size: 1em;
     }
-    .hidden { display: none; }
-    .volume-slider {
+    audio {
       width: 100%;
-      margin-top: 0.5rem;
+      margin-top: 10px;
     }
-    .album-banner {
+    #album-cover {
       width: 100%;
-      height: 200px;
+      max-height: 200px;
       object-fit: cover;
-      border-radius: 8px;
-      margin-bottom: 1rem;
+      border-radius: 10px;
+      margin-bottom: 10px;
     }
   </style>
 </head>
-<body>
-  <header>
-    <h1>🎧 Rádio Supermercado do Louro</h1>
-    <p id="current-album">Álbum atual: (carregando...)</p>
-    <img id="album-banner" class="album-banner hidden" />
-  </header>
-
-  <section class="player">
-    <audio id="audio-player" controls></audio>
-    <input type="range" min="0" max="1" step="0.01" value="1" id="volume" class="volume-slider">
-    <button onclick="resetPlayCount()">🔄 Resetar contagem</button>
-  </section>
-
-  <section class="admin">
-    <h2>🔒 Painel do Administrador</h2>
-    <input type="password" id="admin-password" placeholder="Senha">
-    <button onclick="loginAdmin()">Entrar</button>
-
-    <div id="dashboard" class="hidden">
-      <h3>📊 Dashboard</h3>
-      <pre id="relatorio"></pre>
+<body>  <header>
+    <h1>Rádio Supermercado do Louro</h1>
+    <p>Player Público</p>
+  </header>  <div class="player">
+    <img id="album-cover" src="" alt="Capa do Álbum" style="display:none">
+    <p id="current-track">Carregando...</p>
+    <audio id="audio-player" controls autoplay></audio>
+    <label>Volume
+      <input type="range" id="volume" min="0" max="1" step="0.01" value="0.5">
+    </label>
+  </div>  <div class="admin">
+    <h2>Painel do Administrador</h2>
+    <div id="login-section">
+      <input type="password" id="admin-password" placeholder="Senha do Admin">
+      <button onclick="checkPassword()">Entrar</button>
     </div>
-  </section>
-
-  <section class="dev hidden" id="dev-panel">
-    <h2>🛠️ Modo Desenvolvedor</h2>
-    <input type="file" id="file-upload">
-    <button onclick="uploadMusic()">Enviar música</button>
-  </section>
-
-  <script>
+    <div id="dashboard" style="display:none">
+      <h3>Dashboard</h3>
+      <input type="file" id="music-file">
+      <input type="text" id="music-name" placeholder="Nome da música">
+      <input type="file" id="album-art">
+      <button onclick="uploadMusic()">Enviar Música</button>
+      <button onclick="resetPlayCount()">Resetar Contador</button>
+      <h4>Modo Desenvolvedor</h4>
+      <pre id="report-output"></pre>
+    </div>
+  </div>  <script>
     const supabase = supabase.createClient(
       'https://yrlwyvvlgrjbwnoiwdxv.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybHd5dnZsZ3JqYndub2l3ZHh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4MDk0OTMsImV4cCI6MjA2NDM4NTQ5M30.qrNDx8aqL2WtWPalhmjzeUY6bCNVnnK48L2Oi2DpkVI'
     );
 
-    const audio = document.getElementById('audio-player');
-    const volume = document.getElementById('volume');
-    const albumText = document.getElementById('current-album');
-    const albumBanner = document.getElementById('album-banner');
-    const relatorio = document.getElementById('relatorio');
+    const audioPlayer = document.getElementById('audio-player');
+    const currentTrack = document.getElementById('current-track');
+    const albumCover = document.getElementById('album-cover');
 
-    let playCount = 0;
-    const senhaAdmin = "1234";
+    const loadRandomMusic = async () => {
+      const { data, error } = await supabase.storage.from('musicas').list('', { limit: 100 });
+      if (error || !data.length) {
+        currentTrack.textContent = 'Nenhuma música disponível.';
+        return;
+      }
+      const music = data[Math.floor(Math.random() * data.length)];
+      const { data: urlData } = supabase.storage.from('musicas').getPublicUrl(music.name);
+      audioPlayer.src = urlData.publicUrl;
+      currentTrack.textContent = music.name;
+      albumCover.style.display = 'none'; // implementar lógica de capa no futuro
+    };
 
-    // Controle de volume
-    volume.addEventListener('input', () => {
-      audio.volume = volume.value;
+    document.getElementById('volume').addEventListener('input', (e) => {
+      audioPlayer.volume = e.target.value;
     });
 
-    function resetPlayCount() {
-      playCount = 0;
-      alert("Contagem de reprodução resetada.");
-    }
+    audioPlayer.addEventListener('ended', loadRandomMusic);
 
-    async function carregarMusica() {
-      const { data, error } = await supabase.storage.from('musicas').list();
-      if (data && data.length > 0) {
-        const arquivo = data[0].name;
-        const { data: urlData } = await supabase.storage.from('musicas').getPublicUrl(arquivo);
-        audio.src = urlData.publicUrl;
-        audio.play();
+    loadRandomMusic();
+
+    function checkPassword() {
+      const password = document.getElementById('admin-password').value;
+      if (password === 'louropainel') {
+        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        loadReport();
       } else {
-        alert("Nenhuma música encontrada.");
+        alert('Senha incorreta');
       }
     }
 
     async function uploadMusic() {
-      const fileInput = document.getElementById('file-upload');
-      const file = fileInput.files[0];
-      if (!file) return alert("Selecione um arquivo MP3");
-
-      const { data, error } = await supabase.storage.from('musicas').upload(file.name, file);
-      if (error) {
-        alert("Erro ao enviar: " + error.message);
-      } else {
-        alert("Música enviada!");
-        carregarMusica();
-      }
+      const fileInput = document.getElementById('music-file');
+      const nameInput = document.getElementById('music-name').value || fileInput.files[0].name;
+      const { data, error } = await supabase.storage.from('musicas').upload(nameInput, fileInput.files[0]);
+      if (error) return alert('Erro ao enviar: ' + error.message);
+      alert('Enviado com sucesso!');
     }
 
-    function loginAdmin() {
-      const senha = document.getElementById('admin-password').value;
-      if (senha === senhaAdmin) {
-        document.getElementById('dashboard').classList.remove('hidden');
-        document.getElementById('dev-panel').classList.remove('hidden');
-        gerarRelatorio();
-      } else {
-        alert("Senha incorreta.");
-      }
+    async function loadReport() {
+      const { data, error } = await supabase.storage.from('musicas').list('', { limit: 100 });
+      const output = data?.map(f => `🎵 ${f.name} (${f.metadata?.size || '?'} bytes)`).join('\n') || 'Nada encontrado';
+      document.getElementById('report-output').textContent = output;
     }
 
-    async function gerarRelatorio() {
-      const { data } = await supabase.storage.from('musicas').list();
-      relatorio.innerText = data.map(file => `🎵 ${file.name}`).join('\n');
+    function resetPlayCount() {
+      alert('Função reset ainda será integrada ao banco.');
     }
-
-    // Simula banner e álbum atual
-    albumText.innerText = "Álbum atual: Festa Junina";
-    albumBanner.src = "https://via.placeholder.com/800x200.png?text=Festa+Junina";
-    albumBanner.classList.remove("hidden");
-
-    carregarMusica();
-  </script>
-</body>
+  </script></body>
 </html>
