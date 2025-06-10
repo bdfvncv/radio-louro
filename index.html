@@ -1,107 +1,135 @@
-<!DOCTYPE html><html lang="pt-br">
+<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rádio Supermercado do Louro</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rádio Louro</title>
   <style>
-    body.dark {
-      background-color: #111827;
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #111;
+      color: #fff;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+    header {
+      background: #222;
+      padding: 1rem;
+    }
+    img {
+      width: 100%;
+      max-height: 200px;
+      object-fit: cover;
+    }
+    audio {
+      margin: 1rem auto;
+      display: block;
+    }
+    .admin, .dev {
+      margin: 1rem;
+      padding: 1rem;
+      background: #222;
+      border-radius: 8px;
+    }
+    .hidden {
+      display: none;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      margin: 0.3rem 0;
+    }
+    input[type="file"] {
+      background: #333;
+      color: #fff;
+    }
+    button {
+      background: #28a745;
       color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      border-radius: 5px;
     }
-    .spinner {
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid #38bdf8;
-      border-radius: 50%;
-      width: 24px;
-      height: 24px;
-      animation: spin 1s linear infinite;
+    button:hover {
+      background: #218838;
     }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    input[type="password"] {
+      padding: 0.4rem;
+      border-radius: 5px;
+      border: none;
+    }
+    .volume-container {
+      margin-top: 10px;
+    }
+    .volume-container input {
+      width: 80%;
     }
   </style>
 </head>
-<body class="dark font-sans min-h-screen">
-  <div class="max-w-4xl mx-auto p-4">
-    <header class="text-center mb-8">
-      <h1 class="text-4xl font-bold text-cyan-400">🎧 Rádio Supermercado do Louro</h1>
-    </header><!-- Álbum -->
-<section class="mb-6">
-  <img id="albumBanner" class="w-full h-64 object-cover rounded-lg shadow-lg hidden" src="" alt="Capa do álbum">
-  <h2 id="albumNome" class="text-2xl font-semibold mt-2 text-center"></h2>
-</section>
+<body>
+  <header>
+    <h1>Rádio Supermercado do Louro</h1>
+  </header>
 
-<!-- Player -->
-<section class="bg-gray-800 p-4 rounded-lg shadow mb-6">
-  <audio id="audioPlayer" controls class="w-full mb-2"></audio>
-  <input id="volumeControl" type="range" min="0" max="1" step="0.01" value="1" class="w-full">
-</section>
+  <img id="albumBanner" style="display: none" />
+  <h2 id="albumNome"></h2>
 
-<!-- Login Dev -->
-<section id="loginDev" class="text-center mb-6">
-  <input id="senhaDev" type="password" placeholder="Senha do modo dev" class="p-2 border rounded text-black">
-  <button onclick="entrarDev()" class="ml-2 px-4 py-2 bg-green-600 text-white rounded">Entrar</button>
-</section>
+  <audio id="audioPlayer" controls></audio>
 
-<!-- Painel Dev -->
-<section id="painelDev" class="hidden space-y-6">
-  <h3 class="text-3xl font-bold text-center">🔧 Modo Desenvolvedor</h3>
-
-  <!-- Upload -->
-  <div class="space-y-2">
-    <div>
-      <label class="block">Música:</label>
-      <input type="file" id="uploadMusica" accept="audio/mp3">
-      <button onclick="uploadArquivo('musicas')" class="ml-2 px-3 py-1 bg-blue-600 text-white rounded">Enviar</button>
-    </div>
-    <div>
-      <label class="block">Hora certa:</label>
-      <input type="file" id="uploadHora" accept="audio/mp3">
-      <button onclick="uploadArquivo('hora_certa')" class="ml-2 px-3 py-1 bg-blue-600 text-white rounded">Enviar</button>
-    </div>
-    <div>
-      <label class="block">Avisos:</label>
-      <input type="file" id="uploadAviso" accept="audio/mp3">
-      <button onclick="uploadArquivo('avisos')" class="ml-2 px-3 py-1 bg-blue-600 text-white rounded">Enviar</button>
-    </div>
+  <div class="volume-container">
+    <label for="volumeControl">Volume:</label>
+    <input type="range" id="volumeControl" min="0" max="1" step="0.01" value="1" />
   </div>
 
-  <!-- Álbuns -->
-  <div>
-    <h4 class="text-2xl font-semibold mb-2">Álbuns Temáticos</h4>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="bg-gray-700 p-3 rounded-lg">
-        <h5 class="font-semibold">São João</h5>
-        <button onclick="ativarAlbum('sao_joao')" class="mt-1 w-full px-3 py-1 bg-yellow-600 text-white rounded">Ativar</button>
-        <input type="file" id="uploadSJ" accept="audio/mp3" class="mt-2">
-        <button onclick="uploadParaAlbum('sao_joao', 'uploadSJ')" class="w-full mt-1 px-3 py-1 bg-blue-600 text-white rounded">Enviar</button>
-      </div>
-      <div class="bg-gray-700 p-3 rounded-lg">
-        <h5 class="font-semibold">Natal</h5>
-        <button onclick="ativarAlbum('natal')" class="mt-1 w-full px-3 py-1 bg-red-600 text-white rounded">Ativar</button>
-        <input type="file" id="uploadNatal" accept="audio/mp3" class="mt-2">
-        <button onclick="uploadParaAlbum('natal', 'uploadNatal')" class="w-full mt-1 px-3 py-1 bg-blue-600 text-white rounded">Enviar</button>
-      </div>
-      <div class="bg-gray-700 p-3 rounded-lg">
-        <h5 class="font-semibold">Páscoa</h5>
-        <button onclick="ativarAlbum('pascoa')" class="mt-1 w-full px-3 py-1 bg-pink-600 text-white rounded">Ativar</button>
-        <input type="file" id="uploadPascoa" accept="audio/mp3" class="mt-2">
-        <button onclick="uploadParaAlbum('pascoa', 'uploadPascoa')" class="w-full mt-1 px-3 py-1 bg-blue-600 text-white rounded">Enviar</button>
-      </div>
-    </div>
-    <button onclick="desativarAlbum()" class="mt-4 px-4 py-2 bg-gray-500 text-white rounded w-full">Desativar Álbum</button>
+  <div class="admin">
+    <h3>Entrar no Painel Dev</h3>
+    <input type="password" id="senhaDev" placeholder="Digite a senha" />
+    <button onclick="entrarDev()">Entrar</button>
   </div>
 
-  <!-- Relatório -->
-  <div>
-    <h4 class="text-2xl font-semibold mb-2">📊 Relatório de Reprodução</h4>
-    <ul id="relatorio" class="list-disc pl-5 space-y-1"></ul>
-    <button onclick="resetarRelatorio()" class="mt-2 px-3 py-1 bg-orange-500 text-white rounded">Resetar</button>
-  </div>
-</section>
+  <div id="painelDev" class="dev hidden">
+    <h2>Modo Desenvolvedor</h2>
 
-  </div>  <script src="rádio-jogador.js"></script></body>
+    <h3>Uploads Gerais</h3>
+    <label>Música: <input type="file" id="uploadMusicas" /></label>
+    <button onclick="uploadArquivo('musicas')">Enviar</button>
+    <br />
+    <label>Hora Certa: <input type="file" id="uploadHora_certa" /></label>
+    <button onclick="uploadArquivo('hora_certa')">Enviar</button>
+    <br />
+    <label>Avisos: <input type="file" id="uploadAvisos" /></label>
+    <button onclick="uploadArquivo('avisos')">Enviar</button>
+
+    <h3>Álbuns</h3>
+    <label>Álbum Páscoa:
+      <input type="file" id="uploadPascoa" />
+    </label>
+    <button onclick="uploadParaAlbum('pascoa', 'uploadPascoa')">Enviar</button>
+    <button onclick="ativarAlbum('pascoa')">Ativar</button>
+    <br />
+    <label>Álbum São João:
+      <input type="file" id="uploadSaojoao" />
+    </label>
+    <button onclick="uploadParaAlbum('saojoao', 'uploadSaojoao')">Enviar</button>
+    <button onclick="ativarAlbum('saojoao')">Ativar</button>
+    <br />
+    <label>Álbum Natal:
+      <input type="file" id="uploadNatal" />
+    </label>
+    <button onclick="uploadParaAlbum('natal', 'uploadNatal')">Enviar</button>
+    <button onclick="ativarAlbum('natal')">Ativar</button>
+    <br />
+    <button onclick="desativarAlbum()">Desativar Álbum</button>
+
+    <h3>Relatório de Reprodução</h3>
+    <ul id="relatorio"></ul>
+    <button onclick="resetarRelatorio()">Resetar Relatório</button>
+  </div>
+
+  <script type="module" src="rádio-jogador.js"></script>
+</body>
 </html>
