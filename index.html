@@ -1,232 +1,110 @@
-<!DOCTYPE html>
-<html lang="pt-br">
+<!DOCTYPE html><html lang="pt-br">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rádio Supermercado do Louro</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f3f3f3;
-      margin: 0;
-      padding: 0;
-      transition: background-color 0.3s;
-    }
-
-    .dark-mode {
-      background-color: #121212;
-      color: #fff;
-    }
-
-    .player {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      margin-top: 50px;
-    }
-
-    .controls {
-      margin-top: 20px;
-    }
-
-    .button, .input {
-      padding: 10px;
-      margin: 5px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    .button {
-      background-color: #4CAF50;
+    body.dark {
+      background-color: #111827;
       color: white;
     }
-
-    .button.reset {
-      background-color: #f44336;
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #38bdf8;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
     }
-
-    .input[type="range"] {
-      width: 200px;
-    }
-
-    .album-banner {
-      width: 100%;
-      height: 200px;
-      object-fit: cover;
-      margin-bottom: 20px;
-    }
-
-    .panel {
-      display: none;
-    }
-
-    /* Panel Admin Styles */
-    .admin-panel, .dev-panel {
-      display: none;
-      padding: 20px;
-      background-color: #fff;
-      border-radius: 10px;
-      margin: 20px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .admin-panel.active, .dev-panel.active {
-      display: block;
-    }
-
-    .input-admin {
-      padding: 10px;
-      margin: 5px;
-      width: 200px;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-    }
-
-    .input-admin[type="file"] {
-      padding: 5px;
-    }
-
-    .mode-toggle {
-      margin: 20px;
-      cursor: pointer;
-      padding: 10px;
-      background-color: #2196F3;
-      color: white;
-      border: none;
-      border-radius: 5px;
-    }
-
-    /* Responsive Design */
-    @media (max-width: 600px) {
-      .player {
-        flex-direction: column;
-      }
-
-      .album-banner {
-        height: 150px;
-      }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
   </style>
 </head>
-<body>
+<body class="dark font-sans">
+  <div class="p-4">
+    <h1 class="text-3xl font-bold mb-4">🎧 Rádio Supermercado do Louro</h1><!-- Capa e nome do álbum -->
+<div class="mb-4">
+  <img id="albumBanner" class="w-full max-h-64 object-cover rounded-lg" src="" alt="Capa do álbum" style="display:none">
+  <h2 id="albumNome" class="text-xl font-semibold mt-2"></h2>
+</div>
 
-  <div class="mode-toggle" id="toggleMode">Ativar Modo Dev</div>
-  
-  <div class="player">
-    <img id="albumBanner" class="album-banner" src="" alt="Capa do Álbum">
-    <h2 id="albumName">Nome do Álbum</h2>
-    
-    <audio id="audioPlayer" controls>
-      Seu navegador não suporta o áudio.
-    </audio>
+<!-- Player público -->
+<div class="mb-4">
+  <audio id="audioPlayer" controls class="w-full"></audio>
+  <input id="volumeControl" type="range" min="0" max="1" step="0.01" value="1" class="w-full mt-2">
+</div>
 
-    <div class="controls">
-      <input id="volumeControl" class="input" type="range" min="0" max="100" value="100">
-      <button id="resetCount" class="button reset">Resetar Contagem</button>
-    </div>
+<!-- Login modo dev -->
+<div id="loginDev" class="mb-4">
+  <input id="senhaDev" type="password" placeholder="Senha do modo dev" class="p-2 border rounded">
+  <button onclick="entrarDev()" class="ml-2 px-4 py-2 bg-green-600 text-white rounded">Entrar</button>
+</div>
+
+<!-- Painel dev -->
+<div id="painelDev" class="hidden">
+  <h3 class="text-2xl font-bold mt-4">Modo Desenvolvedor</h3>
+
+  <!-- Dashboard -->
+  <div class="mt-4">
+    <h4 class="text-lg font-semibold">Dashboard</h4>
+    <p>Arquivos enviados:</p>
+    <ul id="listaArquivos" class="list-disc pl-5 text-sm"></ul>
   </div>
 
-  <!-- Admin Panel -->
-  <div class="admin-panel" id="adminPanel">
-    <h3>Admin Panel</h3>
-    <div>
-      <label for="songUpload">Enviar música:</label>
-      <input type="file" id="songUpload" class="input-admin">
-    </div>
-    <div>
-      <label for="addHour">Adicionar Hora Certa:</label>
-      <input type="time" id="addHour" class="input-admin">
-    </div>
-    <div>
-      <button id="sendSong" class="button">Enviar Música</button>
-      <button id="addMessage" class="button">Adicionar Aviso</button>
-    </div>
+  <!-- Upload geral -->
+  <div class="mt-4">
+    <label>Música:</label>
+    <input type="file" id="uploadMusica" accept="audio/mp3">
+    <button onclick="uploadArquivo('musicas')" class="ml-2 px-3 py-1 bg-blue-600 text-white rounded">Enviar</button>
+  </div>
+  <div class="mt-2">
+    <label>Hora certa:</label>
+    <input type="file" id="uploadHora" accept="audio/mp3">
+    <button onclick="uploadArquivo('hora_certa')" class="ml-2 px-3 py-1 bg-blue-600 text-white rounded">Enviar</button>
+  </div>
+  <div class="mt-2">
+    <label>Avisos:</label>
+    <input type="file" id="uploadAviso" accept="audio/mp3">
+    <button onclick="uploadArquivo('avisos')" class="ml-2 px-3 py-1 bg-blue-600 text-white rounded">Enviar</button>
   </div>
 
-  <!-- Developer Panel -->
-  <div class="dev-panel" id="devPanel">
-    <h3>Painel de Desenvolvedor</h3>
-    <input type="password" id="devPassword" class="input-admin" placeholder="Senha">
-    <button id="devLogin" class="button">Entrar</button>
-    <div id="songUploadForm">
-      <input type="file" id="devUploadSong" class="input-admin">
-      <button id="uploadDevSong" class="button">Enviar Música</button>
+  <!-- Álbuns temáticos -->
+  <div class="mt-6">
+    <h4 class="text-lg font-semibold">Álbuns Temáticos</h4>
+    <div class="grid grid-cols-3 gap-4 mt-2">
+      <div>
+        <h5 class="font-semibold">São João</h5>
+        <button onclick="ativarAlbum('sao_joao')" class="mt-1 px-3 py-1 bg-yellow-600 text-white rounded">Ativar</button>
+        <input type="file" id="uploadSJ" accept="audio/mp3">
+        <button onclick="uploadParaAlbum('sao_joao', 'uploadSJ')" class="mt-1 px-3 py-1 bg-blue-600 text-white rounded">Enviar</button>
+      </div>
+      <div>
+        <h5 class="font-semibold">Natal</h5>
+        <button onclick="ativarAlbum('natal')" class="mt-1 px-3 py-1 bg-red-600 text-white rounded">Ativar</button>
+        <input type="file" id="uploadNatal" accept="audio/mp3">
+        <button onclick="uploadParaAlbum('natal', 'uploadNatal')" class="mt-1 px-3 py-1 bg-blue-600 text-white rounded">Enviar</button>
+      </div>
+      <div>
+        <h5 class="font-semibold">Páscoa</h5>
+        <button onclick="ativarAlbum('pascoa')" class="mt-1 px-3 py-1 bg-pink-600 text-white rounded">Ativar</button>
+        <input type="file" id="uploadPascoa" accept="audio/mp3">
+        <button onclick="uploadParaAlbum('pascoa', 'uploadPascoa')" class="mt-1 px-3 py-1 bg-blue-600 text-white rounded">Enviar</button>
+      </div>
     </div>
+    <button onclick="desativarAlbum()" class="mt-4 px-4 py-2 bg-gray-700 text-white rounded">Desativar Álbum</button>
   </div>
 
-  <script>
-    // Inicialização do Supabase
-    const SUPABASE_URL = 'https://yrlwyvvlgrjbwnoiwdxv.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybHd5dnZsZ3JqYndub2l3ZHh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4MDk0OTMsImV4cCI6MjA2NDM4NTQ5M30.qrNDx8aqL2WtWPalhmjzeUY6bCNVnnK48L2Oi2DpkVI';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  <!-- Relatório e controle -->
+  <div class="mt-6">
+    <h4 class="text-lg font-semibold">Relatório de Reprodução</h4>
+    <ul id="relatorio" class="list-disc pl-5"></ul>
+    <button onclick="resetarRelatorio()" class="mt-2 px-3 py-1 bg-orange-500 text-white rounded">Resetar</button>
+  </div>
+</div>
 
-    // Variáveis Globais
-    let currentAlbum = "São João";
-    let albumFiles = [];
-
-    // Função para carregar o player com música
-    function loadMusic(fileUrl) {
-      const audioPlayer = document.getElementById("audioPlayer");
-      audioPlayer.src = fileUrl;
-      audioPlayer.play();
-    }
-
-    // Função para alterar capa e nome do álbum
-    function updateAlbumBanner(albumName, bannerUrl) {
-      document.getElementById("albumBanner").src = bannerUrl;
-      document.getElementById("albumName").innerText = albumName;
-    }
-
-    // Função para configurar volume
-    document.getElementById("volumeControl").addEventListener("input", function() {
-      document.getElementById("audioPlayer").volume = this.value / 100;
-    });
-
-    // Função para resetar contagem
-    document.getElementById("resetCount").addEventListener("click", function() {
-      console.log("Contagem de reprodução reiniciada.");
-      // Lógica de reset da contagem de reprodução
-    });
-
-    // Função para alternar modo
-    document.getElementById("toggleMode").addEventListener("click", function() {
-      const devPanel = document.getElementById("devPanel");
-      devPanel.classList.toggle("active");
-    });
-
-    // Função de envio de músicas (Modo Dev)
-    document.getElementById("uploadDevSong").addEventListener("click", function() {
-      const fileInput = document.getElementById("devUploadSong");
-      const file = fileInput.files[0];
-      if (file) {
-        uploadSongToSupabase(file);
-      }
-    });
-
-    // Enviar música para o Supabase (Modo Dev)
-    async function uploadSongToSupabase(file) {
-      const { data, error } = await supabase.storage.from("musicas").upload(file.name, file);
-      if (error) {
-        alert("Erro ao enviar a música.");
-        return;
-      }
-      alert("Música enviada com sucesso!");
-      albumFiles.push(data.Key);
-    }
-
-    // Função para login do Admin (Modo Admin)
-    document.getElementById("devLogin").addEventListener("click", function() {
-      const password = document.getElementById("devPassword").value;
-      if (password === "2007") {
-        document.getElementById("adminPanel").classList.add("active");
-        document.getElementById("devPanel").classList.remove("active");
-      } else {
-        alert("Senha incorreta.");
-      }
-    });
-  </script>
-
-</body>
+  </div>  <script src="radio-player.js"></script></body>
 </html>
