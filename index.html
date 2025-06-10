@@ -6,9 +6,11 @@
   <title>Rádio Supermercado do Louro</title>
   <style>
     body {
+      font-family: sans-serif;
       margin: 0;
-      font-family: Arial, sans-serif;
-      background-color: #f4f4f4;
+      padding: 0;
+      background: #f4f4f4;
+      color: #333;
     }
     header {
       background: #0a572f;
@@ -17,73 +19,71 @@
       text-align: center;
     }
     .container {
-      max-width: 700px;
-      margin: 20px auto;
+      max-width: 800px;
+      margin: auto;
+      padding: 1rem;
+    }
+    .card {
       background: white;
-      border-radius: 10px;
-      padding: 20px;
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 1rem;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    img.capa {
+    .capa {
       width: 100%;
+      max-height: 200px;
+      object-fit: cover;
       border-radius: 10px;
-      margin-bottom: 20px;
+      margin-bottom: 1rem;
     }
-    audio {
+    .volume-control {
       width: 100%;
     }
-    .volume {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 10px;
-    }
-    .volume input[type="range"] {
-      width: 100%;
-    }
-    #login {
-      max-width: 300px;
-      margin: 100px auto;
-      padding: 20px;
-      background: white;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    #login input {
-      width: 100%;
-      margin: 10px 0;
-      padding: 10px;
-    }
-    #dashboard {
+    #loginSection, #dashboardSection, #devPanel {
       display: none;
+    }
+    button {
+      padding: 8px 16px;
+      border: none;
+      background: #0a572f;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>Rádio Supermercado do Louro</h1>
+    <h1>📻 Rádio Supermercado do Louro</h1>
   </header>
 
-  <div class="container" id="publicPlayer">
-    <img id="capaAlbum" class="capa" src="" alt="Capa do álbum" />
-    <audio id="audioPlayer" controls autoplay onended="proximaMusica()"></audio>
-    <div class="volume">
-      <label>🔊 Volume</label>
-      <input type="range" id="volumeControl" min="0" max="1" step="0.01" value="1">
+  <div class="container">
+    <div id="loginSection" class="card">
+      <h2>🔐 Login Admin</h2>
+      <input type="password" id="senha" placeholder="Digite a senha" />
+      <button onclick="verificarSenha()">Entrar</button>
     </div>
-  </div>
 
-  <div id="login">
-    <h2>Administração</h2>
-    <input type="password" id="senha" placeholder="Senha de admin">
-    <button onclick="verificarSenha()">Entrar</button>
-  </div>
+    <div id="dashboardSection">
+      <div class="card">
+        <h2>🎧 Player Público</h2>
+        <img id="capaAlbum" class="capa" src="" alt="Capa do álbum" />
+        <audio id="player" controls onended="tocarProxima()"></audio>
+        <input type="range" id="volume" class="volume-control" min="0" max="1" step="0.01" value="1" onchange="ajustarVolume(this.value)" />
+      </div>
+      <div class="card">
+        <h2>📊 Relatório</h2>
+        <div id="relatorio"></div>
+        <button onclick="resetarRelatorio()">Resetar Contagem</button>
+      </div>
 
-  <div class="container" id="dashboard">
-    <h2>📊 Dashboard Admin</h2>
-    <p><strong>Álbum ativo:</strong> <span id="albumNome"></span></p>
-    <button onclick="resetarContagem()">Resetar contagem</button>
-    <ul id="relatorio"></ul>
+      <div id="devPanel" class="card">
+        <h2>🛠️ Painel Dev</h2>
+        <p>Aqui vai o painel desenvolvedor com upload e gerenciamento completo.</p>
+        <!-- Aqui você poderá reinserir seu painel anterior -->
+      </div>
+    </div>
   </div>
 
   <script type="module">
@@ -93,74 +93,66 @@
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybHd5dnZsZ3JqYndub2l3ZHh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4MDk0OTMsImV4cCI6MjA2NDM4NTQ5M30.qrNDx8aqL2WtWPalhmjzeUY6bCNVnnK48L2Oi2DpkVI'
     );
 
-    const album = localStorage.getItem("album") || "musicas";
-    const player = document.getElementById("audioPlayer");
-    const volumeSlider = document.getElementById("volumeControl");
-    const tocadas = JSON.parse(localStorage.getItem("tocadas") || "{}");
+    const tocadas = {};
+    let musicas = [], index = 0;
 
-    let playlist = [];
-    let index = 0;
+    window.onload = async () => {
+      document.getElementById("loginSection").style.display = 'block';
+      carregarAudios();
+    };
 
-    volumeSlider.addEventListener("input", () => {
-      player.volume = volumeSlider.value;
-    });
-
-    async function carregarCapa() {
-      const capaURL = `https://yrlwyvvlgrjbwnoiwdxv.supabase.co/storage/v1/object/public/imagens/${album}.jpg`;
-      document.getElementById("capaAlbum").src = capaURL;
-    }
-
-    async function carregarMusicas() {
-      const { data } = await supabase.storage.from(album).list();
-      playlist = data.map(f => `https://yrlwyvvlgrjbwnoiwdxv.supabase.co/storage/v1/object/public/${album}/${f.name}`);
-      playlist = playlist.sort(() => Math.random() - 0.5);
-      tocarAtual();
-    }
-
-    function tocarAtual() {
-      const src = playlist[index % playlist.length];
-      if (!src) return;
-      const nome = src.split("/").pop();
-      tocadas[nome] = (tocadas[nome] || 0) + 1;
-      localStorage.setItem("tocadas", JSON.stringify(tocadas));
-      player.src = src;
-      player.play();
-    }
-
-    window.proximaMusica = function() {
-      index++;
-      tocarAtual();
-    }
-
-    carregarMusicas();
-    carregarCapa();
-
-    // DASHBOARD
-    window.verificarSenha = function () {
-      const senha = document.getElementById("senha").value;
-      if (senha === "2007") {
-        document.getElementById("login").style.display = "none";
-        document.getElementById("dashboard").style.display = "block";
-        document.getElementById("albumNome").textContent = album;
+    window.verificarSenha = () => {
+      const senha = document.getElementById('senha').value;
+      if (senha === '1234') {
+        document.getElementById("loginSection").style.display = 'none';
+        document.getElementById("dashboardSection").style.display = 'block';
+        document.getElementById("devPanel").style.display = 'block';
         atualizarRelatorio();
       } else {
-        alert("Senha incorreta");
+        alert('Senha incorreta!');
       }
+    };
+
+    window.ajustarVolume = (valor) => {
+      document.getElementById("player").volume = valor;
+    };
+
+    async function carregarAudios() {
+      const { data, error } = await supabase.storage.from('musicas').list();
+      musicas = data.map(f => `https://yrlwyvvlgrjbwnoiwdxv.supabase.co/storage/v1/object/public/musicas/${f.name}`);
+      exibirCapa();
+      tocarProxima();
+    }
+
+    function tocarProxima() {
+      if (musicas.length === 0) return;
+      const player = document.getElementById('player');
+      const src = musicas[index % musicas.length];
+      const nome = src.split('/').pop();
+      tocadas[nome] = (tocadas[nome] || 0) + 1;
+      player.src = src;
+      index++;
+      player.play();
+      atualizarRelatorio();
     }
 
     function atualizarRelatorio() {
-      const lista = document.getElementById("relatorio");
-      lista.innerHTML = "";
-      Object.entries(tocadas).forEach(([nome, vezes]) => {
-        const li = document.createElement("li");
-        li.textContent = `${nome} - ${vezes}x tocada`;
-        lista.appendChild(li);
+      const div = document.getElementById("relatorio");
+      div.innerHTML = '';
+      Object.entries(tocadas).forEach(([nome, contagem]) => {
+        const p = document.createElement('p');
+        p.textContent = `${nome}: ${contagem} vez(es)`;
+        div.appendChild(p);
       });
     }
 
-    window.resetarContagem = function () {
-      localStorage.removeItem("tocadas");
-      location.reload();
+    window.resetarRelatorio = () => {
+      Object.keys(tocadas).forEach(k => delete tocadas[k]);
+      atualizarRelatorio();
+    };
+
+    function exibirCapa() {
+      document.getElementById("capaAlbum").src = 'https://yrlwyvvlgrjbwnoiwdxv.supabase.co/storage/v1/object/public/imagens/sao-joao.jpg';
     }
   </script>
 </body>
