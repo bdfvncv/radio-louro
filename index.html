@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="pt-BR">
+<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -49,17 +50,23 @@
     }
   </style>
 </head>
-<body>  <header>
+<body>
+
+  <header>
     <h1>Rádio Supermercado do Louro</h1>
     <p>Player Público</p>
-  </header>  <div class="player">
+  </header>
+
+  <div class="player">
     <img id="album-cover" src="" alt="Capa do Álbum" style="display:none">
     <p id="current-track">Carregando...</p>
     <audio id="audio-player" controls autoplay></audio>
     <label>Volume
       <input type="range" id="volume" min="0" max="1" step="0.01" value="0.5">
     </label>
-  </div>  <div class="admin">
+  </div>
+
+  <div class="admin">
     <h2>Painel do Administrador</h2>
     <div id="login-section">
       <input type="password" id="admin-password" placeholder="Senha do Admin">
@@ -75,7 +82,9 @@
       <h4>Modo Desenvolvedor</h4>
       <pre id="report-output"></pre>
     </div>
-  </div>  <script>
+  </div>
+
+  <script>
     const supabase = supabase.createClient(
       'https://yrlwyvvlgrjbwnoiwdxv.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybHd5dnZsZ3JqYndub2l3ZHh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4MDk0OTMsImV4cCI6MjA2NDM4NTQ5M30.qrNDx8aqL2WtWPalhmjzeUY6bCNVnnK48L2Oi2DpkVI'
@@ -134,5 +143,7 @@
     function resetPlayCount() {
       alert('Função reset ainda será integrada ao banco.');
     }
-  </script></body>
+  </script>
+
+</body>
 </html>
