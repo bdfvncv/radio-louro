@@ -1,16 +1,20 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rádio Supermercado do Louro</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rádio Louro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    body {
-      font-family: Arial, sans-serif;
+    * {
       margin: 0;
-      background-color: #121212;
-      color: #fff;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Roboto', sans-serif;
+    }
+    body {
+      background-color: #111;
+      color: #f1f1f1;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -18,132 +22,140 @@
     }
     header {
       text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 30px;
     }
-    .player, .admin {
-      background: #1e1e1e;
-      padding: 20px;
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+    .player-container {
+      background-color: #1e1e1e;
       border-radius: 10px;
+      padding: 20px;
+      width: 100%;
       max-width: 500px;
-      width: 100%;
-      margin-bottom: 20px;
-      box-shadow: 0 0 10px #000;
-    }
-    input, button, select {
-      margin-top: 10px;
-      padding: 10px;
-      width: 100%;
-      border: none;
-      border-radius: 5px;
-      font-size: 1em;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
     }
     audio {
       width: 100%;
-      margin-top: 10px;
     }
-    #album-cover {
-      width: 100%;
-      max-height: 200px;
-      object-fit: cover;
+    .admin-panel {
+      margin-top: 40px;
+      padding: 20px;
+      background-color: #222;
       border-radius: 10px;
-      margin-bottom: 10px;
+      width: 100%;
+      max-width: 500px;
+    }
+    .hidden {
+      display: none;
+    }
+    input, button, label {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
+    }
+    button {
+      background-color: #00c853;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #00e676;
     }
   </style>
 </head>
 <body>
-
   <header>
     <h1>Rádio Supermercado do Louro</h1>
-    <p>Player Público</p>
   </header>
-
-  <div class="player">
-    <img id="album-cover" src="" alt="Capa do Álbum" style="display:none">
-    <p id="current-track">Carregando...</p>
-    <audio id="audio-player" controls autoplay></audio>
-    <label>Volume
-      <input type="range" id="volume" min="0" max="1" step="0.01" value="0.5">
-    </label>
+  
+  <div class="player-container">
+    <audio id="audioPlayer" controls></audio>
+    <p id="currentTrack"></p>
   </div>
 
-  <div class="admin">
-    <h2>Painel do Administrador</h2>
-    <div id="login-section">
-      <input type="password" id="admin-password" placeholder="Senha do Admin">
-      <button onclick="checkPassword()">Entrar</button>
-    </div>
-    <div id="dashboard" style="display:none">
-      <h3>Dashboard</h3>
-      <input type="file" id="music-file">
-      <input type="text" id="music-name" placeholder="Nome da música">
-      <input type="file" id="album-art">
-      <button onclick="uploadMusic()">Enviar Música</button>
-      <button onclick="resetPlayCount()">Resetar Contador</button>
-      <h4>Modo Desenvolvedor</h4>
-      <pre id="report-output"></pre>
+  <div class="admin-panel">
+    <h2>Administração</h2>
+    <input type="password" id="adminPassword" placeholder="Digite a senha do admin" />
+    <button onclick="checkAdmin()">Entrar</button>
+
+    <div id="dashboard" class="hidden">
+      <label for="file">Enviar música (.mp3)</label>
+      <input type="file" id="file" accept="audio/mp3">
+      <button onclick="uploadFile()">Upload</button>
+      <p id="status"></p>
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    const supabase = supabase.createClient(
-      'https://yrlwyvvlgrjbwnoiwdxv.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybHd5dnZsZ3JqYndub2l3ZHh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4MDk0OTMsImV4cCI6MjA2NDM4NTQ5M30.qrNDx8aqL2WtWPalhmjzeUY6bCNVnnK48L2Oi2DpkVI'
-    );
+    const supabaseUrl = 'https://yrlwyvvlgrjbwnoiwdxv.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybHd5dnZsZ3JqYndub2l3ZHh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4MDk0OTMsImV4cCI6MjA2NDM4NTQ5M30.qrNDx8aqL2WtWPalhmjzeUY6bCNVnnK48L2Oi2DpkVI';
+    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-    const audioPlayer = document.getElementById('audio-player');
-    const currentTrack = document.getElementById('current-track');
-    const albumCover = document.getElementById('album-cover');
+    let audioPlayer = document.getElementById('audioPlayer');
+    let currentTrack = document.getElementById('currentTrack');
 
-    const loadRandomMusic = async () => {
-      const { data, error } = await supabase.storage.from('musicas').list('', { limit: 100 });
+    async function loadAndPlay() {
+      const { data, error } = await supabase.storage.from('musicas').list('', {
+        limit: 100,
+        offset: 0,
+        sortBy: { column: 'name', order: 'asc' },
+      });
+
       if (error || !data.length) {
         currentTrack.textContent = 'Nenhuma música disponível.';
         return;
       }
-      const music = data[Math.floor(Math.random() * data.length)];
-      const { data: urlData } = supabase.storage.from('musicas').getPublicUrl(music.name);
-      audioPlayer.src = urlData.publicUrl;
-      currentTrack.textContent = music.name;
-      albumCover.style.display = 'none'; // implementar lógica de capa no futuro
-    };
 
-    document.getElementById('volume').addEventListener('input', (e) => {
-      audioPlayer.volume = e.target.value;
-    });
+      let index = 0;
+      playTrack(index);
 
-    audioPlayer.addEventListener('ended', loadRandomMusic);
+      audioPlayer.addEventListener('ended', () => {
+        index = (index + 1) % data.length;
+        playTrack(index);
+      });
 
-    loadRandomMusic();
+      function playTrack(i) {
+        const track = data[i];
+        const url = supabase.storage.from('musicas').getPublicUrl(track.name).data.publicUrl;
+        audioPlayer.src = url;
+        audioPlayer.play();
+        currentTrack.textContent = `Tocando agora: ${track.name}`;
+      }
+    }
 
-    function checkPassword() {
-      const password = document.getElementById('admin-password').value;
-      if (password === 'louropainel') {
-        document.getElementById('login-section').style.display = 'none';
-        document.getElementById('dashboard').style.display = 'block';
-        loadReport();
+    loadAndPlay();
+
+    function checkAdmin() {
+      const pass = document.getElementById('adminPassword').value;
+      if (pass === 'louropainel') {
+        document.getElementById('dashboard').classList.remove('hidden');
       } else {
         alert('Senha incorreta');
       }
     }
 
-    async function uploadMusic() {
-      const fileInput = document.getElementById('music-file');
-      const nameInput = document.getElementById('music-name').value || fileInput.files[0].name;
-      const { data, error } = await supabase.storage.from('musicas').upload(nameInput, fileInput.files[0]);
-      if (error) return alert('Erro ao enviar: ' + error.message);
-      alert('Enviado com sucesso!');
-    }
+    async function uploadFile() {
+      const fileInput = document.getElementById('file');
+      const file = fileInput.files[0];
 
-    async function loadReport() {
-      const { data, error } = await supabase.storage.from('musicas').list('', { limit: 100 });
-      const output = data?.map(f => `🎵 ${f.name} (${f.metadata?.size || '?'} bytes)`).join('\n') || 'Nada encontrado';
-      document.getElementById('report-output').textContent = output;
-    }
+      if (!file) return alert('Escolha um arquivo!');
 
-    function resetPlayCount() {
-      alert('Função reset ainda será integrada ao banco.');
+      const { data, error } = await supabase.storage.from('musicas').upload(file.name, file);
+
+      if (error) {
+        document.getElementById('status').textContent = 'Erro no upload: ' + error.message;
+      } else {
+        document.getElementById('status').textContent = 'Upload realizado com sucesso!';
+        loadAndPlay();
+      }
     }
   </script>
-
 </body>
 </html>
