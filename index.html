@@ -536,8 +536,18 @@
         }
 
         async function listFiles(folder) {
+            // Mapeia os nomes das pastas para os buckets do Supabase
+            const bucketMap = {
+                'music': 'músicasas',
+                'time': 'hora-certa', 
+                'ads': 'avisos',
+                'albums': 'músicas-sãojoão'
+            };
+            
+            const bucketName = bucketMap[folder];
+            
             try {
-                const response = await fetch(`${SUPABASE_URL}/storage/v1/object/list/radio-files/${folder}`, {
+                const response = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${bucketName}`, {
                     headers: {
                         'Authorization': `Bearer ${SUPABASE_KEY}`,
                         'apikey': SUPABASE_KEY
@@ -549,7 +559,7 @@
                 const files = await response.json();
                 return files.filter(file => file.name.endsWith('.mp3')).map(file => ({
                     name: file.name,
-                    url: `${SUPABASE_URL}/storage/v1/object/public/radio-files/${folder}/${file.name}`
+                    url: `${SUPABASE_URL}/storage/v1/object/public/${bucketName}/${file.name}`
                 }));
             } catch (error) {
                 console.error(`Erro ao listar arquivos de ${folder}:`, error);
@@ -685,14 +695,21 @@
                                                   folder === 'time' ? 'timeList' :
                                                   folder === 'ads' ? 'adList' : 'albumList');
             
+            // Mapeia os nomes das pastas para os buckets do Supabase
+            const bucketMap = {
+                'music': 'músicasas',
+                'time': 'hora-certa', 
+                'ads': 'avisos',
+                'albums': 'músicas-sãojoão'
+            };
+            
+            const bucketName = bucketMap[folder];
+            
             for (const file of files) {
                 if (!file.name.endsWith('.mp3')) continue;
                 
                 try {
-                    const formData = new FormData();
-                    formData.append('file', file);
-                    
-                    const response = await fetch(`${SUPABASE_URL}/storage/v1/object/radio-files/${folder}/${file.name}`, {
+                    const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucketName}/${file.name}`, {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${SUPABASE_KEY}`,
@@ -717,8 +734,18 @@
         }
 
         async function deleteFile(folder, fileName) {
+            // Mapeia os nomes das pastas para os buckets do Supabase
+            const bucketMap = {
+                'music': 'músicasas',
+                'time': 'hora-certa', 
+                'ads': 'avisos',
+                'albums': 'músicas-sãojoão'
+            };
+            
+            const bucketName = bucketMap[folder];
+            
             try {
-                const response = await fetch(`${SUPABASE_URL}/storage/v1/object/radio-files/${folder}/${fileName}`, {
+                const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucketName}/${fileName}`, {
                     method: 'DELETE',
                     headers: {
                         'Authorization': `Bearer ${SUPABASE_KEY}`,
