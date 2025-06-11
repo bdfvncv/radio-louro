@@ -13,84 +13,84 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            color: #1b5e20;
             min-height: 100vh;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            color: white;
-            transition: all 0.3s ease;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 500px;
             width: 90%;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
+            background: white;
             border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(27, 94, 32, 0.1);
             padding: 30px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .header {
             text-align: center;
-            margin-bottom: 30px;
+            border: 2px solid #e8f5e8;
         }
 
-        .header h1 {
+        .logo {
             font-size: 2.5rem;
+            font-weight: bold;
+            color: #1b5e20;
             margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            text-shadow: 2px 2px 4px rgba(27, 94, 32, 0.1);
         }
 
-        .header p {
-            opacity: 0.9;
+        .subtitle {
+            color: #2e7d32;
+            margin-bottom: 30px;
             font-size: 1.1rem;
         }
 
-        /* Player Público */
         .player-container {
-            text-align: center;
-            margin-bottom: 30px;
+            background: #f1f8e9;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid #c8e6c9;
         }
 
         .album-cover {
-            width: 300px;
-            height: 300px;
+            width: 200px;
+            height: 200px;
             border-radius: 15px;
             margin: 0 auto 20px;
-            background: rgba(255, 255, 255, 0.1);
+            background: #e8f5e8;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.2rem;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            overflow: hidden;
+            font-size: 3rem;
+            color: #1b5e20;
+            border: 3px solid #2e7d32;
+            box-shadow: 0 10px 20px rgba(27, 94, 32, 0.1);
         }
 
         .album-cover img {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            border-radius: 12px;
         }
 
-        .player-info {
-            margin-bottom: 20px;
-        }
-
-        .current-track {
-            font-size: 1.3rem;
+        .now-playing {
+            color: #1b5e20;
+            font-size: 1.2rem;
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
 
-        .track-type {
-            opacity: 0.8;
+        .track-info {
+            color: #2e7d32;
             margin-bottom: 20px;
+            font-size: 1rem;
         }
 
-        .player-controls {
+        .controls {
             display: flex;
             align-items: center;
             justify-content: center;
@@ -99,37 +99,36 @@
         }
 
         .play-btn {
-            background: #4CAF50;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #1b5e20;
             border: none;
             color: white;
-            padding: 15px 30px;
-            border-radius: 50px;
-            font-size: 1.1rem;
+            font-size: 24px;
             cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .play-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.6);
+            background: #2e7d32;
+            transform: scale(1.1);
         }
 
-        .play-btn:disabled {
-            background: #666;
-            cursor: not-allowed;
-        }
-
-        .volume-control {
+        .volume-container {
             display: flex;
             align-items: center;
             gap: 10px;
+            color: #1b5e20;
         }
 
         .volume-slider {
             width: 100px;
             height: 5px;
-            background: rgba(255, 255, 255, 0.3);
+            background: #c8e6c9;
             border-radius: 5px;
             outline: none;
             -webkit-appearance: none;
@@ -137,1055 +136,689 @@
 
         .volume-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 15px;
-            height: 15px;
-            background: #4CAF50;
+            width: 20px;
+            height: 20px;
+            background: #1b5e20;
             border-radius: 50%;
             cursor: pointer;
         }
 
-        /* Botões de Modo */
-        .mode-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 30px;
+        .status {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 10px;
+            color: #1b5e20;
+            font-weight: bold;
+            margin-bottom: 20px;
         }
 
-        .mode-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+        .admin-btn {
+            background: #2e7d32;
             color: white;
-            padding: 10px 20px;
+            border: none;
+            padding: 12px 24px;
             border-radius: 25px;
             cursor: pointer;
+            font-size: 1rem;
             transition: all 0.3s ease;
+            margin: 5px;
         }
 
-        .mode-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
+        .admin-btn:hover {
+            background: #1b5e20;
             transform: translateY(-2px);
         }
 
-        .mode-btn.active {
-            background: #4CAF50;
-            border-color: #4CAF50;
-        }
-
-        /* Painel Admin */
         .admin-panel {
             display: none;
+            max-width: 800px;
+            width: 95%;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            border: 2px solid #e8f5e8;
+        }
+
+        .admin-header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #1b5e20;
         }
 
         .admin-section {
-            background: rgba(255, 255, 255, 0.1);
+            background: #f1f8e9;
             border-radius: 15px;
             padding: 20px;
             margin-bottom: 20px;
+            border: 1px solid #c8e6c9;
         }
 
         .admin-section h3 {
+            color: #1b5e20;
             margin-bottom: 15px;
-            color: #4CAF50;
+            font-size: 1.3rem;
         }
 
-        .upload-section {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        .upload-group {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 15px;
+        .upload-area {
+            border: 2px dashed #2e7d32;
             border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 15px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
 
-        .upload-group h4 {
-            margin-bottom: 10px;
-            color: #81C784;
+        .upload-area:hover {
+            background: #f1f8e9;
+            border-color: #1b5e20;
         }
 
         .file-input {
-            width: 100%;
-            padding: 10px;
-            border: 2px dashed rgba(255, 255, 255, 0.3);
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            margin-bottom: 10px;
-        }
-
-        .upload-btn {
-            background: #4CAF50;
-            border: none;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            width: 100%;
-            transition: all 0.3s ease;
-        }
-
-        .upload-btn:hover {
-            background: #45a049;
-        }
-
-        .album-selection {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-
-        .album-card {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 15px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-        }
-
-        .album-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-        }
-
-        .album-card.active {
-            border-color: #4CAF50;
-            background: rgba(76, 175, 80, 0.2);
-        }
-
-        .album-card img {
-            width: 100%;
-            height: 120px;
-            object-fit: cover;
-            border-radius: 8px;
-            margin-bottom: 10px;
+            display: none;
         }
 
         .file-list {
-            max-height: 300px;
+            max-height: 200px;
             overflow-y: auto;
+            background: white;
+            border-radius: 10px;
+            padding: 10px;
+            margin-top: 10px;
         }
 
         .file-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            margin-bottom: 5px;
-            border-radius: 8px;
+            padding: 8px;
+            border-bottom: 1px solid #e8f5e8;
+            color: #1b5e20;
         }
 
         .delete-btn {
-            background: #f44336;
-            border: none;
+            background: #d32f2f;
             color: white;
+            border: none;
             padding: 5px 10px;
             border-radius: 5px;
             cursor: pointer;
             font-size: 0.8rem;
         }
 
-        .delete-btn:hover {
-            background: #d32f2f;
-        }
-
-        .stats {
+        .album-selector {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 15px;
+            margin-top: 15px;
         }
 
-        .stat-card {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 20px;
+        .album-option {
+            background: white;
+            border: 2px solid #c8e6c9;
             border-radius: 10px;
+            padding: 15px;
             text-align: center;
-        }
-
-        .stat-number {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #4CAF50;
-        }
-
-        .password-prompt {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .password-input {
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.9);
-            color: #333;
-            margin-right: 10px;
-            width: 200px;
-        }
-
-        .login-btn {
-            background: #4CAF50;
-            border: none;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s ease;
         }
 
-        .login-btn:hover {
-            background: #45a049;
+        .album-option:hover, .album-option.active {
+            border-color: #1b5e20;
+            background: #f1f8e9;
         }
 
         .report-section {
-            max-height: 400px;
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            max-height: 300px;
             overflow-y: auto;
         }
 
         .report-item {
             display: flex;
             justify-content: space-between;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            margin-bottom: 5px;
-            border-radius: 8px;
+            padding: 8px;
+            border-bottom: 1px solid #e8f5e8;
+            color: #1b5e20;
         }
 
-        .reset-btn {
-            background: #ff9800;
-            border: none;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            margin-bottom: 15px;
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
         }
 
-        .reset-btn:hover {
-            background: #f57c00;
+        .login-input {
+            padding: 12px;
+            border: 2px solid #c8e6c9;
+            border-radius: 10px;
+            font-size: 1rem;
+            width: 200px;
+            text-align: center;
+        }
+
+        .login-input:focus {
+            outline: none;
+            border-color: #1b5e20;
         }
 
         .hidden {
             display: none;
         }
 
-        .loading {
-            text-align: center;
-            padding: 20px;
-            opacity: 0.7;
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .playing {
+            animation: pulse 2s infinite;
         }
 
         .error {
-            background: rgba(244, 67, 54, 0.2);
-            border: 1px solid #f44336;
-            color: #ffcdd2;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
+            color: #d32f2f;
+            background: #ffebee;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
         }
 
         .success {
-            background: rgba(76, 175, 80, 0.2);
-            border: 1px solid #4CAF50;
-            color: #c8e6c9;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                width: 95%;
-                padding: 20px;
-            }
-
-            .header h1 {
-                font-size: 2rem;
-            }
-
-            .album-cover {
-                width: 250px;
-                height: 250px;
-            }
-
-            .upload-section {
-                grid-template-columns: 1fr;
-            }
-
-            .album-selection {
-                grid-template-columns: 1fr;
-            }
-
-            .stats {
-                grid-template-columns: 1fr;
-            }
-
-            .password-input {
-                width: 150px;
-            }
+            color: #1b5e20;
+            background: #e8f5e8;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🎵 Rádio Supermercado do Louro</h1>
-            <p>Sua trilha sonora perfeita para compras</p>
+    <!-- Player Público -->
+    <div id="playerContainer" class="container">
+        <div class="logo">🎵 Rádio Supermercado do Louro</div>
+        <div class="subtitle">Sua trilha sonora de compras</div>
+        
+        <div class="player-container">
+            <div class="album-cover" id="albumCover">🎵</div>
+            <div class="now-playing" id="nowPlaying">Carregando...</div>
+            <div class="track-info" id="trackInfo">Preparando sua música...</div>
+            
+            <div class="controls">
+                <button class="play-btn" id="playBtn">▶️</button>
+                <div class="volume-container">
+                    🔊
+                    <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="70">
+                </div>
+            </div>
+            
+            <div class="status" id="status">Sistema inicializando...</div>
+        </div>
+        
+        <button class="admin-btn" onclick="showAdminLogin()">Modo Administrador</button>
+    </div>
+
+    <!-- Login Administrador -->
+    <div id="loginContainer" class="container hidden">
+        <div class="logo">🔐 Acesso Administrativo</div>
+        <div class="login-form">
+            <input type="password" class="login-input" id="adminPassword" placeholder="Digite a senha">
+            <button class="admin-btn" onclick="adminLogin()">Entrar</button>
+            <button class="admin-btn" onclick="showPlayer()">Voltar</button>
+        </div>
+        <div id="loginError"></div>
+    </div>
+
+    <!-- Painel Administrativo -->
+    <div id="adminPanel" class="admin-panel">
+        <div class="admin-header">
+            <h2>🛠️ Painel de Controle - Rádio Supermercado do Louro</h2>
+            <button class="admin-btn" onclick="showPlayer()">Voltar ao Player</button>
         </div>
 
-        <!-- Botões de Modo -->
-        <div class="mode-buttons">
-            <button class="mode-btn active" id="publicMode">🎧 Modo Público</button>
-            <button class="mode-btn" id="adminMode">🛠️ Modo Admin</button>
+        <!-- Upload de Músicas -->
+        <div class="admin-section">
+            <h3>🎵 Upload de Músicas Principais</h3>
+            <div class="upload-area" onclick="document.getElementById('musicFiles').click()">
+                <p>📁 Clique para selecionar músicas (.mp3)</p>
+                <input type="file" id="musicFiles" class="file-input" multiple accept=".mp3">
+            </div>
+            <div class="file-list" id="musicList"></div>
         </div>
 
-        <!-- Player Público -->
-        <div id="publicPlayer" class="player-container">
-            <div class="album-cover" id="albumCover">
-                <img src="" alt="Capa do Álbum" id="coverImage" style="display: none;">
-                <span id="coverText">🎵 Supermercado do Louro</span>
+        <!-- Upload Hora Certa -->
+        <div class="admin-section">
+            <h3>🕐 Upload Hora Certa</h3>
+            <div class="upload-area" onclick="document.getElementById('timeFiles').click()">
+                <p>📁 Clique para selecionar áudios de hora certa (.mp3)</p>
+                <input type="file" id="timeFiles" class="file-input" multiple accept=".mp3">
             </div>
-
-            <div class="player-info">
-                <div class="current-track" id="currentTrack">Aguardando música...</div>
-                <div class="track-type" id="trackType">Pronto para tocar</div>
-            </div>
-
-            <div class="player-controls">
-                <button class="play-btn" id="playBtn">▶️ Iniciar Rádio</button>
-                <div class="volume-control">
-                    <span>🔊</span>
-                    <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="50">
-                    <span id="volumeValue">50%</span>
-                </div>
-            </div>
-
-            <audio id="audioPlayer" preload="auto"></audio>
+            <div class="file-list" id="timeList"></div>
         </div>
 
-        <!-- Painel Admin -->
-        <div id="adminPanel" class="admin-panel">
-            <div class="password-prompt" id="passwordPrompt">
-                <h3>🔒 Acesso Restrito</h3>
-                <input type="password" class="password-input" id="passwordInput" placeholder="Digite a senha">
-                <button class="login-btn" id="loginBtn">Acessar</button>
+        <!-- Upload Avisos -->
+        <div class="admin-section">
+            <h3>📢 Upload de Avisos</h3>
+            <div class="upload-area" onclick="document.getElementById('adFiles').click()">
+                <p>📁 Clique para selecionar avisos (.mp3)</p>
+                <input type="file" id="adFiles" class="file-input" multiple accept=".mp3">
             </div>
+            <div class="file-list" id="adList"></div>
+        </div>
 
-            <div id="adminContent" class="hidden">
-                <!-- Upload de Arquivos -->
-                <div class="admin-section">
-                    <h3>📁 Upload de Arquivos</h3>
-                    <div class="upload-section">
-                        <div class="upload-group">
-                            <h4>🎵 Músicas Principais</h4>
-                            <input type="file" class="file-input" id="musicUpload" accept="audio/*" multiple>
-                            <button class="upload-btn" onclick="uploadFiles('musicas')">Upload Músicas</button>
-                        </div>
-                        
-                        <div class="upload-group">
-                            <h4>🕐 Hora Certa</h4>
-                            <input type="file" class="file-input" id="timeUpload" accept="audio/*" multiple>
-                            <button class="upload-btn" onclick="uploadFiles('hora-certa')">Upload Hora Certa</button>
-                        </div>
-                        
-                        <div class="upload-group">
-                            <h4>📢 Avisos</h4>
-                            <input type="file" class="file-input" id="adUpload" accept="audio/*" multiple>
-                            <button class="upload-btn" onclick="uploadFiles('avisos')">Upload Avisos</button>
-                        </div>
-                        
-                        <div class="upload-group">
-                            <h4>🎊 Álbuns Temáticos</h4>
-                            <input type="file" class="file-input" id="albumUpload" accept="audio/*" multiple>
-                            <button class="upload-btn" onclick="uploadFiles('albuns')">Upload Álbuns</button>
-                        </div>
-                    </div>
+        <!-- Álbuns Temáticos -->
+        <div class="admin-section">
+            <h3>🎨 Álbuns Temáticos</h3>
+            <div class="album-selector">
+                <div class="album-option" data-album="natal">
+                    🎄 Natal
                 </div>
-
-                <!-- Seleção de Álbum -->
-                <div class="admin-section">
-                    <h3>🎊 Álbuns Temáticos</h3>
-                    <div class="album-selection" id="albumSelection">
-                        <div class="album-card" data-album="natal">
-                            <img src="https://via.placeholder.com/200x120/ff0000/ffffff?text=NATAL" alt="Natal">
-                            <h4>🎄 Natal</h4>
-                        </div>
-                        <div class="album-card" data-album="pascoa">
-                            <img src="https://via.placeholder.com/200x120/ffeb3b/333333?text=PÁSCOA" alt="Páscoa">
-                            <h4>🐰 Páscoa</h4>
-                        </div>
-                        <div class="album-card" data-album="sao-joao">
-                            <img src="https://via.placeholder.com/200x120/ff9800/ffffff?text=SÃO+JOÃO" alt="São João">
-                            <h4>🌽 São João</h4>
-                        </div>
-                        <div class="album-card" data-album="none">
-                            <img src="https://via.placeholder.com/200x120/9e9e9e/ffffff?text=DESATIVAR" alt="Desativar">
-                            <h4>❌ Desativar</h4>
-                        </div>
-                    </div>
+                <div class="album-option" data-album="pascoa">
+                    🐰 Páscoa
                 </div>
-
-                <!-- Estatísticas -->
-                <div class="admin-section">
-                    <h3>📊 Estatísticas</h3>
-                    <div class="stats">
-                        <div class="stat-card">
-                            <div class="stat-number" id="totalSongs">0</div>
-                            <div>Total de Músicas</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number" id="totalPlayed">0</div>
-                            <div>Músicas Tocadas</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number" id="currentAlbum">Nenhum</div>
-                            <div>Álbum Ativo</div>
-                        </div>
-                    </div>
+                <div class="album-option" data-album="saojoao">
+                    🌽 São João
                 </div>
-
-                <!-- Relatório de Reprodução -->
-                <div class="admin-section">
-                    <h3>📋 Relatório de Reprodução</h3>
-                    <button class="reset-btn" onclick="resetPlayReport()">🔄 Resetar Relatório</button>
-                    <div class="report-section" id="playReport">
-                        <div class="loading">Carregando relatório...</div>
-                    </div>
+                <div class="album-option" data-album="carnaval">
+                    🎭 Carnaval
                 </div>
-
-                <!-- Lista de Arquivos -->
-                <div class="admin-section">
-                    <h3>📂 Arquivos Enviados</h3>
-                    <div class="file-list" id="fileList">
-                        <div class="loading">Carregando arquivos...</div>
-                    </div>
+                <div class="album-option" data-album="none">
+                    ❌ Desativar
                 </div>
             </div>
+            <div class="upload-area" onclick="document.getElementById('albumFiles').click()" style="margin-top: 15px;">
+                <p>📁 Upload para álbum ativo (.mp3)</p>
+                <input type="file" id="albumFiles" class="file-input" multiple accept=".mp3">
+            </div>
+            <div class="file-list" id="albumList"></div>
+        </div>
+
+        <!-- Relatório -->
+        <div class="admin-section">
+            <h3>📊 Relatório de Reprodução</h3>
+            <button class="admin-btn" onclick="resetPlayCount()">🔄 Resetar Contagem</button>
+            <div class="report-section" id="playReport"></div>
         </div>
     </div>
+
+    <audio id="audioPlayer" preload="auto"></audio>
 
     <script type="module">
         // Configuração Supabase
         const SUPABASE_URL = 'https://yrlwyvvlgrjbwnoiwdxv.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybHd5dnZsZ3JqYndub2l3ZHh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4MDk0OTMsImV4cCI6MjA2NDM4NTQ5M30.qrNDx8aqL2WtWPalhmjzeUY6bCNVnnK48L2Oi2DpkVI';
-        
-        // Configurações globais
-        const CONFIG = {
-            adminPassword: 'admin123',
-            buckets: {
-                musicas: 'musicas',
-                'hora-certa': 'hora-certa',
-                avisos: 'avisos',
-                albuns: 'albuns'
-            },
-            albums: {
-                natal: {
-                    name: 'Natal',
-                    image: 'https://via.placeholder.com/300x300/ff0000/ffffff?text=NATAL',
-                    folder: 'natal'
-                },
-                pascoa: {
-                    name: 'Páscoa',
-                    image: 'https://via.placeholder.com/300x300/ffeb3b/333333?text=PÁSCOA',
-                    folder: 'pascoa'
-                },
-                'sao-joao': {
-                    name: 'São João',
-                    image: 'https://via.placeholder.com/300x300/ff9800/ffffff?text=SÃO+JOÃO',
-                    folder: 'sao-joao'
-                }
-            }
-        };
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybHd5dnZsZ3JqYndub2l3ZHh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4MDk0OTMsImV4cCI6MjA2NDM4NTQ5M30.qrNDx8aqL2WtWPalhmjzeUY6bCNVnnK48L2Oi2DpkVI';
 
-        // Estado da aplicação
-        let currentState = {
-            isPlaying: false,
-            currentTrack: null,
-            trackQueue: [],
-            playCount: 0,
-            musicCount: 0,
-            timeCount: 0,
-            adCount: 0,
-            isLoggedIn: false,
-            activeAlbum: localStorage.getItem('activeAlbum') || null,
-            volume: localStorage.getItem('volume') || 50,
-            playReport: JSON.parse(localStorage.getItem('playReport') || '[]'),
-            allFiles: {
-                musicas: [],
-                'hora-certa': [],
-                avisos: [],
-                albuns: []
-            }
-        };
+        // Estado global da aplicação
+        let currentAudio = null;
+        let isPlaying = false;
+        let currentTrackIndex = 0;
+        let musicCount = 0;
+        let playQueue = [];
+        let musicFiles = [];
+        let timeFiles = [];
+        let adFiles = [];
+        let albumFiles = [];
+        let playReport = JSON.parse(localStorage.getItem('playReport') || '{}');
+        let activeAlbum = localStorage.getItem('activeAlbum') || 'none';
 
         // Elementos DOM
-        const elements = {
-            // Modo
-            publicMode: document.getElementById('publicMode'),
-            adminMode: document.getElementById('adminMode'),
-            publicPlayer: document.getElementById('publicPlayer'),
-            adminPanel: document.getElementById('adminPanel'),
-            
-            // Player
-            audioPlayer: document.getElementById('audioPlayer'),
-            playBtn: document.getElementById('playBtn'),
-            currentTrack: document.getElementById('currentTrack'),
-            trackType: document.getElementById('trackType'),
-            volumeSlider: document.getElementById('volumeSlider'),
-            volumeValue: document.getElementById('volumeValue'),
-            albumCover: document.getElementById('albumCover'),
-            coverImage: document.getElementById('coverImage'),
-            coverText: document.getElementById('coverText'),
-            
-            // Admin
-            passwordPrompt: document.getElementById('passwordPrompt'),
-            passwordInput: document.getElementById('passwordInput'),
-            loginBtn: document.getElementById('loginBtn'),
-            adminContent: document.getElementById('adminContent'),
-            albumSelection: document.getElementById('albumSelection'),
-            
-            // Uploads
-            musicUpload: document.getElementById('musicUpload'),
-            timeUpload: document.getElementById('timeUpload'),
-            adUpload: document.getElementById('adUpload'),
-            albumUpload: document.getElementById('albumUpload'),
-            
-            // Stats
-            totalSongs: document.getElementById('totalSongs'),
-            totalPlayed: document.getElementById('totalPlayed'),
-            currentAlbum: document.getElementById('currentAlbum'),
-            playReport: document.getElementById('playReport'),
-            fileList: document.getElementById('fileList')
+        const audioPlayer = document.getElementById('audioPlayer');
+        const playBtn = document.getElementById('playBtn');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const nowPlaying = document.getElementById('nowPlaying');
+        const trackInfo = document.getElementById('trackInfo');
+        const status = document.getElementById('status');
+        const albumCover = document.getElementById('albumCover');
+
+        // Configurações de álbuns
+        const albumConfig = {
+            natal: { emoji: '🎄', name: 'Especial de Natal', bg: '#d32f2f' },
+            pascoa: { emoji: '🐰', name: 'Especial de Páscoa', bg: '#7b1fa2' },
+            saojoao: { emoji: '🌽', name: 'Especial São João', bg: '#f57c00' },
+            carnaval: { emoji: '🎭', name: 'Especial Carnaval', bg: '#e91e63' },
+            none: { emoji: '🎵', name: 'Rádio Supermercado do Louro', bg: '#1b5e20' }
         };
 
         // Inicialização
-        document.addEventListener('DOMContentLoaded', init);
-
-        function init() {
+        window.addEventListener('DOMContentLoaded', async () => {
             setupEventListeners();
-            loadVolume();
-            updateAlbumCover();
-            loadFiles();
-            updateStats();
-        }
+            await loadAllFiles();
+            updateAlbumDisplay();
+            updatePlayReport();
+            startRadio();
+        });
 
         function setupEventListeners() {
-            // Modo
-            elements.publicMode.addEventListener('click', () => switchMode('public'));
-            elements.adminMode.addEventListener('click', () => switchMode('admin'));
+            playBtn.addEventListener('click', togglePlay);
+            volumeSlider.addEventListener('input', updateVolume);
+            audioPlayer.addEventListener('ended', playNext);
             
-            // Player
-            elements.playBtn.addEventListener('click', togglePlay);
-            elements.volumeSlider.addEventListener('input', updateVolume);
-            elements.audioPlayer.addEventListener('ended', playNext);
-            elements.audioPlayer.addEventListener('error', handleAudioError);
+            // Upload listeners
+            document.getElementById('musicFiles').addEventListener('change', (e) => uploadFiles(e, 'music'));
+            document.getElementById('timeFiles').addEventListener('change', (e) => uploadFiles(e, 'time'));
+            document.getElementById('adFiles').addEventListener('change', (e) => uploadFiles(e, 'ads'));
+            document.getElementById('albumFiles').addEventListener('change', (e) => uploadFiles(e, 'albums'));
             
-            // Admin
-            elements.loginBtn.addEventListener('click', login);
-            elements.passwordInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') login();
+            // Album selector
+            document.querySelectorAll('.album-option').forEach(option => {
+                option.addEventListener('click', () => selectAlbum(option.dataset.album));
             });
-            
-            // Álbuns
-            elements.albumSelection.addEventListener('click', selectAlbum);
         }
 
-        function switchMode(mode) {
-            if (mode === 'public') {
-                elements.publicMode.classList.add('active');
-                elements.adminMode.classList.remove('active');
-                elements.publicPlayer.style.display = 'block';
-                elements.adminPanel.style.display = 'none';
-            } else {
-                elements.adminMode.classList.add('active');
-                elements.publicMode.classList.remove('active');
-                elements.publicPlayer.style.display = 'none';
-                elements.adminPanel.style.display = 'block';
-                
-                if (!currentState.isLoggedIn) {
-                    elements.passwordPrompt.style.display = 'block';
-                    elements.adminContent.classList.add('hidden');
-                } else {
-                    elements.passwordPrompt.style.display = 'none';
-                    elements.adminContent.classList.remove('hidden');
-                    updateAdminPanel();
-                }
-            }
-        }
-
-        function login() {
-            const password = elements.passwordInput.value;
-            if (password === CONFIG.adminPassword) {
-                currentState.isLoggedIn = true;
-                elements.passwordPrompt.style.display = 'none';
-                elements.adminContent.classList.remove('hidden');
-                updateAdminPanel();
-                showMessage('Login realizado com sucesso!', 'success');
-            } else {
-                showMessage('Senha incorreta!', 'error');
-                elements.passwordInput.value = '';
-            }
-        }
-
-        function loadVolume() {
-            elements.volumeSlider.value = currentState.volume;
-            elements.volumeValue.textContent = currentState.volume + '%';
-            elements.audioPlayer.volume = currentState.volume / 100;
-        }
-
-        function updateVolume() {
-            const volume = elements.volumeSlider.value;
-            currentState.volume = volume;
-            elements.volumeValue.textContent = volume + '%';
-            elements.audioPlayer.volume = volume / 100;
-            localStorage.setItem('volume', volume);
-        }
-
-        function updateAlbumCover() {
-            const activeAlbum = currentState.activeAlbum;
-            if (activeAlbum && CONFIG.albums[activeAlbum]) {
-                elements.coverImage.src = CONFIG.albums[activeAlbum].image;
-                elements.coverImage.style.display = 'block';
-                elements.coverText.style.display = 'none';
-            } else {
-                elements.coverImage.style.display = 'none';
-                elements.coverText.style.display = 'block';
-                elements.coverText.textContent = '🎵 Supermercado do Louro';
-            }
-        }
-
-        function selectAlbum(e) {
-            const albumCard = e.target.closest('.album-card');
-            if (!albumCard) return;
-            
-            const album = albumCard.dataset.album;
-            
-            // Remove active de todos
-            document.querySelectorAll('.album-card').forEach(card => {
-                card.classList.remove('active');
-            });
-            
-            if (album === 'none') {
-                currentState.activeAlbum = null;
-                localStorage.removeItem('activeAlbum');
-                showMessage('Álbum desativado', 'success');
-            } else {
-                currentState.activeAlbum = album;
-                localStorage.setItem('activeAlbum', album);
-                albumCard.classList.add('active');
-                showMessage(`Álbum ${CONFIG.albums[album].name} ativo`, 'success');
-            }
-            
-            updateAlbumCover();
-            updateStats();
-        }
-
-        async function togglePlay() {
-            if (currentState.isPlaying) {
-                pauseRadio();
-            } else {
-                await startRadio();
-            }
-        }
-
-        async function startRadio() {
+        async function loadAllFiles() {
             try {
-                elements.playBtn.textContent = '⏸️ Pausar';
-                elements.playBtn.disabled = true;
+                status.textContent = 'Carregando biblioteca musical...';
                 
-                await loadFiles();
+                const [music, time, ads, albums] = await Promise.all([
+                    listFiles('music'),
+                    listFiles('time'),
+                    listFiles('ads'),
+                    listFiles('albums')
+                ]);
                 
-                if (currentState.allFiles.musicas.length === 0) {
-                    showMessage('Nenhuma música encontrada! Faça upload de arquivos primeiro.', 'error');
-                    elements.playBtn.textContent = '▶️ Iniciar Rádio';
-                    elements.playBtn.disabled = false;
-                    return;
-                }
+                musicFiles = music;
+                timeFiles = time;
+                adFiles = ads;
+                albumFiles = albums;
                 
-                currentState.isPlaying = true;
-                elements.playBtn.disabled = false;
+                updateFileLists();
+                buildPlayQueue();
                 
-                await playNext();
-                
-            } catch (error) {
-                console.error('Erro ao iniciar rádio:', error);
-                showMessage('Erro ao iniciar rádio: ' + error.message, 'error');
-                elements.playBtn.textContent = '▶️ Iniciar Rádio';
-                elements.playBtn.disabled = false;
-            }
-        }
-
-        function pauseRadio() {
-            currentState.isPlaying = false;
-            elements.audioPlayer.pause();
-            elements.playBtn.textContent = '▶️ Continuar';
-        }
-
-        async function playNext() {
-            if (!currentState.isPlaying) return;
-            
-            try {
-                let nextTrack = null;
-                let trackType = '';
-                
-                // Lógica de reprodução:
-                // - Hora certa a cada 3 músicas
-                // - Avisos a cada 6 músicas
-                // - Álbum temático (se ativo) intercalado com músicas principais
-                
-                if (currentState.playCount > 0 && currentState.playCount % 3 === 0) {
-                    // Tocar hora certa
-                    if (currentState.allFiles['hora-certa'].length > 0) {
-                        nextTrack = getRandomTrack('hora-certa');
-                        trackType = '🕐 Hora Certa';
-                    }
-                } else if (currentState.playCount > 0 && currentState.playCount % 6 === 0) {
-                    // Tocar aviso
-                    if (currentState.allFiles.avisos.length > 0) {
-                        nextTrack = getRandomTrack('avisos');
-                        trackType = '📢 Aviso';
-                    }
-                } else {
-                    // Tocar música (principal ou álbum temático)
-                    if (currentState.activeAlbum && currentState.allFiles.albuns.length > 0 && Math.random() < 0.3) {
-                        // 30% chance de tocar música do álbum ativo
-                        nextTrack = getRandomAlbumTrack();
-                        trackType = `🎊 ${CONFIG.albums[currentState.activeAlbum]?.name || 'Álbum'}`;
-                    } else {
-                        // Tocar música principal
-                        nextTrack = getRandomTrack('musicas');
-                        trackType = '🎵 Música';
-                    }
-                }
-                
-                if (!nextTrack) {
-                    // Fallback para música principal
-                    nextTrack = getRandomTrack('musicas');
-                    trackType = '🎵 Música';
-                }
-                
-                if (!nextTrack) {
-                    showMessage('Nenhuma música disponível!', 'error');
-                    return;
-                }
-                
-                await playTrack(nextTrack, trackType);
-                
-            } catch (error) {
-                console.error('Erro ao tocar próxima música:', error);
-                showMessage('Erro na reprodução: ' + error.message, 'error');
-            }
-        }
-
-        function getRandomTrack(category) {
-            const files = currentState.allFiles[category];
-            if (files.length === 0) return null;
-            
-            const randomIndex = Math.floor(Math.random() * files.length);
-            return files[randomIndex];
-        }
-
-        function getRandomAlbumTrack() {
-            const albumFiles = currentState.allFiles.albuns.filter(file => 
-                file.name.toLowerCase().includes(currentState.activeAlbum)
-            );
-            
-            if (albumFiles.length === 0) return null;
-            
-            const randomIndex = Math.floor(Math.random() * albumFiles.length);
-            return albumFiles[randomIndex];
-        }
-
-        async function playTrack(track, trackType) {
-            try {
-                const audioUrl = `${SUPABASE_URL}/storage/v1/object/public/${track.bucket}/${track.name}`;
-                
-                elements.currentTrack.textContent = track.name.replace(/\.[^/.]+$/, ""); // Remove extensão
-                elements.trackType.textContent = trackType;
-                
-                elements.audioPlayer.src = audioUrl;
-                await elements.audioPlayer.play();
-                
-                // Registrar no relatório
-                addToPlayReport(track.name, trackType);
-                
-                currentState.playCount++;
-                updateStats();
-                
-            } catch (error) {
-                console.error('Erro ao reproduzir:', error);
-                throw error;
-            }
-        }
-
-        function addToPlayReport(trackName, trackType) {
-            const timestamp = new Date().toLocaleString('pt-BR');
-            currentState.playReport.unshift({
-                name: trackName,
-                type: trackType,
-                timestamp: timestamp
-            });
-            
-            // Manter apenas os últimos 100 registros
-            if (currentState.playReport.length > 100) {
-                currentState.playReport = currentState.playReport.slice(0, 100);
-            }
-            
-            localStorage.setItem('playReport', JSON.stringify(currentState.playReport));
-            updatePlayReport();
-        }
-
-        function handleAudioError(e) {
-            console.error('Erro no áudio:', e);
-            showMessage('Erro ao reproduzir arquivo de áudio', 'error');
-            
-            // Tentar próxima música após 2 segundos
-            setTimeout(() => {
-                if (currentState.isPlaying) {
-                    playNext();
-                }
-            }, 2000);
-        }
-
-        async function loadFiles() {
-            try {
-                for (const category of Object.keys(CONFIG.buckets)) {
-                    const bucketName = CONFIG.buckets[category];
-                    const files = await listFiles(bucketName);
-                    currentState.allFiles[category] = files;
-                }
-                
-                updateStats();
-                
+                status.textContent = `${musicFiles.length} músicas carregadas`;
             } catch (error) {
                 console.error('Erro ao carregar arquivos:', error);
-                showMessage('Erro ao carregar arquivos: ' + error.message, 'error');
+                status.textContent = 'Erro ao carregar biblioteca';
             }
         }
 
-        async function listFiles(bucketName) {
+        async function listFiles(folder) {
             try {
-                const response = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${bucketName}`, {
+                const response = await fetch(`${SUPABASE_URL}/storage/v1/object/list/radio-files/${folder}`, {
                     headers: {
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                        'apikey': SUPABASE_ANON_KEY
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'apikey': SUPABASE_KEY
                     }
                 });
                 
-                if (!response.ok) {
-                    throw new Error(`Erro ao listar arquivos: ${response.statusText}`);
-                }
+                if (!response.ok) return [];
                 
-                const data = await response.json();
-                return data.map(file => ({
-                    ...file,
-                    bucket: bucketName
+                const files = await response.json();
+                return files.filter(file => file.name.endsWith('.mp3')).map(file => ({
+                    name: file.name,
+                    url: `${SUPABASE_URL}/storage/v1/object/public/radio-files/${folder}/${file.name}`
                 }));
-                
             } catch (error) {
-                console.error(`Erro ao listar arquivos do bucket ${bucketName}:`, error);
+                console.error(`Erro ao listar arquivos de ${folder}:`, error);
                 return [];
             }
         }
 
-        async function uploadFiles(category) {
-            const inputId = {
-                'musicas': 'musicUpload',
-                'hora-certa': 'timeUpload',
-                'avisos': 'adUpload',
-                'albuns': 'albumUpload'
-            }[category];
+        function buildPlayQueue() {
+            playQueue = [];
             
-            const fileInput = document.getElementById(inputId);
-            const files = fileInput.files;
-            
-            if (files.length === 0) {
-                showMessage('Selecione pelo menos um arquivo!', 'error');
+            if (musicFiles.length === 0) {
+                status.textContent = 'Nenhuma música encontrada';
                 return;
             }
             
-            const bucketName = CONFIG.buckets[category];
-            let uploadedCount = 0;
+            let musicIndex = 0;
+            let timeIndex = 0;
+            let adIndex = 0;
+            let albumIndex = 0;
             
-            try {
-                for (const file of files) {
-                    await uploadFile(bucketName, file);
-                    uploadedCount++;
+            for (let i = 0; i < 100; i++) { // Gera uma queue de 100 itens
+                if (i % 6 === 0 && adFiles.length > 0) {
+                    // A cada 6 músicas, toca um aviso
+                    playQueue.push({
+                        type: 'ad',
+                        file: adFiles[adIndex % adFiles.length],
+                        title: 'Aviso Importante'
+                    });
+                    adIndex++;
+                } else if (i % 3 === 0 && timeFiles.length > 0 && i > 0) {
+                    // A cada 3 músicas, toca hora certa
+                    playQueue.push({
+                        type: 'time',
+                        file: timeFiles[timeIndex % timeFiles.length],
+                        title: 'Hora Certa'
+                    });
+                    timeIndex++;
+                } else {
+                    // Música principal ou do álbum ativo
+                    if (activeAlbum !== 'none' && albumFiles.length > 0 && Math.random() < 0.3) {
+                        playQueue.push({
+                            type: 'album',
+                            file: albumFiles[albumIndex % albumFiles.length],
+                            title: albumConfig[activeAlbum].name
+                        });
+                        albumIndex++;
+                    } else {
+                        playQueue.push({
+                            type: 'music',
+                            file: musicFiles[musicIndex % musicFiles.length],
+                            title: 'Música'
+                        });
+                        musicIndex++;
+                    }
                 }
-                
-                showMessage(`${uploadedCount} arquivo(s) enviado(s) com sucesso!`, 'success');
-                fileInput.value = ''; // Limpar input
-                
-                // Recarregar arquivos
-                await loadFiles();
-                updateFileList();
-                
-            } catch (error) {
-                console.error('Erro no upload:', error);
-                showMessage('Erro no upload: ' + error.message, 'error');
             }
         }
 
-        async function uploadFile(bucketName, file) {
-            const fileName = `${Date.now()}_${file.name}`;
+        function startRadio() {
+            if (playQueue.length > 0) {
+                playTrack(playQueue[currentTrackIndex]);
+            }
+        }
+
+        function playTrack(track) {
+            if (!track || !track.file) return;
             
-            const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucketName}/${fileName}`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                    'apikey': SUPABASE_ANON_KEY,
-                    'Content-Type': file.type
-                },
-                body: file
+            audioPlayer.src = track.file.url;
+            nowPlaying.textContent = track.title;
+            trackInfo.textContent = track.file.name.replace('.mp3', '');
+            
+            // Atualiza relatório
+            const fileName = track.file.name;
+            playReport[fileName] = (playReport[fileName] || 0) + 1;
+            localStorage.setItem('playReport', JSON.stringify(playReport));
+            updatePlayReport();
+            
+            audioPlayer.play().then(() => {
+                isPlaying = true;
+                playBtn.textContent = '⏸️';
+                albumCover.classList.add('playing');
+                status.textContent = 'Tocando agora...';
+            }).catch(error => {
+                console.error('Erro ao reproduzir:', error);
+                status.textContent = 'Erro na reprodução';
+                playNext();
             });
-            
-            if (!response.ok) {
-                throw new Error(`Erro ao fazer upload: ${response.statusText}`);
-            }
-            
-            return response.json();
         }
 
-        async function deleteFile(bucketName, fileName) {
+        function playNext() {
+            currentTrackIndex = (currentTrackIndex + 1) % playQueue.length;
+            if (currentTrackIndex === 0) {
+                buildPlayQueue(); // Reconstrói a queue quando termina
+            }
+            playTrack(playQueue[currentTrackIndex]);
+        }
+
+        function togglePlay() {
+            if (isPlaying) {
+                audioPlayer.pause();
+                playBtn.textContent = '▶️';
+                albumCover.classList.remove('playing');
+                isPlaying = false;
+                status.textContent = 'Pausado';
+            } else {
+                audioPlayer.play().then(() => {
+                    playBtn.textContent = '⏸️';
+                    albumCover.classList.add('playing');
+                    isPlaying = true;
+                    status.textContent = 'Tocando agora...';
+                });
+            }
+        }
+
+        function updateVolume() {
+            audioPlayer.volume = volumeSlider.value / 100;
+        }
+
+        function updateAlbumDisplay() {
+            const config = albumConfig[activeAlbum];
+            albumCover.innerHTML = config.emoji;
+            albumCover.style.borderColor = config.bg;
+            
+            // Atualiza seletor no admin
+            document.querySelectorAll('.album-option').forEach(option => {
+                option.classList.toggle('active', option.dataset.album === activeAlbum);
+            });
+        }
+
+        async function uploadFiles(event, folder) {
+            const files = Array.from(event.target.files);
+            const fileList = document.getElementById(folder === 'music' ? 'musicList' : 
+                                                  folder === 'time' ? 'timeList' :
+                                                  folder === 'ads' ? 'adList' : 'albumList');
+            
+            for (const file of files) {
+                if (!file.name.endsWith('.mp3')) continue;
+                
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    const response = await fetch(`${SUPABASE_URL}/storage/v1/object/radio-files/${folder}/${file.name}`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${SUPABASE_KEY}`,
+                            'apikey': SUPABASE_KEY
+                        },
+                        body: file
+                    });
+                    
+                    if (response.ok) {
+                        showMessage(`${file.name} enviado com sucesso!`, 'success');
+                    } else {
+                        showMessage(`Erro ao enviar ${file.name}`, 'error');
+                    }
+                } catch (error) {
+                    console.error('Erro no upload:', error);
+                    showMessage(`Erro ao enviar ${file.name}`, 'error');
+                }
+            }
+            
+            // Recarrega a lista de arquivos
+            await loadAllFiles();
+        }
+
+        async function deleteFile(folder, fileName) {
             try {
-                const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucketName}/${fileName}`, {
+                const response = await fetch(`${SUPABASE_URL}/storage/v1/object/radio-files/${folder}/${fileName}`, {
                     method: 'DELETE',
                     headers: {
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                        'apikey': SUPABASE_ANON_KEY
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'apikey': SUPABASE_KEY
                     }
                 });
                 
-                if (!response.ok) {
-                    throw new Error(`Erro ao deletar arquivo: ${response.statusText}`);
+                if (response.ok) {
+                    showMessage(`${fileName} deletado com sucesso!`, 'success');
+                    await loadAllFiles();
+                } else {
+                    showMessage(`Erro ao deletar ${fileName}`, 'error');
                 }
-                
-                showMessage('Arquivo deletado com sucesso!', 'success');
-                await loadFiles();
-                updateFileList();
-                
             } catch (error) {
-                console.error('Erro ao deletar arquivo:', error);
-                showMessage('Erro ao deletar arquivo: ' + error.message, 'error');
+                console.error('Erro ao deletar:', error);
+                showMessage(`Erro ao deletar ${fileName}`, 'error');
             }
         }
 
-        function updateStats() {
-            const totalSongs = Object.values(currentState.allFiles).reduce((total, files) => total + files.length, 0);
-            elements.totalSongs.textContent = totalSongs;
-            elements.totalPlayed.textContent = currentState.playReport.length;
-            elements.currentAlbum.textContent = currentState.activeAlbum ? 
-                CONFIG.albums[currentState.activeAlbum]?.name || 'Desconhecido' : 'Nenhum';
+        function updateFileLists() {
+            updateFileList('musicList', musicFiles, 'music');
+            updateFileList('timeList', timeFiles, 'time');
+            updateFileList('adList', adFiles, 'ads');
+            updateFileList('albumList', albumFiles, 'albums');
         }
 
-        function updateAdminPanel() {
-            updateFileList();
-            updatePlayReport();
-            updateAlbumSelection();
+        function updateFileList(listId, files, folder) {
+            const list = document.getElementById(listId);
+            list.innerHTML = files.map(file => `
+                <div class="file-item">
+                    <span>${file.name}</span>
+                    <button class="delete-btn" onclick="deleteFile('${folder}', '${file.name}')">Deletar</button>
+                </div>
+            `).join('');
         }
 
-        function updateFileList() {
-            let html = '';
-            
-            for (const [category, files] of Object.entries(currentState.allFiles)) {
-                if (files.length > 0) {
-                    html += `<h4>${getCategoryName(category)} (${files.length})</h4>`;
-                    
-                    for (const file of files) {
-                        html += `
-                            <div class="file-item">
-                                <span>${file.name}</span>
-                                <button class="delete-btn" onclick="deleteFile('${file.bucket}', '${file.name}')">🗑️ Deletar</button>
-                            </div>
-                        `;
-                    }
-                }
-            }
-            
-            if (html === '') {
-                html = '<div class="loading">Nenhum arquivo encontrado</div>';
-            }
-            
-            elements.fileList.innerHTML = html;
+        function selectAlbum(album) {
+            activeAlbum = album;
+            localStorage.setItem('activeAlbum', album);
+            updateAlbumDisplay();
+            buildPlayQueue();
+            showMessage(`Álbum ${albumConfig[album].name} ativado!`, 'success');
         }
 
         function updatePlayReport() {
-            let html = '';
+            const reportDiv = document.getElementById('playReport');
+            const entries = Object.entries(playReport).sort((a, b) => b[1] - a[1]);
             
-            for (const item of currentState.playReport) {
-                html += `
-                    <div class="report-item">
-                        <div>
-                            <strong>${item.name}</strong><br>
-                            <small>${item.type}</small>
-                        </div>
-                        <div>${item.timestamp}</div>
-                    </div>
-                `;
-            }
-            
-            if (html === '') {
-                html = '<div class="loading">Nenhuma música tocada ainda</div>';
-            }
-            
-            elements.playReport.innerHTML = html;
+            reportDiv.innerHTML = entries.map(([file, count]) => `
+                <div class="report-item">
+                    <span>${file}</span>
+                    <span>${count}x</span>
+                </div>
+            `).join('') || '<p>Nenhuma música tocada ainda</p>';
         }
 
-        function updateAlbumSelection() {
-            document.querySelectorAll('.album-card').forEach(card => {
-                card.classList.remove('active');
-                if (card.dataset.album === currentState.activeAlbum) {
-                    card.classList.add('active');
-                }
-            });
+        function resetPlayCount() {
+            playReport = {};
+            localStorage.removeItem('playReport');
+            updatePlayReport();
+            showMessage('Relatório resetado!', 'success');
         }
 
-        function resetPlayReport() {
-            if (confirm('Tem certeza que deseja resetar o relatório de reprodução?')) {
-                currentState.playReport = [];
-                localStorage.removeItem('playReport');
+        function showMessage(text, type) {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = text;
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 3000);
+        }
+
+        // Funções globais para os botões
+        window.showAdminLogin = () => {
+            document.getElementById('playerContainer').style.display = 'none';
+            document.getElementById('loginContainer').style.display = 'block';
+        };
+
+        window.showPlayer = () => {
+            document.getElementById('playerContainer').style.display = 'block';
+            document.getElementById('loginContainer').style.display = 'none';
+            document.getElementById('adminPanel').style.display = 'none';
+        };
+
+        window.adminLogin = () => {
+            const password = document.getElementById('adminPassword').value;
+            if (password === 'admin123') {
+                document.getElementById('loginContainer').style.display = 'none';
+                document.getElementById('adminPanel').style.display = 'block';
+                updateFileLists();
                 updatePlayReport();
-                updateStats();
-                showMessage('Relatório resetado com sucesso!', 'success');
+            } else {
+                document.getElementById('loginError').innerHTML = '<div class="error">Senha incorreta!</div>';
             }
-        }
+        };
 
-        function getCategoryName(category) {
-            const names = {
-                'musicas': '🎵 Músicas Principais',
-                'hora-certa': '🕐 Hora Certa',
-                'avisos': '📢 Avisos',
-                'albuns': '🎊 Álbuns Temáticos'
-            };
-            return names[category] || category;
-        }
-
-        function showMessage(message, type) {
-            // Remove mensagens existentes
-            document.querySelectorAll('.error, .success').forEach(el => el.remove());
-            
-            const messageEl = document.createElement('div');
-            messageEl.className = type;
-            messageEl.textContent = message;
-            
-            document.querySelector('.container').insertBefore(messageEl, document.querySelector('.mode-buttons'));
-            
-            // Remove após 5 segundos
-            setTimeout(() => {
-                messageEl.remove();
-            }, 5000);
-        }
-
-        // Expor funções globais para os eventos onclick
-        window.uploadFiles = uploadFiles;
         window.deleteFile = deleteFile;
-        window.resetPlayReport = resetPlayReport;
+        window.resetPlayCount = resetPlayCount;
+
+        // Configura volume inicial
+        updateVolume();
     </script>
 </body>
 </html>
