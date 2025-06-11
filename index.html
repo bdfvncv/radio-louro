@@ -4,848 +4,551 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rádio Supermercado do Louro</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.38.0/umd/supabase.min.js"></script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
+        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-            color: #1b5e20;
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
+            padding: 20px;
+            color: white;
         }
-
+        
         .container {
-            max-width: 500px;
-            width: 90%;
-            background: white;
+            max-width: 600px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
             border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(27, 94, 32, 0.1);
             padding: 30px;
             text-align: center;
-            border: 2px solid #e8f5e8;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
-
-        .logo {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: #1b5e20;
+        
+        h1 {
+            font-size: 2.5em;
             margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(27, 94, 32, 0.1);
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-
+        
         .subtitle {
-            color: #2e7d32;
+            font-size: 1.2em;
             margin-bottom: 30px;
-            font-size: 1.1rem;
+            opacity: 0.9;
         }
-
-        .player-container {
-            background: #f1f8e9;
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 20px;
-            border: 1px solid #c8e6c9;
+        
+        .debug-section {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
         }
-
-        .album-cover {
-            width: 200px;
-            height: 200px;
-            border-radius: 15px;
-            margin: 0 auto 20px;
-            background: #e8f5e8;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 3rem;
-            color: #1b5e20;
-            border: 3px solid #2e7d32;
-            box-shadow: 0 10px 20px rgba(27, 94, 32, 0.1);
-        }
-
-        .album-cover img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 12px;
-        }
-
-        .now-playing {
-            color: #1b5e20;
-            font-size: 1.2rem;
+        
+        .debug-title {
             font-weight: bold;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
+            color: #FFD700;
         }
-
-        .track-info {
-            color: #2e7d32;
+        
+        .debug-info {
+            font-family: monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .player-section {
+            margin: 30px 0;
+        }
+        
+        .current-song {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 20px;
             margin-bottom: 20px;
-            font-size: 1rem;
         }
-
+        
+        .song-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .song-artist {
+            font-size: 1.1em;
+            opacity: 0.8;
+        }
+        
         .controls {
             display: flex;
-            align-items: center;
             justify-content: center;
+            align-items: center;
             gap: 20px;
-            margin-bottom: 20px;
+            margin: 20px 0;
         }
-
-        .play-btn {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: #1b5e20;
+        
+        .btn {
+            background: linear-gradient(45deg, #FFD700, #FFA500);
             border: none;
-            color: white;
-            font-size: 24px;
+            color: #333;
+            padding: 15px 25px;
+            border-radius: 50px;
+            font-size: 1em;
+            font-weight: bold;
             cursor: pointer;
             transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            text-transform: uppercase;
         }
-
-        .play-btn:hover {
-            background: #2e7d32;
-            transform: scale(1.1);
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
         }
-
-        .volume-container {
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .volume-control {
             display: flex;
             align-items: center;
             gap: 10px;
-            color: #1b5e20;
+            margin: 20px 0;
         }
-
+        
         .volume-slider {
-            width: 100px;
-            height: 5px;
-            background: #c8e6c9;
-            border-radius: 5px;
-            outline: none;
-            -webkit-appearance: none;
+            flex: 1;
+            max-width: 200px;
         }
-
-        .volume-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 20px;
-            height: 20px;
-            background: #1b5e20;
-            border-radius: 50%;
-            cursor: pointer;
+        
+        .playlist {
+            text-align: left;
+            margin-top: 30px;
         }
-
-        .status {
-            background: #e8f5e8;
-            padding: 15px;
-            border-radius: 10px;
-            color: #1b5e20;
+        
+        .playlist-title {
+            font-size: 1.3em;
             font-weight: bold;
-            margin-bottom: 20px;
-        }
-
-        .admin-btn {
-            background: #2e7d32;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            margin: 5px;
-        }
-
-        .admin-btn:hover {
-            background: #1b5e20;
-            transform: translateY(-2px);
-        }
-
-        .admin-panel {
-            display: none;
-            max-width: 800px;
-            width: 95%;
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            border: 2px solid #e8f5e8;
-        }
-
-        .admin-header {
-            text-align: center;
-            margin-bottom: 30px;
-            color: #1b5e20;
-        }
-
-        .admin-section {
-            background: #f1f8e9;
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            border: 1px solid #c8e6c9;
-        }
-
-        .admin-section h3 {
-            color: #1b5e20;
             margin-bottom: 15px;
-            font-size: 1.3rem;
+            text-align: center;
         }
-
-        .upload-area {
-            border: 2px dashed #2e7d32;
+        
+        .song-item {
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            margin-bottom: 15px;
-            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
             cursor: pointer;
             transition: all 0.3s ease;
-        }
-
-        .upload-area:hover {
-            background: #f1f8e9;
-            border-color: #1b5e20;
-        }
-
-        .file-input {
-            display: none;
-        }
-
-        .file-list {
-            max-height: 200px;
-            overflow-y: auto;
-            background: white;
-            border-radius: 10px;
-            padding: 10px;
-            margin-top: 10px;
-        }
-
-        .file-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px;
-            border-bottom: 1px solid #e8f5e8;
-            color: #1b5e20;
         }
-
-        .delete-btn {
-            background: #d32f2f;
-            color: white;
+        
+        .song-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(5px);
+        }
+        
+        .song-item.playing {
+            background: linear-gradient(45deg, rgba(255, 215, 0, 0.3), rgba(255, 165, 0, 0.3));
+            border: 2px solid #FFD700;
+        }
+        
+        .config-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(255, 0, 0, 0.2);
+            border-radius: 10px;
+            border: 2px solid #ff6b6b;
+        }
+        
+        .config-title {
+            color: #ff6b6b;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        
+        .config-input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
             border: none;
-            padding: 5px 10px;
             border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.8rem;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
         }
-
-        .album-selector {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-        }
-
-        .album-option {
-            background: white;
-            border: 2px solid #c8e6c9;
-            border-radius: 10px;
+        
+        .status {
+            margin: 20px 0;
             padding: 15px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .album-option:hover, .album-option.active {
-            border-color: #1b5e20;
-            background: #f1f8e9;
-        }
-
-        .report-section {
-            background: white;
             border-radius: 10px;
-            padding: 15px;
-            max-height: 300px;
-            overflow-y: auto;
+            font-weight: bold;
+        }
+        
+        .status.success {
+            background: rgba(76, 175, 80, 0.3);
+            border: 2px solid #4CAF50;
+            color: #4CAF50;
+        }
+        
+        .status.error {
+            background: rgba(244, 67, 54, 0.3);
+            border: 2px solid #f44336;
+            color: #f44336;
+        }
+        
+        .status.warning {
+            background: rgba(255, 193, 7, 0.3);
+            border: 2px solid #FFC107;
+            color: #FFC107;
         }
 
-        .report-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px;
-            border-bottom: 1px solid #e8f5e8;
-            color: #1b5e20;
-        }
-
-        .login-form {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            align-items: center;
-        }
-
-        .login-input {
-            padding: 12px;
-            border: 2px solid #c8e6c9;
-            border-radius: 10px;
-            font-size: 1rem;
-            width: 200px;
-            text-align: center;
-        }
-
-        .login-input:focus {
-            outline: none;
-            border-color: #1b5e20;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-
-        .playing {
-            animation: pulse 2s infinite;
-        }
-
-        .error {
-            color: #d32f2f;
-            background: #ffebee;
-            padding: 10px;
-            border-radius: 5px;
-            margin: 10px 0;
-        }
-
-        .success {
-            color: #1b5e20;
-            background: #e8f5e8;
-            padding: 10px;
-            border-radius: 5px;
-            margin: 10px 0;
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .controls {
+                flex-direction: column;
+                gap: 15px;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Player Público -->
-    <div id="playerContainer" class="container">
-        <div class="logo">🎵 Rádio Supermercado do Louro</div>
-        <div class="subtitle">Sua trilha sonora de compras</div>
+    <div class="container">
+        <h1>🎵 Rádio Supermercado do Louro</h1>
+        <p class="subtitle">Sua rádio online favorita</p>
         
-        <div class="player-container">
-            <div class="album-cover" id="albumCover">🎵</div>
-            <div class="now-playing" id="nowPlaying">Carregando...</div>
-            <div class="track-info" id="trackInfo">Preparando sua música...</div>
+        <!-- Status de Conexão -->
+        <div id="connectionStatus" class="status warning">
+            ⚠️ Configurando conexão com Supabase...
+        </div>
+        
+        <!-- Seção de Configuração -->
+        <div class="config-section">
+            <div class="config-title">⚙️ Configuração do Supabase (Cole suas credenciais)</div>
+            <input 
+                type="text" 
+                id="supabaseUrl" 
+                class="config-input" 
+                placeholder="Cole sua URL do Supabase aqui (https://xxx.supabase.co)"
+            >
+            <input 
+                type="text" 
+                id="supabaseKey" 
+                class="config-input" 
+                placeholder="Cole sua chave pública (anon key) aqui"
+            >
+            <button class="btn" onclick="configurarSupabase()">Conectar Supabase</button>
+        </div>
+        
+        <!-- Debug Info -->
+        <div class="debug-section">
+            <div class="debug-title">🔍 Informações de Debug</div>
+            <div id="debugInfo" class="debug-info">Aguardando configuração...</div>
+        </div>
+        
+        <!-- Player -->
+        <div class="player-section">
+            <div class="current-song">
+                <div class="song-title" id="currentTitle">Selecione uma música</div>
+                <div class="song-artist" id="currentArtist">Artista desconhecido</div>
+            </div>
             
             <div class="controls">
-                <button class="play-btn" id="playBtn">▶️</button>
-                <div class="volume-container">
-                    🔊
-                    <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="70">
-                </div>
+                <button class="btn" id="playBtn" onclick="togglePlay()" disabled>▶️ Play</button>
+                <button class="btn" onclick="stopMusic()">⏹️ Stop</button>
+                <button class="btn" onclick="nextSong()">⏭️ Próxima</button>
             </div>
             
-            <div class="status" id="status">Sistema inicializando...</div>
+            <div class="volume-control">
+                <span>🔊</span>
+                <input 
+                    type="range" 
+                    id="volumeSlider" 
+                    class="volume-slider" 
+                    min="0" 
+                    max="100" 
+                    value="50" 
+                    onchange="changeVolume(this.value)"
+                >
+                <span id="volumeDisplay">50%</span>
+            </div>
+            
+            <audio id="audioPlayer" preload="metadata"></audio>
         </div>
         
-        <button class="admin-btn" onclick="showAdminLogin()">Modo Administrador</button>
-    </div>
-
-    <!-- Login Administrador -->
-    <div id="loginContainer" class="container hidden">
-        <div class="logo">🔐 Acesso Administrativo</div>
-        <div class="login-form">
-            <input type="password" class="login-input" id="adminPassword" placeholder="Digite a senha">
-            <button class="admin-btn" onclick="adminLogin()">Entrar</button>
-            <button class="admin-btn" onclick="showPlayer()">Voltar</button>
-        </div>
-        <div id="loginError"></div>
-    </div>
-
-    <!-- Painel Administrativo -->
-    <div id="adminPanel" class="admin-panel">
-        <div class="admin-header">
-            <h2>🛠️ Painel de Controle - Rádio Supermercado do Louro</h2>
-            <button class="admin-btn" onclick="showPlayer()">Voltar ao Player</button>
-        </div>
-
-        <!-- Upload de Músicas -->
-        <div class="admin-section">
-            <h3>🎵 Upload de Músicas Principais</h3>
-            <div class="upload-area" onclick="document.getElementById('musicFiles').click()">
-                <p>📁 Clique para selecionar músicas (.mp3)</p>
-                <input type="file" id="musicFiles" class="file-input" multiple accept=".mp3">
-            </div>
-            <div class="file-list" id="musicList"></div>
-        </div>
-
-        <!-- Upload Hora Certa -->
-        <div class="admin-section">
-            <h3>🕐 Upload Hora Certa</h3>
-            <div class="upload-area" onclick="document.getElementById('timeFiles').click()">
-                <p>📁 Clique para selecionar áudios de hora certa (.mp3)</p>
-                <input type="file" id="timeFiles" class="file-input" multiple accept=".mp3">
-            </div>
-            <div class="file-list" id="timeList"></div>
-        </div>
-
-        <!-- Upload Avisos -->
-        <div class="admin-section">
-            <h3>📢 Upload de Avisos</h3>
-            <div class="upload-area" onclick="document.getElementById('adFiles').click()">
-                <p>📁 Clique para selecionar avisos (.mp3)</p>
-                <input type="file" id="adFiles" class="file-input" multiple accept=".mp3">
-            </div>
-            <div class="file-list" id="adList"></div>
-        </div>
-
-        <!-- Álbuns Temáticos -->
-        <div class="admin-section">
-            <h3>🎨 Álbuns Temáticos</h3>
-            <div class="album-selector">
-                <div class="album-option" data-album="natal">
-                    🎄 Natal
-                </div>
-                <div class="album-option" data-album="pascoa">
-                    🐰 Páscoa
-                </div>
-                <div class="album-option" data-album="saojoao">
-                    🌽 São João
-                </div>
-                <div class="album-option" data-album="carnaval">
-                    🎭 Carnaval
-                </div>
-                <div class="album-option" data-album="none">
-                    ❌ Desativar
+        <!-- Playlist -->
+        <div class="playlist">
+            <div class="playlist-title">📜 Playlist</div>
+            <div id="playlistContainer">
+                <div class="song-item">
+                    ⚠️ Configure o Supabase para ver as músicas
                 </div>
             </div>
-            <div class="upload-area" onclick="document.getElementById('albumFiles').click()" style="margin-top: 15px;">
-                <p>📁 Upload para álbum ativo (.mp3)</p>
-                <input type="file" id="albumFiles" class="file-input" multiple accept=".mp3">
-            </div>
-            <div class="file-list" id="albumList"></div>
-        </div>
-
-        <!-- Relatório -->
-        <div class="admin-section">
-            <h3>📊 Relatório de Reprodução</h3>
-            <button class="admin-btn" onclick="resetPlayCount()">🔄 Resetar Contagem</button>
-            <div class="report-section" id="playReport"></div>
         </div>
     </div>
 
-    <audio id="audioPlayer" preload="auto"></audio>
-
-    <script type="module">
-        // Configuração Supabase
-        const SUPABASE_URL = 'https://yrlwyvvlgrjbwnoiwdxv.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybHd5dnZsZ3JqYndub2l3ZHh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4MDk0OTMsImV4cCI6MjA2NDM4NTQ5M30.qrNDx8aqL2WtWPalhmjzeUY6bCNVnnK48L2Oi2DpkVI';
-
-        // Estado global da aplicação
-        let currentAudio = null;
+    <script>
+        // Variáveis globais
+        let supabase = null;
+        let currentPlaylist = [];
+        let currentSongIndex = 0;
         let isPlaying = false;
-        let currentTrackIndex = 0;
-        let musicCount = 0;
-        let playQueue = [];
-        let musicFiles = [];
-        let timeFiles = [];
-        let adFiles = [];
-        let albumFiles = [];
-        let playReport = JSON.parse(localStorage.getItem('playReport') || '{}');
-        let activeAlbum = localStorage.getItem('activeAlbum') || 'none';
-
+        
         // Elementos DOM
         const audioPlayer = document.getElementById('audioPlayer');
         const playBtn = document.getElementById('playBtn');
-        const volumeSlider = document.getElementById('volumeSlider');
-        const nowPlaying = document.getElementById('nowPlaying');
-        const trackInfo = document.getElementById('trackInfo');
-        const status = document.getElementById('status');
-        const albumCover = document.getElementById('albumCover');
-
-        // Configurações de álbuns
-        const albumConfig = {
-            natal: { emoji: '🎄', name: 'Especial de Natal', bg: '#d32f2f' },
-            pascoa: { emoji: '🐰', name: 'Especial de Páscoa', bg: '#7b1fa2' },
-            saojoao: { emoji: '🌽', name: 'Especial São João', bg: '#f57c00' },
-            carnaval: { emoji: '🎭', name: 'Especial Carnaval', bg: '#e91e63' },
-            none: { emoji: '🎵', name: 'Rádio Supermercado do Louro', bg: '#1b5e20' }
-        };
-
-        // Inicialização
-        window.addEventListener('DOMContentLoaded', async () => {
-            setupEventListeners();
-            await loadAllFiles();
-            updateAlbumDisplay();
-            updatePlayReport();
-            startRadio();
-        });
-
-        function setupEventListeners() {
-            playBtn.addEventListener('click', togglePlay);
-            volumeSlider.addEventListener('input', updateVolume);
-            audioPlayer.addEventListener('ended', playNext);
+        const debugInfo = document.getElementById('debugInfo');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const playlistContainer = document.getElementById('playlistContainer');
+        const currentTitle = document.getElementById('currentTitle');
+        const currentArtist = document.getElementById('currentArtist');
+        
+        // Função para configurar Supabase
+        function configurarSupabase() {
+            const url = document.getElementById('supabaseUrl').value.trim();
+            const key = document.getElementById('supabaseKey').value.trim();
             
-            // Upload listeners
-            document.getElementById('musicFiles').addEventListener('change', (e) => uploadFiles(e, 'music'));
-            document.getElementById('timeFiles').addEventListener('change', (e) => uploadFiles(e, 'time'));
-            document.getElementById('adFiles').addEventListener('change', (e) => uploadFiles(e, 'ads'));
-            document.getElementById('albumFiles').addEventListener('change', (e) => uploadFiles(e, 'albums'));
-            
-            // Album selector
-            document.querySelectorAll('.album-option').forEach(option => {
-                option.addEventListener('click', () => selectAlbum(option.dataset.album));
-            });
-        }
-
-        async function loadAllFiles() {
-            try {
-                status.textContent = 'Carregando biblioteca musical...';
-                
-                const [music, time, ads, albums] = await Promise.all([
-                    listFiles('music'),
-                    listFiles('time'),
-                    listFiles('ads'),
-                    listFiles('albums')
-                ]);
-                
-                musicFiles = music;
-                timeFiles = time;
-                adFiles = ads;
-                albumFiles = albums;
-                
-                updateFileLists();
-                buildPlayQueue();
-                
-                status.textContent = `${musicFiles.length} músicas carregadas`;
-            } catch (error) {
-                console.error('Erro ao carregar arquivos:', error);
-                status.textContent = 'Erro ao carregar biblioteca';
-            }
-        }
-
-        async function listFiles(folder) {
-            // Mapeia os nomes das pastas para os buckets do Supabase
-            const bucketMap = {
-                'music': 'músicasas',
-                'time': 'hora-certa', 
-                'ads': 'avisos',
-                'albums': 'músicas-sãojoão'
-            };
-            
-            const bucketName = bucketMap[folder];
-            
-            try {
-                const response = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${bucketName}`, {
-                    headers: {
-                        'Authorization': `Bearer ${SUPABASE_KEY}`,
-                        'apikey': SUPABASE_KEY
-                    }
-                });
-                
-                if (!response.ok) return [];
-                
-                const files = await response.json();
-                return files.filter(file => file.name.endsWith('.mp3')).map(file => ({
-                    name: file.name,
-                    url: `${SUPABASE_URL}/storage/v1/object/public/${bucketName}/${file.name}`
-                }));
-            } catch (error) {
-                console.error(`Erro ao listar arquivos de ${folder}:`, error);
-                return [];
-            }
-        }
-
-        function buildPlayQueue() {
-            playQueue = [];
-            
-            if (musicFiles.length === 0) {
-                status.textContent = 'Nenhuma música encontrada';
+            if (!url || !key) {
+                updateStatus('error', '❌ Por favor, preencha URL e chave do Supabase');
                 return;
             }
             
-            let musicIndex = 0;
-            let timeIndex = 0;
-            let adIndex = 0;
-            let albumIndex = 0;
-            
-            for (let i = 0; i < 100; i++) { // Gera uma queue de 100 itens
-                if (i % 6 === 0 && adFiles.length > 0) {
-                    // A cada 6 músicas, toca um aviso
-                    playQueue.push({
-                        type: 'ad',
-                        file: adFiles[adIndex % adFiles.length],
-                        title: 'Aviso Importante'
-                    });
-                    adIndex++;
-                } else if (i % 3 === 0 && timeFiles.length > 0 && i > 0) {
-                    // A cada 3 músicas, toca hora certa
-                    playQueue.push({
-                        type: 'time',
-                        file: timeFiles[timeIndex % timeFiles.length],
-                        title: 'Hora Certa'
-                    });
-                    timeIndex++;
-                } else {
-                    // Música principal ou do álbum ativo
-                    if (activeAlbum !== 'none' && albumFiles.length > 0 && Math.random() < 0.3) {
-                        playQueue.push({
-                            type: 'album',
-                            file: albumFiles[albumIndex % albumFiles.length],
-                            title: albumConfig[activeAlbum].name
-                        });
-                        albumIndex++;
-                    } else {
-                        playQueue.push({
-                            type: 'music',
-                            file: musicFiles[musicIndex % musicFiles.length],
-                            title: 'Música'
-                        });
-                        musicIndex++;
-                    }
-                }
-            }
-        }
-
-        function startRadio() {
-            if (playQueue.length > 0) {
-                playTrack(playQueue[currentTrackIndex]);
-            }
-        }
-
-        function playTrack(track) {
-            if (!track || !track.file) return;
-            
-            audioPlayer.src = track.file.url;
-            nowPlaying.textContent = track.title;
-            trackInfo.textContent = track.file.name.replace('.mp3', '');
-            
-            // Atualiza relatório
-            const fileName = track.file.name;
-            playReport[fileName] = (playReport[fileName] || 0) + 1;
-            localStorage.setItem('playReport', JSON.stringify(playReport));
-            updatePlayReport();
-            
-            audioPlayer.play().then(() => {
-                isPlaying = true;
-                playBtn.textContent = '⏸️';
-                albumCover.classList.add('playing');
-                status.textContent = 'Tocando agora...';
-            }).catch(error => {
-                console.error('Erro ao reproduzir:', error);
-                status.textContent = 'Erro na reprodução';
-                playNext();
-            });
-        }
-
-        function playNext() {
-            currentTrackIndex = (currentTrackIndex + 1) % playQueue.length;
-            if (currentTrackIndex === 0) {
-                buildPlayQueue(); // Reconstrói a queue quando termina
-            }
-            playTrack(playQueue[currentTrackIndex]);
-        }
-
-        function togglePlay() {
-            if (isPlaying) {
-                audioPlayer.pause();
-                playBtn.textContent = '▶️';
-                albumCover.classList.remove('playing');
-                isPlaying = false;
-                status.textContent = 'Pausado';
-            } else {
-                audioPlayer.play().then(() => {
-                    playBtn.textContent = '⏸️';
-                    albumCover.classList.add('playing');
-                    isPlaying = true;
-                    status.textContent = 'Tocando agora...';
-                });
-            }
-        }
-
-        function updateVolume() {
-            audioPlayer.volume = volumeSlider.value / 100;
-        }
-
-        function updateAlbumDisplay() {
-            const config = albumConfig[activeAlbum];
-            albumCover.innerHTML = config.emoji;
-            albumCover.style.borderColor = config.bg;
-            
-            // Atualiza seletor no admin
-            document.querySelectorAll('.album-option').forEach(option => {
-                option.classList.toggle('active', option.dataset.album === activeAlbum);
-            });
-        }
-
-        async function uploadFiles(event, folder) {
-            const files = Array.from(event.target.files);
-            const fileList = document.getElementById(folder === 'music' ? 'musicList' : 
-                                                  folder === 'time' ? 'timeList' :
-                                                  folder === 'ads' ? 'adList' : 'albumList');
-            
-            // Mapeia os nomes das pastas para os buckets do Supabase
-            const bucketMap = {
-                'music': 'músicasas',
-                'time': 'hora-certa', 
-                'ads': 'avisos',
-                'albums': 'músicas-sãojoão'
-            };
-            
-            const bucketName = bucketMap[folder];
-            
-            for (const file of files) {
-                if (!file.name.endsWith('.mp3')) continue;
+            try {
+                // Criar cliente Supabase
+                supabase = window.supabase.createClient(url, key);
+                updateStatus('success', '✅ Supabase configurado! Testando conexão...');
                 
-                try {
-                    const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucketName}/${file.name}`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${SUPABASE_KEY}`,
-                            'apikey': SUPABASE_KEY
-                        },
-                        body: file
-                    });
-                    
-                    if (response.ok) {
-                        showMessage(`${file.name} enviado com sucesso!`, 'success');
-                    } else {
-                        showMessage(`Erro ao enviar ${file.name}`, 'error');
-                    }
-                } catch (error) {
-                    console.error('Erro no upload:', error);
-                    showMessage(`Erro ao enviar ${file.name}`, 'error');
-                }
+                // Testar conexão
+                testarConexao();
+                
+            } catch (error) {
+                updateStatus('error', '❌ Erro ao configurar Supabase: ' + error.message);
+                updateDebug('Erro de configuração: ' + error.message);
             }
-            
-            // Recarrega a lista de arquivos
-            await loadAllFiles();
         }
-
-        async function deleteFile(folder, fileName) {
-            // Mapeia os nomes das pastas para os buckets do Supabase
-            const bucketMap = {
-                'music': 'músicasas',
-                'time': 'hora-certa', 
-                'ads': 'avisos',
-                'albums': 'músicas-sãojoão'
-            };
-            
-            const bucketName = bucketMap[folder];
+        
+        // Função para testar conexão
+        async function testarConexao() {
+            if (!supabase) {
+                updateStatus('error', '❌ Supabase não configurado');
+                return;
+            }
             
             try {
-                const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucketName}/${fileName}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${SUPABASE_KEY}`,
-                        'apikey': SUPABASE_KEY
-                    }
-                });
+                updateDebug('Testando conexão com Supabase...');
                 
-                if (response.ok) {
-                    showMessage(`${fileName} deletado com sucesso!`, 'success');
-                    await loadAllFiles();
-                } else {
-                    showMessage(`Erro ao deletar ${fileName}`, 'error');
+                // Testar conexão com storage
+                const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+                
+                if (bucketsError) {
+                    throw new Error('Erro ao listar buckets: ' + bucketsError.message);
                 }
+                
+                updateDebug('Buckets encontrados: ' + JSON.stringify(buckets.map(b => b.name)));
+                
+                // Testar tabela de músicas
+                const { data: musicas, error: musicasError } = await supabase
+                    .from('musicas')
+                    .select('*')
+                    .limit(5);
+                
+                if (musicasError) {
+                    updateDebug('Aviso: Erro na tabela músicas: ' + musicasError.message);
+                    // Tentar buscar diretamente no storage
+                    await buscarMusicasNoStorage();
+                } else {
+                    updateDebug('Músicas encontradas na tabela: ' + musicas.length);
+                    currentPlaylist = musicas;
+                    atualizarPlaylist();
+                }
+                
+                updateStatus('success', '✅ Conexão funcionando! ' + currentPlaylist.length + ' músicas encontradas');
+                document.getElementById('playBtn').disabled = false;
+                
             } catch (error) {
-                console.error('Erro ao deletar:', error);
-                showMessage(`Erro ao deletar ${fileName}`, 'error');
+                updateStatus('error', '❌ Erro de conexão: ' + error.message);
+                updateDebug('Erro detalhado: ' + error.message);
             }
         }
-
-        function updateFileLists() {
-            updateFileList('musicList', musicFiles, 'music');
-            updateFileList('timeList', timeFiles, 'time');
-            updateFileList('adList', adFiles, 'ads');
-            updateFileList('albumList', albumFiles, 'albums');
+        
+        // Função para buscar músicas diretamente no storage
+        async function buscarMusicasNoStorage() {
+            try {
+                updateDebug('Buscando músicas no storage...');
+                
+                const { data: files, error } = await supabase.storage
+                    .from('musicas')
+                    .list();
+                
+                if (error) {
+                    throw new Error('Erro ao listar arquivos: ' + error.message);
+                }
+                
+                // Filtrar apenas arquivos de música
+                const musicFiles = files.filter(file => 
+                    file.name.match(/\.(mp3|wav|ogg|m4a)$/i)
+                );
+                
+                // Criar playlist a partir dos arquivos
+                currentPlaylist = musicFiles.map((file, index) => {
+                    const { data } = supabase.storage
+                        .from('musicas')
+                        .getPublicUrl(file.name);
+                    
+                    return {
+                        id: index + 1,
+                        titulo: file.name.replace(/\.[^/.]+$/, ""), // Remove extensão
+                        artista: 'Artista Desconhecido',
+                        arquivo_url: data.publicUrl
+                    };
+                });
+                
+                updateDebug('Arquivos de música encontrados: ' + musicFiles.length);
+                atualizarPlaylist();
+                
+            } catch (error) {
+                updateDebug('Erro ao buscar no storage: ' + error.message);
+            }
         }
-
-        function updateFileList(listId, files, folder) {
-            const list = document.getElementById(listId);
-            list.innerHTML = files.map(file => `
-                <div class="file-item">
-                    <span>${file.name}</span>
-                    <button class="delete-btn" onclick="deleteFile('${folder}', '${file.name}')">Deletar</button>
+        
+        // Função para atualizar playlist na interface
+        function atualizarPlaylist() {
+            if (currentPlaylist.length === 0) {
+                playlistContainer.innerHTML = '<div class="song-item">❌ Nenhuma música encontrada</div>';
+                return;
+            }
+            
+            playlistContainer.innerHTML = currentPlaylist.map((song, index) => `
+                <div class="song-item ${index === currentSongIndex ? 'playing' : ''}" 
+                     onclick="selecionarMusica(${index})">
+                    <div>
+                        <div><strong>${song.titulo}</strong></div>
+                        <div style="opacity: 0.8;">${song.artista}</div>
+                    </div>
+                    <div>▶️</div>
                 </div>
             `).join('');
         }
-
-        function selectAlbum(album) {
-            activeAlbum = album;
-            localStorage.setItem('activeAlbum', album);
-            updateAlbumDisplay();
-            buildPlayQueue();
-            showMessage(`Álbum ${albumConfig[album].name} ativado!`, 'success');
-        }
-
-        function updatePlayReport() {
-            const reportDiv = document.getElementById('playReport');
-            const entries = Object.entries(playReport).sort((a, b) => b[1] - a[1]);
+        
+        // Função para selecionar música
+        function selecionarMusica(index) {
+            currentSongIndex = index;
+            const song = currentPlaylist[index];
             
-            reportDiv.innerHTML = entries.map(([file, count]) => `
-                <div class="report-item">
-                    <span>${file}</span>
-                    <span>${count}x</span>
-                </div>
-            `).join('') || '<p>Nenhuma música tocada ainda</p>';
+            currentTitle.textContent = song.titulo;
+            currentArtist.textContent = song.artista;
+            
+            audioPlayer.src = song.arquivo_url;
+            atualizarPlaylist();
+            
+            updateDebug('Música selecionada: ' + song.titulo + '\nURL: ' + song.arquivo_url);
         }
-
-        function resetPlayCount() {
-            playReport = {};
-            localStorage.removeItem('playReport');
-            updatePlayReport();
-            showMessage('Relatório resetado!', 'success');
-        }
-
-        function showMessage(text, type) {
-            const div = document.createElement('div');
-            div.className = type;
-            div.textContent = text;
-            document.body.appendChild(div);
-            setTimeout(() => div.remove(), 3000);
-        }
-
-        // Funções globais para os botões
-        window.showAdminLogin = () => {
-            document.getElementById('playerContainer').style.display = 'none';
-            document.getElementById('loginContainer').style.display = 'block';
-        };
-
-        window.showPlayer = () => {
-            document.getElementById('playerContainer').style.display = 'block';
-            document.getElementById('loginContainer').style.display = 'none';
-            document.getElementById('adminPanel').style.display = 'none';
-        };
-
-        window.adminLogin = () => {
-            const password = document.getElementById('adminPassword').value;
-            if (password === 'admin123') {
-                document.getElementById('loginContainer').style.display = 'none';
-                document.getElementById('adminPanel').style.display = 'block';
-                updateFileLists();
-                updatePlayReport();
-            } else {
-                document.getElementById('loginError').innerHTML = '<div class="error">Senha incorreta!</div>';
+        
+        // Função para play/pause
+        function togglePlay() {
+            if (!currentPlaylist.length) {
+                updateStatus('warning', '⚠️ Nenhuma música disponível');
+                return;
             }
-        };
-
-        window.deleteFile = deleteFile;
-        window.resetPlayCount = resetPlayCount;
-
-        // Configura volume inicial
-        updateVolume();
+            
+            if (currentSongIndex >= currentPlaylist.length) {
+                currentSongIndex = 0;
+            }
+            
+            if (!audioPlayer.src) {
+                selecionarMusica(currentSongIndex);
+            }
+            
+            if (isPlaying) {
+                audioPlayer.pause();
+                playBtn.textContent = '▶️ Play';
+                isPlaying = false;
+            } else {
+                audioPlayer.play()
+                    .then(() => {
+                        playBtn.textContent = '⏸️ Pause';
+                        isPlaying = true;
+                        updateStatus('success', '🎵 Tocando: ' + currentPlaylist[currentSongIndex].titulo);
+                    })
+                    .catch(error => {
+                        updateStatus('error', '❌ Erro ao reproduzir: ' + error.message);
+                        updateDebug('Erro de reprodução: ' + error.message);
+                    });
+            }
+        }
+        
+        // Função para parar música
+        function stopMusic() {
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
+            playBtn.textContent = '▶️ Play';
+            isPlaying = false;
+            updateStatus('warning', '⏹️ Música parada');
+        }
+        
+        // Função para próxima música
+        function nextSong() {
+            if (currentPlaylist.length === 0) return;
+            
+            currentSongIndex = (currentSongIndex + 1) % currentPlaylist.length;
+            selecionarMusica(currentSongIndex);
+            
+            if (isPlaying) {
+                audioPlayer.play();
+            }
+        }
+        
+        // Função para controle de volume
+        function changeVolume(value) {
+            audioPlayer.volume = value / 100;
+            document.getElementById('volumeDisplay').textContent = value + '%';
+        }
+        
+        // Funções utilitárias
+        function updateStatus(type, message) {
+            connectionStatus.className = `status ${type}`;
+            connectionStatus.textContent = message;
+        }
+        
+        function updateDebug(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            debugInfo.textContent += `[${timestamp}] ${message}\n`;
+            debugInfo.scrollTop = debugInfo.scrollHeight;
+        }
+        
+        // Event listeners
+        audioPlayer.addEventListener('ended', nextSong);
+        
+        audioPlayer.addEventListener('error', (e) => {
+            updateStatus('error', '❌ Erro ao carregar música');
+            updateDebug('Erro do player: ' + e.target.error?.message || 'Erro desconhecido');
+        });
+        
+        // Inicialização
+        updateDebug('Sistema iniciado. Configure o Supabase para começar.');
     </script>
 </body>
 </html>
