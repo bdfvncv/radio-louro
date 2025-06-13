@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="pt-BR">
+<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -21,8 +22,8 @@
     button:hover { background:#256e32; }
     input[type=password] { width:200px; border:1px solid #ccc; margin-right:8px; }
     .admin-panel { display:none; margin-top:20px; }
-    .file-list, #relatorio { list-style:none; padding:0; max-height:150px; overflow:auto; margin-bottom:12px; }
-    .file-list li, #relatorio li { padding:4px 0; border-bottom:1px solid #e0e0e0; }
+    ul { list-style:none; padding:0; max-height:150px; overflow:auto; margin-bottom:12px; }
+    li { padding:4px 0; border-bottom:1px solid #e0e0e0; }
     .album-selector { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:12px; }
     .album-selector button { background:#c8e6c9; color:#1b5e20; }
     .album-selector button.active { background:#2e7d32; color:#fff; }
@@ -41,32 +42,41 @@
     </div>
     <div id="status">Pronto</div>
     <button onclick="showAdminLogin()">Modo Administrador</button>
-  </div>  <div class="container" id="loginContainer" style="display:none;">
+  </div>
+
+  <div class="container" id="loginContainer" style="display:none;">
     <h1>Login Administrador</h1>
     <input type="password" id="adminPassword" placeholder="Senha" />
     <button onclick="adminLogin()">Entrar</button>
     <button onclick="showPlayer()">Voltar</button>
     <div id="loginError" style="color:#d32f2f; margin-top:8px;"></div>
-  </div>  <div class="container admin-panel" id="adminPanel">
+  </div>
+
+  <div class="container admin-panel" id="adminPanel">
     <h1>Painel Administrador</h1>
-    <button onclick="showPlayer()">Voltar ao Player</button><div>
-  <h3>Uploads Gerais</h3>
-  <label>Músicas: <input type="file" id="uploadMusicas" /></label>
-  <button onclick="alert('Faça upload manual no Cloudinary e atualize MUSIC_URLS')">Instruções</button>
-</div>
+    <button onclick="showPlayer()">Voltar ao Player</button>
 
-<div class="album-selector">
-  <button data-album="natal" onclick="selectAlbum('natal')">Natal</button>
-  <button data-album="pascoa" onclick="selectAlbum('pascoa')">Páscoa</button>
-  <button data-album="saojoao" onclick="selectAlbum('saojoao')">São João</button>
-  <button data-album="none" onclick="selectAlbum('none')">Nenhum</button>
-</div>
+    <div>
+      <h3>Uploads Gerais</h3>
+      <button onclick="alert('Faça upload manual no Cloudinary e atualize os arrays de URLs no JS')">
+        Instruções de upload
+      </button>
+    </div>
 
-<div>
-  <h3>Relatório de Reprodução</h3>
-  <ul id="relatorio"></ul>
-  <button onclick="resetarRelatorio()">Resetar Relatório</button>
-</div>
+    <div class="album-selector">
+      <button data-album="natal" onclick="selectAlbum('natal')">Natal</button>
+      <button data-album="pascoa" onclick="selectAlbum('pascoa')">Páscoa</button>
+      <button data-album="saojoao" onclick="selectAlbum('saojoao')">São João</button>
+      <button data-album="none" onclick="selectAlbum('none')">Nenhum</button>
+    </div>
 
-  </div>  <script type="module" src="rádio-jogador.js"></script></body>
+    <div>
+      <h3>Relatório de Reprodução</h3>
+      <ul id="relatorio"></ul>
+      <button onclick="resetarRelatorio()">Resetar Relatório</button>
+    </div>
+  </div>
+
+  <script type="module" src="rádio-jogador.js"></script>
+</body>
 </html>
