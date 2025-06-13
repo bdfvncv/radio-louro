@@ -200,19 +200,13 @@
         }
 
         .upload-area {
-            border: 2px dashed #2e7d32;
+            border: 2px solid #2e7d32;
             border-radius: 10px;
             padding: 20px;
             text-align: center;
             margin-bottom: 15px;
             background: white;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .upload-area:hover {
-            background: #f1f8e9;
-            border-color: #1b5e20;
+            color: #1b5e20;
         }
 
         .file-input {
@@ -382,30 +376,30 @@
 
         <!-- Upload de Músicas -->
         <div class="admin-section">
-            <h3>🎵 Upload de Músicas Principais</h3>
-            <div class="upload-area" onclick="document.getElementById('musicFiles').click()">
-                <p>📁 Clique para selecionar músicas (.mp3)</p>
-                <input type="file" id="musicFiles" class="file-input" multiple accept=".mp3">
+            <h3>🎵 Músicas Principais</h3>
+            <div class="upload-area">
+                <p>📝 Para adicionar músicas, faça upload no Cloudinary e adicione o nome do arquivo no código</p>
+                <p><strong>Formato:</strong> nome-da-musica_id123.mp3</p>
             </div>
             <div class="file-list" id="musicList"></div>
         </div>
 
         <!-- Upload Hora Certa -->
         <div class="admin-section">
-            <h3>🕐 Upload Hora Certa</h3>
-            <div class="upload-area" onclick="document.getElementById('timeFiles').click()">
-                <p>📁 Clique para selecionar áudios de hora certa (.mp3)</p>
-                <input type="file" id="timeFiles" class="file-input" multiple accept=".mp3">
+            <h3>🕐 Hora Certa</h3>
+            <div class="upload-area">
+                <p>📝 Para adicionar hora certa, faça upload no Cloudinary e adicione o nome do arquivo no código</p>
+                <p><strong>Formato:</strong> hora-certa-1_id123.mp3</p>
             </div>
             <div class="file-list" id="timeList"></div>
         </div>
 
         <!-- Upload Avisos -->
         <div class="admin-section">
-            <h3>📢 Upload de Avisos</h3>
-            <div class="upload-area" onclick="document.getElementById('adFiles').click()">
-                <p>📁 Clique para selecionar avisos (.mp3)</p>
-                <input type="file" id="adFiles" class="file-input" multiple accept=".mp3">
+            <h3>📢 Avisos</h3>
+            <div class="upload-area">
+                <p>📝 Para adicionar avisos, faça upload no Cloudinary e adicione o nome do arquivo no código</p>
+                <p><strong>Formato:</strong> aviso-promocao_id123.mp3</p>
             </div>
             <div class="file-list" id="adList"></div>
         </div>
@@ -430,9 +424,9 @@
                     ❌ Desativar
                 </div>
             </div>
-            <div class="upload-area" onclick="document.getElementById('albumFiles').click()" style="margin-top: 15px;">
-                <p>📁 Upload para álbum ativo (.mp3)</p>
-                <input type="file" id="albumFiles" class="file-input" multiple accept=".mp3">
+            <div class="upload-area">
+                <p>📝 Para adicionar músicas do álbum ativo, faça upload no Cloudinary</p>
+                <p><strong>Álbum ativo:</strong> <span id="activeAlbumName">Nenhum</span></p>
             </div>
             <div class="file-list" id="albumList"></div>
         </div>
@@ -448,9 +442,42 @@
     <audio id="audioPlayer" preload="auto"></audio>
 
     <script type="module">
-        // Configuração Supabase
-        const SUPABASE_URL = 'https://yrlwyvvlgrjbwnoiwdxv.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybHd5dnZsZ3JqYndub2l3ZHh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4MDk0OTMsImV4cCI6MjA2NDM4NTQ5M30.qrNDx8aqL2WtWPalhmjzeUY6bCNVnnK48L2Oi2DpkVI';
+        // Configuração Cloudinary
+        const CLOUDINARY_CLOUD_NAME = 'dygbrcrr6';
+        const CLOUDINARY_BASE_URL = `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/video/upload/`;
+        
+        // Lista de arquivos de música (você pode expandir esta lista)
+        const MUSIC_FILES = [
+            'Leonardo-Nao-Aprendi-A-Dizer-Adeus_xrmdjf.mp3',
+            // Adicione mais arquivos aqui conforme fizer upload no Cloudinary
+        ];
+
+        // Listas de arquivos por categoria (você pode expandir conforme necessário)
+        const TIME_FILES = [
+            // Adicione arquivos de hora certa aqui
+            // Exemplo: 'hora-certa-1_abc123.mp3'
+        ];
+        
+        const AD_FILES = [
+            // Adicione arquivos de avisos aqui
+            // Exemplo: 'aviso-promocao_def456.mp3'
+        ];
+        
+        const ALBUM_FILES = {
+            natal: [
+                // Adicione músicas de natal aqui
+                // Exemplo: 'jingle-bells_ghi789.mp3'
+            ],
+            pascoa: [
+                // Adicione músicas de páscoa aqui
+            ],
+            saojoao: [
+                // Adicione músicas de são joão aqui
+            ],
+            carnaval: [
+                // Adicione músicas de carnaval aqui
+            ]
+        };
 
         // Estado global da aplicação
         let currentAudio = null;
@@ -486,7 +513,7 @@
         // Inicialização
         window.addEventListener('DOMContentLoaded', async () => {
             setupEventListeners();
-            await loadAllFiles();
+            loadAllFiles();
             updateAlbumDisplay();
             updatePlayReport();
             startRadio();
@@ -497,33 +524,43 @@
             volumeSlider.addEventListener('input', updateVolume);
             audioPlayer.addEventListener('ended', playNext);
             
-            // Upload listeners
-            document.getElementById('musicFiles').addEventListener('change', (e) => uploadFiles(e, 'music'));
-            document.getElementById('timeFiles').addEventListener('change', (e) => uploadFiles(e, 'time'));
-            document.getElementById('adFiles').addEventListener('change', (e) => uploadFiles(e, 'ads'));
-            document.getElementById('albumFiles').addEventListener('change', (e) => uploadFiles(e, 'albums'));
-            
             // Album selector
             document.querySelectorAll('.album-option').forEach(option => {
                 option.addEventListener('click', () => selectAlbum(option.dataset.album));
             });
         }
 
-        async function loadAllFiles() {
+        function loadAllFiles() {
             try {
                 status.textContent = 'Carregando biblioteca musical...';
                 
-                const [music, time, ads, albums] = await Promise.all([
-                    listFiles('music'),
-                    listFiles('time'),
-                    listFiles('ads'),
-                    listFiles('albums')
-                ]);
+                // Converte os arrays de nomes para objetos com URL completa
+                musicFiles = MUSIC_FILES.map(filename => ({
+                    name: filename,
+                    url: CLOUDINARY_BASE_URL + filename,
+                    displayName: filename.replace(/_[a-zA-Z0-9]+\.mp3$/, '').replace(/-/g, ' ')
+                }));
                 
-                musicFiles = music;
-                timeFiles = time;
-                adFiles = ads;
-                albumFiles = albums;
+                timeFiles = TIME_FILES.map(filename => ({
+                    name: filename,
+                    url: CLOUDINARY_BASE_URL + filename,
+                    displayName: filename.replace(/_[a-zA-Z0-9]+\.mp3$/, '').replace(/-/g, ' ')
+                }));
+                
+                adFiles = AD_FILES.map(filename => ({
+                    name: filename,
+                    url: CLOUDINARY_BASE_URL + filename,
+                    displayName: filename.replace(/_[a-zA-Z0-9]+\.mp3$/, '').replace(/-/g, ' ')
+                }));
+                
+                // Carrega arquivos do álbum ativo
+                if (activeAlbum !== 'none' && ALBUM_FILES[activeAlbum]) {
+                    albumFiles = ALBUM_FILES[activeAlbum].map(filename => ({
+                        name: filename,
+                        url: CLOUDINARY_BASE_URL + filename,
+                        displayName: filename.replace(/_[a-zA-Z0-9]+\.mp3$/, '').replace(/-/g, ' ')
+                    }));
+                }
                 
                 updateFileLists();
                 buildPlayQueue();
@@ -532,38 +569,6 @@
             } catch (error) {
                 console.error('Erro ao carregar arquivos:', error);
                 status.textContent = 'Erro ao carregar biblioteca';
-            }
-        }
-
-        async function listFiles(folder) {
-            // Mapeia os nomes das pastas para os buckets do Supabase
-            const bucketMap = {
-                'music': 'músicasas',
-                'time': 'hora-certa', 
-                'ads': 'avisos',
-                'albums': 'músicas-sãojoão'
-            };
-            
-            const bucketName = bucketMap[folder];
-            
-            try {
-                const response = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${bucketName}`, {
-                    headers: {
-                        'Authorization': `Bearer ${SUPABASE_KEY}`,
-                        'apikey': SUPABASE_KEY
-                    }
-                });
-                
-                if (!response.ok) return [];
-                
-                const files = await response.json();
-                return files.filter(file => file.name.endsWith('.mp3')).map(file => ({
-                    name: file.name,
-                    url: `${SUPABASE_URL}/storage/v1/object/public/${bucketName}/${file.name}`
-                }));
-            } catch (error) {
-                console.error(`Erro ao listar arquivos de ${folder}:`, error);
-                return [];
             }
         }
 
@@ -629,7 +634,7 @@
             
             audioPlayer.src = track.file.url;
             nowPlaying.textContent = track.title;
-            trackInfo.textContent = track.file.name.replace('.mp3', '');
+            trackInfo.textContent = track.file.displayName || track.file.name.replace('.mp3', '');
             
             // Atualiza relatório
             const fileName = track.file.name;
@@ -695,21 +700,14 @@
                                                   folder === 'time' ? 'timeList' :
                                                   folder === 'ads' ? 'adList' : 'albumList');
             
-            // Mapeia os nomes das pastas para os buckets do Supabase
-            const bucketMap = {
-                'music': 'músicasas',
-                'time': 'hora-certa', 
-                'ads': 'avisos',
-                'albums': 'músicas-sãojoão'
-            };
-            
-            const bucketName = bucketMap[folder];
-            
             for (const file of files) {
                 if (!file.name.endsWith('.mp3')) continue;
                 
                 try {
-                    const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucketName}/${file.name}`, {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    const response = await fetch(`${SUPABASE_URL}/storage/v1/object/radio-files/${folder}/${file.name}`, {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${SUPABASE_KEY}`,
@@ -734,18 +732,8 @@
         }
 
         async function deleteFile(folder, fileName) {
-            // Mapeia os nomes das pastas para os buckets do Supabase
-            const bucketMap = {
-                'music': 'músicasas',
-                'time': 'hora-certa', 
-                'ads': 'avisos',
-                'albums': 'músicas-sãojoão'
-            };
-            
-            const bucketName = bucketMap[folder];
-            
             try {
-                const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucketName}/${fileName}`, {
+                const response = await fetch(`${SUPABASE_URL}/storage/v1/object/radio-files/${folder}/${fileName}`, {
                     method: 'DELETE',
                     headers: {
                         'Authorization': `Bearer ${SUPABASE_KEY}`,
@@ -766,26 +754,35 @@
         }
 
         function updateFileLists() {
-            updateFileList('musicList', musicFiles, 'music');
-            updateFileList('timeList', timeFiles, 'time');
-            updateFileList('adList', adFiles, 'ads');
-            updateFileList('albumList', albumFiles, 'albums');
+            updateFileList('musicList', musicFiles);
+            updateFileList('timeList', timeFiles);
+            updateFileList('adList', adFiles);
+            updateFileList('albumList', albumFiles);
+            
+            // Atualiza nome do álbum ativo
+            const activeAlbumSpan = document.getElementById('activeAlbumName');
+            if (activeAlbumSpan) {
+                activeAlbumSpan.textContent = activeAlbum !== 'none' ? albumConfig[activeAlbum].name : 'Nenhum';
+            }
         }
 
-        function updateFileList(listId, files, folder) {
+        function updateFileList(listId, files) {
             const list = document.getElementById(listId);
+            if (!list) return;
+            
             list.innerHTML = files.map(file => `
                 <div class="file-item">
-                    <span>${file.name}</span>
-                    <button class="delete-btn" onclick="deleteFile('${folder}', '${file.name}')">Deletar</button>
+                    <span>${file.displayName || file.name}</span>
+                    <span style="color: #2e7d32; font-size: 0.9em;">${file.name}</span>
                 </div>
-            `).join('');
+            `).join('') || '<p style="color: #666; padding: 10px;">Nenhum arquivo adicionado</p>';
         }
 
         function selectAlbum(album) {
             activeAlbum = album;
             localStorage.setItem('activeAlbum', album);
             updateAlbumDisplay();
+            loadAllFiles(); // Recarrega os arquivos do álbum
             buildPlayQueue();
             showMessage(`Álbum ${albumConfig[album].name} ativado!`, 'success');
         }
@@ -841,7 +838,6 @@
             }
         };
 
-        window.deleteFile = deleteFile;
         window.resetPlayCount = resetPlayCount;
 
         // Configura volume inicial
