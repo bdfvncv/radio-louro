@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rádio Supermercado do Louro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .subtitle {
+            opacity: 0.9;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+
+        .album-cover {
+            width: 200px;
+            height: 200px;
+            border-radius: 15px;
+            margin: 0 auto 20px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .album-cover:hover {
+            transform: scale(1.05);
+        }
+
+        .album-cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 15px;
+        }
+
+        .track-info {
+            margin: 20px 0;
+        }
+
+        .track-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .track-artist {
+            opacity: 0.8;
+            font-size: 1rem;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .play-btn {
+            width: 60px;
+            height: 60px;
+            border: none;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .play-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .volume-slider {
+            width: 100px;
+            height: 5px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.3);
+            outline: none;
+            cursor: pointer;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ff6b6b;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .admin-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .admin-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .admin-panel {
+            display: none;
+            background: rgba(0, 0, 0, 0.9);
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .admin-content {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 800px;
+            margin: 0 auto;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .close-admin {
+            background: #ff4757;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .upload-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .upload-section h3 {
+            margin-bottom: 15px;
+            color: #4ecdc4;
+        }
+
+        .file-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        .upload-btn {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            width: 100%;
+        }
+
+        .album-control {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .album-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .album-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .album-item.active {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+        }
+
+        .stats {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .stats h3 {
+            color: #ff6b6b;
+            margin-bottom: 15px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .login-form {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+
+        .login-input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ecdc4, #44a08d);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .file-list {
+            max-height: 200px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .delete-btn {
+            background: #ff4757;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 20px;
+            }
+
+            .admin-content {
+                padding: 20px;
+                margin: 10px;
+            }
+
+            .album-control {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="admin-toggle" onclick="toggleAdmin()">⚙️ Admin</button>
+
+    <div class="container" id="playerContainer">
+        <div class="logo">🎵 Rádio Supermercado</div>
+        <div class="subtitle">do Louro</div>
+        
+        <div class="album-cover" id="albumCover">
+            🎵
+        </div>
+        
+        <div class="track-info">
+            <div class="track-title" id="trackTitle">Carregando...</div>
+            <div class="track-artist" id="trackArtist">Prepare-se para uma experiência única</div>
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        
+        <div class="controls">
+            <button class="play-btn" id="playBtn" onclick="togglePlayPause()">▶️</button>
+            <div class="volume-control">
+                <span>🔊</span>
+                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="70">
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-panel" id="adminPanel">
+        <div id="loginForm" class="login-form">
+            <h2 style="text-align: center; margin-bottom: 20px;">🔐 Acesso Administrativo</h2>
+            <input type="password" class="login-input" id="adminPassword" placeholder="Digite a senha">
+            <button class="login-btn" onclick="adminLogin()">Entrar</button>
+        </div>
+
+        <div id="adminContent" class="admin-content" style="display: none;">
+            <div class="admin-header">
+                <h2>🛠️ Painel Administrativo</h2>
+                <button class="close-admin" onclick="closeAdmin()">✕ Fechar</button>
+            </div>
+
+            <div class="upload-section">
+                <h3>🎵 Upload de Músicas Principais</h3>
+                <input type="file" class="file-input" id="musicUpload" accept=".mp3" multiple>
+                <button class="upload-btn" onclick="uploadFiles('music')">Upload Músicas</button>
+                <div class="file-list" id="musicList"></div>
+            </div>
+
+            <div class="upload-section">
+                <h3>🕐 Upload Hora Certa</h3>
+                <input type="file" class="file-input" id="timeUpload" accept=".mp3" multiple>
+                <button class="upload-btn" onclick="uploadFiles('time')">Upload Hora Certa</button>
+                <div class="file-list" id="timeList"></div>
+            </div>
+
+            <div class="upload-section">
+                <h3>📢 Upload Avisos</h3>
+                <input type="file" class="file-input" id="adUpload" accept=".mp3" multiple>
+                <button class="upload-btn" onclick="uploadFiles('ads')">Upload Avisos</button>
+                <div class="file-list" id="adsList"></div>
+            </div>
+
+            <div class="upload-section">
+                <h3>🎊 Álbuns Temáticos</h3>
+                <div class="album-control" id="albumControl">
+                    <div class="album-item" data-album="natal" onclick="setActiveAlbum('natal')">
+                        🎄 Natal
+                    </div>
+                    <div class="album-item" data-album="pascoa" onclick="setActiveAlbum('pascoa')">
+                        🐰 Páscoa
+                    </div>
+                    <div class="album-item" data-album="saojoao" onclick="setActiveAlbum('saojoao')">
+                        🎪 São João
+                    </div>
+                    <div class="album-item" data-album="none" onclick="setActiveAlbum('none')">
+                        ❌ Desativar
+                    </div>
+                </div>
+                <input type="file" class="file-input" id="albumUpload" accept=".mp3" multiple style="margin-top: 15px;">
+                <button class="upload-btn" onclick="uploadAlbumFiles()">Upload para Álbum Ativo</button>
+                <div class="file-list" id="albumList"></div>
+            </div>
+
+            <div class="stats">
+                <h3>📊 Estatísticas de Reprodução</h3>
+                <div id="playStats"></div>
+                <button class="upload-btn" onclick="resetStats()" style="margin-top: 15px; background: #ff4757;">
+                    🗑️ Resetar Estatísticas
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <audio id="audioPlayer" preload="auto"></audio>
+
+    <script>
+        // Configuração do Cloudinary
+        const CLOUDINARY_CONFIG = {
+            cloudName: 'dygbrcrr6',
+            uploadPreset: 'radio_preset', // Você precisa criar este preset no Cloudinary
+            apiKey: 'your_api_key' // Substitua pela sua API key
+        };
+
+        // Estado da aplicação
+        let currentPlaylist = [];
+        let currentIndex = 0;
+        let isPlaying = false;
+        let musicCount = 0;
+        let activeAlbum = localStorage.getItem('activeAlbum') || 'none';
+        let audioFiles = {
+            music: JSON.parse(localStorage.getItem('musicFiles') || '[]'),
+            time: JSON.parse(localStorage.getItem('timeFiles') || '[]'),
+            ads: JSON.parse(localStorage.getItem('adsFiles') || '[]'),
+            albums: {
+                natal: JSON.parse(localStorage.getItem('natalFiles') || '[]'),
+                pascoa: JSON.parse(localStorage.getItem('pascoaFiles') || '[]'),
+                saojoao: JSON.parse(localStorage.getItem('saojoaoFiles') || '[]')
+            }
+        };
+        let playStats = JSON.parse(localStorage.getItem('playStats') || '{}');
+
+        // Elementos DOM
+        const audioPlayer = document.getElementById('audioPlayer');
+        const playBtn = document.getElementById('playBtn');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const trackTitle = document.getElementById('trackTitle');
+        const trackArtist = document.getElementById('trackArtist');
+        const albumCover = document.getElementById('albumCover');
+        const progressFill = document.getElementById('progressFill');
+
+        // Inicialização
+        window.addEventListener('load', () => {
+            setupAudioPlayer();
+            generatePlaylist();
+            updateUI();
+            updateAlbumDisplay();
+            updateFileList();
+            updatePlayStats();
+        });
+
+        function setupAudioPlayer() {
+            audioPlayer.volume = volumeSlider.value / 100;
+            
+            volumeSlider.addEventListener('input', (e) => {
+                audioPlayer.volume = e.target.value / 100;
+            });
+
+            audioPlayer.addEventListener('loadedmetadata', () => {
+                updateUI();
+            });
+
+            audioPlayer.addEventListener('timeupdate', () => {
+                if (audioPlayer.duration) {
+                    const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+                    progressFill.style.width = progress + '%';
+                }
+            });
+
+            audioPlayer.addEventListener('ended', () => {
+                nextTrack();
+            });
+
+            audioPlayer.addEventListener('error', (e) => {
+                console.log('Erro no áudio:', e);
+                nextTrack();
+            });
+        }
+
+        function generatePlaylist() {
+            currentPlaylist = [];
+            const musicFiles = audioFiles.music;
+            const albumFiles = activeAlbum !== 'none' ? audioFiles.albums[activeAlbum] : [];
+            const allMusic = [...musicFiles, ...albumFiles];
+
+            if (allMusic.length === 0) {
+                // Playlist de exemplo se não houver arquivos
+                currentPlaylist = [
+                    {
+                        type: 'music',
+                        title: 'Música de Exemplo',
+                        artist: 'Artista Exemplo',
+                        url: 'https://res.cloudinary.com/dygbrcrr6/video/upload/v1749781508/Leonardo-Nao-Aprendi-A-Dizer-Adeus_xrmdjf.mp3'
+                    }
+                ];
+                return;
+            }
+
+            // Embaralhar músicas
+            const shuffledMusic = [...allMusic].sort(() => Math.random() - 0.5);
+            
+            for (let i = 0; i < shuffledMusic.length; i++) {
+                currentPlaylist.push({
+                    type: 'music',
+                    title: shuffledMusic[i].name || 'Música',
+                    artist: 'Supermercado do Louro',
+                    url: shuffledMusic[i].url
+                });
+
+                // Inserir hora certa a cada 3 músicas
+                if ((i + 1) % 3 === 0 && audioFiles.time.length > 0) {
+                    const timeFile = audioFiles.time[Math.floor(Math.random() * audioFiles.time.length)];
+                    currentPlaylist.push({
+                        type: 'time',
+                        title: 'Hora Certa',
+                        artist: 'Informativo',
+                        url: timeFile.url
+                    });
+                }
+
+                // Inserir avisos a cada 6 músicas
+                if ((i + 1) % 6 === 0 && audioFiles.ads.length > 0) {
+                    const adFile = audioFiles.ads[Math.floor(Math.random() * audioFiles.ads.length)];
+                    currentPlaylist.push({
+                        type: 'ads',
+                        title: 'Aviso Importante',
+                        artist: 'Administração',
+                        url: adFile.url
+                    });
+                }
+            }
+        }
+
+        function togglePlayPause() {
+            if (isPlaying) {
+                audioPlayer.pause();
+                playBtn.textContent = '▶️';
+                isPlaying = false;
+            } else {
+                if (currentPlaylist.length === 0) {
+                    generatePlaylist();
+                }
+                if (currentIndex >= currentPlaylist.length) {
+                    currentIndex = 0;
+                }
+                playCurrentTrack();
+            }
+        }
+
+        function playCurrentTrack() {
+            if (currentPlaylist.length === 0) return;
+
+            const track = currentPlaylist[currentIndex];
+            audioPlayer.src = track.url;
+            audioPlayer.play().then(() => {
+                isPlaying = true;
+                playBtn.textContent = '⏸️';
+                updateUI();
+                updatePlayStats(track);
+            }).catch(e => {
+                console.log('Erro ao reproduzir:', e);
+                nextTrack();
+            });
+        }
+
+        function nextTrack() {
+            currentIndex++;
+            if (currentIndex >= currentPlaylist.length) {
+                generatePlaylist(); // Regenerar playlist
+                currentIndex = 0;
+            }
+            playCurrentTrack();
+        }
+
+        function updateUI() {
+            if (currentPlaylist.length === 0) return;
+            
+            const track = currentPlaylist[currentIndex];
+            trackTitle.textContent = track.title;
+            trackArtist.textContent = track.artist;
+
+            // Atualizar cor do tipo de conteúdo
+            if (track.type === 'time') {
+                albumCover.style.background = 'linear-gradient(45deg, #ffa726, #ff9800)';
+                albumCover.textContent = '🕐';
+            } else if (track.type === 'ads') {
+                albumCover.style.background = 'linear-gradient(45deg, #ef5350, #e53935)';
+                albumCover.textContent = '📢';
+            } else {
+                albumCover.style.background = 'linear-gradient(45deg, #ff6b6b, #4ecdc4)';
+                albumCover.textContent = '🎵';
+            }
+        }
+
+        function updateAlbumDisplay() {
+            const albumItems = document.querySelectorAll('.album-item');
+            albumItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.album === activeAlbum) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
+        function updatePlayStats(track) {
+            if (track && track.type === 'music') {
+                const key = track.title + ' - ' + track.artist;
+                playStats[key] = (playStats[key] || 0) + 1;
+                localStorage.setItem('playStats', JSON.stringify(playStats));
+                updatePlayStatsDisplay();
+            }
+        }
+
+        function updatePlayStatsDisplay() {
+            const statsContainer = document.getElementById('playStats');
+            statsContainer.innerHTML = '';
+            
+            Object.entries(playStats)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 10)
+                .forEach(([track, count]) => {
+                    const statItem = document.createElement('div');
+                    statItem.className = 'stat-item';
+                    statItem.innerHTML = `
+                        <span>${track}</span>
+                        <span>${count}x</span>
+                    `;
+                    statsContainer.appendChild(statItem);
+                });
+        }
+
+        function resetStats() {
+            playStats = {};
+            localStorage.removeItem('playStats');
+            updatePlayStatsDisplay();
+        }
+
+        // Funções administrativas
+        function toggleAdmin() {
+            document.getElementById('adminPanel').style.display = 'block';
+        }
+
+        function closeAdmin() {
+            document.getElementById('adminPanel').style.display = 'none';
+        }
+
+        function adminLogin() {
+            const password = document.getElementById('adminPassword').value;
+            if (password === 'admin123') {
+                document.getElementById('loginForm').style.display = 'none';
+                document.getElementById('adminContent').style.display = 'block';
+                updateFileList();
+                updatePlayStatsDisplay();
+            } else {
+                alert('Senha incorreta!');
+            }
+        }
+
+        function setActiveAlbum(album) {
+            activeAlbum = album;
+            localStorage.setItem('activeAlbum', album);
+            updateAlbumDisplay();
+            generatePlaylist();
+        }
+
+        // Simulação de upload (substitua pela integração real do Cloudinary)
+        function uploadFiles(type) {
+            const fileInput = document.getElementById(type + 'Upload');
+            const files = fileInput.files;
+            
+            if (files.length === 0) {
+                alert('Selecione arquivos para upload');
+                return;
+            }
+
+            // Simular upload para demonstração
+            Array.from(files).forEach(file => {
+                const fileObj = {
+                    name: file.name,
+                    url: URL.createObjectURL(file), // Em produção, use a URL do Cloudinary
+                    uploadDate: new Date().toISOString()
+                };
+                
+                audioFiles[type].push(fileObj);
+            });
+
+            localStorage.setItem(type + 'Files', JSON.stringify(audioFiles[type]));
+            updateFileList();
+            generatePlaylist();
+            fileInput.value = '';
+            alert('Arquivos enviados com sucesso!');
+        }
+
+        function uploadAlbumFiles() {
+            if (activeAlbum === 'none') {
+                alert('Selecione um álbum ativo primeiro');
+                return;
+            }
+
+            const fileInput = document.getElementById('albumUpload');
+            const files = fileInput.files;
+            
+            if (files.length === 0) {
+                alert('Selecione arquivos para upload');
+                return;
+            }
+
+            Array.from(files).forEach(file => {
+                const fileObj = {
+                    name: file.name,
+                    url: URL.createObjectURL(file),
+                    uploadDate: new Date().toISOString()
+                };
+                
+                audioFiles.albums[activeAlbum].push(fileObj);
+            });
+
+            localStorage.setItem(activeAlbum + 'Files', JSON.stringify(audioFiles.albums[activeAlbum]));
+            updateFileList();
+            generatePlaylist();
+            fileInput.value = '';
+            alert('Arquivos do álbum enviados com sucesso!');
+        }
+
+        function updateFileList() {
+            // Atualizar lista de músicas
+            updateSingleFileList('music', 'musicList');
+            updateSingleFileList('time', 'timeList');
+            updateSingleFileList('ads', 'adsList');
+            
+            // Atualizar lista do álbum ativo
+            if (activeAlbum !== 'none') {
+                updateAlbumFileList();
+            }
+        }
+
+        function updateSingleFileList(type, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            
+            audioFiles[type].forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <span>${file.name}</span>
+                    <button class="delete-btn" onclick="deleteFile('${type}', ${index})">🗑️</button>
+                `;
+                container.appendChild(fileItem);
+            });
+        }
+
+        function updateAlbumFileList() {
+            const container = document.getElementById('albumList');
+            container.innerHTML = '';
+            
+            if (activeAlbum === 'none') return;
+            
+            audioFiles.albums[activeAlbum].forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <span>${file.name}</span>
+                    <button class="delete-btn" onclick="deleteAlbumFile(${index})">🗑️</button>
+                `;
+                container.appendChild(fileItem);
+            });
+        }
+
+        function deleteFile(type, index) {
+            if (confirm('Deseja excluir este arquivo?')) {
+                audioFiles[type].splice(index, 1);
+                localStorage.setItem(type + 'Files', JSON.stringify(audioFiles[type]));
+                updateFileList();
+                generatePlaylist();
+            }
+        }
+
+        function deleteAlbumFile(index) {
+            if (confirm('Deseja excluir este arquivo do álbum?')) {
+                audioFiles.albums[activeAlbum].splice(index, 1);
+                localStorage.setItem(activeAlbum + 'Files', JSON.stringify(audioFiles.albums[activeAlbum]));
+                updateFileList();
+                generatePlaylist();
+            }
+        }
+
+        // Integração com Cloudinary (implementação real)
+        async function uploadToCloudinary(file, folder = 'radio') {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
+            formData.append('folder', folder);
+
+            try {
+                const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/video/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (data.secure_url) {
+                    return {
+                        name: file.name,
+                        url: data.secure_url,
+                        publicId: data.public_id,
+                        uploadDate: new Date().toISOString()
+                    };
+                }
+                throw new Error('Upload falhou');
+            } catch (error) {
+                console.error('Erro no upload:', error);
+                throw error;
+            }
+        }
+
+        // Função para upload real com Cloudinary
+        async function uploadFilesReal(type) {
+            const fileInput = document.getElementById(type + 'Upload');
+            const files = fileInput.files;
+            
+            if (files.length === 0) {
+                alert('Selecione arquivos para upload');
+                return;
+            }
+
+            const uploadBtn = document.querySelector(`button[onclick="uploadFiles('${type}')"]`);
+            uploadBtn.textContent = 'Enviando...';
+            uploadBtn.disabled = true;
+
+            try {
+                for (let file of files) {
+                    const uploadedFile = await uploadToCloudinary(file, `radio/${type}`);
+                    audioFiles[type].push(uploadedFile);
+                }
+
+                localStorage.setItem(type + 'Files', JSON.stringify(audioFiles[type]));
+                updateFileList();
+                generatePlaylist();
+                fileInput.value = '';
+                alert('Arquivos enviados com sucesso!');
+            } catch (error) {
+                alert('Erro no upload: ' + error.message);
+            } finally {
+                uploadBtn.textContent = 'Upload ' + (type === 'music' ? 'Músicas' : type === 'time' ? 'Hora Certa' : 'Avisos');
+                uploadBtn.disabled = false;
+            }
+        }
+
+        // Função para deletar do Cloudinary
+        async function deleteFromCloudinary(publicId) {
+            try {
+                const timestamp = Math.round(Date.now() / 1000);
+                const stringToSign = `public_id=${publicId}&timestamp=${timestamp}`;
+                
+                // Nota: Em produção, a assinatura deve ser gerada no backend por segurança
+                const signature = await generateSignature(stringToSign);
+                
+                const formData = new FormData();
+                formData.append('public_id', publicId);
+                formData.append('timestamp', timestamp);
+                formData.append('api_key', CLOUDINARY_CONFIG.apiKey);
+                formData.append('signature', signature);
+
+                const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/image/destroy`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                return await response.json();
+            } catch (error) {
+                console.error('Erro ao deletar do Cloudinary:', error);
+            }
+        }
+
+        // Função para gerar assinatura (deve ser implementada no backend)
+        async function generateSignature(stringToSign) {
+            // Esta função deve chamar seu backend para gerar a assinatura
+            // Por questões de segurança, a API secret não deve estar no frontend
+            console.warn('Implementar geração de assinatura no backend');
+            return 'signature_placeholder';
+        }
+
+        // Auto-play quando a página carrega
+        setTimeout(() => {
+            if (currentPlaylist.length > 0) {
+                playCurrentTrack();
+            }
+        }, 2000);
+
+        // Prevenção de sleep em dispositivos móveis
+        let wakeLock = null;
+        async function requestWakeLock() {
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+            } catch (err) {
+                console.log('Wake Lock não suportado:', err);
+            }
+        }
+
+        // Solicitar wake lock quando começar a tocar
+        audioPlayer.addEventListener('play', () => {
+            requestWakeLock();
+        });
+
+        // Adicionar Service Worker para funcionamento offline
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(err => {
+                console.log('Service Worker não registrado:', err);
+            });
+        }
+
+        // Controles de teclado
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !document.getElementById('adminPanel').style.display) {
+                e.preventDefault();
+                togglePlayPause();
+            }
+        });
+
+        // Notificação de nova música
+        function showNotification(track) {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('🎵 Tocando Agora', {
+                    body: `${track.title} - ${track.artist}`,
+                    icon: '/favicon.ico'
+                });
+            }
+        }
+
+        // Solicitar permissão para notificações
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
+        // Visualizador de áudio simples
+        function createAudioVisualizer() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const analyser = audioContext.createAnalyser();
+                const source = audioContext.createMediaElementSource(audioPlayer);
+                
+                source.connect(analyser);
+                analyser.connect(audioContext.destination);
+                
+                analyser.fftSize = 256;
+                const bufferLength = analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+                
+                function animate() {
+                    requestAnimationFrame(animate);
+                    analyser.getByteFrequencyData(dataArray);
+                    
+                    // Calcular intensidade média
+                    const average = dataArray.reduce((a, b) => a + b) / bufferLength;
+                    const intensity = average / 255;
+                    
+                    // Aplicar efeito visual na capa do álbum
+                    const scale = 1 + (intensity * 0.1);
+                    albumCover.style.transform = `scale(${scale})`;
+                }
+                
+                animate();
+            } catch (error) {
+                console.log('Visualizador de áudio não suportado:', error);
+            }
+        }
+
+        // Inicializar visualizador quando o áudio começar
+        audioPlayer.addEventListener('play', createAudioVisualizer, { once: true });
+
+        // Função para backup/restore das configurações
+        function exportConfig() {
+            const config = {
+                audioFiles,
+                activeAlbum,
+                playStats,
+                timestamp: new Date().toISOString()
+            };
+            
+            const dataStr = JSON.stringify(config, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = 'radio_config_backup.json';
+            link.click();
+        }
+
+        function importConfig(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const config = JSON.parse(e.target.result);
+                    
+                    // Restaurar configurações
+                    audioFiles = config.audioFiles || audioFiles;
+                    activeAlbum = config.activeAlbum || 'none';
+                    playStats = config.playStats || {};
+                    
+                    // Salvar no localStorage
+                    localStorage.setItem('musicFiles', JSON.stringify(audioFiles.music));
+                    localStorage.setItem('timeFiles', JSON.stringify(audioFiles.time));
+                    localStorage.setItem('adsFiles', JSON.stringify(audioFiles.ads));
+                    localStorage.setItem('natalFiles', JSON.stringify(audioFiles.albums.natal));
+                    localStorage.setItem('pascoaFiles', JSON.stringify(audioFiles.albums.pascoa));
+                    localStorage.setItem('saojoaoFiles', JSON.stringify(audioFiles.albums.saojoao));
+                    localStorage.setItem('activeAlbum', activeAlbum);
+                    localStorage.setItem('playStats', JSON.stringify(playStats));
+                    
+                    // Atualizar interface
+                    updateFileList();
+                    updateAlbumDisplay();
+                    updatePlayStatsDisplay();
+                    generatePlaylist();
+                    
+                    alert('Configurações importadas com sucesso!');
+                } catch (error) {
+                    alert('Erro ao importar configurações: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Adicionar controles de backup no painel admin
+        document.addEventListener('DOMContentLoaded', () => {
+            const adminContent = document.getElementById('adminContent');
+            if (adminContent) {
+                const backupSection = document.createElement('div');
+                backupSection.className = 'upload-section';
+                backupSection.innerHTML = `
+                    <h3>💾 Backup & Restore</h3>
+                    <button class="upload-btn" onclick="exportConfig()" style="margin-bottom: 10px;">
+                        📤 Exportar Configurações
+                    </button>
+                    <input type="file" id="importConfig" accept=".json" onchange="importConfig(event)" style="display: none;">
+                    <button class="upload-btn" onclick="document.getElementById('importConfig').click()">
+                        📥 Importar Configurações
+                    </button>
+                `;
+                adminContent.appendChild(backupSection);
+            }
+        });
+
+        console.log('🎵 Rádio Supermercado do Louro - Sistema iniciado com sucesso!');
+    </script>
+</body>
+</html>
