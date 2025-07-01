@@ -14,42 +14,43 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #fff;
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            color: white;
+            overflow-x: hidden;
         }
 
         .container {
-            background: rgba(255, 255, 255, 0.1);
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .player-section {
+            background: rgba(255,255,255,0.1);
             backdrop-filter: blur(10px);
             border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            max-width: 500px;
-            width: 90%;
-            text-align: center;
-            animation: fadeIn 0.8s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .logo {
-            font-size: 2.5rem;
-            font-weight: bold;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-        }
-
-        .subtitle {
-            opacity: 0.9;
+            padding: 30px;
             margin-bottom: 30px;
-            font-size: 1.1rem;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            animation: fadeInUp 0.8s ease;
         }
 
         .album-cover {
@@ -57,12 +58,12 @@
             height: 200px;
             border-radius: 15px;
             margin: 0 auto 20px;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            background: rgba(255,255,255,0.1);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 3rem;
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+            font-size: 4rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
             transition: transform 0.3s ease;
         }
 
@@ -70,15 +71,9 @@
             transform: scale(1.05);
         }
 
-        .album-cover img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 15px;
-        }
-
-        .track-info {
-            margin: 20px 0;
+        .now-playing {
+            text-align: center;
+            margin-bottom: 20px;
         }
 
         .track-title {
@@ -87,9 +82,13 @@
             margin-bottom: 5px;
         }
 
-        .track-artist {
+        .track-category {
+            font-size: 0.9rem;
             opacity: 0.8;
-            font-size: 1rem;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            display: inline-block;
         }
 
         .controls {
@@ -97,25 +96,23 @@
             align-items: center;
             justify-content: center;
             gap: 20px;
-            margin: 30px 0;
+            margin-top: 20px;
         }
 
-        .play-btn {
-            width: 60px;
-            height: 60px;
+        .control-btn {
+            background: rgba(255,255,255,0.2);
             border: none;
-            border-radius: 50%;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
             color: white;
-            font-size: 1.5rem;
+            padding: 15px;
+            border-radius: 50%;
             cursor: pointer;
+            font-size: 1.5rem;
             transition: all 0.3s ease;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
         }
 
-        .play-btn:hover {
+        .control-btn:hover {
+            background: rgba(255,255,255,0.3);
             transform: scale(1.1);
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
         }
 
         .volume-control {
@@ -127,402 +124,497 @@
         .volume-slider {
             width: 100px;
             height: 5px;
+            background: rgba(255,255,255,0.3);
             border-radius: 5px;
-            background: rgba(255, 255, 255, 0.3);
             outline: none;
             cursor: pointer;
         }
 
-        .volume-slider::-webkit-slider-thumb {
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #ff6b6b;
-            cursor: pointer;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        }
-
-        .admin-toggle {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            padding: 10px 15px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-        }
-
-        .admin-toggle:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
         .admin-panel {
-            display: none;
-            background: rgba(0, 0, 0, 0.9);
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1000;
-            overflow-y: auto;
-            padding: 20px;
-        }
-
-        .admin-content {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(0,0,0,0.8);
             backdrop-filter: blur(10px);
             border-radius: 20px;
             padding: 30px;
-            max-width: 800px;
-            margin: 0 auto;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-top: 30px;
+            animation: fadeInUp 0.8s ease;
         }
 
-        .admin-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
-
-        .close-admin {
-            background: #ff4757;
-            border: none;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 1rem;
-        }
-
-        .upload-section {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-
-        .upload-section h3 {
-            margin-bottom: 15px;
-            color: #4ecdc4;
-        }
-
-        .file-input {
-            width: 100%;
-            padding: 10px;
-            border: 2px dashed rgba(255, 255, 255, 0.3);
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            margin-bottom: 10px;
-            cursor: pointer;
-        }
-
-        .upload-btn {
-            background: linear-gradient(45deg, #4ecdc4, #44a08d);
-            border: none;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 1rem;
-            width: 100%;
-        }
-
-        .album-control {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .album-item {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 15px;
+        .admin-login {
             text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .album-item:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .album-item.active {
-            background: linear-gradient(45deg, #4ecdc4, #44a08d);
-        }
-
-        .stats {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 20px;
-            margin-top: 20px;
-        }
-
-        .stats h3 {
-            color: #ff6b6b;
-            margin-bottom: 15px;
-        }
-
-        .stat-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .login-form {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 30px;
-            margin: 20px;
             max-width: 400px;
             margin: 0 auto;
         }
 
-        .login-input {
-            width: 100%;
-            padding: 15px;
-            border: none;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            font-size: 1rem;
+        .form-group {
             margin-bottom: 20px;
+            text-align: left;
         }
 
-        .login-input::placeholder {
-            color: rgba(255, 255, 255, 0.7);
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
         }
 
-        .login-btn {
+        .form-group input, .form-group select {
             width: 100%;
-            padding: 15px;
+            padding: 12px;
             border: none;
             border-radius: 10px;
-            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            background: rgba(255,255,255,0.1);
             color: white;
             font-size: 1rem;
+        }
+
+        .form-group input::placeholder {
+            color: rgba(255,255,255,0.6);
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
             cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin: 5px;
         }
 
-        .progress-bar {
-            width: 100%;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 2px;
-            margin: 20px 0;
-            overflow: hidden;
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
 
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #4ecdc4, #44a08d);
-            width: 0%;
-            transition: width 0.3s ease;
+        .btn-danger {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: white;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
         }
 
         .file-list {
-            max-height: 200px;
-            overflow-y: auto;
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(255,255,255,0.05);
             border-radius: 10px;
-            padding: 10px;
-            margin-top: 10px;
+            padding: 20px;
+            margin-top: 20px;
         }
 
         .file-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
 
-        .delete-btn {
-            background: #ff4757;
-            border: none;
-            color: white;
-            padding: 5px 10px;
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: rgba(255,255,255,0.1);
             border-radius: 5px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        .album-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .album-option {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
             cursor: pointer;
-            font-size: 0.8rem;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .album-option.active {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.2);
+        }
+
+        .album-option:hover {
+            transform: translateY(-2px);
+            background: rgba(255,255,255,0.2);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .playing {
+            animation: pulse 2s infinite;
         }
 
         @media (max-width: 768px) {
             .container {
-                padding: 20px;
-                margin: 20px;
+                padding: 10px;
             }
-
-            .admin-content {
-                padding: 20px;
-                margin: 10px;
+            
+            .header h1 {
+                font-size: 2rem;
             }
-
-            .album-control {
-                grid-template-columns: 1fr;
+            
+            .album-cover {
+                width: 150px;
+                height: 150px;
+                font-size: 3rem;
+            }
+            
+            .controls {
+                flex-wrap: wrap;
+            }
+            
+            .tabs {
+                flex-direction: column;
             }
         }
     </style>
 </head>
 <body>
-    <button class="admin-toggle" onclick="toggleAdmin()">⚙️ Admin</button>
-
-    <div class="container" id="playerContainer">
-        <div class="logo">🎵 Rádio Supermercado</div>
-        <div class="subtitle">do Louro</div>
-        
-        <div class="album-cover" id="albumCover">
-            🎵
-        </div>
-        
-        <div class="track-info">
-            <div class="track-title" id="trackTitle">Carregando...</div>
-            <div class="track-artist" id="trackArtist">Prepare-se para uma experiência única</div>
-        </div>
-        
-        <div class="progress-bar">
-            <div class="progress-fill" id="progressFill"></div>
-        </div>
-        
-        <div class="controls">
-            <button class="play-btn" id="playBtn" onclick="togglePlayPause()">▶️</button>
-            <div class="volume-control">
-                <span>🔊</span>
-                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="70">
-            </div>
-        </div>
-    </div>
-
-    <div class="admin-panel" id="adminPanel">
-        <div id="loginForm" class="login-form">
-            <h2 style="text-align: center; margin-bottom: 20px;">🔐 Acesso Administrativo</h2>
-            <input type="password" class="login-input" id="adminPassword" placeholder="Digite a senha">
-            <button class="login-btn" onclick="adminLogin()">Entrar</button>
+    <div class="container">
+        <div class="header">
+            <h1>🎵 Rádio Supermercado do Louro</h1>
+            <p>Sua trilha sonora perfeita para compras</p>
         </div>
 
-        <div id="adminContent" class="admin-content" style="display: none;">
-            <div class="admin-header">
-                <h2>🛠️ Painel Administrativo</h2>
-                <button class="close-admin" onclick="closeAdmin()">✕ Fechar</button>
+        <!-- Player Público -->
+        <div class="player-section" id="playerSection">
+            <div class="album-cover" id="albumCover">🎵</div>
+            
+            <div class="now-playing">
+                <div class="track-title" id="trackTitle">Carregando...</div>
+                <div class="track-category" id="trackCategory">Preparando playlist</div>
             </div>
 
-            <div class="upload-section">
-                <h3>🎵 Upload de Músicas Principais</h3>
-                <input type="file" class="file-input" id="musicUpload" accept=".mp3" multiple>
-                <button class="upload-btn" onclick="uploadFiles('music')">Upload Músicas</button>
-                <div class="file-list" id="musicList"></div>
+            <div class="controls">
+                <button class="control-btn" id="playPauseBtn" onclick="togglePlayPause()">▶️</button>
+                <button class="control-btn" onclick="skipTrack()">⏭️</button>
+                <div class="volume-control">
+                    <span>🔊</span>
+                    <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="70" onchange="setVolume(this.value)">
+                </div>
             </div>
 
-            <div class="upload-section">
-                <h3>🕐 Upload Hora Certa</h3>
-                <input type="file" class="file-input" id="timeUpload" accept=".mp3" multiple>
-                <button class="upload-btn" onclick="uploadFiles('time')">Upload Hora Certa</button>
-                <div class="file-list" id="timeList"></div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
             </div>
 
-            <div class="upload-section">
-                <h3>📢 Upload Avisos</h3>
-                <input type="file" class="file-input" id="adUpload" accept=".mp3" multiple>
-                <button class="upload-btn" onclick="uploadFiles('ads')">Upload Avisos</button>
-                <div class="file-list" id="adsList"></div>
+            <audio id="audioPlayer" preload="auto"></audio>
+        </div>
+
+        <!-- Botão de Acesso Admin -->
+        <div style="text-align: center; margin-bottom: 20px;">
+            <button class="btn" onclick="toggleAdmin()">🔧 Painel Administrativo</button>
+        </div>
+
+        <!-- Painel Administrativo -->
+        <div class="admin-panel hidden" id="adminPanel">
+            <div class="admin-login" id="adminLogin">
+                <h2>🔐 Acesso Administrativo</h2>
+                <div class="form-group">
+                    <label>Senha:</label>
+                    <input type="password" id="adminPassword" placeholder="Digite a senha">
+                </div>
+                <button class="btn" onclick="login()">Entrar</button>
             </div>
 
-            <div class="upload-section">
-                <h3>🎊 Álbuns Temáticos</h3>
-                <div class="album-control" id="albumControl">
-                    <div class="album-item" data-album="natal" onclick="setActiveAlbum('natal')">
-                        🎄 Natal
+            <div class="hidden" id="adminContent">
+                <h2>🛠️ Painel de Controle</h2>
+                
+                <!-- Estatísticas -->
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalMusics">0</div>
+                        <div class="stat-label">Músicas</div>
                     </div>
-                    <div class="album-item" data-album="pascoa" onclick="setActiveAlbum('pascoa')">
-                        🐰 Páscoa
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalPlayed">0</div>
+                        <div class="stat-label">Reproduções</div>
                     </div>
-                    <div class="album-item" data-album="saojoao" onclick="setActiveAlbum('saojoao')">
-                        🎪 São João
-                    </div>
-                    <div class="album-item" data-album="none" onclick="setActiveAlbum('none')">
-                        ❌ Desativar
+                    <div class="stat-card">
+                        <div class="stat-number" id="currentAlbum">Nenhum</div>
+                        <div class="stat-label">Álbum Ativo</div>
                     </div>
                 </div>
-                <input type="file" class="file-input" id="albumUpload" accept=".mp3" multiple style="margin-top: 15px;">
-                <button class="upload-btn" onclick="uploadAlbumFiles()">Upload para Álbum Ativo</button>
-                <div class="file-list" id="albumList"></div>
-            </div>
 
-            <div class="stats">
-                <h3>📊 Estatísticas de Reprodução</h3>
-                <div id="playStats"></div>
-                <button class="upload-btn" onclick="resetStats()" style="margin-top: 15px; background: #ff4757;">
-                    🗑️ Resetar Estatísticas
-                </button>
+                <div class="tabs">
+                    <button class="tab active" onclick="showTab('upload')">📤 Upload</button>
+                    <button class="tab" onclick="showTab('albums')">📁 Álbuns</button>
+                    <button class="tab" onclick="showTab('reports')">📊 Relatórios</button>
+                    <button class="tab" onclick="showTab('files')">📋 Arquivos</button>
+                </div>
+
+                <!-- Aba Upload -->
+                <div class="tab-content active" id="upload">
+                    <div class="form-group">
+                        <label>Categoria:</label>
+                        <select id="uploadCategory">
+                            <option value="musicas">Músicas Principais</option>
+                            <option value="hora_certa">Hora Certa</option>
+                            <option value="avisos">Avisos/Propagandas</option>
+                            <option value="natal">Álbum - Natal</option>
+                            <option value="pascoa">Álbum - Páscoa</option>
+                            <option value="sao_joao">Álbum - São João</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Arquivo MP3:</label>
+                        <input type="file" id="audioFile" accept=".mp3" multiple>
+                    </div>
+                    <button class="btn" onclick="uploadFiles()">📤 Enviar Arquivos</button>
+                    <div class="progress-bar hidden" id="uploadProgress">
+                        <div class="progress-fill" id="uploadProgressFill"></div>
+                    </div>
+                </div>
+
+                <!-- Aba Álbuns -->
+                <div class="tab-content" id="albums">
+                    <h3>Selecionar Álbum Ativo</h3>
+                    <div class="album-selector">
+                        <div class="album-option" data-album="none" onclick="selectAlbum('none')">
+                            <div>❌</div>
+                            <div>Nenhum</div>
+                        </div>
+                        <div class="album-option" data-album="natal" onclick="selectAlbum('natal')">
+                            <div>🎄</div>
+                            <div>Natal</div>
+                        </div>
+                        <div class="album-option" data-album="pascoa" onclick="selectAlbum('pascoa')">
+                            <div>🐰</div>
+                            <div>Páscoa</div>
+                        </div>
+                        <div class="album-option" data-album="sao_joao" onclick="selectAlbum('sao_joao')">
+                            <div>🌽</div>
+                            <div>São João</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Aba Relatórios -->
+                <div class="tab-content" id="reports">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3>📊 Histórico de Reprodução</h3>
+                        <button class="btn btn-danger" onclick="resetReports()">🗑️ Reset</button>
+                    </div>
+                    <div class="file-list" id="playHistory"></div>
+                </div>
+
+                <!-- Aba Arquivos -->
+                <div class="tab-content" id="files">
+                    <h3>📋 Gerenciar Arquivos</h3>
+                    <div class="file-list" id="filesList"></div>
+                </div>
             </div>
         </div>
     </div>
-
-    <audio id="audioPlayer" preload="auto"></audio>
 
     <script>
         // Configuração do Cloudinary
         const CLOUDINARY_CONFIG = {
             cloudName: 'dygbrcrr6',
-            uploadPreset: 'radio_preset', // Você precisa criar este preset no Cloudinary
-            apiKey: 'your_api_key' // Substitua pela sua API key
+            apiKey: '891234567890123',
+            apiSecret: 'abcdefghijklmnopqrstuvwxyz123456',
+            uploadPreset: 'radio_preset'
         };
 
         // Estado da aplicação
         let currentPlaylist = [];
-        let currentIndex = 0;
+        let currentTrackIndex = 0;
         let isPlaying = false;
         let musicCount = 0;
-        let activeAlbum = localStorage.getItem('activeAlbum') || 'none';
-        let audioFiles = {
-            music: JSON.parse(localStorage.getItem('musicFiles') || '[]'),
-            time: JSON.parse(localStorage.getItem('timeFiles') || '[]'),
-            ads: JSON.parse(localStorage.getItem('adsFiles') || '[]'),
-            albums: {
-                natal: JSON.parse(localStorage.getItem('natalFiles') || '[]'),
-                pascoa: JSON.parse(localStorage.getItem('pascoaFiles') || '[]'),
-                saojoao: JSON.parse(localStorage.getItem('saojoaoFiles') || '[]')
-            }
-        };
-        let playStats = JSON.parse(localStorage.getItem('playStats') || '{}');
+        let playHistory = JSON.parse(localStorage.getItem('playHistory') || '[]');
+        let audioFiles = JSON.parse(localStorage.getItem('audioFiles') || '{}');
+        let currentAlbumName = localStorage.getItem('currentAlbum') || 'none';
 
         // Elementos DOM
         const audioPlayer = document.getElementById('audioPlayer');
-        const playBtn = document.getElementById('playBtn');
-        const volumeSlider = document.getElementById('volumeSlider');
+        const playPauseBtn = document.getElementById('playPauseBtn');
         const trackTitle = document.getElementById('trackTitle');
-        const trackArtist = document.getElementById('trackArtist');
+        const trackCategory = document.getElementById('trackCategory');
         const albumCover = document.getElementById('albumCover');
         const progressFill = document.getElementById('progressFill');
+        const volumeSlider = document.getElementById('volumeSlider');
 
         // Inicialização
-        window.addEventListener('load', () => {
-            setupAudioPlayer();
-            generatePlaylist();
-            updateUI();
-            updateAlbumDisplay();
-            updateFileList();
-            updatePlayStats();
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeRadio();
+            updateStats();
+            updateAlbumSelector();
+            loadFilesList();
+            loadPlayHistory();
         });
 
-        function setupAudioPlayer() {
-            audioPlayer.volume = volumeSlider.value / 100;
-            
-            volumeSlider.addEventListener('input', (e) => {
-                audioPlayer.volume = e.target.value / 100;
-            });
+        function initializeRadio() {
+            // Simular arquivos de exemplo para demonstração
+            if (Object.keys(audioFiles).length === 0) {
+                audioFiles = {
+                    musicas: [
+                        {name: 'Música Exemplo 1.mp3', url: 'data:audio/mp3;base64,//fake-audio-data', uploaded: Date.now()},
+                        {name: 'Música Exemplo 2.mp3', url: 'data:audio/mp3;base64,//fake-audio-data', uploaded: Date.now()}
+                    ],
+                    hora_certa: [
+                        {name: 'Hora Certa.mp3', url: 'data:audio/mp3;base64,//fake-hora-data', uploaded: Date.now()}
+                    ],
+                    avisos: [
+                        {name: 'Aviso Promoção.mp3', url: 'data:audio/mp3;base64,//fake-aviso-data', uploaded: Date.now()}
+                    ],
+                    natal: [],
+                    pascoa: [],
+                    sao_joao: []
+                };
+                localStorage.setItem('audioFiles', JSON.stringify(audioFiles));
+            }
 
-            audioPlayer.addEventListener('loadedmetadata', () => {
-                updateUI();
+            buildPlaylist();
+            setupAudioPlayer();
+            setVolume(70);
+        }
+
+        function buildPlaylist() {
+            currentPlaylist = [];
+            
+            // Adicionar músicas principais
+            const mainMusics = audioFiles.musicas || [];
+            
+            // Adicionar músicas do álbum ativo
+            const albumMusics = currentAlbumName !== 'none' ? (audioFiles[currentAlbumName] || []) : [];
+            
+            // Combinar músicas
+            const allMusics = [...mainMusics, ...albumMusics];
+            
+            if (allMusics.length === 0) {
+                trackTitle.textContent = 'Nenhuma música disponível';
+                trackCategory.textContent = 'Faça upload de arquivos no painel admin';
+                return;
+            }
+
+            // Construir playlist com intercalação
+            for (let i = 0; i < allMusics.length; i++) {
+                currentPlaylist.push({...allMusics[i], type: 'musica'});
+                
+                // A cada 3 músicas, adicionar hora certa
+                if ((i + 1) % 3 === 0 && audioFiles.hora_certa && audioFiles.hora_certa.length > 0) {
+                    const horaCerta = audioFiles.hora_certa[Math.floor(Math.random() * audioFiles.hora_certa.length)];
+                    currentPlaylist.push({...horaCerta, type: 'hora_certa'});
+                }
+                
+                // A cada 6 músicas, adicionar aviso
+                if ((i + 1) % 6 === 0 && audioFiles.avisos && audioFiles.avisos.length > 0) {
+                    const aviso = audioFiles.avisos[Math.floor(Math.random() * audioFiles.avisos.length)];
+                    currentPlaylist.push({...aviso, type: 'aviso'});
+                }
+            }
+
+            currentTrackIndex = 0;
+            loadCurrentTrack();
+        }
+
+        function setupAudioPlayer() {
+            audioPlayer.addEventListener('ended', () => {
+                nextTrack();
             });
 
             audioPlayer.addEventListener('timeupdate', () => {
@@ -532,584 +624,604 @@
                 }
             });
 
-            audioPlayer.addEventListener('ended', () => {
-                nextTrack();
+            audioPlayer.addEventListener('loadstart', () => {
+                trackTitle.textContent = 'Carregando...';
             });
 
-            audioPlayer.addEventListener('error', (e) => {
-                console.log('Erro no áudio:', e);
-                nextTrack();
+            audioPlayer.addEventListener('canplay', () => {
+                if (isPlaying) {
+                    audioPlayer.play().catch(e => console.log('Erro ao reproduzir:', e));
+                }
             });
         }
 
-        function generatePlaylist() {
-            currentPlaylist = [];
-            const musicFiles = audioFiles.music;
-            const albumFiles = activeAlbum !== 'none' ? audioFiles.albums[activeAlbum] : [];
-            const allMusic = [...musicFiles, ...albumFiles];
-
-            if (allMusic.length === 0) {
-                // Playlist de exemplo se não houver arquivos
-                currentPlaylist = [
-                    {
-                        type: 'music',
-                        title: 'Música de Exemplo',
-                        artist: 'Artista Exemplo',
-                        url: 'https://res.cloudinary.com/dygbrcrr6/video/upload/v1749781508/Leonardo-Nao-Aprendi-A-Dizer-Adeus_xrmdjf.mp3'
-                    }
-                ];
-                return;
-            }
-
-            // Embaralhar músicas
-            const shuffledMusic = [...allMusic].sort(() => Math.random() - 0.5);
+        function loadCurrentTrack() {
+            if (currentPlaylist.length === 0) return;
             
-            for (let i = 0; i < shuffledMusic.length; i++) {
-                currentPlaylist.push({
-                    type: 'music',
-                    title: shuffledMusic[i].name || 'Música',
-                    artist: 'Supermercado do Louro',
-                    url: shuffledMusic[i].url
-                });
+            const track = currentPlaylist[currentTrackIndex];
+            trackTitle.textContent = track.name.replace('.mp3', '');
+            
+            const categoryNames = {
+                'musica': '🎵 Música',
+                'hora_certa': '🕐 Hora Certa',
+                'aviso': '📢 Aviso'
+            };
+            
+            trackCategory.textContent = categoryNames[track.type] || '🎵 Música';
+            
+            // Atualizar capa do álbum
+            updateAlbumCover();
+            
+            // Para demonstração, não carregaremos áudio real
+            // audioPlayer.src = track.url;
+            
+            // Registrar reprodução
+            logPlay(track);
+        }
 
-                // Inserir hora certa a cada 3 músicas
-                if ((i + 1) % 3 === 0 && audioFiles.time.length > 0) {
-                    const timeFile = audioFiles.time[Math.floor(Math.random() * audioFiles.time.length)];
-                    currentPlaylist.push({
-                        type: 'time',
-                        title: 'Hora Certa',
-                        artist: 'Informativo',
-                        url: timeFile.url
-                    });
-                }
-
-                // Inserir avisos a cada 6 músicas
-                if ((i + 1) % 6 === 0 && audioFiles.ads.length > 0) {
-                    const adFile = audioFiles.ads[Math.floor(Math.random() * audioFiles.ads.length)];
-                    currentPlaylist.push({
-                        type: 'ads',
-                        title: 'Aviso Importante',
-                        artist: 'Administração',
-                        url: adFile.url
-                    });
-                }
+        function updateAlbumCover() {
+            const albumEmojis = {
+                'none': '🎵',
+                'natal': '🎄',
+                'pascoa': '🐰',
+                'sao_joao': '🌽'
+            };
+            
+            albumCover.textContent = albumEmojis[currentAlbumName] || '🎵';
+            
+            if (isPlaying) {
+                albumCover.classList.add('playing');
+            } else {
+                albumCover.classList.remove('playing');
             }
         }
 
         function togglePlayPause() {
+            if (currentPlaylist.length === 0) {
+                alert('Nenhuma música disponível. Faça upload de arquivos primeiro.');
+                return;
+            }
+
             if (isPlaying) {
                 audioPlayer.pause();
-                playBtn.textContent = '▶️';
+                playPauseBtn.textContent = '▶️';
                 isPlaying = false;
             } else {
-                if (currentPlaylist.length === 0) {
-                    generatePlaylist();
-                }
-                if (currentIndex >= currentPlaylist.length) {
-                    currentIndex = 0;
-                }
-                playCurrentTrack();
+                // Para demonstração, simularemos a reprodução
+                playPauseBtn.textContent = '⏸️';
+                isPlaying = true;
+                // audioPlayer.play().catch(e => console.log('Erro ao reproduzir:', e));
             }
+            
+            updateAlbumCover();
         }
 
-        function playCurrentTrack() {
-            if (currentPlaylist.length === 0) return;
-
-            const track = currentPlaylist[currentIndex];
-            audioPlayer.src = track.url;
-            audioPlayer.play().then(() => {
-                isPlaying = true;
-                playBtn.textContent = '⏸️';
-                updateUI();
-                updatePlayStats(track);
-            }).catch(e => {
-                console.log('Erro ao reproduzir:', e);
-                nextTrack();
-            });
+        function skipTrack() {
+            nextTrack();
         }
 
         function nextTrack() {
-            currentIndex++;
-            if (currentIndex >= currentPlaylist.length) {
-                generatePlaylist(); // Regenerar playlist
-                currentIndex = 0;
-            }
-            playCurrentTrack();
-        }
-
-        function updateUI() {
             if (currentPlaylist.length === 0) return;
             
-            const track = currentPlaylist[currentIndex];
-            trackTitle.textContent = track.title;
-            trackArtist.textContent = track.artist;
-
-            // Atualizar cor do tipo de conteúdo
-            if (track.type === 'time') {
-                albumCover.style.background = 'linear-gradient(45deg, #ffa726, #ff9800)';
-                albumCover.textContent = '🕐';
-            } else if (track.type === 'ads') {
-                albumCover.style.background = 'linear-gradient(45deg, #ef5350, #e53935)';
-                albumCover.textContent = '📢';
-            } else {
-                albumCover.style.background = 'linear-gradient(45deg, #ff6b6b, #4ecdc4)';
-                albumCover.textContent = '🎵';
-            }
-        }
-
-        function updateAlbumDisplay() {
-            const albumItems = document.querySelectorAll('.album-item');
-            albumItems.forEach(item => {
-                item.classList.remove('active');
-                if (item.dataset.album === activeAlbum) {
-                    item.classList.add('active');
-                }
-            });
-        }
-
-        function updatePlayStats(track) {
-            if (track && track.type === 'music') {
-                const key = track.title + ' - ' + track.artist;
-                playStats[key] = (playStats[key] || 0) + 1;
-                localStorage.setItem('playStats', JSON.stringify(playStats));
-                updatePlayStatsDisplay();
-            }
-        }
-
-        function updatePlayStatsDisplay() {
-            const statsContainer = document.getElementById('playStats');
-            statsContainer.innerHTML = '';
+            currentTrackIndex = (currentTrackIndex + 1) % currentPlaylist.length;
+            loadCurrentTrack();
             
-            Object.entries(playStats)
-                .sort(([,a], [,b]) => b - a)
-                .slice(0, 10)
-                .forEach(([track, count]) => {
-                    const statItem = document.createElement('div');
-                    statItem.className = 'stat-item';
-                    statItem.innerHTML = `
-                        <span>${track}</span>
-                        <span>${count}x</span>
-                    `;
-                    statsContainer.appendChild(statItem);
-                });
+            if (isPlaying) {
+                // audioPlayer.play().catch(e => console.log('Erro ao reproduzir:', e));
+            }
         }
 
-        function resetStats() {
-            playStats = {};
-            localStorage.removeItem('playStats');
-            updatePlayStatsDisplay();
+        function setVolume(value) {
+            audioPlayer.volume = value / 100;
+            volumeSlider.value = value;
         }
 
-        // Funções administrativas
+        function logPlay(track) {
+            const playRecord = {
+                name: track.name,
+                type: track.type,
+                timestamp: new Date().toLocaleString('pt-BR'),
+                date: Date.now()
+            };
+            
+            playHistory.push(playRecord);
+            localStorage.setItem('playHistory', JSON.stringify(playHistory));
+            updateStats();
+            loadPlayHistory();
+        }
+
+        // Funções do Painel Admin
         function toggleAdmin() {
-            document.getElementById('adminPanel').style.display = 'block';
+            const adminPanel = document.getElementById('adminPanel');
+            adminPanel.classList.toggle('hidden');
         }
 
-        function closeAdmin() {
-            document.getElementById('adminPanel').style.display = 'none';
-        }
-
-        function adminLogin() {
+        function login() {
             const password = document.getElementById('adminPassword').value;
+            
             if (password === 'admin123') {
-                document.getElementById('loginForm').style.display = 'none';
-                document.getElementById('adminContent').style.display = 'block';
-                updateFileList();
-                updatePlayStatsDisplay();
+                document.getElementById('adminLogin').classList.add('hidden');
+                document.getElementById('adminContent').classList.remove('hidden');
+                updateStats();
             } else {
                 alert('Senha incorreta!');
             }
         }
 
-        function setActiveAlbum(album) {
-            activeAlbum = album;
-            localStorage.setItem('activeAlbum', album);
-            updateAlbumDisplay();
-            generatePlaylist();
+        function showTab(tabName) {
+            // Remover active de todas as abas
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Ativar aba clicada
+            event.target.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+            
+            if (tabName === 'files') {
+                loadFilesList();
+            } else if (tabName === 'reports') {
+                loadPlayHistory();
+            }
         }
 
-        // Simulação de upload (substitua pela integração real do Cloudinary)
-        function uploadFiles(type) {
-            const fileInput = document.getElementById(type + 'Upload');
-            const files = fileInput.files;
+        function uploadFiles() {
+            const category = document.getElementById('uploadCategory').value;
+            const files = document.getElementById('audioFile').files;
             
             if (files.length === 0) {
-                alert('Selecione arquivos para upload');
+                alert('Selecione pelo menos um arquivo!');
                 return;
             }
-
-            // Simular upload para demonstração
-            Array.from(files).forEach(file => {
-                const fileObj = {
-                    name: file.name,
-                    url: URL.createObjectURL(file), // Em produção, use a URL do Cloudinary
-                    uploadDate: new Date().toISOString()
-                };
-                
-                audioFiles[type].push(fileObj);
-            });
-
-            localStorage.setItem(type + 'Files', JSON.stringify(audioFiles[type]));
-            updateFileList();
-            generatePlaylist();
-            fileInput.value = '';
-            alert('Arquivos enviados com sucesso!');
-        }
-
-        function uploadAlbumFiles() {
-            if (activeAlbum === 'none') {
-                alert('Selecione um álbum ativo primeiro');
-                return;
-            }
-
-            const fileInput = document.getElementById('albumUpload');
-            const files = fileInput.files;
             
-            if (files.length === 0) {
-                alert('Selecione arquivos para upload');
-                return;
-            }
-
-            Array.from(files).forEach(file => {
-                const fileObj = {
-                    name: file.name,
-                    url: URL.createObjectURL(file),
-                    uploadDate: new Date().toISOString()
-                };
-                
-                audioFiles.albums[activeAlbum].push(fileObj);
-            });
-
-            localStorage.setItem(activeAlbum + 'Files', JSON.stringify(audioFiles.albums[activeAlbum]));
-            updateFileList();
-            generatePlaylist();
-            fileInput.value = '';
-            alert('Arquivos do álbum enviados com sucesso!');
-        }
-
-        function updateFileList() {
-            // Atualizar lista de músicas
-            updateSingleFileList('music', 'musicList');
-            updateSingleFileList('time', 'timeList');
-            updateSingleFileList('ads', 'adsList');
+            const progressBar = document.getElementById('uploadProgress');
+            const progressFill = document.getElementById('uploadProgressFill');
             
-            // Atualizar lista do álbum ativo
-            if (activeAlbum !== 'none') {
-                updateAlbumFileList();
-            }
-        }
-
-        function updateSingleFileList(type, containerId) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = '';
+            progressBar.classList.remove('hidden');
             
-            audioFiles[type].forEach((file, index) => {
-                const fileItem = document.createElement('div');
-                fileItem.className = 'file-item';
-                fileItem.innerHTML = `
-                    <span>${file.name}</span>
-                    <button class="delete-btn" onclick="deleteFile('${type}', ${index})">🗑️</button>
-                `;
-                container.appendChild(fileItem);
-            });
-        }
-
-        function updateAlbumFileList() {
-            const container = document.getElementById('albumList');
-            container.innerHTML = '';
-            
-            if (activeAlbum === 'none') return;
-            
-            audioFiles.albums[activeAlbum].forEach((file, index) => {
-                const fileItem = document.createElement('div');
-                fileItem.className = 'file-item';
-                fileItem.innerHTML = `
-                    <span>${file.name}</span>
-                    <button class="delete-btn" onclick="deleteAlbumFile(${index})">🗑️</button>
-                `;
-                container.appendChild(fileItem);
-            });
-        }
-
-        function deleteFile(type, index) {
-            if (confirm('Deseja excluir este arquivo?')) {
-                audioFiles[type].splice(index, 1);
-                localStorage.setItem(type + 'Files', JSON.stringify(audioFiles[type]));
-                updateFileList();
-                generatePlaylist();
-            }
-        }
-
-        function deleteAlbumFile(index) {
-            if (confirm('Deseja excluir este arquivo do álbum?')) {
-                audioFiles.albums[activeAlbum].splice(index, 1);
-                localStorage.setItem(activeAlbum + 'Files', JSON.stringify(audioFiles.albums[activeAlbum]));
-                updateFileList();
-                generatePlaylist();
-            }
-        }
-
-        // Integração com Cloudinary (implementação real)
-        async function uploadToCloudinary(file, folder = 'radio') {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
-            formData.append('folder', folder);
-
-            try {
-                const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/video/upload`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await response.json();
-                if (data.secure_url) {
-                    return {
-                        name: file.name,
-                        url: data.secure_url,
-                        publicId: data.public_id,
-                        uploadDate: new Date().toISOString()
-                    };
-                }
-                throw new Error('Upload falhou');
-            } catch (error) {
-                console.error('Erro no upload:', error);
-                throw error;
-            }
-        }
-
-        // Função para upload real com Cloudinary
-        async function uploadFilesReal(type) {
-            const fileInput = document.getElementById(type + 'Upload');
-            const files = fileInput.files;
-            
-            if (files.length === 0) {
-                alert('Selecione arquivos para upload');
-                return;
-            }
-
-            const uploadBtn = document.querySelector(`button[onclick="uploadFiles('${type}')"]`);
-            uploadBtn.textContent = 'Enviando...';
-            uploadBtn.disabled = true;
-
-            try {
-                for (let file of files) {
-                    const uploadedFile = await uploadToCloudinary(file, `radio/${type}`);
-                    audioFiles[type].push(uploadedFile);
-                }
-
-                localStorage.setItem(type + 'Files', JSON.stringify(audioFiles[type]));
-                updateFileList();
-                generatePlaylist();
-                fileInput.value = '';
-                alert('Arquivos enviados com sucesso!');
-            } catch (error) {
-                alert('Erro no upload: ' + error.message);
-            } finally {
-                uploadBtn.textContent = 'Upload ' + (type === 'music' ? 'Músicas' : type === 'time' ? 'Hora Certa' : 'Avisos');
-                uploadBtn.disabled = false;
-            }
-        }
-
-        // Função para deletar do Cloudinary
-        async function deleteFromCloudinary(publicId) {
-            try {
-                const timestamp = Math.round(Date.now() / 1000);
-                const stringToSign = `public_id=${publicId}&timestamp=${timestamp}`;
+            // Simular upload
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 10;
+                progressFill.style.width = progress + '%';
                 
-                // Nota: Em produção, a assinatura deve ser gerada no backend por segurança
-                const signature = await generateSignature(stringToSign);
-                
-                const formData = new FormData();
-                formData.append('public_id', publicId);
-                formData.append('timestamp', timestamp);
-                formData.append('api_key', CLOUDINARY_CONFIG.apiKey);
-                formData.append('signature', signature);
-
-                const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/image/destroy`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                return await response.json();
-            } catch (error) {
-                console.error('Erro ao deletar do Cloudinary:', error);
-            }
-        }
-
-        // Função para gerar assinatura (deve ser implementada no backend)
-        async function generateSignature(stringToSign) {
-            // Esta função deve chamar seu backend para gerar a assinatura
-            // Por questões de segurança, a API secret não deve estar no frontend
-            console.warn('Implementar geração de assinatura no backend');
-            return 'signature_placeholder';
-        }
-
-        // Auto-play quando a página carrega
-        setTimeout(() => {
-            if (currentPlaylist.length > 0) {
-                playCurrentTrack();
-            }
-        }, 2000);
-
-        // Prevenção de sleep em dispositivos móveis
-        let wakeLock = null;
-        async function requestWakeLock() {
-            try {
-                wakeLock = await navigator.wakeLock.request('screen');
-            } catch (err) {
-                console.log('Wake Lock não suportado:', err);
-            }
-        }
-
-        // Solicitar wake lock quando começar a tocar
-        audioPlayer.addEventListener('play', () => {
-            requestWakeLock();
-        });
-
-        // Adicionar Service Worker para funcionamento offline
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(err => {
-                console.log('Service Worker não registrado:', err);
-            });
-        }
-
-        // Controles de teclado
-        document.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' && !document.getElementById('adminPanel').style.display) {
-                e.preventDefault();
-                togglePlayPause();
-            }
-        });
-
-        // Notificação de nova música
-        function showNotification(track) {
-            if ('Notification' in window && Notification.permission === 'granted') {
-                new Notification('🎵 Tocando Agora', {
-                    body: `${track.title} - ${track.artist}`,
-                    icon: '/favicon.ico'
-                });
-            }
-        }
-
-        // Solicitar permissão para notificações
-        if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission();
-        }
-
-        // Visualizador de áudio simples
-        function createAudioVisualizer() {
-            try {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const analyser = audioContext.createAnalyser();
-                const source = audioContext.createMediaElementSource(audioPlayer);
-                
-                source.connect(analyser);
-                analyser.connect(audioContext.destination);
-                
-                analyser.fftSize = 256;
-                const bufferLength = analyser.frequencyBinCount;
-                const dataArray = new Uint8Array(bufferLength);
-                
-                function animate() {
-                    requestAnimationFrame(animate);
-                    analyser.getByteFrequencyData(dataArray);
+                if (progress >= 100) {
+                    clearInterval(interval);
                     
-                    // Calcular intensidade média
-                    const average = dataArray.reduce((a, b) => a + b) / bufferLength;
-                    const intensity = average / 255;
+                    // Adicionar arquivos ao sistema
+                    if (!audioFiles[category]) {
+                        audioFiles[category] = [];
+                    }
                     
-                    // Aplicar efeito visual na capa do álbum
-                    const scale = 1 + (intensity * 0.1);
-                    albumCover.style.transform = `scale(${scale})`;
+                    Array.from(files).forEach(file => {
+                        audioFiles[category].push({
+                            name: file.name,
+                            url: `https://res.cloudinary.com/dygbrcrr6/raw/upload/v${Date.now()}/${file.name}`,
+                            uploaded: Date.now()
+                        });
+                    });
+                    
+                    localStorage.setItem('audioFiles', JSON.stringify(audioFiles));
+                    
+                    alert(`${files.length} arquivo(s) enviado(s) com sucesso!`);
+                    progressBar.classList.add('hidden');
+                    progressFill.style.width = '0%';
+                    
+                    // Limpar formulário
+                    document.getElementById('audioFile').value = '';
+                    
+                    // Atualizar sistema
+                    buildPlaylist();
+                    updateStats();
+                    loadFilesList();
                 }
-                
-                animate();
-            } catch (error) {
-                console.log('Visualizador de áudio não suportado:', error);
-            }
+            }, 200);
         }
 
-        // Inicializar visualizador quando o áudio começar
-        audioPlayer.addEventListener('play', createAudioVisualizer, { once: true });
+        function selectAlbum(albumName) {
+            currentAlbumName = albumName;
+            localStorage.setItem('currentAlbum', albumName);
+            
+            updateAlbumSelector();
+            updateAlbumCover();
+            buildPlaylist();
+            updateStats();
+        }
 
-        // Função para backup/restore das configurações
-        function exportConfig() {
-            const config = {
-                audioFiles,
-                activeAlbum,
-                playStats,
-                timestamp: new Date().toISOString()
+        function updateAlbumSelector() {
+            document.querySelectorAll('.album-option').forEach(option => {
+                option.classList.remove('active');
+                if (option.dataset.album === currentAlbumName) {
+                    option.classList.add('active');
+                }
+            });
+        }
+
+        function updateStats() {
+            const totalMusics = Object.values(audioFiles).reduce((total, category) => total + (category.length || 0), 0);
+            const totalPlayed = playHistory.length;
+            
+            const albumNames = {
+                'none': 'Nenhum',
+                'natal': 'Natal 🎄',
+                'pascoa': 'Páscoa 🐰',
+                'sao_joao': 'São João 🌽'
             };
             
-            const dataStr = JSON.stringify(config, null, 2);
-            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            document.getElementById('totalMusics').textContent = totalMusics;
+            document.getElementById('totalPlayed').textContent = totalPlayed;
+            document.getElementById('currentAlbum').textContent = albumNames[currentAlbumName] || 'Nenhum';
+        }
+
+        function loadFilesList() {
+            const filesList = document.getElementById('filesList');
+            filesList.innerHTML = '';
+            
+            Object.keys(audioFiles).forEach(category => {
+                if (audioFiles[category].length > 0) {
+                    const categoryDiv = document.createElement('div');
+                    categoryDiv.innerHTML = `<h4>${getCategoryName(category)}</h4>`;
+                    
+                    audioFiles[category].forEach((file, index) => {
+                        const fileDiv = document.createElement('div');
+                        fileDiv.className = 'file-item';
+                        fileDiv.innerHTML = `
+                            <span>${file.name}</span>
+                            <button class="btn btn-danger" onclick="deleteFile('${category}', ${index})">🗑️</button>
+                        `;
+                        categoryDiv.appendChild(fileDiv);
+                    });
+                    
+                    filesList.appendChild(categoryDiv);
+                }
+            });
+        }
+
+        function deleteFile(category, index) {
+            if (confirm('Tem certeza que deseja excluir este arquivo?')) {
+                audioFiles[category].splice(index, 1);
+                localStorage.setItem('audioFiles', JSON.stringify(audioFiles));
+                
+                buildPlaylist();
+                updateStats();
+                loadFilesList();
+                
+                alert('Arquivo excluído com sucesso!');
+            }
+        }
+
+        function loadPlayHistory() {
+            const playHistoryDiv = document.getElementById('playHistory');
+            playHistoryDiv.innerHTML = '';
+            
+            if (playHistory.length === 0) {
+                playHistoryDiv.innerHTML = '<p style="text-align: center; opacity: 0.7;">Nenhuma reprodução registrada ainda.</p>';
+                return;
+            }
+            
+            // Mostrar os últimos 20 registros
+            const recentHistory = playHistory.slice(-20).reverse();
+            
+            recentHistory.forEach(record => {
+                const recordDiv = document.createElement('div');
+                recordDiv.className = 'file-item';
+                recordDiv.innerHTML = `
+                    <div>
+                        <strong>${record.name}</strong>
+                        <br>
+                        <small>${record.type} - ${record.timestamp}</small>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="font-size: 1.5rem;">${getTypeEmoji(record.type)}</span>
+                    </div>
+                `;
+                playHistoryDiv.appendChild(recordDiv);
+            });
+        }
+
+        function resetReports() {
+            if (confirm('Tem certeza que deseja limpar todo o histórico de reprodução?')) {
+                playHistory = [];
+                localStorage.setItem('playHistory', JSON.stringify(playHistory));
+                loadPlayHistory();
+                updateStats();
+                alert('Histórico limpo com sucesso!');
+            }
+        }
+
+        function getCategoryName(category) {
+            const names = {
+                'musicas': '🎵 Músicas Principais',
+                'hora_certa': '🕐 Hora Certa',
+                'avisos': '📢 Avisos/Propagandas',
+                'natal': '🎄 Álbum Natal',
+                'pascoa': '🐰 Álbum Páscoa',
+                'sao_joao': '🌽 Álbum São João'
+            };
+            return names[category] || category;
+        }
+
+        function getTypeEmoji(type) {
+            const emojis = {
+                'musica': '🎵',
+                'hora_certa': '🕐',
+                'aviso': '📢'
+            };
+            return emojis[type] || '🎵';
+        }
+
+        // Auto-play simulation para demonstração
+        setInterval(() => {
+            if (isPlaying && currentPlaylist.length > 0) {
+                // Simular fim da música após 30 segundos
+                if (Math.random() < 0.1) { // 10% de chance a cada segundo
+                    nextTrack();
+                }
+            }
+        }, 1000);
+
+        // Simular hora certa a cada minuto
+        setInterval(() => {
+            const now = new Date();
+            if (now.getSeconds() === 0 && audioFiles.hora_certa && audioFiles.hora_certa.length > 0) {
+                // Forçar hora certa no próximo track
+                if (isPlaying) {
+                    const horaCerta = audioFiles.hora_certa[0];
+                    currentPlaylist.splice(currentTrackIndex + 1, 0, {...horaCerta, type: 'hora_certa'});
+                }
+            }
+        }, 1000);
+
+        // Detectar mudanças no volume slider
+        volumeSlider.addEventListener('input', function() {
+            setVolume(this.value);
+        });
+
+        // Função para simular conexão com Cloudinary
+        function simulateCloudinaryUpload(file, category) {
+            return new Promise((resolve) => {
+                // Simular delay de upload
+                setTimeout(() => {
+                    const fakeUrl = `https://res.cloudinary.com/dygbrcrr6/raw/upload/v${Date.now()}/${encodeURIComponent(file.name)}`;
+                    resolve({
+                        url: fakeUrl,
+                        public_id: `radio_${category}_${Date.now()}`,
+                        original_filename: file.name.replace('.mp3', ''),
+                        format: 'mp3'
+                    });
+                }, Math.random() * 2000 + 1000); // 1-3 segundos
+            });
+        }
+
+        // Melhorar a experiência mobile
+        if ('ontouchstart' in window) {
+            // Detectar dispositivos touch
+            document.body.style.userSelect = 'none';
+            
+            // Melhorar controles em dispositivos móveis
+            const controls = document.querySelectorAll('.control-btn');
+            controls.forEach(btn => {
+                btn.style.minHeight = '50px';
+                btn.style.minWidth = '50px';
+            });
+        }
+
+        // Função para exportar relatórios
+        function exportPlayHistory() {
+            if (playHistory.length === 0) {
+                alert('Nenhum histórico para exportar.');
+                return;
+            }
+            
+            const csvContent = "data:text/csv;charset=utf-8,Nome,Tipo,Data/Hora\n" + 
+                playHistory.map(record => `"${record.name}","${record.type}","${record.timestamp}"`).join("\n");
+            
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `historico_radio_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Adicionar botão de exportação aos relatórios
+        document.addEventListener('DOMContentLoaded', function() {
+            const reportsTab = document.getElementById('reports');
+            const exportBtn = document.createElement('button');
+            exportBtn.className = 'btn';
+            exportBtn.innerHTML = '📊 Exportar CSV';
+            exportBtn.onclick = exportPlayHistory;
+            
+            const headerDiv = reportsTab.querySelector('div');
+            headerDiv.appendChild(exportBtn);
+        });
+
+        // Notificações do sistema
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'error' ? '#ff6b6b' : '#667eea'};
+                color: white;
+                padding: 15px 20px;
+                border-radius: 10px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                z-index: 1000;
+                animation: slideInRight 0.3s ease;
+            `;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOutRight 0.3s ease';
+                setTimeout(() => document.body.removeChild(notification), 300);
+            }, 3000);
+        }
+
+        // Adicionar estilos para animações de notificação
+        const notificationStyles = document.createElement('style');
+        notificationStyles.textContent = `
+            @keyframes slideInRight {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOutRight {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(notificationStyles);
+
+        // Salvar configurações automaticamente
+        function saveSettings() {
+            const settings = {
+                volume: volumeSlider.value,
+                currentAlbum: currentAlbumName,
+                lastUpdated: Date.now()
+            };
+            localStorage.setItem('radioSettings', JSON.stringify(settings));
+        }
+
+        // Carregar configurações salvas
+        function loadSettings() {
+            const settings = JSON.parse(localStorage.getItem('radioSettings') || '{}');
+            
+            if (settings.volume) {
+                setVolume(settings.volume);
+            }
+            
+            if (settings.currentAlbum) {
+                currentAlbumName = settings.currentAlbum;
+            }
+        }
+
+        // Chamar ao inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSettings();
+        });
+
+        // Salvar configurações quando houver mudanças
+        volumeSlider.addEventListener('change', saveSettings);
+
+        // Função para verificar compatibilidade do navegador
+        function checkBrowserCompatibility() {
+            const features = {
+                audioSupport: !!window.Audio,
+                localStorage: !!window.localStorage,
+                fileAPI: !!window.File && !!window.FileReader,
+                fetch: !!window.fetch
+            };
+            
+            const unsupported = Object.keys(features).filter(key => !features[key]);
+            
+            if (unsupported.length > 0) {
+                showNotification(`Recursos não suportados: ${unsupported.join(', ')}`, 'error');
+                return false;
+            }
+            
+            return true;
+        }
+
+        // Verificar compatibilidade na inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!checkBrowserCompatibility()) {
+                console.warn('Alguns recursos podem não funcionar corretamente neste navegador.');
+            }
+        });
+
+        // Sistema de backup e restauração
+        function backupData() {
+            const backup = {
+                audioFiles,
+                playHistory,
+                currentAlbum: currentAlbumName,
+                settings: JSON.parse(localStorage.getItem('radioSettings') || '{}'),
+                timestamp: Date.now(),
+                version: '1.0'
+            };
+            
+            const dataStr = JSON.stringify(backup, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
             
             const link = document.createElement('a');
             link.href = URL.createObjectURL(dataBlob);
-            link.download = 'radio_config_backup.json';
+            link.download = `backup_radio_${new Date().toISOString().split('T')[0]}.json`;
             link.click();
-        }
-
-        function importConfig(event) {
-            const file = event.target.files[0];
-            if (!file) return;
             
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const config = JSON.parse(e.target.result);
-                    
-                    // Restaurar configurações
-                    audioFiles = config.audioFiles || audioFiles;
-                    activeAlbum = config.activeAlbum || 'none';
-                    playStats = config.playStats || {};
-                    
-                    // Salvar no localStorage
-                    localStorage.setItem('musicFiles', JSON.stringify(audioFiles.music));
-                    localStorage.setItem('timeFiles', JSON.stringify(audioFiles.time));
-                    localStorage.setItem('adsFiles', JSON.stringify(audioFiles.ads));
-                    localStorage.setItem('natalFiles', JSON.stringify(audioFiles.albums.natal));
-                    localStorage.setItem('pascoaFiles', JSON.stringify(audioFiles.albums.pascoa));
-                    localStorage.setItem('saojoaoFiles', JSON.stringify(audioFiles.albums.saojoao));
-                    localStorage.setItem('activeAlbum', activeAlbum);
-                    localStorage.setItem('playStats', JSON.stringify(playStats));
-                    
-                    // Atualizar interface
-                    updateFileList();
-                    updateAlbumDisplay();
-                    updatePlayStatsDisplay();
-                    generatePlaylist();
-                    
-                    alert('Configurações importadas com sucesso!');
-                } catch (error) {
-                    alert('Erro ao importar configurações: ' + error.message);
-                }
-            };
-            reader.readAsText(file);
+            showNotification('Backup realizado com sucesso!');
         }
 
-        // Adicionar controles de backup no painel admin
-        document.addEventListener('DOMContentLoaded', () => {
+        function restoreData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const backup = JSON.parse(e.target.result);
+                        
+                        if (confirm('Tem certeza que deseja restaurar o backup? Isso substituirá todos os dados atuais.')) {
+                            audioFiles = backup.audioFiles || {};
+                            playHistory = backup.playHistory || [];
+                            currentAlbumName = backup.currentAlbum || 'none';
+                            
+                            localStorage.setItem('audioFiles', JSON.stringify(audioFiles));
+                            localStorage.setItem('playHistory', JSON.stringify(playHistory));
+                            localStorage.setItem('currentAlbum', currentAlbumName);
+                            
+                            if (backup.settings) {
+                                localStorage.setItem('radioSettings', JSON.stringify(backup.settings));
+                            }
+                            
+                            // Recarregar interface
+                            buildPlaylist();
+                            updateStats();
+                            updateAlbumSelector();
+                            loadFilesList();
+                            loadPlayHistory();
+                            
+                            showNotification('Backup restaurado com sucesso!');
+                        }
+                    } catch (error) {
+                        showNotification('Erro ao ler arquivo de backup!', 'error');
+                        console.error('Erro no backup:', error);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            
+            input.click();
+        }
+
+        // Adicionar botões de backup na interface admin
+        document.addEventListener('DOMContentLoaded', function() {
             const adminContent = document.getElementById('adminContent');
-            if (adminContent) {
-                const backupSection = document.createElement('div');
-                backupSection.className = 'upload-section';
-                backupSection.innerHTML = `
-                    <h3>💾 Backup & Restore</h3>
-                    <button class="upload-btn" onclick="exportConfig()" style="margin-bottom: 10px;">
-                        📤 Exportar Configurações
-                    </button>
-                    <input type="file" id="importConfig" accept=".json" onchange="importConfig(event)" style="display: none;">
-                    <button class="upload-btn" onclick="document.getElementById('importConfig').click()">
-                        📥 Importar Configurações
-                    </button>
-                `;
-                adminContent.appendChild(backupSection);
-            }
+            
+            // Criar seção de backup
+            const backupSection = document.createElement('div');
+            backupSection.innerHTML = `
+                <div style="margin-top: 20px; padding: 20px; background: rgba(255,255,255,0.1); border-radius: 10px;">
+                    <h3>💾 Backup e Restauração</h3>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button class="btn" onclick="backupData()">📤 Fazer Backup</button>
+                        <button class="btn" onclick="restoreData()">📥 Restaurar Backup</button>
+                    </div>
+                </div>
+            `;
+            
+            adminContent.appendChild(backupSection);
         });
 
-        console.log('🎵 Rádio Supermercado do Louro - Sistema iniciado com sucesso!');
+        console.log('🎵 Rádio Supermercado do Louro inicializada com sucesso!');
+        console.log('📊 Para usar em produção, configure as credenciais do Cloudinary.');
     </script>
 </body>
 </html>
