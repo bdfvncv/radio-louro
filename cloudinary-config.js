@@ -5,8 +5,8 @@ class CloudinaryManager {
     constructor() {
         this.config = {
             cloudName: 'dygbrcrr6',
-            apiKey: 'your_api_key', // Substitua pela sua API Key
-            apiSecret: 'your_api_secret', // Substitua pelo seu API Secret
+            apiKey: '853591251513134',
+            apiSecret: 'yVz8MbGa_undTqNHbOqzo-hKc-U',
             uploadPreset: 'radio_louro' // Crie um upload preset no Cloudinary
         };
         
