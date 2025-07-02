@@ -1,92 +1,40 @@
 // Configuração do Cloudinary para a Rádio Supermercado do Louro
-// Versão corrigida com melhor tratamento de erros e validações
+// Este arquivo deve ser incluído antes do script principal
 
 class CloudinaryManager {
     constructor() {
         this.config = {
             cloudName: 'dygbrcrr6',
-            // IMPORTANTE: API Secret não deve estar no frontend por segurança
-            uploadPreset: 'radio_louro' // Certifique-se que este preset existe no Cloudinary
+            apiKey: '853591251513134',
+            apiSecret: 'yVz8MbGa_undTqNHbOqzo-hKc-U',
+            uploadPreset: 'radio_louro' // Crie um upload preset no Cloudinary
         };
         
         this.baseUrl = `https://res.cloudinary.com/${this.config.cloudName}`;
         this.apiUrl = `https://api.cloudinary.com/v1_1/${this.config.cloudName}`;
-        this.isInitialized = false;
-    }
-    
-    /**
-     * Inicializar e validar configuração
-     */
-    async initialize() {
-        try {
-            // Verificar se o cloud name existe
-            const testUrl = `${this.baseUrl}/image/upload/v1/sample`;
-            const response = await fetch(testUrl, { method: 'HEAD' });
-            
-            if (response.ok) {
-                this.isInitialized = true;
-                console.log('✅ Cloudinary inicializado com sucesso');
-                return true;
-            } else {
-                throw new Error('Cloud name inválido ou inacessível');
-            }
-        } catch (error) {
-            console.error('❌ Erro ao inicializar Cloudinary:', error);
-            this.isInitialized = false;
-            return false;
-        }
-    }
-    
-    /**
-     * Verificar se está inicializado antes de usar
-     */
-    checkInitialization() {
-        if (!this.isInitialized) {
-            throw new Error('CloudinaryManager não foi inicializado. Chame initialize() primeiro.');
-        }
     }
     
     /**
      * Upload de arquivo para o Cloudinary
+     * @param {File} file - Arquivo para upload
+     * @param {string} folder - Pasta de destino no Cloudinary
+     * @returns {Promise} - Promise com dados do upload
      */
     async uploadFile(file, folder = 'radio-louro') {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', this.config.uploadPreset);
+        formData.append('folder', folder);
+        formData.append('resource_type', 'auto'); // Para arquivos de áudio
+        
         try {
-            // Verificar inicialização
-            this.checkInitialization();
-            
-            // Validar arquivo
-            const validation = this.validateFile(file);
-            if (!validation.isValid) {
-                return {
-                    success: false,
-                    error: validation.errors.join(', ')
-                };
-            }
-            
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('upload_preset', this.config.uploadPreset);
-            formData.append('folder', folder);
-            formData.append('resource_type', 'auto');
-            
-            // Adicionar timeout para evitar carregamento infinito
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos
-            
             const response = await fetch(`${this.apiUrl}/upload`, {
                 method: 'POST',
-                body: formData,
-                signal: controller.signal
+                body: formData
             });
             
-            clearTimeout(timeoutId);
-            
             if (!response.ok) {
-                const errorData = await response.json().catch(() => null);
-                throw new Error(
-                    errorData?.error?.message || 
-                    `HTTP error! status: ${response.status}`
-                );
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
             
             const data = await response.json();
@@ -102,78 +50,33 @@ class CloudinaryManager {
             
         } catch (error) {
             console.error('Erro no upload para Cloudinary:', error);
-            
-            let errorMessage = 'Erro desconhecido no upload';
-            
-            if (error.name === 'AbortError') {
-                errorMessage = 'Upload cancelado por timeout (30s)';
-            } else if (error.message.includes('upload_preset')) {
-                errorMessage = 'Preset de upload não configurado corretamente';
-            } else if (error.message.includes('network')) {
-                errorMessage = 'Erro de conexão. Verifique sua internet.';
-            } else {
-                errorMessage = error.message;
-            }
-            
             return {
                 success: false,
-                error: errorMessage
+                error: error.message
             };
         }
     }
     
     /**
-     * Upload múltiplos arquivos com melhor controle
+     * Upload múltiplos arquivos
+     * @param {FileList} files - Lista de arquivos
+     * @param {string} folder - Pasta de destino
+     * @returns {Promise} - Promise com resultados dos uploads
      */
-    async uploadMultipleFiles(files, folder = 'radio-louro', onProgress = null) {
+    async uploadMultipleFiles(files, folder = 'radio-louro') {
+        const uploadPromises = Array.from(files).map(file => 
+            this.uploadFile(file, folder)
+        );
+        
         try {
-            this.checkInitialization();
-            
-            const results = [];
-            const totalFiles = files.length;
-            
-            for (let i = 0; i < totalFiles; i++) {
-                const file = files[i];
-                
-                // Callback de progresso
-                if (onProgress) {
-                    onProgress({
-                        currentFile: i + 1,
-                        totalFiles,
-                        fileName: file.name,
-                        percentage: Math.round(((i) / totalFiles) * 100)
-                    });
-                }
-                
-                const result = await this.uploadFile(file, folder);
-                results.push({
-                    ...result,
-                    fileName: file.name,
-                    fileIndex: i
-                });
-                
-                // Pequena pausa entre uploads para não sobrecarregar
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-            
+            const results = await Promise.all(uploadPromises);
             const successful = results.filter(r => r.success);
             const failed = results.filter(r => !r.success);
-            
-            // Callback final
-            if (onProgress) {
-                onProgress({
-                    currentFile: totalFiles,
-                    totalFiles,
-                    fileName: 'Concluído',
-                    percentage: 100,
-                    completed: true
-                });
-            }
             
             return {
                 successful,
                 failed,
-                totalFiles,
+                totalFiles: files.length,
                 successCount: successful.length,
                 failureCount: failed.length
             };
@@ -185,46 +88,90 @@ class CloudinaryManager {
     }
     
     /**
-     * Validar arquivo com mais verificações
+     * Deletar arquivo do Cloudinary
+     * @param {string} publicId - ID público do arquivo
+     * @returns {Promise} - Promise com resultado da deleção
+     */
+    async deleteFile(publicId) {
+        try {
+            // Para deletar, você precisará implementar uma função serverless
+            // ou usar um backend, pois requer autenticação com API Secret
+            console.warn('Deleção requer implementação backend por segurança');
+            return { success: false, error: 'Deleção não implementada no frontend' };
+            
+        } catch (error) {
+            console.error('Erro ao deletar arquivo:', error);
+            return { success: false, error: error.message };
+        }
+    }
+    
+    /**
+     * Gerar URL de transformação para áudio
+     * @param {string} publicId - ID público do arquivo
+     * @param {Object} options - Opções de transformação
+     * @returns {string} - URL transformada
+     */
+    generateAudioUrl(publicId, options = {}) {
+        let transformations = [];
+        
+        // Qualidade do áudio
+        if (options.quality) {
+            transformations.push(`q_${options.quality}`);
+        }
+        
+        // Formato do áudio
+        if (options.format) {
+            transformations.push(`f_${options.format}`);
+        }
+        
+        // Bitrate
+        if (options.bitrate) {
+            transformations.push(`br_${options.bitrate}`);
+        }
+        
+        const transformStr = transformations.length > 0 ? `/${transformations.join(',')}` : '';
+        return `${this.baseUrl}/video/upload${transformStr}/${publicId}`;
+    }
+    
+    /**
+     * Listar arquivos de uma pasta
+     * @param {string} folder - Nome da pasta
+     * @returns {Promise} - Promise com lista de arquivos
+     */
+    async listFiles(folder = 'radio-louro') {
+        try {
+            // Esta função também requer backend por segurança
+            // Aqui você pode implementar uma API própria que consulta o Cloudinary
+            console.warn('Listagem requer implementação backend por segurança');
+            return { success: false, error: 'Listagem não implementada no frontend' };
+            
+        } catch (error) {
+            console.error('Erro ao listar arquivos:', error);
+            return { success: false, error: error.message };
+        }
+    }
+    
+    /**
+     * Validar arquivo antes do upload
+     * @param {File} file - Arquivo para validar
+     * @returns {Object} - Resultado da validação
      */
     validateFile(file) {
-        const validTypes = [
-            'audio/mpeg', 'audio/mp3', 'audio/wav', 
-            'audio/ogg', 'audio/flac', 'audio/m4a'
-        ];
+        const validTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg'];
         const maxSize = 50 * 1024 * 1024; // 50MB
-        const minSize = 1024; // 1KB mínimo
         
         const errors = [];
         
-        // Verificar se o arquivo existe
-        if (!file) {
-            errors.push('Nenhum arquivo selecionado');
-            return { isValid: false, errors };
-        }
-        
-        // Verificar tipo
         if (!validTypes.includes(file.type)) {
-            errors.push(`Tipo não suportado: ${file.type}. Use MP3, WAV, OGG, FLAC ou M4A.`);
+            errors.push('Tipo de arquivo não suportado. Use MP3, WAV ou OGG.');
         }
         
-        // Verificar tamanho
         if (file.size > maxSize) {
-            errors.push(`Arquivo muito grande: ${this.formatFileSize(file.size)}. Máximo: 50MB.`);
+            errors.push('Arquivo muito grande. Máximo 50MB.');
         }
         
-        if (file.size < minSize) {
-            errors.push('Arquivo muito pequeno. Mínimo: 1KB.');
-        }
-        
-        // Verificar nome
         if (file.name.length > 100) {
-            errors.push('Nome muito longo. Máximo: 100 caracteres.');
-        }
-        
-        // Verificar caracteres especiais no nome
-        if (!/^[a-zA-Z0-9._\-\s]+$/.test(file.name)) {
-            errors.push('Nome contém caracteres inválidos. Use apenas letras, números, pontos, hífens e espaços.');
+            errors.push('Nome do arquivo muito longo. Máximo 100 caracteres.');
         }
         
         return {
@@ -240,34 +187,9 @@ class CloudinaryManager {
     }
     
     /**
-     * Gerar URL de áudio com validação
-     */
-    generateAudioUrl(publicId, options = {}) {
-        if (!publicId) {
-            console.error('Public ID é obrigatório para gerar URL');
-            return null;
-        }
-        
-        let transformations = [];
-        
-        if (options.quality) {
-            transformations.push(`q_${options.quality}`);
-        }
-        
-        if (options.format) {
-            transformations.push(`f_${options.format}`);
-        }
-        
-        if (options.bitrate) {
-            transformations.push(`br_${options.bitrate}`);
-        }
-        
-        const transformStr = transformations.length > 0 ? `/${transformations.join(',')}` : '';
-        return `${this.baseUrl}/video/upload${transformStr}/${publicId}`;
-    }
-    
-    /**
      * Formatar tamanho do arquivo
+     * @param {number} bytes - Tamanho em bytes
+     * @returns {string} - Tamanho formatado
      */
     formatFileSize(bytes) {
         if (bytes === 0) return '0 Bytes';
@@ -280,137 +202,117 @@ class CloudinaryManager {
     }
     
     /**
-     * Criar preview de áudio com tratamento de erro
+     * Gerar thumbnail para arquivo de áudio (usando waveform)
+     * @param {string} publicId - ID público do arquivo
+     * @returns {string} - URL do thumbnail
      */
-    async createAudioPreview(file) {
-        return new Promise((resolve, reject) => {
-            if (!file) {
-                reject(new Error('Arquivo não fornecido'));
-                return;
+    generateAudioThumbnail(publicId) {
+        return `${this.baseUrl}/video/upload/f_jpg,w_300,h_200,c_pad,b_auto,fl_waveform/${publicId}.jpg`;
+    }
+}
+
+// Instância global do gerenciador Cloudinary
+window.cloudinaryManager = new CloudinaryManager();
+
+// Função para inicializar o Cloudinary
+window.initializeCloudinary = function(config) {
+    if (config.cloudName) {
+        window.cloudinaryManager.config.cloudName = config.cloudName;
+        window.cloudinaryManager.baseUrl = `https://res.cloudinary.com/${config.cloudName}`;
+        window.cloudinaryManager.apiUrl = `https://api.cloudinary.com/v1_1/${config.cloudName}`;
+    }
+    
+    if (config.uploadPreset) {
+        window.cloudinaryManager.config.uploadPreset = config.uploadPreset;
+    }
+    
+    console.log('🔧 Cloudinary configurado:', window.cloudinaryManager.config.cloudName);
+};
+
+// Widget de upload do Cloudinary (opcional)
+window.createUploadWidget = function(options, callback) {
+    if (typeof cloudinary === 'undefined') {
+        console.error('Cloudinary SDK não carregado');
+        return null;
+    }
+    
+    return cloudinary.createUploadWidget({
+        cloudName: window.cloudinaryManager.config.cloudName,
+        uploadPreset: window.cloudinaryManager.config.uploadPreset,
+        folder: options.folder || 'radio-louro',
+        resourceType: 'auto',
+        multiple: options.multiple || false,
+        maxFiles: options.maxFiles || 10,
+        maxFileSize: 50000000, // 50MB
+        sources: ['local', 'url', 'camera'],
+        clientAllowedFormats: ['mp3', 'wav', 'ogg', 'flac'],
+        maxImageWidth: 2000,
+        maxImageHeight: 2000,
+        cropping: false,
+        theme: 'minimal',
+        styles: {
+            palette: {
+                window: "#2c3e50",
+                sourceBg: "#34495e",
+                windowBorder: "#3498db",
+                tabIcon: "#ffffff",
+                inactiveTabIcon: "#bdc3c7",
+                menuIcons: "#3498db",
+                link: "#3498db",
+                action: "#27ae60",
+                inProgress: "#f39c12",
+                complete: "#27ae60",
+                error: "#e74c3c",
+                textDark: "#2c3e50",
+                textLight: "#ffffff"
             }
-            
-            const audio = new Audio();
-            const url = URL.createObjectURL(file);
-            let resolved = false;
-            
-            // Timeout para evitar travamento
-            const timeout = setTimeout(() => {
-                if (!resolved) {
-                    resolved = true;
-                    URL.revokeObjectURL(url);
-                    reject(new Error('Timeout ao carregar áudio'));
-                }
-            }, 10000);
-            
-            audio.addEventListener('loadedmetadata', () => {
-                if (!resolved) {
-                    resolved = true;
-                    clearTimeout(timeout);
-                    resolve({
-                        duration: audio.duration,
-                        url: url,
-                        name: file.name,
-                        size: file.size,
-                        type: file.type,
-                        durationFormatted: this.formatDuration(audio.duration)
-                    });
-                }
+        }
+    }, callback);
+};
+
+// Função para processar resultado do upload
+window.processUploadResult = function(result) {
+    if (result.event === 'success') {
+        return {
+            success: true,
+            url: result.info.secure_url,
+            publicId: result.info.public_id,
+            originalName: result.info.original_filename,
+            size: result.info.bytes,
+            format: result.info.format,
+            duration: result.info.duration || 0,
+            resourceType: result.info.resource_type
+        };
+    }
+    
+    return {
+        success: false,
+        error: result.info || 'Upload failed'
+    };
+};
+
+// Função para criar preview de áudio
+window.createAudioPreview = function(file) {
+    return new Promise((resolve, reject) => {
+        const audio = new Audio();
+        const url = URL.createObjectURL(file);
+        
+        audio.addEventListener('loadedmetadata', () => {
+            resolve({
+                duration: audio.duration,
+                url: url,
+                name: file.name,
+                size: file.size,
+                type: file.type
             });
-            
-            audio.addEventListener('error', (e) => {
-                if (!resolved) {
-                    resolved = true;
-                    clearTimeout(timeout);
-                    URL.revokeObjectURL(url);
-                    reject(new Error(`Erro ao carregar áudio: ${e.message || 'Formato inválido'}`));
-                }
-            });
-            
-            audio.src = url;
         });
-    }
-    
-    /**
-     * Formatar duração em mm:ss
-     */
-    formatDuration(seconds) {
-        if (!seconds || isNaN(seconds)) return '00:00';
         
-        const minutes = Math.floor(seconds / 60);
-        const remainingSeconds = Math.floor(seconds % 60);
+        audio.addEventListener('error', () => {
+            reject(new Error('Não foi possível carregar o arquivo de áudio'));
+        });
         
-        return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-    }
-    
-    /**
-     * Limpar recursos
-     */
-    cleanup() {
-        this.isInitialized = false;
-        console.log('🧹 Cloudinary Manager limpo');
-    }
-}
+        audio.src = url;
+    });
+};
 
-// Inicialização segura
-let cloudinaryManager = null;
-
-// Função para inicializar com verificação
-async function initializeCloudinaryManager(config = {}) {
-    try {
-        if (cloudinaryManager) {
-            console.log('CloudinaryManager já inicializado');
-            return cloudinaryManager;
-        }
-        
-        cloudinaryManager = new CloudinaryManager();
-        
-        // Aplicar configurações customizadas
-        if (config.cloudName) {
-            cloudinaryManager.config.cloudName = config.cloudName;
-            cloudinaryManager.baseUrl = `https://res.cloudinary.com/${config.cloudName}`;
-            cloudinaryManager.apiUrl = `https://api.cloudinary.com/v1_1/${config.cloudName}`;
-        }
-        
-        if (config.uploadPreset) {
-            cloudinaryManager.config.uploadPreset = config.uploadPreset;
-        }
-        
-        // Inicializar e verificar conexão
-        const success = await cloudinaryManager.initialize();
-        
-        if (success) {
-            // Disponibilizar globalmente apenas se inicializado com sucesso
-            window.cloudinaryManager = cloudinaryManager;
-            console.log('🔧 Cloudinary configurado e inicializado:', cloudinaryManager.config.cloudName);
-            return cloudinaryManager;
-        } else {
-            throw new Error('Falha na inicialização do Cloudinary');
-        }
-        
-    } catch (error) {
-        console.error('❌ Erro ao inicializar CloudinaryManager:', error);
-        cloudinaryManager = null;
-        throw error;
-    }
-}
-
-// Função para obter instância (com lazy loading)
-function getCloudinaryManager() {
-    if (!cloudinaryManager) {
-        throw new Error('CloudinaryManager não foi inicializado. Chame initializeCloudinaryManager() primeiro.');
-    }
-    return cloudinaryManager;
-}
-
-// Exportar funções principais
-window.initializeCloudinaryManager = initializeCloudinaryManager;
-window.getCloudinaryManager = getCloudinaryManager;
-
-// Cleanup ao descarregar página
-window.addEventListener('beforeunload', () => {
-    if (cloudinaryManager) {
-        cloudinaryManager.cleanup();
-    }
-});
-
-console.log('📁 Cloudinary Manager carregado (versão corrigida)!');
+console.log('📁 Cloudinary Manager carregado!');
