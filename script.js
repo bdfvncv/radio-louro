@@ -6,21 +6,17 @@ const CLOUDINARY_CONFIG = {
     baseUrl: 'https://res.cloudinary.com/dygbrcrr6'
 };
 
-// Debug e logs
-console.log('🚀 Iniciando Rádio Supermercado do Louro...');
-
 // Estado Global da Rádio
 class RadioState {
     constructor() {
-        console.log('📻 Inicializando RadioState...');
         this.currentPlaylist = [];
         this.currentIndex = 0;
         this.isPlaying = false;
         this.musicCount = 0;
         this.timeCount = 0;
         this.adsCount = 0;
-        this.playStats = this.safeGetFromStorage('playStats', {});
-        this.activeAlbum = this.safeGetFromStorage('activeAlbum', null);
+        this.playStats = JSON.parse(localStorage.getItem('playStats') || '{}');
+        this.activeAlbum = localStorage.getItem('activeAlbum') || null;
         this.startTime = new Date().toLocaleTimeString();
         this.audioContext = null;
         this.analyser = null;
@@ -58,38 +54,18 @@ class RadioState {
         };
         
         this.loadFromStorage();
-        console.log('✅ RadioState inicializado');
-    }
-    
-    safeGetFromStorage(key, defaultValue) {
-        try {
-            const item = localStorage.getItem(key);
-            return item ? JSON.parse(item) : defaultValue;
-        } catch (error) {
-            console.warn(`Erro ao carregar ${key} do localStorage:`, error);
-            return defaultValue;
-        }
     }
     
     loadFromStorage() {
-        try {
-            const savedPlaylists = localStorage.getItem('radioPlaylists');
-            if (savedPlaylists) {
-                this.playlists = JSON.parse(savedPlaylists);
-            }
-            console.log('📂 Playlists carregadas do storage');
-        } catch (error) {
-            console.warn('Erro ao carregar playlists:', error);
+        const savedPlaylists = localStorage.getItem('radioPlaylists');
+        if (savedPlaylists) {
+            this.playlists = JSON.parse(savedPlaylists);
         }
     }
     
     saveToStorage() {
-        try {
-            localStorage.setItem('radioPlaylists', JSON.stringify(this.playlists));
-            localStorage.setItem('playStats', JSON.stringify(this.playStats));
-        } catch (error) {
-            console.warn('Erro ao salvar no storage:', error);
-        }
+        localStorage.setItem('radioPlaylists', JSON.stringify(this.playlists));
+        localStorage.setItem('playStats', JSON.stringify(this.playStats));
     }
     
     addToPlaylist(category, files) {
@@ -152,10 +128,7 @@ class RadioState {
     }
     
     getNextTrack() {
-        if (this.currentPlaylist.length === 0) {
-            console.log('⚠️ Nenhuma música na playlist');
-            return null;
-        }
+        if (this.currentPlaylist.length === 0) return null;
         
         let nextTrack = null;
         
@@ -187,22 +160,14 @@ class RadioState {
     
     setActiveAlbum(albumName) {
         this.activeAlbum = albumName;
-        try {
-            localStorage.setItem('activeAlbum', albumName);
-        } catch (error) {
-            console.warn('Erro ao salvar álbum ativo:', error);
-        }
+        localStorage.setItem('activeAlbum', albumName);
         this.updatePlaylist();
         this.updateAlbumDisplay();
     }
     
     disableAlbum() {
         this.activeAlbum = null;
-        try {
-            localStorage.removeItem('activeAlbum');
-        } catch (error) {
-            console.warn('Erro ao remover álbum ativo:', error);
-        }
+        localStorage.removeItem('activeAlbum');
         this.updatePlaylist();
         this.updateAlbumDisplay();
     }
@@ -211,27 +176,18 @@ class RadioState {
         const albumImage = document.getElementById('album-image');
         const albumName = document.getElementById('album-name');
         
-        if (albumImage && albumName) {
-            if (this.activeAlbum && this.albumInfo[this.activeAlbum]) {
-                albumImage.src = this.albumInfo[this.activeAlbum].image;
-                albumName.textContent = this.albumInfo[this.activeAlbum].name;
-            } else {
-                albumImage.src = 'https://via.placeholder.com/300x300/333333/ffffff?text=Rádio+Louro';
-                albumName.textContent = 'Programação Geral';
-            }
+        if (this.activeAlbum && this.albumInfo[this.activeAlbum]) {
+            albumImage.src = this.albumInfo[this.activeAlbum].image;
+            albumName.textContent = this.albumInfo[this.activeAlbum].name;
+        } else {
+            albumImage.src = 'https://via.placeholder.com/300x300/333333/ffffff?text=Rádio+Louro';
+            albumName.textContent = 'Programação Geral';
         }
     }
     
     updateUI() {
-        const musicCountEl = document.getElementById('music-count');
-        const startTimeEl = document.getElementById('start-time');
-        
-        if (musicCountEl) {
-            musicCountEl.textContent = this.currentPlaylist.length;
-        }
-        if (startTimeEl) {
-            startTimeEl.textContent = this.startTime;
-        }
+        document.getElementById('music-count').textContent = this.currentPlaylist.length;
+        document.getElementById('start-time').textContent = this.startTime;
     }
     
     removeFile(category, fileId) {
@@ -303,70 +259,29 @@ class RadioState {
     }
 }
 
+// Instância global do estado
+const radioState = new RadioState();
+
 // Player de Áudio
 class AudioPlayer {
     constructor() {
-        console.log('🎵 Inicializando AudioPlayer...');
-        this.audio = null;
+        this.audio = document.getElementById('audio-player');
         this.isPlaying = false;
         this.currentTrack = null;
-        this.initialized = false;
-    }
-    
-    async init() {
-        try {
-            // Aguarda o DOM estar pronto
-            await this.waitForElement('audio-player');
-            
-            this.audio = document.getElementById('audio-player');
-            if (!this.audio) {
-                throw new Error('Elemento audio-player não encontrado');
-            }
-            
-            this.setupEventListeners();
-            this.setupAudioEvents();
-            this.initialized = true;
-            console.log('✅ AudioPlayer inicializado');
-        } catch (error) {
-            console.error('❌ Erro ao inicializar AudioPlayer:', error);
-        }
-    }
-    
-    waitForElement(id, timeout = 5000) {
-        return new Promise((resolve, reject) => {
-            const startTime = Date.now();
-            
-            const checkElement = () => {
-                const element = document.getElementById(id);
-                if (element) {
-                    resolve(element);
-                } else if (Date.now() - startTime > timeout) {
-                    reject(new Error(`Elemento ${id} não encontrado após ${timeout}ms`));
-                } else {
-                    setTimeout(checkElement, 100);
-                }
-            };
-            
-            checkElement();
-        });
+        
+        this.setupEventListeners();
+        this.setupAudioEvents();
     }
     
     setupEventListeners() {
         // Controles do player
-        const playBtn = document.getElementById('play-pause-btn');
-        const volumeSlider = document.getElementById('volume-slider');
+        document.getElementById('play-pause-btn').addEventListener('click', () => {
+            this.togglePlay();
+        });
         
-        if (playBtn) {
-            playBtn.addEventListener('click', () => {
-                this.togglePlay();
-            });
-        }
-        
-        if (volumeSlider) {
-            volumeSlider.addEventListener('input', (e) => {
-                this.setVolume(e.target.value / 100);
-            });
-        }
+        document.getElementById('volume-slider').addEventListener('input', (e) => {
+            this.setVolume(e.target.value / 100);
+        });
         
         // Teclas de atalho
         document.addEventListener('keydown', (e) => {
@@ -378,8 +293,6 @@ class AudioPlayer {
     }
     
     setupAudioEvents() {
-        if (!this.audio) return;
-        
         this.audio.addEventListener('loadedmetadata', () => {
             this.updateTimeDisplay();
         });
@@ -399,11 +312,6 @@ class AudioPlayer {
     }
     
     async togglePlay() {
-        if (!this.initialized) {
-            console.log('⚠️ Player não inicializado ainda');
-            return;
-        }
-        
         if (this.isPlaying) {
             this.pause();
         } else {
@@ -416,19 +324,16 @@ class AudioPlayer {
             if (!this.currentTrack) {
                 this.currentTrack = radioState.getNextTrack();
                 if (!this.currentTrack) {
-                    showNotification('Nenhuma música disponível! Carregue algumas músicas.', 'warning');
+                    showNotification('Nenhuma música disponível!', 'warning');
                     return;
                 }
                 this.loadTrack(this.currentTrack);
             }
             
-            // Tenta reproduzir
             await this.audio.play();
             this.isPlaying = true;
             this.updatePlayButton();
             this.updateCurrentTrackDisplay();
-            
-            console.log('▶️ Reproduzindo:', this.currentTrack.name);
             
         } catch (error) {
             console.error('Erro ao reproduzir:', error);
@@ -437,9 +342,7 @@ class AudioPlayer {
     }
     
     pause() {
-        if (this.audio) {
-            this.audio.pause();
-        }
+        this.audio.pause();
         this.isPlaying = false;
         this.updatePlayButton();
     }
@@ -453,69 +356,49 @@ class AudioPlayer {
         
         this.loadTrack(this.currentTrack);
         if (this.isPlaying) {
-            try {
-                await this.audio.play();
-            } catch (error) {
-                console.error('Erro ao reproduzir próxima música:', error);
-            }
+            await this.audio.play();
         }
         this.updateCurrentTrackDisplay();
     }
     
     loadTrack(track) {
-        if (this.audio) {
-            this.audio.src = track.url;
-            this.audio.load();
-        }
+        this.audio.src = track.url;
+        this.audio.load();
     }
     
     setVolume(volume) {
-        if (this.audio) {
-            this.audio.volume = Math.max(0, Math.min(1, volume));
-        }
+        this.audio.volume = Math.max(0, Math.min(1, volume));
     }
     
     updatePlayButton() {
         const btn = document.getElementById('play-pause-btn');
-        if (!btn) return;
-        
         const icon = btn.querySelector('i');
-        if (icon) {
-            if (this.isPlaying) {
-                icon.className = 'fas fa-pause';
-            } else {
-                icon.className = 'fas fa-play';
-            }
+        
+        if (this.isPlaying) {
+            icon.className = 'fas fa-pause';
+        } else {
+            icon.className = 'fas fa-play';
         }
     }
     
     updateCurrentTrackDisplay() {
         const trackElement = document.getElementById('current-track');
-        if (trackElement && this.currentTrack) {
+        if (this.currentTrack) {
             trackElement.textContent = this.currentTrack.name.replace('.mp3', '');
         }
     }
     
     updateProgress() {
-        if (!this.audio || !this.audio.duration) return;
+        if (!this.audio.duration) return;
         
         const progress = (this.audio.currentTime / this.audio.duration) * 100;
-        const progressFill = document.getElementById('progress-fill');
-        if (progressFill) {
-            progressFill.style.width = `${progress}%`;
-        }
+        document.getElementById('progress-fill').style.width = `${progress}%`;
         
-        const currentTimeEl = document.getElementById('current-time');
-        if (currentTimeEl) {
-            currentTimeEl.textContent = this.formatTime(this.audio.currentTime);
-        }
+        document.getElementById('current-time').textContent = this.formatTime(this.audio.currentTime);
     }
     
     updateTimeDisplay() {
-        const durationEl = document.getElementById('duration');
-        if (durationEl) {
-            durationEl.textContent = this.formatTime(this.audio.duration || 0);
-        }
+        document.getElementById('duration').textContent = this.formatTime(this.audio.duration || 0);
     }
     
     formatTime(seconds) {
@@ -524,6 +407,9 @@ class AudioPlayer {
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
 }
+
+// Instância global do player
+const audioPlayer = new AudioPlayer();
 
 // Gerenciador de Uploads
 class UploadManager {
@@ -583,76 +469,39 @@ class UploadManager {
     }
 }
 
+// Instância global do upload manager
+const uploadManager = new UploadManager();
+
 // Gerenciador de Administração
 class AdminManager {
     constructor() {
         this.isLoggedIn = false;
         this.password = 'admin123';
-    }
-    
-    async init() {
-        try {
-            await this.waitForElement('admin-btn');
-            this.setupEventListeners();
-            console.log('✅ AdminManager inicializado');
-        } catch (error) {
-            console.error('❌ Erro ao inicializar AdminManager:', error);
-        }
-    }
-    
-    waitForElement(id, timeout = 5000) {
-        return new Promise((resolve, reject) => {
-            const startTime = Date.now();
-            
-            const checkElement = () => {
-                const element = document.getElementById(id);
-                if (element) {
-                    resolve(element);
-                } else if (Date.now() - startTime > timeout) {
-                    reject(new Error(`Elemento ${id} não encontrado após ${timeout}ms`));
-                } else {
-                    setTimeout(checkElement, 100);
-                }
-            };
-            
-            checkElement();
-        });
+        this.setupEventListeners();
     }
     
     setupEventListeners() {
         // Toggle admin panel
-        const adminBtn = document.getElementById('admin-btn');
-        if (adminBtn) {
-            adminBtn.addEventListener('click', () => {
-                this.toggleAdminPanel();
-            });
-        }
+        document.getElementById('admin-btn').addEventListener('click', () => {
+            this.toggleAdminPanel();
+        });
         
         // Close admin panel
-        const closeAdmin = document.getElementById('close-admin');
-        if (closeAdmin) {
-            closeAdmin.addEventListener('click', () => {
-                this.closeAdminPanel();
-            });
-        }
+        document.getElementById('close-admin').addEventListener('click', () => {
+            this.closeAdminPanel();
+        });
         
         // Login
-        const loginBtn = document.getElementById('login-btn');
-        if (loginBtn) {
-            loginBtn.addEventListener('click', () => {
-                this.login();
-            });
-        }
+        document.getElementById('login-btn').addEventListener('click', () => {
+            this.login();
+        });
         
         // Enter key on password input
-        const passwordInput = document.getElementById('admin-password');
-        if (passwordInput) {
-            passwordInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    this.login();
-                }
-            });
-        }
+        document.getElementById('admin-password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.login();
+            }
+        });
         
         // Tab navigation
         document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -662,57 +511,39 @@ class AdminManager {
         });
         
         // Reset stats
-        const resetStats = document.getElementById('reset-stats');
-        if (resetStats) {
-            resetStats.addEventListener('click', () => {
-                if (confirm('Tem certeza que deseja resetar as estatísticas?')) {
-                    radioState.resetStats();
-                }
-            });
-        }
+        document.getElementById('reset-stats').addEventListener('click', () => {
+            if (confirm('Tem certeza que deseja resetar as estatísticas?')) {
+                radioState.resetStats();
+            }
+        });
         
         // Disable album
-        const disableAlbum = document.getElementById('disable-album');
-        if (disableAlbum) {
-            disableAlbum.addEventListener('click', () => {
-                radioState.disableAlbum();
-                this.updateAlbumGrid();
-                showNotification('Álbum desativado', 'success');
-            });
-        }
+        document.getElementById('disable-album').addEventListener('click', () => {
+            radioState.disableAlbum();
+            this.updateAlbumGrid();
+            showNotification('Álbum desativado', 'success');
+        });
     }
     
     toggleAdminPanel() {
         const panel = document.getElementById('admin-panel');
-        if (panel) {
-            if (panel.classList.contains('hidden')) {
-                panel.classList.remove('hidden');
-                if (this.isLoggedIn) {
-                    this.showDashboard();
-                }
-            } else {
-                this.closeAdminPanel();
+        if (panel.classList.contains('hidden')) {
+            panel.classList.remove('hidden');
+            if (this.isLoggedIn) {
+                this.showDashboard();
             }
+        } else {
+            this.closeAdminPanel();
         }
     }
     
     closeAdminPanel() {
-        const panel = document.getElementById('admin-panel');
-        const passwordInput = document.getElementById('admin-password');
-        
-        if (panel) {
-            panel.classList.add('hidden');
-        }
-        if (passwordInput) {
-            passwordInput.value = '';
-        }
+        document.getElementById('admin-panel').classList.add('hidden');
+        document.getElementById('admin-password').value = '';
     }
     
     login() {
-        const passwordInput = document.getElementById('admin-password');
-        if (!passwordInput) return;
-        
-        const password = passwordInput.value;
+        const password = document.getElementById('admin-password').value;
         
         if (password === this.password) {
             this.isLoggedIn = true;
@@ -720,20 +551,13 @@ class AdminManager {
             showNotification('Login realizado com sucesso!', 'success');
         } else {
             showNotification('Senha incorreta!', 'error');
-            passwordInput.value = '';
+            document.getElementById('admin-password').value = '';
         }
     }
     
     showDashboard() {
-        const loginEl = document.getElementById('admin-login');
-        const dashboardEl = document.getElementById('admin-dashboard');
-        
-        if (loginEl) {
-            loginEl.classList.add('hidden');
-        }
-        if (dashboardEl) {
-            dashboardEl.classList.remove('hidden');
-        }
+        document.getElementById('admin-login').classList.add('hidden');
+        document.getElementById('admin-dashboard').classList.remove('hidden');
         
         this.updateAlbumGrid();
         radioState.updateFilesList();
@@ -745,19 +569,13 @@ class AdminManager {
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.remove('active');
         });
-        const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
-        if (activeBtn) {
-            activeBtn.classList.add('active');
-        }
+        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
         
         // Update tab content
         document.querySelectorAll('.tab-content').forEach(content => {
             content.classList.remove('active');
         });
-        const activeContent = document.getElementById(`tab-${tabName}`);
-        if (activeContent) {
-            activeContent.classList.add('active');
-        }
+        document.getElementById(`tab-${tabName}`).classList.add('active');
         
         // Update content based on tab
         if (tabName === 'albums') {
@@ -798,17 +616,12 @@ class AdminManager {
     }
 }
 
-// Instâncias globais
-let radioState;
-let audioPlayer;
-let uploadManager;
-let adminManager;
+// Instância global do admin manager
+const adminManager = new AdminManager();
 
 // Funções globais para upload
 window.uploadFiles = function(category) {
     const input = document.getElementById(`upload-${category}`);
-    if (!input) return;
-    
     const files = Array.from(input.files);
     
     if (files.length === 0) {
@@ -823,9 +636,6 @@ window.uploadFiles = function(category) {
 window.uploadAlbumFiles = function() {
     const albumSelect = document.getElementById('album-select');
     const input = document.getElementById('upload-album');
-    
-    if (!albumSelect || !input) return;
-    
     const files = Array.from(input.files);
     
     if (files.length === 0) {
@@ -840,11 +650,6 @@ window.uploadAlbumFiles = function() {
 // Utilitários
 function showNotification(message, type = 'info') {
     const container = document.getElementById('notifications');
-    if (!container) {
-        console.log(`Notificação: ${message}`);
-        return;
-    }
-    
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     notification.textContent = message;
@@ -858,62 +663,24 @@ function showNotification(message, type = 'info') {
 
 function showLoading(show) {
     const loading = document.getElementById('loading');
-    if (loading) {
-        if (show) {
-            loading.classList.remove('hidden');
-        } else {
-            loading.classList.add('hidden');
-        }
-    }
-}
-
-// Função para esconder o loading inicial
-function hideInitialLoading() {
-    const initialLoading = document.querySelector('.loading-screen');
-    if (initialLoading) {
-        initialLoading.style.display = 'none';
+    if (show) {
+        loading.classList.remove('hidden');
+    } else {
+        loading.classList.add('hidden');
     }
 }
 
 // Inicialização
-document.addEventListener('DOMContentLoaded', async () => {
-    console.log('📱 DOM carregado, iniciando aplicação...');
+document.addEventListener('DOMContentLoaded', () => {
+    // Inicializar estado
+    radioState.updatePlaylist();
+    radioState.updateAlbumDisplay();
+    radioState.updateUI();
     
-    try {
-        // Inicializar componentes
-        radioState = new RadioState();
-        audioPlayer = new AudioPlayer();
-        uploadManager = new UploadManager();
-        adminManager = new AdminManager();
-        
-        // Aguardar inicialização dos componentes que dependem do DOM
-        await Promise.all([
-            audioPlayer.init(),
-            adminManager.init()
-        ]);
-        
-        // Inicializar estado
-        radioState.updatePlaylist();
-        radioState.updateAlbumDisplay();
-        radioState.updateUI();
-        
-        // Esconder loading
-        hideInitialLoading();
-        
-        // Auto-start do player após um delay
-        setTimeout(() => {
-            if (radioState.currentPlaylist.length > 0) {
-                audioPlayer.play();
-            } else {
-                showNotification('Bem-vindo! Adicione algumas músicas para começar a tocar.', 'info');
-            }
-        }, 2000);
-        
-        console.log('🎵 Rádio Supermercado do Louro inicializada com sucesso!');
-        
-    } catch (error) {
-        console.error('❌ Erro na inicialização:', error);
-        hideInitialLoading();
-        showNotification('Erro na inicialização da rádio', 'error');
-    }
+    // Auto-start do player
+    setTimeout(() => {
+        audioPlayer.play();
+    }, 1000);
+    
+    console.log('🎵 Rádio Supermercado do Louro inicializada!');
 });
