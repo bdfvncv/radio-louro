@@ -21,11 +21,42 @@ class RadioState {
         this.audioContext = null;
         this.analyser = null;
         
-        // Playlists por categoria
+        // Playlists por categoria com músicas de demonstração
         this.playlists = {
-            music: [],
-            time: [],
-            ads: [],
+            music: [
+                {
+                    id: 'demo1',
+                    name: 'Música Demo 1.mp3',
+                    url: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
+                    category: 'music',
+                    plays: 0
+                },
+                {
+                    id: 'demo2', 
+                    name: 'Música Demo 2.mp3',
+                    url: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
+                    category: 'music',
+                    plays: 0
+                }
+            ],
+            time: [
+                {
+                    id: 'time1',
+                    name: 'Hora Certa.mp3',
+                    url: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
+                    category: 'time',
+                    plays: 0
+                }
+            ],
+            ads: [
+                {
+                    id: 'ad1',
+                    name: 'Aviso Supermercado.mp3',
+                    url: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
+                    category: 'ads',
+                    plays: 0
+                }
+            ],
             albums: {
                 natal: [],
                 pascoa: [],
@@ -59,7 +90,15 @@ class RadioState {
     loadFromStorage() {
         const savedPlaylists = localStorage.getItem('radioPlaylists');
         if (savedPlaylists) {
-            this.playlists = JSON.parse(savedPlaylists);
+            try {
+                const parsed = JSON.parse(savedPlaylists);
+                // Mescla com as músicas demo se não houver músicas salvas
+                if (parsed.music && parsed.music.length > 0) {
+                    this.playlists = parsed;
+                }
+            } catch (e) {
+                console.warn('Erro ao carregar playlists salvas:', e);
+            }
         }
     }
     
@@ -114,8 +153,10 @@ class RadioState {
             this.currentPlaylist.push(...this.playlists.albums[this.activeAlbum]);
         }
         
-        // Embaralha a playlist
-        this.shuffleArray(this.currentPlaylist);
+        // Embaralha a playlist apenas se houver músicas
+        if (this.currentPlaylist.length > 0) {
+            this.shuffleArray(this.currentPlaylist);
+        }
         
         this.updateUI();
     }
@@ -128,7 +169,11 @@ class RadioState {
     }
     
     getNextTrack() {
-        if (this.currentPlaylist.length === 0) return null;
+        // Verifica se há músicas disponíveis
+        if (this.currentPlaylist.length === 0) {
+            console.warn('Nenhuma música na playlist atual');
+            return null;
+        }
         
         let nextTrack = null;
         
@@ -186,7 +231,8 @@ class RadioState {
     }
     
     updateUI() {
-        document.getElementById('music-count').textContent = this.currentPlaylist.length;
+        const totalSongs = this.currentPlaylist.length + this.playlists.time.length + this.playlists.ads.length;
+        document.getElementById('music-count').textContent = totalSongs;
         document.getElementById('start-time').textContent = this.startTime;
     }
     
@@ -268,6 +314,8 @@ class AudioPlayer {
         this.audio = document.getElementById('audio-player');
         this.isPlaying = false;
         this.currentTrack = null;
+        this.loadAttempts = 0;
+        this.maxLoadAttempts = 3;
         
         this.setupEventListeners();
         this.setupAudioEvents();
@@ -295,6 +343,7 @@ class AudioPlayer {
     setupAudioEvents() {
         this.audio.addEventListener('loadedmetadata', () => {
             this.updateTimeDisplay();
+            this.loadAttempts = 0; // Reset counter on successful load
         });
         
         this.audio.addEventListener('timeupdate', () => {
@@ -307,8 +356,32 @@ class AudioPlayer {
         
         this.audio.addEventListener('error', (e) => {
             console.error('Erro no áudio:', e);
-            this.playNext();
+            this.handleAudioError();
         });
+        
+        this.audio.addEventListener('canplay', () => {
+            showLoading(false);
+        });
+        
+        this.audio.addEventListener('waiting', () => {
+            showLoading(true);
+        });
+    }
+    
+    handleAudioError() {
+        this.loadAttempts++;
+        
+        if (this.loadAttempts >= this.maxLoadAttempts) {
+            showNotification('Erro ao carregar música. Pulando para próxima...', 'error');
+            this.playNext();
+        } else {
+            // Tenta recarregar
+            setTimeout(() => {
+                if (this.currentTrack) {
+                    this.loadTrack(this.currentTrack);
+                }
+            }, 1000);
+        }
     }
     
     async togglePlay() {
@@ -324,20 +397,31 @@ class AudioPlayer {
             if (!this.currentTrack) {
                 this.currentTrack = radioState.getNextTrack();
                 if (!this.currentTrack) {
-                    showNotification('Nenhuma música disponível!', 'warning');
+                    showNotification('Nenhuma música disponível! Adicione músicas pelo painel administrativo.', 'warning');
+                    document.getElementById('current-track').textContent = 'Nenhuma música disponível!';
                     return;
                 }
                 this.loadTrack(this.currentTrack);
             }
             
+            showLoading(true);
             await this.audio.play();
             this.isPlaying = true;
             this.updatePlayButton();
             this.updateCurrentTrackDisplay();
+            showLoading(false);
             
         } catch (error) {
             console.error('Erro ao reproduzir:', error);
-            showNotification('Erro ao reproduzir música', 'error');
+            showLoading(false);
+            
+            // Se falhar, tenta próxima música
+            if (error.name === 'NotAllowedError') {
+                showNotification('Clique no botão play para iniciar a reprodução', 'info');
+            } else {
+                showNotification('Erro ao reproduzir música. Tentando próxima...', 'error');
+                this.playNext();
+            }
         }
     }
     
@@ -345,23 +429,39 @@ class AudioPlayer {
         this.audio.pause();
         this.isPlaying = false;
         this.updatePlayButton();
+        showLoading(false);
     }
     
     async playNext() {
+        this.loadAttempts = 0; // Reset counter for new track
         this.currentTrack = radioState.getNextTrack();
+        
         if (!this.currentTrack) {
             this.pause();
+            document.getElementById('current-track').textContent = 'Nenhuma música disponível!';
+            showNotification('Playlist vazia! Adicione músicas pelo painel administrativo.', 'warning');
             return;
         }
         
         this.loadTrack(this.currentTrack);
         if (this.isPlaying) {
-            await this.audio.play();
+            try {
+                await this.audio.play();
+            } catch (error) {
+                console.error('Erro ao tocar próxima música:', error);
+                this.handleAudioError();
+            }
         }
         this.updateCurrentTrackDisplay();
     }
     
     loadTrack(track) {
+        if (!track || !track.url) {
+            console.error('Track inválido:', track);
+            return;
+        }
+        
+        showLoading(true);
         this.audio.src = track.url;
         this.audio.load();
     }
@@ -385,6 +485,8 @@ class AudioPlayer {
         const trackElement = document.getElementById('current-track');
         if (this.currentTrack) {
             trackElement.textContent = this.currentTrack.name.replace('.mp3', '');
+        } else {
+            trackElement.textContent = 'Aguardando...';
         }
     }
     
@@ -402,6 +504,8 @@ class AudioPlayer {
     }
     
     formatTime(seconds) {
+        if (!seconds || isNaN(seconds)) return '00:00';
+        
         const mins = Math.floor(seconds / 60);
         const secs = Math.floor(seconds % 60);
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
@@ -677,10 +781,12 @@ document.addEventListener('DOMContentLoaded', () => {
     radioState.updateAlbumDisplay();
     radioState.updateUI();
     
-    // Auto-start do player
-    setTimeout(() => {
-        audioPlayer.play();
-    }, 1000);
-    
+    // Não auto-start - espera clique do usuário para evitar problemas de autoplay
     console.log('🎵 Rádio Supermercado do Louro inicializada!');
+    console.log('👆 Clique no botão Play para iniciar a reprodução');
+    
+    // Mostra instruções se não houver músicas
+    if (radioState.currentPlaylist.length === 0) {
+        showNotification('Adicione músicas pelo painel administrativo (senha: admin123)', 'info');
+    }
 });
