@@ -35,7 +35,7 @@
                 </div>
 
                 <div class="player-info">
-                    <h2 id="current-track">Aguardando...</h2>
+                    <h2 id="current-track">Clique em Play para começar</h2>
                     <p id="album-name">Programação Geral</p>
                     
                     <div class="player-controls">
@@ -106,19 +106,19 @@
                     <div class="upload-sections">
                         <div class="upload-category">
                             <h3><i class="fas fa-music"></i> Músicas Principais</h3>
-                            <input type="file" id="upload-music" multiple accept=".mp3">
+                            <input type="file" id="upload-music" multiple accept=".mp3,.wav,.ogg">
                             <button onclick="uploadFiles('music')" class="upload-btn">Upload Músicas</button>
                         </div>
 
                         <div class="upload-category">
                             <h3><i class="fas fa-clock"></i> Hora Certa</h3>
-                            <input type="file" id="upload-time" multiple accept=".mp3">
+                            <input type="file" id="upload-time" multiple accept=".mp3,.wav,.ogg">
                             <button onclick="uploadFiles('time')" class="upload-btn">Upload Hora</button>
                         </div>
 
                         <div class="upload-category">
                             <h3><i class="fas fa-bullhorn"></i> Avisos</h3>
-                            <input type="file" id="upload-ads" multiple accept=".mp3">
+                            <input type="file" id="upload-ads" multiple accept=".mp3,.wav,.ogg">
                             <button onclick="uploadFiles('ads')" class="upload-btn">Upload Avisos</button>
                         </div>
 
@@ -130,7 +130,7 @@
                                 <option value="saojoao">São João</option>
                                 <option value="carnaval">Carnaval</option>
                             </select>
-                            <input type="file" id="upload-album" multiple accept=".mp3">
+                            <input type="file" id="upload-album" multiple accept=".mp3,.wav,.ogg">
                             <button onclick="uploadAlbumFiles()" class="upload-btn">Upload Álbum</button>
                         </div>
                     </div>
@@ -194,8 +194,23 @@
     </div>
 
     <!-- Audio Element -->
-    <audio id="audio-player" preload="metadata" style="display: none;"></audio>
+    <audio id="audio-player" preload="none" crossorigin="anonymous"></audio>
 
+    <!-- Scripts -->
+    <script>
+        // Verificação básica de compatibilidade
+        if (!window.Audio) {
+            alert('Seu navegador não suporta reprodução de áudio');
+        }
+        
+        // Detecção de erros globais
+        window.addEventListener('error', function(e) {
+            console.error('Erro detectado:', e.error);
+        });
+        
+        // Debug inicial
+        console.log('🔧 Página carregada, inicializando scripts...');
+    </script>
     <script src="script.js"></script>
 </body>
 </html>
