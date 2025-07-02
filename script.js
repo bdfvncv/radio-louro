@@ -1,8 +1,8 @@
 // Configurações Cloudinary
 const CLOUDINARY_CONFIG = {
     cloudName: 'dygbrcrr6',
-    apiKey: 'your_api_key',
-    apiSecret: 'your_api_secret',
+    apiKey: '853591251513134',
+    apiSecret: 'yVz8MbGa_undTqNHbOqzo-hKc-U',
     baseUrl: 'https://res.cloudinary.com/dygbrcrr6'
 };
 
