@@ -1,667 +1,689 @@
-// Rádio Supermercado do Louro - Script Otimizado
-// Sistema de rádio automatizada com integração Cloudinary
+/**
+ * Script principal da Rádio Supermercado do Louro
+ * Sistema completo de reprodução automática e gerenciamento
+ */
 
-// Estado Global da Aplicação
-class RadioApp {
+class RadioSystem {
     constructor() {
-        this.state = {
-            currentPlaylist: [],
-            currentIndex: 0,
-            isPlaying: false,
-            currentTrack: null,
-            musicCount: 0,
-            timeCount: 0,
-            adsCount: 0,
-            startTime: new Date().toLocaleTimeString(),
-            activeAlbum: localStorage.getItem('activeAlbum') || null,
-            playStats: JSON.parse(localStorage.getItem('playStats') || '{}'),
-            playlists: {
-                music: [],
-                time: [],
-                ads: [],
-                albums: { natal: [], pascoa: [], saojoao: [], carnaval: [] }
+        console.log('🚀 Inicializando Rádio Supermercado do Louro...');
+        
+        // Estado do sistema
+        this.isPlaying = false;
+        this.currentTrack = null;
+        this.currentTrackIndex = 0;
+        this.volume = 0.7;
+        this.startTime = null;
+        this.isAdmin = false;
+        
+        // Contadores para controle de programação
+        this.musicCounter = 0;
+        this.lastTimeAnnouncement = 0;
+        this.lastAdAnnouncement = 0;
+        
+        // Playlists do sistema
+        this.playlists = {
+            music: [],
+            time: [],
+            ads: [],
+            albums: {
+                natal: [],
+                pascoa: [],
+                saojoao: [],
+                carnaval: []
             }
         };
-
-        this.config = {
-            adminPassword: 'admin123',
-            cloudinary: {
-                cloudName: 'dygbrcrr6',
-                apiKey: '853591251513134',
-                uploadPreset: 'radio_louro'
-            },
-            albumInfo: {
-                natal: { name: 'Especial Natal', image: 'https://via.placeholder.com/300x300/e74c3c/ffffff?text=🎄+Natal' },
-                pascoa: { name: 'Especial Páscoa', image: 'https://via.placeholder.com/300x300/f39c12/ffffff?text=🐰+Páscoa' },
-                saojoao: { name: 'Especial São João', image: 'https://via.placeholder.com/300x300/27ae60/ffffff?text=🎪+São+João' },
-                carnaval: { name: 'Especial Carnaval', image: 'https://via.placeholder.com/300x300/9b59b6/ffffff?text=🎭+Carnaval' }
-            }
+        
+        // Estatísticas
+        this.stats = {
+            totalPlayed: 0,
+            sessionStart: new Date(),
+            playHistory: []
         };
-
-        this.audio = null;
-        this.isLoggedIn = false;
-        this.cloudinaryManager = null;
-
+        
+        // Referencias DOM
+        this.audioPlayer = null;
+        this.elements = {};
+        
         this.init();
     }
-
-    init() {
+    
+    async init() {
+        console.log('⚙️ Configurando sistema...');
+        
+        // Aguardar DOM estar pronto
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => this.setup());
+            document.addEventListener('DOMContentLoaded', () => this.setupDOM());
         } else {
-            this.setup();
+            this.setupDOM();
         }
     }
-
-    setup() {
-        this.loadFromStorage();
-        this.initializeElements();
-        this.bindEvents();
-        this.initializeCloudinary();
-        this.updateUI();
-        console.log('🎵 Rádio Supermercado do Louro inicializada!');
-    }
-
-    initializeElements() {
-        this.audio = document.getElementById('audio-player');
-        if (!this.audio) {
-            console.error('Elemento audio não encontrado');
+    
+    setupDOM() {
+        console.log('🔧 Configurando interface...');
+        
+        // Obter referências dos elementos
+        this.audioPlayer = document.getElementById('audio-player');
+        this.elements = {
+            playPauseBtn: document.getElementById('play-pause-btn'),
+            volumeSlider: document.getElementById('volume-slider'),
+            currentTrack: document.getElementById('current-track'),
+            albumName: document.getElementById('album-name'),
+            albumImage: document.getElementById('album-image'),
+            currentTime: document.getElementById('current-time'),
+            duration: document.getElementById('duration'),
+            progressFill: document.getElementById('progress-fill'),
+            musicCount: document.getElementById('music-count'),
+            startTime: document.getElementById('start-time'),
+            adminBtn: document.getElementById('admin-btn'),
+            adminPanel: document.getElementById('admin-panel'),
+            adminLogin: document.getElementById('admin-login'),
+            adminDashboard: document.getElementById('admin-dashboard'),
+            closeAdmin: document.getElementById('close-admin'),
+            loginBtn: document.getElementById('login-btn'),
+            adminPassword: document.getElementById('admin-password'),
+            loading: document.getElementById('loading'),
+            notifications: document.getElementById('notifications')
+        };
+        
+        // Verificar se elementos essenciais existem
+        if (!this.audioPlayer) {
+            this.showError('Elemento de áudio não encontrado');
             return;
         }
-        this.setupAudioEvents();
-    }
-
-    bindEvents() {
-        // Player controls
-        this.bindElement('play-pause-btn', 'click', () => this.togglePlay());
-        this.bindElement('volume-slider', 'input', (e) => this.setVolume(e.target.value / 100));
         
-        // Admin controls
-        this.bindElement('admin-btn', 'click', () => this.toggleAdminPanel());
-        this.bindElement('close-admin', 'click', () => this.closeAdminPanel());
-        this.bindElement('login-btn', 'click', () => this.login());
-        this.bindElement('admin-password', 'keypress', (e) => {
-            if (e.key === 'Enter') this.login();
-        });
-        this.bindElement('reset-stats', 'click', () => this.resetStats());
-        this.bindElement('disable-album', 'click', () => this.disableAlbum());
-
-        // Tab navigation
+        this.setupEventListeners();
+        this.loadStoredData();
+        this.setupDefaultPlaylists();
+        this.updateUI();
+        this.hideLoading();
+        
+        console.log('✅ Sistema inicializado com sucesso!');
+    }
+    
+    setupEventListeners() {
+        console.log('🎧 Configurando eventos...');
+        
+        // Controles do player
+        if (this.elements.playPauseBtn) {
+            this.elements.playPauseBtn.addEventListener('click', () => this.togglePlay());
+        }
+        
+        if (this.elements.volumeSlider) {
+            this.elements.volumeSlider.addEventListener('input', (e) => this.setVolume(e.target.value / 100));
+        }
+        
+        // Eventos do áudio
+        this.audioPlayer.addEventListener('loadstart', () => this.showLoading());
+        this.audioPlayer.addEventListener('canplay', () => this.hideLoading());
+        this.audioPlayer.addEventListener('ended', () => this.playNext());
+        this.audioPlayer.addEventListener('timeupdate', () => this.updateProgress());
+        this.audioPlayer.addEventListener('error', (e) => this.handleAudioError(e));
+        
+        // Admin
+        if (this.elements.adminBtn) {
+            this.elements.adminBtn.addEventListener('click', () => this.toggleAdminPanel());
+        }
+        
+        if (this.elements.closeAdmin) {
+            this.elements.closeAdmin.addEventListener('click', () => this.closeAdminPanel());
+        }
+        
+        if (this.elements.loginBtn) {
+            this.elements.loginBtn.addEventListener('click', () => this.adminLogin());
+        }
+        
+        if (this.elements.adminPassword) {
+            this.elements.adminPassword.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') this.adminLogin();
+            });
+        }
+        
+        // Tabs do admin
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => this.switchTab(btn.dataset.tab));
         });
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' && !document.querySelector('input:focus')) {
-                e.preventDefault();
-                this.togglePlay();
-            }
+        
+        // Upload buttons
+        document.querySelectorAll('.upload-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const category = e.target.onclick?.toString().match(/'([^']+)'/)?.[1];
+                if (category) this.handleUpload(category);
+            });
         });
     }
-
-    bindElement(id, event, handler) {
-        const element = document.getElementById(id);
-        if (element) element.addEventListener(event, handler);
-    }
-
-    setupAudioEvents() {
-        const events = {
-            'loadedmetadata': () => this.updateTimeDisplay(),
-            'timeupdate': () => this.updateProgress(),
-            'ended': () => this.playNext(),
-            'error': (e) => {
-                console.error('Erro no áudio:', e);
-                this.playNext();
-            }
-        };
-
-        Object.entries(events).forEach(([event, handler]) => {
-            this.audio.addEventListener(event, handler);
-        });
-    }
-
-    initializeCloudinary() {
-        if (window.cloudinaryManager) {
-            this.cloudinaryManager = window.cloudinaryManager;
-        } else {
-            console.warn('Cloudinary Manager não encontrado');
+    
+    setupDefaultPlaylists() {
+        console.log('🎵 Configurando playlists padrão...');
+        
+        // Se não há músicas, adicionar algumas de demonstração
+        if (this.playlists.music.length === 0) {
+            this.playlists.music = [
+                {
+                    title: 'Música Demo 1',
+                    url: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
+                    duration: 30,
+                    type: 'demo'
+                },
+                {
+                    title: 'Música Demo 2', 
+                    url: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
+                    duration: 30,
+                    type: 'demo'
+                }
+            ];
         }
-    }
-
-    // Storage Management
-    loadFromStorage() {
-        const savedPlaylists = localStorage.getItem('radioPlaylists');
-        if (savedPlaylists) {
-            try {
-                this.state.playlists = JSON.parse(savedPlaylists);
-            } catch (error) {
-                console.error('Erro ao carregar playlists:', error);
-            }
+        
+        // Hora certa padrão
+        if (this.playlists.time.length === 0) {
+            this.playlists.time = [
+                {
+                    title: 'Anúncio Hora',
+                    url: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
+                    duration: 5,
+                    type: 'time'
+                }
+            ];
         }
+        
+        // Avisos padrão
+        if (this.playlists.ads.length === 0) {
+            this.playlists.ads = [
+                {
+                    title: 'Aviso Promocional',
+                    url: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
+                    duration: 10,
+                    type: 'ad'
+                }
+            ];
+        }
+        
+        this.updateMusicCount();
     }
-
-    saveToStorage() {
+    
+    loadStoredData() {
+        console.log('💾 Carregando dados salvos...');
+        
         try {
-            localStorage.setItem('radioPlaylists', JSON.stringify(this.state.playlists));
-            localStorage.setItem('playStats', JSON.stringify(this.state.playStats));
-            if (this.state.activeAlbum) {
-                localStorage.setItem('activeAlbum', this.state.activeAlbum);
+            // Carregar playlists
+            const storedPlaylists = localStorage.getItem('radioPlaylists');
+            if (storedPlaylists) {
+                this.playlists = { ...this.playlists, ...JSON.parse(storedPlaylists) };
             }
+            
+            // Carregar estatísticas
+            const storedStats = localStorage.getItem('playStats');
+            if (storedStats) {
+                this.stats = { ...this.stats, ...JSON.parse(storedStats) };
+            }
+            
+            // Carregar volume
+            const storedVolume = localStorage.getItem('radioVolume');
+            if (storedVolume) {
+                this.volume = parseFloat(storedVolume);
+                if (this.elements.volumeSlider) {
+                    this.elements.volumeSlider.value = this.volume * 100;
+                }
+            }
+            
         } catch (error) {
-            console.error('Erro ao salvar dados:', error);
+            console.warn('⚠️ Erro ao carregar dados salvos:', error);
         }
     }
-
-    // Playlist Management
-    updatePlaylist() {
-        this.state.currentPlaylist = [...this.state.playlists.music];
-        
-        if (this.state.activeAlbum && this.state.playlists.albums[this.state.activeAlbum]) {
-            this.state.currentPlaylist.push(...this.state.playlists.albums[this.state.activeAlbum]);
-        }
-        
-        this.shuffleArray(this.state.currentPlaylist);
-        this.updateUI();
-    }
-
-    shuffleArray(array) {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
+    
+    saveData() {
+        try {
+            localStorage.setItem('radioPlaylists', JSON.stringify(this.playlists));
+            localStorage.setItem('playStats', JSON.stringify(this.stats));
+            localStorage.setItem('radioVolume', this.volume.toString());
+        } catch (error) {
+            console.warn('⚠️ Erro ao salvar dados:', error);
         }
     }
-
-    getNextTrack() {
-        if (this.state.currentPlaylist.length === 0) return null;
-
-        let nextTrack = null;
-
-        // Lógica de intercalação
-        if (this.state.musicCount > 0 && this.state.musicCount % 3 === 0 && this.state.playlists.time.length > 0) {
-            nextTrack = this.state.playlists.time[this.state.timeCount % this.state.playlists.time.length];
-            this.state.timeCount++;
-        } else if (this.state.musicCount > 0 && this.state.musicCount % 6 === 0 && this.state.playlists.ads.length > 0) {
-            nextTrack = this.state.playlists.ads[this.state.adsCount % this.state.playlists.ads.length];
-            this.state.adsCount++;
-        } else {
-            nextTrack = this.state.currentPlaylist[this.state.currentIndex % this.state.currentPlaylist.length];
-            this.state.currentIndex++;
-            this.state.musicCount++;
-        }
-
-        if (nextTrack) {
-            this.state.playStats[nextTrack.id] = (this.state.playStats[nextTrack.id] || 0) + 1;
-            nextTrack.plays = this.state.playStats[nextTrack.id];
-            this.saveToStorage();
-        }
-
-        return nextTrack;
-    }
-
-    // Audio Player Methods
+    
     async togglePlay() {
-        if (!this.audio) return;
-        
-        if (this.state.isPlaying) {
+        if (this.isPlaying) {
             this.pause();
         } else {
             await this.play();
         }
     }
-
+    
     async play() {
-        try {
-            if (!this.state.currentTrack) {
-                this.state.currentTrack = this.getNextTrack();
-                if (!this.state.currentTrack) {
-                    this.showNotification('Nenhuma música disponível! Faça upload no painel admin.', 'warning');
-                    return;
-                }
-                this.loadTrack(this.state.currentTrack);
+        console.log('▶️ Iniciando reprodução...');
+        
+        if (!this.startTime) {
+            this.startTime = new Date();
+            this.updateStartTime();
+        }
+        
+        // Se não há track atual, selecionar próximo
+        if (!this.currentTrack) {
+            this.selectNextTrack();
+        }
+        
+        if (this.currentTrack) {
+            try {
+                this.showLoading();
+                
+                // Configurar áudio
+                this.audioPlayer.src = this.currentTrack.url;
+                this.audioPlayer.volume = this.volume;
+                
+                await this.audioPlayer.play();
+                
+                this.isPlaying = true;
+                this.updatePlayButton();
+                this.updateCurrentTrackInfo();
+                this.hideLoading();
+                
+                // Registrar estatística
+                this.recordPlay(this.currentTrack);
+                
+                console.log('✅ Reprodução iniciada:', this.currentTrack.title);
+                
+            } catch (error) {
+                console.error('❌ Erro na reprodução:', error);
+                this.handleAudioError(error);
+                this.playNext();
             }
-
-            await this.audio.play();
-            this.state.isPlaying = true;
-            this.updatePlayButton();
-            this.updateCurrentTrackDisplay();
-
-        } catch (error) {
-            console.error('Erro ao reproduzir:', error);
-            this.showNotification('Erro ao reproduzir música', 'error');
+        } else {
+            this.showNotification('Nenhuma música disponível', 'warning');
         }
     }
-
+    
     pause() {
-        if (this.audio) this.audio.pause();
-        this.state.isPlaying = false;
+        console.log('⏸️ Pausando reprodução...');
+        
+        this.audioPlayer.pause();
+        this.isPlaying = false;
         this.updatePlayButton();
     }
-
-    async playNext() {
-        this.state.currentTrack = this.getNextTrack();
-        if (!this.state.currentTrack) {
-            this.pause();
-            return;
+    
+    playNext() {
+        console.log('⏭️ Próxima música...');
+        
+        this.selectNextTrack();
+        if (this.isPlaying && this.currentTrack) {
+            this.play();
         }
-
-        this.loadTrack(this.state.currentTrack);
-        if (this.state.isPlaying) {
-            try {
-                await this.audio.play();
-            } catch (error) {
-                console.error('Erro ao tocar próxima música:', error);
+    }
+    
+    selectNextTrack() {
+        const activeAlbum = localStorage.getItem('activeAlbum');
+        let availableTracks = [];
+        
+        // Verificar se deve tocar hora certa
+        const now = new Date();
+        const minutes = now.getMinutes();
+        const shouldPlayTime = minutes === 0 || minutes === 30; // A cada 30 minutos
+        
+        if (shouldPlayTime && this.musicCounter > 0 && this.playlists.time.length > 0) {
+            availableTracks = this.playlists.time;
+            this.lastTimeAnnouncement = Date.now();
+            console.log('🕐 Tocando hora certa');
+        }
+        // Verificar se deve tocar aviso
+        else if (this.musicCounter > 0 && this.musicCounter % 6 === 0 && this.playlists.ads.length > 0) {
+            availableTracks = this.playlists.ads;
+            this.lastAdAnnouncement = Date.now();
+            console.log('📢 Tocando aviso');
+        }
+        // Tocar música do álbum ativo ou música normal
+        else {
+            if (activeAlbum && this.playlists.albums[activeAlbum]?.length > 0) {
+                availableTracks = this.playlists.albums[activeAlbum];
+                console.log(`🎵 Tocando do álbum: ${activeAlbum}`);
+            } else {
+                availableTracks = this.playlists.music;
+                console.log('🎵 Tocando música normal');
             }
+            this.musicCounter++;
         }
-        this.updateCurrentTrackDisplay();
-    }
-
-    loadTrack(track) {
-        if (this.audio && track) {
-            this.audio.src = track.url;
-            this.audio.load();
+        
+        if (availableTracks.length > 0) {
+            // Seleção aleatória
+            const randomIndex = Math.floor(Math.random() * availableTracks.length);
+            this.currentTrack = availableTracks[randomIndex];
+            this.currentTrackIndex = randomIndex;
+        } else {
+            this.currentTrack = null;
+            console.warn('⚠️ Nenhuma música disponível');
         }
     }
-
+    
     setVolume(volume) {
-        if (this.audio) {
-            this.audio.volume = Math.max(0, Math.min(1, volume));
-        }
+        this.volume = Math.max(0, Math.min(1, volume));
+        this.audioPlayer.volume = this.volume;
+        this.saveData();
     }
-
-    // Upload Management
-    async uploadFiles(category, files) {
-        this.showLoading(true);
+    
+    updateProgress() {
+        if (this.audioPlayer.duration && this.elements.progressFill) {
+            const progress = (this.audioPlayer.currentTime / this.audioPlayer.duration) * 100;
+            this.elements.progressFill.style.width = `${progress}%`;
+        }
         
-        try {
-            const fileArray = Array.from(files);
-            const results = [];
-
-            if (this.cloudinaryManager) {
-                // Upload real para Cloudinary
-                const uploadResult = await this.cloudinaryManager.uploadMultipleFiles(fileArray, `radio-louro/${category}`);
-                results.push(...uploadResult.successful);
-                
-                if (uploadResult.failed.length > 0) {
-                    console.warn('Alguns uploads falharam:', uploadResult.failed);
-                }
-            } else {
-                // Fallback para URLs locais
-                fileArray.forEach(file => {
-                    results.push({
-                        name: file.name,
-                        url: URL.createObjectURL(file),
-                        success: true
-                    });
-                });
-            }
-
-            // Adicionar à playlist
-            const tracks = results.filter(r => r.success).map(file => ({
-                id: Date.now() + Math.random(),
-                name: file.originalName || file.name,
-                url: file.url,
-                category: category,
-                plays: 0
-            }));
-
-            this.state.playlists[category].push(...tracks);
-            this.saveToStorage();
-            this.updatePlaylist();
-
-            this.showNotification(`${tracks.length} arquivo(s) enviado(s) com sucesso!`, 'success');
-
-        } catch (error) {
-            console.error('Erro no upload:', error);
-            this.showNotification('Erro ao enviar arquivos', 'error');
-        } finally {
-            this.showLoading(false);
+        if (this.elements.currentTime) {
+            this.elements.currentTime.textContent = this.formatTime(this.audioPlayer.currentTime || 0);
         }
-    }
-
-    async uploadAlbumFiles(albumName, files) {
-        this.showLoading(true);
         
-        try {
-            const fileArray = Array.from(files);
-            const results = [];
-
-            if (this.cloudinaryManager) {
-                const uploadResult = await this.cloudinaryManager.uploadMultipleFiles(fileArray, `radio-louro/albums/${albumName}`);
-                results.push(...uploadResult.successful);
-            } else {
-                fileArray.forEach(file => {
-                    results.push({
-                        name: file.name,
-                        url: URL.createObjectURL(file),
-                        success: true
-                    });
-                });
-            }
-
-            const tracks = results.filter(r => r.success).map(file => ({
-                id: Date.now() + Math.random(),
-                name: file.originalName || file.name,
-                url: file.url,
-                category: 'album',
-                album: albumName,
-                plays: 0
-            }));
-
-            this.state.playlists.albums[albumName].push(...tracks);
-            this.saveToStorage();
-            this.updatePlaylist();
-
-            this.showNotification(`Álbum ${albumName} atualizado!`, 'success');
-
-        } catch (error) {
-            console.error('Erro no upload do álbum:', error);
-            this.showNotification('Erro ao enviar arquivos do álbum', 'error');
-        } finally {
-            this.showLoading(false);
+        if (this.elements.duration) {
+            this.elements.duration.textContent = this.formatTime(this.audioPlayer.duration || 0);
         }
     }
-
-    // Admin Methods
+    
+    updatePlayButton() {
+        if (this.elements.playPauseBtn) {
+            const icon = this.elements.playPauseBtn.querySelector('i');
+            if (icon) {
+                icon.className = this.isPlaying ? 'fas fa-pause' : 'fas fa-play';
+            }
+        }
+    }
+    
+    updateCurrentTrackInfo() {
+        if (this.elements.currentTrack && this.currentTrack) {
+            this.elements.currentTrack.textContent = this.currentTrack.title || 'Música sem título';
+        }
+        
+        const activeAlbum = localStorage.getItem('activeAlbum');
+        if (this.elements.albumName) {
+            if (activeAlbum && window.RADIO_CONFIG?.albums?.[activeAlbum]) {
+                this.elements.albumName.textContent = window.RADIO_CONFIG.albums[activeAlbum].name;
+            } else {
+                this.elements.albumName.textContent = 'Programação Geral';
+            }
+        }
+        
+        // Atualizar imagem do álbum
+        if (this.elements.albumImage && activeAlbum && window.RADIO_CONFIG?.albums?.[activeAlbum]) {
+            this.elements.albumImage.src = window.RADIO_CONFIG.albums[activeAlbum].image;
+        }
+    }
+    
+    updateMusicCount() {
+        const totalMusic = this.playlists.music.length + 
+                          Object.values(this.playlists.albums).reduce((acc, album) => acc + album.length, 0);
+        
+        if (this.elements.musicCount) {
+            this.elements.musicCount.textContent = totalMusic;
+        }
+    }
+    
+    updateStartTime() {
+        if (this.elements.startTime && this.startTime) {
+            this.elements.startTime.textContent = this.startTime.toLocaleTimeString();
+        }
+    }
+    
+    updateUI() {
+        this.updatePlayButton();
+        this.updateCurrentTrackInfo(); 
+        this.updateMusicCount();
+        this.updateStartTime();
+    }
+    
+    recordPlay(track) {
+        this.stats.totalPlayed++;
+        this.stats.playHistory.push({
+            track: track.title,
+            time: new Date(),
+            type: track.type || 'music'
+        });
+        
+        // Manter apenas últimas 100 reproduções
+        if (this.stats.playHistory.length > 100) {
+            this.stats.playHistory = this.stats.playHistory.slice(-100);
+        }
+        
+        this.saveData();
+    }
+    
+    // Funções Admin
     toggleAdminPanel() {
-        const panel = document.getElementById('admin-panel');
-        if (panel) {
-            panel.classList.toggle('hidden');
-            if (!panel.classList.contains('hidden') && this.isLoggedIn) {
-                this.showDashboard();
-            }
+        if (this.elements.adminPanel) {
+            this.elements.adminPanel.classList.toggle('hidden');
         }
     }
-
+    
     closeAdminPanel() {
-        const panel = document.getElementById('admin-panel');
-        const passwordInput = document.getElementById('admin-password');
-        
-        if (panel) panel.classList.add('hidden');
-        if (passwordInput) passwordInput.value = '';
+        if (this.elements.adminPanel) {
+            this.elements.adminPanel.classList.add('hidden');
+        }
+        this.isAdmin = false;
+        if (this.elements.adminLogin) this.elements.adminLogin.classList.remove('hidden');
+        if (this.elements.adminDashboard) this.elements.adminDashboard.classList.add('hidden');
     }
-
-    login() {
-        const passwordInput = document.getElementById('admin-password');
-        if (!passwordInput) return;
-
-        if (passwordInput.value === this.config.adminPassword) {
-            this.isLoggedIn = true;
-            this.showDashboard();
+    
+    adminLogin() {
+        const password = this.elements.adminPassword?.value;
+        const correctPassword = window.RADIO_CONFIG?.admin?.password || 'admin123';
+        
+        if (password === correctPassword) {
+            this.isAdmin = true;
+            if (this.elements.adminLogin) this.elements.adminLogin.classList.add('hidden');
+            if (this.elements.adminDashboard) this.elements.adminDashboard.classList.remove('hidden');
+            this.loadAdminData();
             this.showNotification('Login realizado com sucesso!', 'success');
         } else {
             this.showNotification('Senha incorreta!', 'error');
-            passwordInput.value = '';
         }
-    }
-
-    showDashboard() {
-        const loginForm = document.getElementById('admin-login');
-        const dashboard = document.getElementById('admin-dashboard');
         
-        if (loginForm) loginForm.classList.add('hidden');
-        if (dashboard) dashboard.classList.remove('hidden');
-        
-        this.updateAlbumGrid();
-        this.updateFilesList();
-        this.updateReports();
+        if (this.elements.adminPassword) this.elements.adminPassword.value = '';
     }
-
+    
     switchTab(tabName) {
-        // Update buttons
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        const activeTab = document.querySelector(`[data-tab="${tabName}"]`);
-        if (activeTab) activeTab.classList.add('active');
-
-        // Update content
-        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-        const activeContent = document.getElementById(`tab-${tabName}`);
-        if (activeContent) activeContent.classList.add('active');
-
-        // Update content based on tab
-        const updateMethods = {
-            'albums': () => this.updateAlbumGrid(),
-            'reports': () => this.updateReports(),
-            'files': () => this.updateFilesList()
-        };
-
-        if (updateMethods[tabName]) updateMethods[tabName]();
-    }
-
-    setActiveAlbum(albumName) {
-        this.state.activeAlbum = albumName;
-        this.saveToStorage();
-        this.updatePlaylist();
-        this.updateAlbumDisplay();
-    }
-
-    disableAlbum() {
-        this.state.activeAlbum = null;
-        localStorage.removeItem('activeAlbum');
-        this.updatePlaylist();
-        this.updateAlbumDisplay();
-        this.updateAlbumGrid();
-        this.showNotification('Álbum desativado', 'success');
-    }
-
-    resetStats() {
-        if (confirm('Tem certeza que deseja resetar as estatísticas?')) {
-            this.state.playStats = {};
-            this.saveToStorage();
-            this.updateReports();
-            this.showNotification('Estatísticas resetadas!', 'success');
-        }
-    }
-
-    removeFile(category, fileId) {
-        this.state.playlists[category] = this.state.playlists[category].filter(file => file.id !== fileId);
-        delete this.state.playStats[fileId];
-        this.saveToStorage();
-        this.updatePlaylist();
-        this.updateFilesList();
-    }
-
-    // UI Update Methods
-    updateUI() {
-        this.updateElement('music-count', this.state.currentPlaylist.length);
-        this.updateElement('start-time', this.state.startTime);
-        this.updateAlbumDisplay();
-    }
-
-    updateElement(id, content) {
-        const element = document.getElementById(id);
-        if (element) element.textContent = content;
-    }
-
-    updatePlayButton() {
-        const btn = document.getElementById('play-pause-btn');
-        if (!btn) return;
+        // Atualizar botões
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tabName);
+        });
         
-        const icon = btn.querySelector('i');
-        if (icon) {
-            icon.className = this.state.isPlaying ? 'fas fa-pause' : 'fas fa-play';
-        }
-    }
-
-    updateCurrentTrackDisplay() {
-        if (this.state.currentTrack) {
-            this.updateElement('current-track', this.state.currentTrack.name.replace('.mp3', ''));
-        }
-    }
-
-    updateProgress() {
-        if (!this.audio || !this.audio.duration) return;
-
-        const progress = (this.audio.currentTime / this.audio.duration) * 100;
-        const progressFill = document.getElementById('progress-fill');
+        // Atualizar conteúdo
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.toggle('active', content.id === `tab-${tabName}`);
+        });
         
-        if (progressFill) progressFill.style.width = `${progress}%`;
-        this.updateElement('current-time', this.formatTime(this.audio.currentTime));
-    }
-
-    updateTimeDisplay() {
-        this.updateElement('duration', this.formatTime(this.audio.duration || 0));
-    }
-
-    updateAlbumDisplay() {
-        const albumImage = document.getElementById('album-image');
-        const albumName = document.getElementById('album-name');
-        
-        if (albumImage && albumName) {
-            if (this.state.activeAlbum && this.config.albumInfo[this.state.activeAlbum]) {
-                const info = this.config.albumInfo[this.state.activeAlbum];
-                albumImage.src = info.image;
-                albumName.textContent = info.name;
-            } else {
-                albumImage.src = 'https://via.placeholder.com/300x300/333333/ffffff?text=Rádio+Louro';
-                albumName.textContent = 'Programação Geral';
-            }
+        // Carregar dados específicos da tab
+        if (tabName === 'reports') {
+            this.loadReports();
+        } else if (tabName === 'albums') {
+            this.loadAlbumsManager();
+        } else if (tabName === 'files') {
+            this.loadFilesManager();
         }
     }
-
-    updateAlbumGrid() {
-        const grid = document.getElementById('album-grid');
-        if (!grid) return;
-
-        grid.innerHTML = '';
-
-        Object.entries(this.config.albumInfo).forEach(([albumKey, album]) => {
-            const isActive = this.state.activeAlbum === albumKey;
+    
+    loadAdminData() {
+        this.loadAlbumsManager();
+        this.loadReports();
+        this.loadFilesManager();
+    }
+    
+    loadAlbumsManager() {
+        const albumGrid = document.getElementById('album-grid');
+        if (!albumGrid) return;
+        
+        albumGrid.innerHTML = '';
+        
+        const albums = window.RADIO_CONFIG?.albums || {};
+        const activeAlbum = localStorage.getItem('activeAlbum');
+        
+        Object.entries(albums).forEach(([key, album]) => {
             const albumItem = document.createElement('div');
-            albumItem.className = `album-item ${isActive ? 'active' : ''}`;
+            albumItem.className = `album-item ${activeAlbum === key ? 'active' : ''}`;
             albumItem.innerHTML = `
                 <img src="${album.image}" alt="${album.name}">
                 <h4>${album.name}</h4>
-                <p>${this.state.playlists.albums[albumKey].length} músicas</p>
+                <p>${this.playlists.albums[key]?.length || 0} músicas</p>
             `;
-
-            albumItem.addEventListener('click', () => {
-                this.setActiveAlbum(albumKey);
-                this.updateAlbumGrid();
-                this.showNotification(`Álbum "${album.name}" ativado!`, 'success');
-            });
-
-            grid.appendChild(albumItem);
+            
+            albumItem.addEventListener('click', () => this.activateAlbum(key));
+            albumGrid.appendChild(albumItem);
         });
     }
-
-    updateFilesList() {
-        ['music', 'time', 'ads'].forEach(category => {
+    
+    activateAlbum(albumKey) {
+        localStorage.setItem('activeAlbum', albumKey);
+        this.loadAlbumsManager();
+        this.updateCurrentTrackInfo();
+        this.showNotification(`Álbum ${albumKey} ativado!`, 'success');
+    }
+    
+    loadReports() {
+        const reportList = document.getElementById('play-report');
+        if (!reportList) return;
+        
+        reportList.innerHTML = '';
+        
+        this.stats.playHistory.slice(-20).reverse().forEach(entry => {
+            const reportItem = document.createElement('div');
+            reportItem.className = 'report-item';
+            reportItem.innerHTML = `
+                <div>
+                    <strong>${entry.track}</strong>
+                    <small>${entry.type}</small>
+                </div>
+                <div>${new Date(entry.time).toLocaleString()}</div>
+            `;
+            reportList.appendChild(reportItem);
+        });
+    }
+    
+    loadFilesManager() {
+        const categories = ['music', 'time', 'ads'];
+        
+        categories.forEach(category => {
             const container = document.getElementById(`${category}-files`);
             if (!container) return;
-
+            
             container.innerHTML = '';
-
-            this.state.playlists[category].forEach(file => {
+            
+            this.playlists[category].forEach((file, index) => {
                 const fileItem = document.createElement('div');
                 fileItem.className = 'file-item';
                 fileItem.innerHTML = `
-                    <span>${file.name}</span>
-                    <button class="delete-file-btn" onclick="radioApp.removeFile('${category}', '${file.id}')">
-                        <i class="fas fa-trash"></i>
+                    <span>${file.title}</span>
+                    <button onclick="radioSystem.deleteFile('${category}', ${index})" class="delete-file-btn">
+                        Excluir
                     </button>
                 `;
                 container.appendChild(fileItem);
             });
         });
     }
-
-    updateReports() {
-        const reportContainer = document.getElementById('play-report');
-        if (!reportContainer) return;
-
-        reportContainer.innerHTML = '';
-
-        const allTracks = [
-            ...this.state.playlists.music,
-            ...this.state.playlists.time,
-            ...this.state.playlists.ads,
-            ...Object.values(this.state.playlists.albums).flat()
-        ];
-
-        const sortedTracks = allTracks
-            .filter(track => this.state.playStats[track.id] > 0)
-            .sort((a, b) => (this.state.playStats[b.id] || 0) - (this.state.playStats[a.id] || 0));
-
-        sortedTracks.forEach(track => {
-            const reportItem = document.createElement('div');
-            reportItem.className = 'report-item';
-            reportItem.innerHTML = `
-                <span>${track.name}</span>
-                <span>${this.state.playStats[track.id] || 0} reproduções</span>
-            `;
-            reportContainer.appendChild(reportItem);
-        });
+    
+    deleteFile(category, index) {
+        if (confirm('Tem certeza que deseja excluir este arquivo?')) {
+            this.playlists[category].splice(index, 1);
+            this.saveData();
+            this.loadFilesManager();
+            this.updateMusicCount();
+            this.showNotification('Arquivo excluído!', 'success');
+        }
     }
-
-    // Utility Methods
+    
+    // Função simulada de upload (sem Cloudinary)
+    handleUpload(category) {
+        this.showNotification('Upload simulado - funcionalidade em desenvolvimento', 'warning');
+        
+        // Simular adição de arquivo
+        const newFile = {
+            title: `Nova música ${category} ${Date.now()}`,
+            url: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
+            duration: 30,
+            type: category
+        };
+        
+        if (category === 'album') {
+            const albumSelect = document.getElementById('album-select');
+            const selectedAlbum = albumSelect?.value || 'natal';
+            this.playlists.albums[selectedAlbum].push(newFile);
+        } else {
+            this.playlists[category].push(newFile);
+        }
+        
+        this.saveData();
+        this.updateMusicCount();
+        this.loadFilesManager();
+    }
+    
+    // Utilitários
     formatTime(seconds) {
+        if (!seconds || isNaN(seconds)) return '00:00';
+        
         const mins = Math.floor(seconds / 60);
         const secs = Math.floor(seconds % 60);
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
-
+    
+    showLoading() {
+        if (this.elements.loading) {
+            this.elements.loading.classList.remove('hidden');
+        }
+    }
+    
+    hideLoading() {
+        if (this.elements.loading) {
+            this.elements.loading.classList.add('hidden');
+        }
+    }
+    
     showNotification(message, type = 'info') {
-        const container = document.getElementById('notifications');
-        if (!container) return;
-
+        if (!this.elements.notifications) return;
+        
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
         notification.textContent = message;
-
-        container.appendChild(notification);
-
+        
+        this.elements.notifications.appendChild(notification);
+        
+        // Auto remover após 5 segundos
         setTimeout(() => {
             if (notification.parentNode) {
-                notification.remove();
+                notification.parentNode.removeChild(notification);
             }
         }, 5000);
     }
-
-    showLoading(show) {
-        const loading = document.getElementById('loading');
-        if (loading) {
-            loading.classList.toggle('hidden', !show);
-        }
+    
+    showError(message) {
+        console.error('❌ Erro:', message);
+        this.showNotification(message, 'error');
+    }
+    
+    handleAudioError(error) {
+        console.error('❌ Erro de áudio:', error);
+        this.hideLoading();
+        this.isPlaying = false;
+        this.updatePlayButton();
+        this.showNotification('Erro na reprodução do áudio', 'error');
     }
 }
 
-// Instância global da aplicação
-const radioApp = new RadioApp();
-
-// Funções globais para upload (compatibilidade com HTML)
+// Funções globais para compatibilidade
 window.uploadFiles = function(category) {
-    const input = document.getElementById(`upload-${category}`);
-    if (!input || input.files.length === 0) {
-        radioApp.showNotification('Selecione pelo menos um arquivo!', 'warning');
-        return;
+    if (window.radioSystem) {
+        window.radioSystem.handleUpload(category);
     }
-    
-    radioApp.uploadFiles(category, input.files);
-    input.value = '';
 };
 
 window.uploadAlbumFiles = function() {
-    const albumSelect = document.getElementById('album-select');
-    const input = document.getElementById('upload-album');
-    
-    if (!albumSelect || !input || input.files.length === 0) {
-        radioApp.showNotification('Selecione pelo menos um arquivo!', 'warning');
-        return;
+    if (window.radioSystem) {
+        window.radioSystem.handleUpload('album');
     }
-    
-    radioApp.uploadAlbumFiles(albumSelect.value, input.files);
-    input.value = '';
 };
 
-// Verificação de compatibilidade
-if (!window.Audio) {
-    alert('Seu navegador não suporta reprodução de áudio');
+// Inicializar sistema quando DOM estiver pronto
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        window.radioSystem = new RadioSystem();
+    });
+} else {
+    window.radioSystem = new RadioSystem();
 }
 
-// Tratamento de erros globais
-window.addEventListener('error', function(e) {
-    console.error('Erro detectado:', e.error);
-});
+// Carregar configurações do setup se disponível
+if (typeof window.initializeRadioConfig === 'function') {
+    window.initializeRadioConfig();
+}
 
-console.log('🔧 Script da Rádio Supermercado do Louro carregado!');
+console.log('🎵 Script principal da rádio carregado!');
