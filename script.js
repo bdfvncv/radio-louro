@@ -159,16 +159,16 @@ class RadioSystem {
         if (this.playlists.music.length === 0) {
             this.playlists.music = [
                 {
-                    title: 'Música Demo 1',
-                    url: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
-                    duration: 30,
-                    type: 'demo'
+                    title: 'pancada-de-mulher',
+                    url: 'https://res.cloudinary.com/dygbrcrr6/video/upload/v1751504378/d4al5xcgdzl43ugk8ffz.mp3',
+                    duration: 02:17,
+                    type: 'music'
                 },
                 {
-                    title: 'Música Demo 2', 
-                    url: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
-                    duration: 30,
-                    type: 'demo'
+                    title: 'Leonardo-Nao-Aprendi-A-Dizer-Adeus', 
+                    url: 'https://res.cloudinary.com/dygbrcrr6/video/upload/v1751504859/a6i8wjf9owtqfr32haxb.mp3',
+                    duration: 01:30,
+                    type: 'music'
                 }
             ];
         }
@@ -177,10 +177,10 @@ class RadioSystem {
         if (this.playlists.time.length === 0) {
             this.playlists.time = [
                 {
-                    title: 'Anúncio Hora',
-                    url: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
-                    duration: 5,
-                    type: 'time'
+                    title: 'hora-certa-1-hora',
+                    url: 'https://res.cloudinary.com/dygbrcrr6/video/upload/v1751505070/pfiyrl9uuzzsud4hxuvo.mp3',
+                    duration: 00:06,
+                    type: 'music'
                 }
             ];
         }
@@ -189,10 +189,10 @@ class RadioSystem {
         if (this.playlists.ads.length === 0) {
             this.playlists.ads = [
                 {
-                    title: 'Aviso Promocional',
-                    url: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
-                    duration: 10,
-                    type: 'ad'
+                    title: 'aqui-voce-compra-mais-barato-',
+                    url: 'https://res.cloudinary.com/dygbrcrr6/video/upload/v1751505219/jcu59rbwi8u3covg80l5.mp3',
+                    duration: 00:03,
+                    type: 'music'
                 }
             ];
         }
