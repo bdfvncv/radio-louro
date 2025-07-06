@@ -16,6 +16,7 @@ let radioState = {
     tracksSinceAd: 0,
     activeAlbum: null,
     volume: 70,
+    lastTimeAnnouncement: 0, // Timestamp da última hora certa
     playlists: {
         music: [],
         time: [],
@@ -209,35 +210,48 @@ function loadNextTrack() {
 }
 
 function getNextTrack() {
-    // Lógica para alternar entre músicas, hora certa e avisos
-    let playlist = [];
+    const currentTime = new Date();
+    const currentHour = currentTime.getHours();
+    const currentMinute = currentTime.getMinutes();
     
-    // Verificar se deve tocar hora certa (a cada 3 músicas)
-    if (radioState.tracksSinceTime >= 3 && radioState.playlists.time.length > 0) {
-        playlist = radioState.playlists.time;
+    // Verificar se deve tocar hora certa (no minuto 0 de cada hora)
+    if (currentMinute === 0 && 
+        radioState.playlists.time.length > 0 && 
+        (Date.now() - radioState.lastTimeAnnouncement) > 3540000) { // 59 minutos
+        
+        radioState.lastTimeAnnouncement = Date.now();
         radioState.tracksSinceTime = 0;
         radioState.tracksSinceAd++;
+        
+        const timePlaylist = radioState.playlists.time;
+        const randomIndex = Math.floor(Math.random() * timePlaylist.length);
+        return timePlaylist[randomIndex];
     }
+    
     // Verificar se deve tocar aviso (a cada 6 músicas)
-    else if (radioState.tracksSinceAd >= 6 && radioState.playlists.ads.length > 0) {
-        playlist = radioState.playlists.ads;
+    if (radioState.tracksSinceAd >= 6 && radioState.playlists.ads.length > 0) {
         radioState.tracksSinceAd = 0;
         radioState.tracksSinceTime++;
+        
+        const adsPlaylist = radioState.playlists.ads;
+        const randomIndex = Math.floor(Math.random() * adsPlaylist.length);
+        return adsPlaylist[randomIndex];
     }
+    
     // Tocar música normal
-    else {
-        if (radioState.activeAlbum && radioState.playlists.albums[radioState.activeAlbum].length > 0) {
-            playlist = radioState.playlists.albums[radioState.activeAlbum];
-        } else {
-            playlist = radioState.playlists.music;
-        }
-        radioState.tracksSinceTime++;
-        radioState.tracksSinceAd++;
+    let playlist = [];
+    if (radioState.activeAlbum && radioState.playlists.albums[radioState.activeAlbum].length > 0) {
+        playlist = radioState.playlists.albums[radioState.activeAlbum];
+    } else {
+        playlist = radioState.playlists.music;
     }
     
     if (playlist.length === 0) {
         return null;
     }
+    
+    radioState.tracksSinceTime++;
+    radioState.tracksSinceAd++;
     
     // Escolher música aleatória
     const randomIndex = Math.floor(Math.random() * playlist.length);
@@ -537,10 +551,20 @@ async function deleteFile(category, index) {
         return;
     }
     
+    showLoading(true);
+    
     try {
         const file = radioState.playlists[category][index];
-        await deleteFromCloudinary(file.publicId);
         
+        // Tentar deletar da Cloudinary
+        try {
+            await deleteFromCloudinary(file.publicId);
+        } catch (cloudError) {
+            console.warn('Erro ao deletar da Cloudinary:', cloudError);
+            // Continuar mesmo se falhar na Cloudinary
+        }
+        
+        // Remover do estado local
         radioState.playlists[category].splice(index, 1);
         saveData();
         refreshFilesList();
@@ -549,6 +573,8 @@ async function deleteFile(category, index) {
     } catch (error) {
         console.error('Erro ao excluir:', error);
         alert('Erro ao excluir o arquivo.');
+    } finally {
+        showLoading(false);
     }
 }
 
@@ -557,10 +583,20 @@ async function deleteAlbumFile(albumKey, index) {
         return;
     }
     
+    showLoading(true);
+    
     try {
         const file = radioState.playlists.albums[albumKey][index];
-        await deleteFromCloudinary(file.publicId);
         
+        // Tentar deletar da Cloudinary
+        try {
+            await deleteFromCloudinary(file.publicId);
+        } catch (cloudError) {
+            console.warn('Erro ao deletar da Cloudinary:', cloudError);
+            // Continuar mesmo se falhar na Cloudinary
+        }
+        
+        // Remover do estado local
         radioState.playlists.albums[albumKey].splice(index, 1);
         saveData();
         refreshFilesList();
@@ -569,18 +605,25 @@ async function deleteAlbumFile(albumKey, index) {
     } catch (error) {
         console.error('Erro ao excluir:', error);
         alert('Erro ao excluir o arquivo.');
+    } finally {
+        showLoading(false);
     }
 }
 
 async function deleteFromCloudinary(publicId) {
     const timestamp = Math.round(new Date().getTime() / 1000);
+    
+    // Gerar assinatura usando CryptoJS (se disponível) ou fazer requisição sem assinatura
     const signature = await generateSignature(publicId, timestamp);
     
     const formData = new FormData();
     formData.append('public_id', publicId);
-    formData.append('signature', signature);
     formData.append('api_key', CLOUDINARY_CONFIG.apiKey);
     formData.append('timestamp', timestamp);
+    
+    if (signature) {
+        formData.append('signature', signature);
+    }
     
     const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/image/destroy`, {
         method: 'POST',
@@ -590,15 +633,31 @@ async function deleteFromCloudinary(publicId) {
     if (!response.ok) {
         throw new Error('Erro ao excluir da Cloudinary');
     }
+    
+    return response.json();
+}
+
+// Função para gerar assinatura (simplificada)
+async function generateSignature(publicId, timestamp) {
+    try {
+        // Usar Web Crypto API se disponível
+        if (window.crypto && window.crypto.subtle) {
+            const message = `public_id=${publicId}&timestamp=${timestamp}${CLOUDINARY_CONFIG.apiSecret}`;
+            const encoder = new TextEncoder();
+            const data = encoder.encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-1', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return hashHex;
+        }
+    } catch (error) {
+        console.warn('Erro ao gerar assinatura:', error);
+    }
+    
+    return null; // Retornar null se não conseguir gerar assinatura
 }
 
 // Funções auxiliares
-function generateSignature(publicId, timestamp) {
-    // Nota: Em produção, esta função deve ser implementada no backend
-    // Para fins de demonstração, retornamos uma string vazia
-    return '';
-}
-
 function showLoading(show) {
     elements.loadingOverlay.style.display = show ? 'flex' : 'none';
 }
