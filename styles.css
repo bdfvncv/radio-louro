@@ -148,6 +148,7 @@ body {
 }
 
 .volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
     appearance: none;
     width: 20px;
     height: 20px;
@@ -328,6 +329,15 @@ body {
     color: white;
 }
 
+.upload-category input[type="file"]::-webkit-file-upload-button {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+    color: white;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
 .upload-category select {
     width: 100%;
     padding: 10px;
@@ -335,6 +345,11 @@ body {
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 5px;
+    color: white;
+}
+
+.upload-category select option {
+    background: #1a1a1a;
     color: white;
 }
 
@@ -422,6 +437,11 @@ body {
     margin-bottom: 15px;
 }
 
+.album-selector select option {
+    background: #1a1a1a;
+    color: white;
+}
+
 .album-preview {
     flex: 1;
     display: flex;
@@ -496,6 +516,11 @@ body {
     font-size: 1.1rem;
 }
 
+.file-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
 .file-item {
     display: flex;
     justify-content: space-between;
@@ -511,12 +536,16 @@ body {
 .file-name {
     font-size: 0.9rem;
     color: #b0b0b0;
+    flex: 1;
+    margin-right: 10px;
+    word-break: break-word;
 }
 
 .btn-small {
     padding: 5px 10px;
     font-size: 0.8rem;
     border-radius: 5px;
+    min-width: 35px;
 }
 
 /* Modal */
@@ -563,6 +592,10 @@ body {
     border-radius: 8px;
     color: white;
     font-size: 1rem;
+}
+
+.modal-content input::placeholder {
+    color: #b0b0b0;
 }
 
 .modal-buttons {
