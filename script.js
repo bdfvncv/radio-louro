@@ -6,7 +6,7 @@ const CLOUDINARY_CONFIG = {
     uploadPreset: 'radio_preset'
 };
 
-// Estado da aplicação
+// Estado da aplicação - AGORA COM SINCRONIZAÇÃO AO VIVO
 let radioState = {
     currentTrack: null,
     isPlaying: false,
@@ -29,7 +29,12 @@ let radioState = {
     },
     playHistory: {},
     isAdmin: false,
-    lastTimeCheck: 0 // Para controle da hora certa
+    lastTimeCheck: 0,
+    // NOVOS CAMPOS PARA SINCRONIZAÇÃO AO VIVO
+    globalStartTime: null,
+    globalPlaylist: [],
+    currentGlobalIndex: 0,
+    lastSync: 0
 };
 
 // Elementos DOM
@@ -114,9 +119,157 @@ document.addEventListener('DOMContentLoaded', function() {
     loadStoredData();
     updateUI();
     
-    // Inicializar controle de hora certa
-    radioState.lastTimeCheck = Date.now();
+    // NOVA FUNCIONALIDADE: Inicializar rádio ao vivo
+    initializeLiveRadio();
 });
+
+// NOVA FUNÇÃO: Inicializar rádio ao vivo
+function initializeLiveRadio() {
+    // Gerar playlist global se não existir
+    if (!radioState.globalStartTime) {
+        generateGlobalPlaylist();
+    }
+    
+    // Sincronizar com a programação global
+    syncWithGlobalPlaylist();
+    
+    // Sincronizar a cada 30 segundos
+    setInterval(syncWithGlobalPlaylist, 30000);
+}
+
+// NOVA FUNÇÃO: Gerar playlist global para sincronização
+function generateGlobalPlaylist() {
+    const now = Date.now();
+    radioState.globalStartTime = now;
+    radioState.globalPlaylist = [];
+    
+    // Gerar playlist para as próximas 24 horas
+    let currentTime = now;
+    let trackIndex = 0;
+    
+    for (let i = 0; i < 200; i++) { // ~200 músicas para 24h
+        const track = getScheduledTrack(currentTime, trackIndex);
+        if (track) {
+            radioState.globalPlaylist.push({
+                ...track,
+                scheduledTime: currentTime,
+                duration: 180000 // 3 minutos padrão
+            });
+            currentTime += 180000; // Adicionar 3 minutos
+            trackIndex++;
+        }
+    }
+    
+    radioState.lastSync = now;
+    saveData();
+}
+
+// NOVA FUNÇÃO: Obter música programada para horário específico
+function getScheduledTrack(timestamp, trackIndex) {
+    const date = new Date(timestamp);
+    const hour = date.getHours();
+    const minute = date.getMinutes();
+    
+    // Hora certa (a cada hora exata)
+    if (minute === 0 && radioState.playlists.time.length > 0) {
+        const randomIndex = Math.floor(Math.random() * radioState.playlists.time.length);
+        return {
+            ...radioState.playlists.time[randomIndex],
+            type: 'time'
+        };
+    }
+    
+    // Avisos a cada 6 músicas
+    if (trackIndex % 6 === 5 && radioState.playlists.ads.length > 0) {
+        const randomIndex = Math.floor(Math.random() * radioState.playlists.ads.length);
+        return {
+            ...radioState.playlists.ads[randomIndex],
+            type: 'ad'
+        };
+    }
+    
+    // Música normal
+    let playlist = [];
+    if (radioState.activeAlbum && radioState.playlists.albums[radioState.activeAlbum].length > 0) {
+        playlist = radioState.playlists.albums[radioState.activeAlbum];
+    } else {
+        playlist = radioState.playlists.music;
+    }
+    
+    if (playlist.length === 0) return null;
+    
+    const randomIndex = Math.floor(Math.random() * playlist.length);
+    return {
+        ...playlist[randomIndex],
+        type: 'music'
+    };
+}
+
+// NOVA FUNÇÃO: Sincronizar com playlist global
+function syncWithGlobalPlaylist() {
+    const now = Date.now();
+    
+    // Se não há playlist global, gerar uma
+    if (!radioState.globalStartTime || radioState.globalPlaylist.length === 0) {
+        generateGlobalPlaylist();
+        return;
+    }
+    
+    // Encontrar a música atual na programação
+    let currentTrackIndex = -1;
+    let currentPosition = 0;
+    
+    for (let i = 0; i < radioState.globalPlaylist.length; i++) {
+        const track = radioState.globalPlaylist[i];
+        const trackEndTime = track.scheduledTime + track.duration;
+        
+        if (now >= track.scheduledTime && now < trackEndTime) {
+            currentTrackIndex = i;
+            currentPosition = now - track.scheduledTime;
+            break;
+        }
+    }
+    
+    // Se encontrou a música atual
+    if (currentTrackIndex >= 0) {
+        const currentGlobalTrack = radioState.globalPlaylist[currentTrackIndex];
+        
+        // Se é uma música diferente da atual, trocar
+        if (!radioState.currentTrack || 
+            radioState.currentTrack.url !== currentGlobalTrack.url ||
+            radioState.currentGlobalIndex !== currentTrackIndex) {
+            
+            radioState.currentTrack = currentGlobalTrack;
+            radioState.currentGlobalIndex = currentTrackIndex;
+            
+            // Carregar e sincronizar
+            loadAndSyncTrack(currentGlobalTrack, currentPosition);
+        }
+    }
+}
+
+// NOVA FUNÇÃO: Carregar e sincronizar música
+function loadAndSyncTrack(track, position) {
+    elements.audioPlayer.src = track.url;
+    elements.currentTrack.textContent = track.name;
+    
+    // Quando a música carregar, sincronizar posição
+    elements.audioPlayer.addEventListener('loadeddata', function syncPosition() {
+        if (position > 0 && position < elements.audioPlayer.duration * 1000) {
+            elements.audioPlayer.currentTime = position / 1000;
+        }
+        
+        if (radioState.isPlaying) {
+            elements.audioPlayer.play();
+        }
+        
+        // Remover este listener após usar
+        elements.audioPlayer.removeEventListener('loadeddata', syncPosition);
+    });
+    
+    updatePlayHistory(track);
+    updateTrackCount();
+}
 
 function initializeRadio() {
     // Configurar volume inicial
@@ -125,16 +278,22 @@ function initializeRadio() {
     elements.volumeValue.textContent = radioState.volume + '%';
     
     // Configurar eventos do player
-    elements.audioPlayer.addEventListener('ended', playNext);
+    elements.audioPlayer.addEventListener('ended', handleTrackEnd);
     elements.audioPlayer.addEventListener('loadstart', () => showLoading(true));
     elements.audioPlayer.addEventListener('canplay', () => showLoading(false));
     elements.audioPlayer.addEventListener('error', handleAudioError);
 }
 
+// FUNÇÃO MODIFICADA: Tratar fim da música
+function handleTrackEnd() {
+    // Na rádio ao vivo, apenas sincronizar - não pular manualmente
+    syncWithGlobalPlaylist();
+}
+
 function setupEventListeners() {
     // Player controls
     elements.playPauseBtn.addEventListener('click', togglePlayPause);
-    elements.skipBtn.addEventListener('click', playNext);
+    elements.skipBtn.addEventListener('click', forceNextTrack);
     elements.volumeSlider.addEventListener('input', updateVolume);
     
     // Admin access
@@ -176,9 +335,8 @@ function togglePlayPause() {
         elements.playPauseBtn.innerHTML = '<span class="play-icon">▶️</span>';
         elements.playStatus.textContent = 'Pausado';
     } else {
-        if (!radioState.currentTrack) {
-            loadNextTrack();
-        }
+        // Sincronizar antes de tocar
+        syncWithGlobalPlaylist();
         elements.audioPlayer.play();
         radioState.isPlaying = true;
         elements.playPauseBtn.innerHTML = '<span class="pause-icon">⏸️</span>';
@@ -186,10 +344,15 @@ function togglePlayPause() {
     }
 }
 
-function playNext() {
-    loadNextTrack();
-    if (radioState.isPlaying) {
-        elements.audioPlayer.play();
+// FUNÇÃO MODIFICADA: Forçar próxima música (apenas para admin)
+function forceNextTrack() {
+    if (radioState.isAdmin) {
+        // Regenerar playlist global para pular música
+        generateGlobalPlaylist();
+        syncWithGlobalPlaylist();
+        if (radioState.isPlaying) {
+            elements.audioPlayer.play();
+        }
     }
 }
 
@@ -199,63 +362,6 @@ function updateVolume() {
     elements.audioPlayer.volume = volume / 100;
     elements.volumeValue.textContent = volume + '%';
     saveData();
-}
-
-function loadNextTrack() {
-    const nextTrack = getNextTrack();
-    if (nextTrack) {
-        radioState.currentTrack = nextTrack;
-        elements.audioPlayer.src = nextTrack.url;
-        elements.currentTrack.textContent = nextTrack.name;
-        updatePlayHistory(nextTrack);
-        updateTrackCount();
-    }
-}
-
-// CORREÇÃO DO BUG 2: Hora certa agora funciona corretamente
-function getNextTrack() {
-    const now = Date.now();
-    const currentHour = new Date().getHours();
-    const currentMinute = new Date().getMinutes();
-    
-    // Verificar se é hora certa (00 minutos de qualquer hora)
-    if (currentMinute === 0 && radioState.playlists.time.length > 0) {
-        const timeSinceLastCheck = now - radioState.lastTimeCheck;
-        // Só toca hora certa se passou mais de 50 minutos desde a última verificação
-        if (timeSinceLastCheck > 50 * 60 * 1000) {
-            radioState.lastTimeCheck = now;
-            radioState.tracksSinceTime = 0;
-            radioState.tracksSinceAd++;
-            const randomIndex = Math.floor(Math.random() * radioState.playlists.time.length);
-            return radioState.playlists.time[randomIndex];
-        }
-    }
-    
-    // Verificar se deve tocar aviso (a cada 6 músicas)
-    if (radioState.tracksSinceAd >= 6 && radioState.playlists.ads.length > 0) {
-        radioState.tracksSinceAd = 0;
-        radioState.tracksSinceTime++;
-        const randomIndex = Math.floor(Math.random() * radioState.playlists.ads.length);
-        return radioState.playlists.ads[randomIndex];
-    }
-    
-    // Tocar música normal
-    let playlist = [];
-    if (radioState.activeAlbum && radioState.playlists.albums[radioState.activeAlbum].length > 0) {
-        playlist = radioState.playlists.albums[radioState.activeAlbum];
-    } else {
-        playlist = radioState.playlists.music;
-    }
-    
-    radioState.tracksSinceTime++;
-    radioState.tracksSinceAd++;
-    
-    if (playlist.length === 0) {
-        return null;
-    }
-    
-    const randomIndex = Math.floor(Math.random() * playlist.length);
-    return playlist[randomIndex];
 }
 
 function updatePlayHistory(track) {
@@ -274,7 +380,9 @@ function updateTrackCount() {
 function handleAudioError(e) {
     console.error('Erro no áudio:', e);
     showLoading(false);
-    setTimeout(playNext, 2000);
+    setTimeout(() => {
+        syncWithGlobalPlaylist();
+    }, 2000);
 }
 
 // Modo Administrador
@@ -371,6 +479,9 @@ async function uploadFiles(category) {
         }
         
         saveData();
+        // Regenerar playlist global quando novos arquivos são adicionados
+        generateGlobalPlaylist();
+        
         fileInput.value = '';
         refreshFilesList();
         alert(`${files.length} arquivo(s) enviado(s) com sucesso!`);
@@ -431,6 +542,10 @@ function setActiveAlbum() {
     const selectedAlbum = elements.activeAlbumSelect.value;
     radioState.activeAlbum = selectedAlbum || null;
     updateAlbumDisplay();
+    
+    // Regenerar playlist global quando álbum muda
+    generateGlobalPlaylist();
+    
     saveData();
     alert(selectedAlbum ? `Álbum "${albumData[selectedAlbum].title}" ativado!` : 'Álbum desativado. Tocando playlist geral.');
 }
@@ -542,7 +657,7 @@ function refreshAlbumFiles() {
     elements.albumFiles.innerHTML = html;
 }
 
-// CORREÇÃO DO BUG 1: Exclusão de arquivos agora funciona corretamente
+// CORREÇÃO PROBLEMA 1: Exclusão correta da Cloudinary
 async function deleteFile(category, index) {
     if (!confirm('Tem certeza que deseja excluir este arquivo?')) {
         return;
@@ -553,23 +668,22 @@ async function deleteFile(category, index) {
     try {
         const file = radioState.playlists[category][index];
         
-        // Tentar excluir da Cloudinary (se falhar, continua mesmo assim)
-        try {
-            await deleteFromCloudinary(file.publicId);
-        } catch (cloudinaryError) {
-            console.warn('Erro ao excluir da Cloudinary:', cloudinaryError);
-            // Continua mesmo se a exclusão da Cloudinary falhar
-        }
+        // Excluir da Cloudinary usando a API de administração
+        await deleteFromCloudinary(file.publicId);
         
         // Remove do estado local
         radioState.playlists[category].splice(index, 1);
+        
+        // Regenerar playlist global
+        generateGlobalPlaylist();
+        
         saveData();
         refreshFilesList();
         alert('Arquivo excluído com sucesso!');
         
     } catch (error) {
         console.error('Erro ao excluir:', error);
-        alert('Erro ao excluir o arquivo.');
+        alert('Erro ao excluir o arquivo: ' + error.message);
     } finally {
         showLoading(false);
     }
@@ -585,34 +699,34 @@ async function deleteAlbumFile(albumKey, index) {
     try {
         const file = radioState.playlists.albums[albumKey][index];
         
-        // Tentar excluir da Cloudinary (se falhar, continua mesmo assim)
-        try {
-            await deleteFromCloudinary(file.publicId);
-        } catch (cloudinaryError) {
-            console.warn('Erro ao excluir da Cloudinary:', cloudinaryError);
-            // Continua mesmo se a exclusão da Cloudinary falhar
-        }
+        // Excluir da Cloudinary usando a API de administração
+        await deleteFromCloudinary(file.publicId);
         
         // Remove do estado local
         radioState.playlists.albums[albumKey].splice(index, 1);
+        
+        // Regenerar playlist global
+        generateGlobalPlaylist();
+        
         saveData();
         refreshFilesList();
         alert('Arquivo excluído com sucesso!');
         
     } catch (error) {
         console.error('Erro ao excluir:', error);
-        alert('Erro ao excluir o arquivo.');
+        alert('Erro ao excluir o arquivo: ' + error.message);
     } finally {
         showLoading(false);
     }
 }
 
-// Função melhorada para exclusão da Cloudinary
+// CORREÇÃO PROBLEMA 1: Função correta para deletar da Cloudinary
 async function deleteFromCloudinary(publicId) {
     const timestamp = Math.round(Date.now() / 1000);
+    const stringToSign = `public_id=${publicId}&timestamp=${timestamp}${CLOUDINARY_CONFIG.apiSecret}`;
     
-    // Gerar a assinatura para autenticação
-    const signature = await generateCloudinarySignature(publicId, timestamp);
+    // Gerar signature SHA-1
+    const signature = await generateSHA1(stringToSign);
     
     const formData = new FormData();
     formData.append('public_id', publicId);
@@ -626,34 +740,26 @@ async function deleteFromCloudinary(publicId) {
     });
     
     if (!response.ok) {
-        throw new Error('Erro ao excluir da Cloudinary');
+        const errorData = await response.json();
+        throw new Error(`Erro na Cloudinary: ${errorData.error?.message || 'Erro desconhecido'}`);
     }
     
-    return await response.json();
+    const result = await response.json();
+    
+    if (result.result !== 'ok') {
+        throw new Error(`Falha ao excluir: ${result.result}`);
+    }
+    
+    return result;
 }
 
-// Função para gerar assinatura da Cloudinary
-async function generateCloudinarySignature(publicId, timestamp) {
-    // Para funcionar corretamente, você precisa implementar esta função no backend
-    // Por enquanto, vamos usar uma abordagem simplificada
-    const stringToSign = `public_id=${publicId}&timestamp=${timestamp}${CLOUDINARY_CONFIG.apiSecret}`;
-    
-    // Usar crypto-js se disponível, caso contrário retornar string vazia
-    if (typeof CryptoJS !== 'undefined') {
-        return CryptoJS.SHA1(stringToSign).toString();
-    }
-    
-    // Fallback: tentar usar Web Crypto API
-    try {
-        const encoder = new TextEncoder();
-        const data = encoder.encode(stringToSign);
-        const hashBuffer = await crypto.subtle.digest('SHA-1', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    } catch (error) {
-        console.warn('Não foi possível gerar assinatura localmente');
-        return '';
-    }
+// Função para gerar SHA-1 usando Web Crypto API
+async function generateSHA1(message) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-1', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 // Funções auxiliares
@@ -666,27 +772,51 @@ function updateUI() {
     updateTrackCount();
 }
 
-// Auto-play quando a página carrega
+// Auto-sincronização quando a página carrega
 window.addEventListener('load', function() {
-    document.addEventListener('click', function() {
-        if (!radioState.currentTrack && !radioState.isPlaying) {
-            loadNextTrack();
-        }
-    }, { once: true });
+    // Começar a sincronização automaticamente
+    setTimeout(() => {
+        syncWithGlobalPlaylist();
+        radioState.isPlaying = true;
+        elements.audioPlayer.play();
+        elements.playPauseBtn.innerHTML = '<span class="pause-icon">⏸️</span>';
+        elements.playStatus.textContent = 'Tocando';
+    }, 1000);
 });
 
 // Salvar dados periodicamente
 setInterval(saveData, 30000);
 
-// Verificar hora certa a cada minuto
+// CORREÇÃO PROBLEMA 2: Verificação melhorada da hora certa
 setInterval(function() {
     const now = new Date();
     const currentMinute = now.getMinutes();
+    const currentSecond = now.getSeconds();
     
-    // Se chegou na hora certa (00 minutos) e está tocando
-    if (currentMinute === 0 && radioState.isPlaying) {
-        console.log('Hora certa detectada!');
-        // Força próxima música a ser hora certa
-        radioState.tracksSinceTime = 999;
+    // Verificar hora certa quando chegar aos 0 minutos e 0 segundos
+    if (currentMinute === 0 && currentSecond === 0) {
+        console.log('Hora certa detectada! Regenerando playlist...');
+        
+        // Regenerar playlist global para incluir hora certa
+        generateGlobalPlaylist();
+        
+        // Forçar sincronização
+        setTimeout(() => {
+            syncWithGlobalPlaylist();
+        }, 1000);
     }
-}, 60000); // Verifica a cada minuto
+}, 1000); // Verificar a cada segundo para precisão
+
+// Detectar quando o usuário volta para a aba (para ressincronizar)
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+        console.log('Usuário voltou para a aba, sincronizando...');
+        syncWithGlobalPlaylist();
+    }
+});
+
+// Ressincronizar quando houver erro de rede
+window.addEventListener('online', function() {
+    console.log('Conexão restaurada, sincronizando...');
+    syncWithGlobalPlaylist();
+});
