@@ -11,7 +11,7 @@
     <div id="playerMode" class="player-container">
         <div class="player-header">
             <h1>🎵 Rádio Supermercado do Louro</h1>
-            <p class="tagline">Sua música, sua experiência</p>
+            <p class="tagline">Sua música, sua experiência - AO VIVO</p>
         </div>
         
         <div class="player-main">
@@ -20,6 +20,7 @@
                 <div class="album-info">
                     <h3 id="albumTitle">Playlist Geral</h3>
                     <p id="currentTrack">Carregando...</p>
+                    <p id="trackTime">00:00 / 00:00</p>
                 </div>
             </div>
             
@@ -49,19 +50,20 @@
                 </div>
                 <div class="status">
                     <span id="playStatus">Pausado</span>
-                    <span id="trackCount">Músicas tocadas: 0</span>
+                    <span id="trackCount">Músicas: 0</span>
+                    <span id="liveIndicator" class="live-indicator">🔴 AO VIVO</span>
                 </div>
             </div>
         </div>
         
-        <button id="adminBtn" class="admin-access-btn">🔐 Acesso Administrador</button>
+        <button id="adminBtn" class="admin-access-btn">🔐 Admin</button>
     </div>
 
     <!-- Painel Administrador -->
     <div id="adminMode" class="admin-container" style="display: none;">
         <div class="admin-header">
-            <h1>🛠️ Painel Administrador</h1>
-            <button id="backToPlayerBtn" class="btn-secondary">← Voltar ao Player</button>
+            <h1>🛠️ Painel Admin</h1>
+            <button id="backToPlayerBtn" class="btn-secondary">← Voltar</button>
         </div>
         
         <div class="admin-tabs">
@@ -71,126 +73,119 @@
             <button class="tab-btn" data-tab="files">📂 Arquivos</button>
         </div>
         
-        <!-- Tab Upload -->
+        <!-- Upload Tab -->
         <div class="tab-content active" id="upload-tab">
-            <div class="upload-section">
-                <h3>📤 Upload de Arquivos</h3>
-                <div class="upload-categories">
-                    <div class="upload-category">
-                        <h4>🎵 Músicas Principais</h4>
-                        <input type="file" id="musicUpload" accept=".mp3" multiple>
-                        <button onclick="uploadFiles('music')" class="btn-primary">Enviar Músicas</button>
-                    </div>
-                    
-                    <div class="upload-category">
-                        <h4>🕐 Hora Certa</h4>
-                        <input type="file" id="timeUpload" accept=".mp3" multiple>
-                        <button onclick="uploadFiles('time')" class="btn-primary">Enviar Hora Certa</button>
-                    </div>
-                    
-                    <div class="upload-category">
-                        <h4>📢 Avisos</h4>
-                        <input type="file" id="adUpload" accept=".mp3" multiple>
-                        <button onclick="uploadFiles('ads')" class="btn-primary">Enviar Avisos</button>
-                    </div>
-                    
-                    <div class="upload-category">
-                        <h4>🎄 Álbuns Temáticos</h4>
-                        <select id="albumSelect">
-                            <option value="natal">🎄 Natal</option>
-                            <option value="pascoa">🐰 Páscoa</option>
-                            <option value="saojoao">🎪 São João</option>
-                            <option value="carnaval">🎭 Carnaval</option>
-                        </select>
-                        <input type="file" id="albumUpload" accept=".mp3" multiple>
-                        <button onclick="uploadFiles('album')" class="btn-primary">Enviar ao Álbum</button>
-                    </div>
+            <div class="upload-grid">
+                <div class="upload-card">
+                    <h4>🎵 Músicas</h4>
+                    <input type="file" id="musicUpload" accept=".mp3,.wav,.ogg" multiple>
+                    <button onclick="uploadFiles('music')" class="btn-primary">Enviar</button>
+                </div>
+                
+                <div class="upload-card">
+                    <h4>🕐 Hora Certa</h4>
+                    <input type="file" id="timeUpload" accept=".mp3,.wav,.ogg" multiple>
+                    <button onclick="uploadFiles('time')" class="btn-primary">Enviar</button>
+                </div>
+                
+                <div class="upload-card">
+                    <h4>📢 Avisos</h4>
+                    <input type="file" id="adUpload" accept=".mp3,.wav,.ogg" multiple>
+                    <button onclick="uploadFiles('ads')" class="btn-primary">Enviar</button>
+                </div>
+                
+                <div class="upload-card">
+                    <h4>🎄 Álbuns</h4>
+                    <select id="albumSelect">
+                        <option value="natal">🎄 Natal</option>
+                        <option value="pascoa">🐰 Páscoa</option>
+                        <option value="saojoao">🎪 São João</option>
+                        <option value="carnaval">🎭 Carnaval</option>
+                    </select>
+                    <input type="file" id="albumUpload" accept=".mp3,.wav,.ogg" multiple>
+                    <button onclick="uploadFiles('album')" class="btn-primary">Enviar</button>
                 </div>
             </div>
         </div>
         
-        <!-- Tab Albums -->
+        <!-- Albums Tab -->
         <div class="tab-content" id="albums-tab">
-            <div class="albums-section">
-                <h3>🎵 Gerenciar Álbuns</h3>
-                <div class="album-controls">
-                    <div class="album-selector">
-                        <label>Álbum Ativo:</label>
-                        <select id="activeAlbumSelect">
-                            <option value="">Nenhum (Playlist Geral)</option>
-                            <option value="natal">🎄 Natal</option>
-                            <option value="pascoa">🐰 Páscoa</option>
-                            <option value="saojoao">🎪 São João</option>
-                            <option value="carnaval">🎭 Carnaval</option>
-                        </select>
-                        <button onclick="setActiveAlbum()" class="btn-primary">Ativar Álbum</button>
-                    </div>
-                    
-                    <div class="album-preview" id="albumPreview">
-                        <img id="previewCover" src="" alt="Preview">
-                        <div class="preview-info">
-                            <h4 id="previewTitle">Selecione um álbum</h4>
-                            <p id="previewDescription">Escolha um álbum para visualizar</p>
-                        </div>
-                    </div>
+            <div class="album-management">
+                <div class="album-selector">
+                    <h3>🎵 Álbum Ativo</h3>
+                    <select id="activeAlbumSelect">
+                        <option value="">Playlist Geral</option>
+                        <option value="natal">🎄 Natal</option>
+                        <option value="pascoa">🐰 Páscoa</option>
+                        <option value="saojoao">🎪 São João</option>
+                        <option value="carnaval">🎭 Carnaval</option>
+                    </select>
+                    <button onclick="setActiveAlbum()" class="btn-primary">Ativar</button>
+                </div>
+                
+                <div class="album-covers">
+                    <h3>🖼️ Capas dos Álbuns</h3>
+                    <div class="covers-grid" id="coversGrid"></div>
                 </div>
             </div>
         </div>
         
-        <!-- Tab Reports -->
+        <!-- Reports Tab -->
         <div class="tab-content" id="reports-tab">
-            <div class="reports-section">
-                <h3>📊 Relatórios de Reprodução</h3>
-                <div class="report-controls">
-                    <button onclick="resetPlayCount()" class="btn-danger">🔄 Resetar Contagem</button>
-                    <button onclick="refreshReports()" class="btn-secondary">🔄 Atualizar</button>
-                </div>
-                <div class="report-list" id="reportList">
-                    <p>Nenhuma música foi reproduzida ainda.</p>
-                </div>
+            <div class="reports-controls">
+                <button onclick="resetPlayCount()" class="btn-danger">🔄 Reset</button>
+                <button onclick="refreshReports()" class="btn-secondary">🔄 Atualizar</button>
             </div>
+            <div class="report-list" id="reportList"></div>
         </div>
         
-        <!-- Tab Files -->
+        <!-- Files Tab -->
         <div class="tab-content" id="files-tab">
-            <div class="files-section">
-                <h3>📂 Gerenciar Arquivos</h3>
-                <div class="files-categories">
-                    <div class="file-category">
-                        <h4>🎵 Músicas</h4>
-                        <div class="file-list" id="musicFiles"></div>
-                    </div>
-                    <div class="file-category">
-                        <h4>🕐 Hora Certa</h4>
-                        <div class="file-list" id="timeFiles"></div>
-                    </div>
-                    <div class="file-category">
-                        <h4>📢 Avisos</h4>
-                        <div class="file-list" id="adFiles"></div>
-                    </div>
-                    <div class="file-category">
-                        <h4>🎄 Álbuns</h4>
-                        <div class="file-list" id="albumFiles"></div>
-                    </div>
+            <div class="files-grid">
+                <div class="file-category">
+                    <h4>🎵 Músicas</h4>
+                    <div class="file-list" id="musicFiles"></div>
+                </div>
+                <div class="file-category">
+                    <h4>🕐 Hora Certa</h4>
+                    <div class="file-list" id="timeFiles"></div>
+                </div>
+                <div class="file-category">
+                    <h4>📢 Avisos</h4>
+                    <div class="file-list" id="adFiles"></div>
+                </div>
+                <div class="file-category">
+                    <h4>🎄 Álbuns</h4>
+                    <div class="file-list" id="albumFiles"></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal de Senha -->
+    <!-- Modals -->
     <div id="passwordModal" class="modal" style="display: none;">
         <div class="modal-content">
-            <h3>🔐 Acesso Restrito</h3>
-            <p>Digite a senha de administrador:</p>
-            <input type="password" id="adminPassword" placeholder="Senha">
+            <h3>🔐 Senha Admin</h3>
+            <input type="password" id="adminPassword" placeholder="Digite a senha">
             <div class="modal-buttons">
                 <button onclick="checkPassword()" class="btn-primary">Entrar</button>
-                <button onclick="closePasswordModal()" class="btn-secondary">Cancelar</button>
+                <button onclick="closeModal('passwordModal')" class="btn-secondary">Cancelar</button>
             </div>
         </div>
     </div>
 
-    <!-- Loading Overlay -->
+    <div id="coverModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>🖼️ Alterar Capa</h3>
+            <p>Álbum: <span id="coverAlbumName"></span></p>
+            <input type="file" id="coverUpload" accept="image/*">
+            <div class="modal-buttons">
+                <button onclick="uploadCover()" class="btn-primary">Alterar</button>
+                <button onclick="closeModal('coverModal')" class="btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <div id="loadingOverlay" class="loading-overlay" style="display: none;">
         <div class="spinner"></div>
         <p>Carregando...</p>
