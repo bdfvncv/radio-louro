@@ -13,6 +13,63 @@ body {
     overflow-x: hidden;
 }
 
+/* Botões Base */
+.btn-primary {
+    background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+    border: none;
+    border-radius: 8px;
+    padding: 12px 20px;
+    color: white;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 12px 20px;
+    color: white;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.btn-danger {
+    background: linear-gradient(45deg, #ff4757, #ff3838);
+    border: none;
+    border-radius: 8px;
+    padding: 12px 20px;
+    color: white;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 71, 87, 0.4);
+}
+
+.btn-small {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    border-radius: 5px;
+    min-width: 35px;
+}
+
 /* Player Público */
 .player-container {
     display: flex;
@@ -212,6 +269,12 @@ body {
     gap: 5px;
 }
 
+.live-indicator {
+    color: #ff4757;
+    font-weight: bold;
+    animation: pulse 2s infinite;
+}
+
 .admin-access-btn {
     position: fixed;
     bottom: 30px;
@@ -232,7 +295,7 @@ body {
     transform: scale(1.05);
 }
 
-/* Painel Administrador */
+/* Painel Admin */
 .admin-container {
     min-height: 100vh;
     padding: 20px;
@@ -293,148 +356,96 @@ body {
     display: block;
 }
 
-.upload-section {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 15px;
-    padding: 30px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.upload-categories {
+/* Upload Grid */
+.upload-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 20px;
 }
 
-.upload-category {
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 10px;
-    padding: 20px;
+.upload-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    padding: 25px;
     border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: transform 0.3s ease;
 }
 
-.upload-category h4 {
+.upload-card:hover {
+    transform: translateY(-5px);
+}
+
+.upload-card h4 {
     margin-bottom: 15px;
     color: #4ecdc4;
-    font-size: 1.1rem;
+    font-size: 1.2rem;
 }
 
-.upload-category input[type="file"] {
+.upload-card input[type="file"] {
     width: 100%;
-    padding: 10px;
-    margin-bottom: 10px;
+    padding: 12px;
+    margin-bottom: 15px;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 5px;
+    border-radius: 8px;
     color: white;
+    font-size: 0.9rem;
 }
 
-.upload-category input[type="file"]::-webkit-file-upload-button {
+.upload-card input[type="file"]::-webkit-file-upload-button {
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 5px;
     color: white;
-    padding: 5px 10px;
+    padding: 8px 12px;
     cursor: pointer;
+    margin-right: 10px;
 }
 
-.upload-category select {
+.upload-card select {
     width: 100%;
-    padding: 10px;
-    margin-bottom: 10px;
+    padding: 12px;
+    margin-bottom: 15px;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 5px;
+    border-radius: 8px;
     color: white;
+    font-size: 0.9rem;
 }
 
-.upload-category select option {
+.upload-card select option {
     background: #1a1a1a;
     color: white;
 }
 
-.btn-primary {
-    background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-    border: none;
-    border-radius: 8px;
-    padding: 12px 20px;
-    color: white;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
-}
-
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
-}
-
-.btn-secondary {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    padding: 12px 20px;
-    color: white;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: translateY(-2px);
-}
-
-.btn-danger {
-    background: linear-gradient(45deg, #ff4757, #ff3838);
-    border: none;
-    border-radius: 8px;
-    padding: 12px 20px;
-    color: white;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.btn-danger:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(255, 71, 87, 0.4);
-}
-
-.albums-section, .reports-section, .files-section {
+/* Album Management */
+.album-management {
     background: rgba(255, 255, 255, 0.05);
     border-radius: 15px;
     padding: 30px;
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.album-controls {
-    display: flex;
-    gap: 30px;
-    align-items: flex-start;
-}
-
 .album-selector {
-    flex: 1;
+    margin-bottom: 30px;
 }
 
-.album-selector label {
-    display: block;
-    margin-bottom: 10px;
+.album-selector h3 {
+    margin-bottom: 15px;
     color: #4ecdc4;
-    font-weight: 500;
+    font-size: 1.3rem;
 }
 
 .album-selector select {
     width: 100%;
+    max-width: 300px;
     padding: 12px;
+    margin-bottom: 15px;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 8px;
     color: white;
     font-size: 1rem;
-    margin-bottom: 15px;
 }
 
 .album-selector select option {
@@ -442,46 +453,61 @@ body {
     color: white;
 }
 
-.album-preview {
-    flex: 1;
-    display: flex;
-    align-items: center;
+.album-covers h3 {
+    margin-bottom: 20px;
+    color: #4ecdc4;
+    font-size: 1.3rem;
+}
+
+.covers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 20px;
-    padding: 20px;
-    background: rgba(255, 255, 255, 0.03);
+}
+
+.cover-item {
+    background: rgba(255, 255, 255, 0.05);
     border-radius: 10px;
+    padding: 15px;
+    text-align: center;
     border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: transform 0.3s ease;
 }
 
-.album-preview img {
-    width: 80px;
-    height: 80px;
-    border-radius: 10px;
+.cover-item:hover {
+    transform: translateY(-5px);
+}
+
+.cover-item img {
+    width: 100%;
+    height: 150px;
     object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 10px;
 }
 
-.preview-info h4 {
-    margin-bottom: 5px;
+.cover-item h4 {
     color: #ff6b6b;
+    margin-bottom: 10px;
 }
 
-.preview-info p {
-    color: #b0b0b0;
-    font-size: 0.9rem;
+.cover-item button {
+    width: 100%;
 }
 
-.report-controls {
+/* Reports */
+.reports-controls {
     display: flex;
     gap: 15px;
     margin-bottom: 20px;
 }
 
 .report-list {
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 10px;
-    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    padding: 25px;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    max-height: 400px;
+    max-height: 500px;
     overflow-y: auto;
 }
 
@@ -489,7 +515,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 0;
+    padding: 15px 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -497,27 +523,46 @@ body {
     border-bottom: none;
 }
 
-.files-categories {
+.report-item h4 {
+    color: #ff6b6b;
+    margin-bottom: 5px;
+}
+
+.report-item p {
+    color: #b0b0b0;
+    font-size: 0.9rem;
+}
+
+.report-count {
+    background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+    color: white;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+}
+
+/* Files */
+.files-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 20px;
 }
 
 .file-category {
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 10px;
-    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    padding: 25px;
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .file-category h4 {
     margin-bottom: 15px;
     color: #4ecdc4;
-    font-size: 1.1rem;
+    font-size: 1.2rem;
 }
 
 .file-list {
-    max-height: 300px;
+    max-height: 400px;
     overflow-y: auto;
 }
 
@@ -525,7 +570,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 0;
+    padding: 10px 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -541,13 +586,6 @@ body {
     word-break: break-word;
 }
 
-.btn-small {
-    padding: 5px 10px;
-    font-size: 0.8rem;
-    border-radius: 5px;
-    min-width: 35px;
-}
-
 /* Modal */
 .modal {
     position: fixed;
@@ -560,6 +598,7 @@ body {
     justify-content: center;
     align-items: center;
     z-index: 1000;
+    backdrop-filter: blur(5px);
 }
 
 .modal-content {
@@ -568,14 +607,15 @@ body {
     border-radius: 15px;
     padding: 30px;
     border: 1px solid rgba(255, 255, 255, 0.2);
-    max-width: 400px;
+    max-width: 450px;
     width: 90%;
     text-align: center;
 }
 
 .modal-content h3 {
-    margin-bottom: 15px;
+    margin-bottom: 20px;
     color: #ff6b6b;
+    font-size: 1.4rem;
 }
 
 .modal-content p {
@@ -600,7 +640,7 @@ body {
 
 .modal-buttons {
     display: flex;
-    gap: 10px;
+    gap: 15px;
     justify-content: center;
 }
 
@@ -620,8 +660,8 @@ body {
 }
 
 .spinner {
-    width: 50px;
-    height: 50px;
+    width: 60px;
+    height: 60px;
     border: 4px solid rgba(255, 255, 255, 0.3);
     border-top: 4px solid #ff6b6b;
     border-radius: 50%;
@@ -631,7 +671,7 @@ body {
 .loading-overlay p {
     margin-top: 20px;
     color: #b0b0b0;
-    font-size: 1.1rem;
+    font-size: 1.2rem;
 }
 
 /* Animações */
@@ -660,6 +700,11 @@ body {
     100% { transform: rotate(360deg); }
 }
 
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
 /* Responsivo */
 @media (max-width: 768px) {
     .player-header h1 {
@@ -686,16 +731,16 @@ body {
         justify-content: center;
     }
     
-    .upload-categories {
+    .upload-grid {
         grid-template-columns: 1fr;
     }
     
-    .album-controls {
-        flex-direction: column;
+    .files-grid {
+        grid-template-columns: 1fr;
     }
     
-    .files-categories {
-        grid-template-columns: 1fr;
+    .covers-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     }
     
     .modal-content {
@@ -720,11 +765,18 @@ body {
     }
     
     .admin-access-btn {
-        position: fixed;
         bottom: 20px;
         right: 20px;
         padding: 12px 20px;
         font-size: 0.8rem;
+    }
+    
+    .reports-controls {
+        flex-direction: column;
+    }
+    
+    .modal-buttons {
+        flex-direction: column;
     }
 }
 
@@ -753,7 +805,15 @@ body {
         font-size: 0.9rem;
     }
     
-    .upload-section, .albums-section, .reports-section, .files-section {
-        padding: 20px;
+    .upload-card, .file-category, .album-management, .report-list {
+        padding: 15px;
+    }
+    
+    .covers-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .cover-item img {
+        height: 120px;
     }
 }
