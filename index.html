@@ -3,1148 +3,194 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Playlist Interface Moderna</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        /* Reset e Base */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: #333;
-            line-height: 1.6;
-        }
-
-        /* Container Principal */
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-            display: grid;
-            grid-template-columns: 1fr 400px;
-            gap: 30px;
-            min-height: 100vh;
-        }
-
-        /* Seção Principal */
-        .main-section {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border-radius: 24px;
-            padding: 40px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        /* Header */
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        .header h1 {
-            font-size: 3rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 10px;
-            letter-spacing: -0.02em;
-        }
-
-        .header p {
-            font-size: 1.1rem;
-            color: #666;
-            font-weight: 400;
-        }
-
-        /* Formulário de Upload */
-        .upload-section {
-            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-            border: 2px dashed #e2e8f0;
-            border-radius: 20px;
-            padding: 40px;
-            text-align: center;
-            margin-bottom: 40px;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .upload-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-            transition: left 0.5s;
-        }
-
-        .upload-section:hover::before {
-            left: 100%;
-        }
-
-        .upload-section:hover {
-            border-color: #667eea;
-            background: linear-gradient(135deg, #f0f4ff, #e6f0ff);
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.1);
-        }
-
-        .upload-icon {
-            font-size: 4rem;
-            color: #667eea;
-            margin-bottom: 20px;
-            display: block;
-        }
-
-        .upload-text {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #334155;
-            margin-bottom: 10px;
-        }
-
-        .upload-subtext {
-            color: #64748b;
-            font-size: 0.95rem;
-        }
-
-        .file-input-wrapper {
-            position: relative;
-            display: inline-block;
-            margin-top: 20px;
-        }
-
-        #fileInput {
-            position: absolute;
-            opacity: 0;
-            width: 100%;
-            height: 100%;
-            cursor: pointer;
-        }
-
-        .file-input-button {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            padding: 14px 32px;
-            border-radius: 50px;
-            font-weight: 600;
-            font-size: 1rem;
-            border: none;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-        }
-
-        .file-input-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-        }
-
-        /* Controles de Reprodução */
-        .audio-controls {
-            background: linear-gradient(135deg, #1e293b, #334155);
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 30px;
-            color: white;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-        }
-
-        .control-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-bottom: 25px;
-        }
-
-        .control-btn {
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            color: white;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-        }
-
-        .control-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: scale(1.1);
-            box-shadow: 0 5px 20px rgba(255, 255, 255, 0.2);
-        }
-
-        .control-btn.play {
-            background: linear-gradient(135deg, #10b981, #059669);
-            border-color: #10b981;
-            width: 70px;
-            height: 70px;
-            font-size: 1.8rem;
-        }
-
-        .progress-container {
-            margin-bottom: 20px;
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
-            overflow: hidden;
-            cursor: pointer;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(135deg, #10b981, #059669);
-            width: 0%;
-            transition: width 0.1s ease;
-            border-radius: 4px;
-        }
-
-        .time-display {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.9rem;
-            color: rgba(255, 255, 255, 0.8);
-            margin-top: 10px;
-        }
-
-        .volume-container {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .volume-slider {
-            flex: 1;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 3px;
-            outline: none;
-            cursor: pointer;
-        }
-
-        .volume-slider::-webkit-slider-thumb {
-            appearance: none;
-            width: 18px;
-            height: 18px;
-            background: #10b981;
-            border-radius: 50%;
-            cursor: pointer;
-        }
-
-        /* Lista de Músicas */
-        .playlist-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #f1f5f9;
-        }
-
-        .playlist-title {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: #1e293b;
-        }
-
-        .playlist-count {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 50px;
-            font-size: 0.9rem;
-            font-weight: 600;
-        }
-
-        .music-list {
-            display: grid;
-            gap: 15px;
-            max-height: 600px;
-            overflow-y: auto;
-        }
-
-        .music-item {
-            background: white;
-            border-radius: 16px;
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            animation: fadeIn 0.5s ease forwards;
-        }
-
-        .music-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-            border-color: #e2e8f0;
-        }
-
-        .music-item.playing {
-            background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
-            border-color: #0ea5e9;
-            box-shadow: 0 8px 25px rgba(14, 165, 233, 0.15);
-        }
-
-        .music-item.playing .music-title {
-            color: #0ea5e9;
-        }
-
-        .album-art {
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            color: #64748b;
-            flex-shrink: 0;
-            overflow: hidden;
-        }
-
-        .album-art img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 12px;
-        }
-
-        .music-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .music-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .music-artist {
-            color: #64748b;
-            font-size: 0.9rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .music-duration {
-            color: #94a3b8;
-            font-size: 0.9rem;
-            font-weight: 500;
-            flex-shrink: 0;
-        }
-
-        .music-actions {
-            display: flex;
-            gap: 10px;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .music-item:hover .music-actions {
-            opacity: 1;
-        }
-
-        .action-btn {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border: none;
-            background: rgba(100, 116, 139, 0.1);
-            color: #64748b;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 0.9rem;
-        }
-
-        .action-btn:hover {
-            background: #ef4444;
-            color: white;
-            transform: scale(1.1);
-        }
-
-        /* Sidebar */
-        .sidebar {
-            display: flex;
-            flex-direction: column;
-            gap: 25px;
-        }
-
-        /* Player Atual */
-        .current-player {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border-radius: 24px;
-            padding: 30px;
-            text-align: center;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .current-album-art {
-            width: 200px;
-            height: 200px;
-            background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
-            border-radius: 20px;
-            margin: 0 auto 25px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 4rem;
-            color: #94a3b8;
-            overflow: hidden;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-        }
-
-        .current-album-art img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 20px;
-        }
-
-        .current-info h3 {
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 8px;
-            line-height: 1.3;
-        }
-
-        .current-info p {
-            color: #64748b;
-            font-size: 1rem;
-            margin-bottom: 20px;
-        }
-
-        /* Estatísticas */
-        .stats-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border-radius: 24px;
-            padding: 30px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .stats-title {
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        .stat-item {
-            text-align: center;
-            padding: 20px;
-            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-            border-radius: 16px;
-            transition: transform 0.3s ease;
-        }
-
-        .stat-item:hover {
-            transform: translateY(-2px);
-        }
-
-        .stat-number {
-            font-size: 2rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            color: #64748b;
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
-
-        /* Scrollbar Personalizada */
-        .music-list::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .music-list::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 4px;
-        }
-
-        .music-list::-webkit-scrollbar-thumb {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border-radius: 4px;
-        }
-
-        .music-list::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(135deg, #5a67d8, #6b46c1);
-        }
-
-        /* Estados de Loading */
-        .loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 40px;
-            color: #64748b;
-            font-size: 1.1rem;
-        }
-
-        .loading::before {
-            content: '';
-            width: 20px;
-            height: 20px;
-            border: 2px solid #e2e8f0;
-            border-top: 2px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-right: 15px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* Responsividade */
-        @media (max-width: 1200px) {
-            .container {
-                grid-template-columns: 1fr;
-                max-width: 800px;
-            }
-            
-            .sidebar {
-                order: -1;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 15px;
-                gap: 20px;
-            }
-            
-            .main-section,
-            .current-player,
-            .stats-card {
-                padding: 25px;
-            }
-            
-            .header h1 {
-                font-size: 2.2rem;
-            }
-            
-            .upload-section {
-                padding: 30px 20px;
-            }
-            
-            .control-buttons {
-                gap: 15px;
-            }
-            
-            .control-btn {
-                width: 50px;
-                height: 50px;
-                font-size: 1.2rem;
-            }
-            
-            .control-btn.play {
-                width: 60px;
-                height: 60px;
-                font-size: 1.5rem;
-            }
-            
-            .current-album-art {
-                width: 150px;
-                height: 150px;
-                font-size: 3rem;
-            }
-            
-            .music-item {
-                padding: 15px;
-                gap: 15px;
-            }
-            
-            .album-art {
-                width: 50px;
-                height: 50px;
-                font-size: 1.2rem;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .header h1 {
-                font-size: 1.8rem;
-            }
-            
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .music-item {
-                flex-direction: column;
-                text-align: center;
-            }
-            
-            .music-info {
-                order: 1;
-            }
-            
-            .music-duration {
-                order: 2;
-            }
-            
-            .music-actions {
-                order: 3;
-                opacity: 1;
-                margin-top: 10px;
-            }
-        }
-    </style>
+    <title>Rádio Supermercado do Louro</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <!-- Seção Principal -->
-        <main class="main-section">
-            <!-- Header -->
-            <header class="header">
-                <h1>My Playlist</h1>
-                <p>Sua coleção musical personalizada</p>
-            </header>
-
-            <!-- Upload Section -->
-            <section class="upload-section">
-                <div class="upload-icon">🎵</div>
-                <div class="upload-text">Adicione suas músicas</div>
-                <div class="upload-subtext">Arraste e solte ou clique para selecionar arquivos</div>
-                <div class="file-input-wrapper">
-                    <input type="file" id="fileInput" multiple accept="audio/*">
-                    <button class="file-input-button">
-                        📁 Escolher Arquivos
-                    </button>
+    <!-- Player Público -->
+    <div id="playerMode" class="player-container">
+        <div class="player-header">
+            <h1>🎵 Rádio Supermercado do Louro</h1>
+            <p class="tagline">Sua música, sua experiência - AO VIVO</p>
+        </div>
+        
+        <div class="player-main">
+            <div class="album-cover">
+                <img id="albumCover" src="https://s10.aconvert.com/convert/p3r68-cdx67/a9p73-3tban.png" alt="Capa do Álbum">
+                <div class="album-info">
+                    <h3 id="albumTitle">Playlist Geral</h3>
+                    <p id="currentTrack">Carregando...</p>
+                    <p id="trackTime">00:00 / 00:00</p>
                 </div>
-            </section>
-
-            <!-- Controles de Áudio -->
-            <section class="audio-controls">
+            </div>
+            
+            <div class="player-controls">
+                <audio id="audioPlayer" preload="auto"></audio>
                 <div class="control-buttons">
-                    <button class="control-btn" id="prevBtn">⏮</button>
-                    <button class="control-btn play" id="playBtn">▶</button>
-                    <button class="control-btn" id="nextBtn">⏭</button>
-                    <button class="control-btn" id="shuffleBtn">🔀</button>
-                    <button class="control-btn" id="repeatBtn">🔁</button>
+                    <button id="playPauseBtn" class="btn-control">
+                        <span class="play-icon">▶️</span>
+                        <span class="pause-icon" style="display: none;">⏸️</span>
+                    </button>
+                    <button id="skipBtn" class="btn-control">⏭️</button>
                 </div>
                 
-                <div class="progress-container">
-                    <div class="progress-bar" id="progressBar">
-                        <div class="progress-fill" id="progressFill"></div>
-                    </div>
-                    <div class="time-display">
-                        <span id="currentTime">0:00</span>
-                        <span id="totalTime">0:00</span>
-                    </div>
+                <div class="volume-control">
+                    <span class="volume-icon">🔊</span>
+                    <input type="range" id="volumeSlider" min="0" max="100" value="70" class="volume-slider">
+                    <span id="volumeValue">70%</span>
                 </div>
-
-                <div class="volume-container">
-                    <span>🔊</span>
-                    <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="50">
-                    <span>100%</span>
+            </div>
+            
+            <div class="now-playing">
+                <div class="equalizer">
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
                 </div>
-            </section>
-
-            <!-- Lista de Músicas -->
-            <section class="playlist-section">
-                <div class="playlist-header">
-                    <h2 class="playlist-title">Sua Playlist</h2>
-                    <span class="playlist-count" id="playlistCount">0 músicas</span>
+                <div class="status">
+                    <span id="playStatus">Pausado</span>
+                    <span id="trackCount">Músicas: 0</span>
+                    <span id="liveIndicator" class="live-indicator">🔴 AO VIVO</span>
                 </div>
-                
-                <div class="music-list" id="musicList">
-                    <!-- Exemplo de itens de música -->
-                    <div class="music-item playing">
-                        <div class="album-art">🎵</div>
-                        <div class="music-info">
-                            <div class="music-title">Exemplo de Música</div>
-                            <div class="music-artist">Artista Demo</div>
-                        </div>
-                        <div class="music-duration">3:45</div>
-                        <div class="music-actions">
-                            <button class="action-btn">❤️</button>
-                            <button class="action-btn">🗑️</button>
-                        </div>
-                    </div>
-                    
-                    <div class="music-item">
-                        <div class="album-art">🎶</div>
-                        <div class="music-info">
-                            <div class="music-title">Segunda Música</div>
-                            <div class="music-artist">Outro Artista</div>
-                        </div>
-                        <div class="music-duration">4:12</div>
-                        <div class="music-actions">
-                            <button class="action-btn">❤️</button>
-                            <button class="action-btn">🗑️</button>
-                        </div>
-                    </div>
-                    
-                    <div class="music-item">
-                        <div class="album-art">🎼</div>
-                        <div class="music-info">
-                            <div class="music-title">Terceira Música com Nome Muito Longo que Precisa ser Cortado</div>
-                            <div class="music-artist">Artista com Nome Longo Também</div>
-                        </div>
-                        <div class="music-duration">2:58</div>
-                        <div class="music-actions">
-                            <button class="action-btn">❤️</button>
-                            <button class="action-btn">🗑️</button>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </main>
-
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <!-- Player Atual -->
-            <section class="current-player">
-                <div class="current-album-art">🎵</div>
-                <div class="current-info">
-                    <h3>Exemplo de Música</h3>
-                    <p>Artista Demo</p>
-                </div>
-            </section>
-
-            <!-- Estatísticas -->
-            <section class="stats-card">
-                <h3 class="stats-title">Estatísticas</h3>
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <span class="stat-number">24</span>
-                        <span class="stat-label">Músicas</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number">12</span>
-                        <span class="stat-label">Artistas</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number">1h 45m</span>
-                        <span class="stat-label">Duração</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number">8</span>
-                        <span class="stat-label">Gêneros</span>
-                    </div>
-                </div>
-            </section>
-        </aside>
+            </div>
+        </div>
+        
+        <button id="adminBtn" class="admin-access-btn">🔐 Admin</button>
     </div>
 
-    <!-- Áudio oculto para reprodução -->
-    <audio id="audioPlayer" preload="metadata"></audio>
-
-    <script>
-        // Variáveis globais
-        let currentTrack = 0;
-        let isPlaying = false;
-        let playlist = [];
-        let audioPlayer = document.getElementById('audioPlayer');
-
-        // Elementos DOM
-        const playBtn = document.getElementById('playBtn');
-        const prevBtn = document.getElementById('prevBtn');
-        const nextBtn = document.getElementById('nextBtn');
-        const shuffleBtn = document.getElementById('shuffleBtn');
-        const repeatBtn = document.getElementById('repeatBtn');
-        const progressBar = document.getElementById('progressBar');
-        const progressFill = document.getElementById('progressFill');
-        const currentTimeSpan = document.getElementById('currentTime');
-        const totalTimeSpan = document.getElementById('totalTime');
-        const volumeSlider = document.getElementById('volumeSlider');
-        const fileInput = document.getElementById('fileInput');
-        const musicList = document.getElementById('musicList');
-        const playlistCount = document.getElementById('playlistCount');
-
-        // Event Listeners
-        playBtn.addEventListener('click', togglePlay);
-        prevBtn.addEventListener('click', previousTrack);
-        nextBtn.addEventListener('click', nextTrack);
-        progressBar.addEventListener('click', seekTo);
-        volumeSlider.addEventListener('input', changeVolume);
-        fileInput.addEventListener('change', handleFileUpload);
-
-        // Atualizar progresso do áudio
-        audioPlayer.addEventListener('timeupdate', updateProgress);
-        audioPlayer.addEventListener('ended', nextTrack);
-        audioPlayer.addEventListener('loadedmetadata', updateDuration);
-
-        // Funções principais
-        function togglePlay() {
-            if (isPlaying) {
-                audioPlayer.pause();
-                playBtn.textContent = '▶';
-                isPlaying = false;
-            } else {
-                audioPlayer.play();
-                playBtn.textContent = '⏸';
-                isPlaying = true;
-            }
-        }
-
-        function previousTrack() {
-            if (currentTrack > 0) {
-                currentTrack--;
-                loadTrack();
-            }
-        }
-
-        function nextTrack() {
-            if (currentTrack < playlist.length - 1) {
-                currentTrack++;
-                loadTrack();
-            }
-        }
-
-        function loadTrack() {
-            if (playlist.length > 0) {
-                const track = playlist[currentTrack];
-                audioPlayer.src = track.url;
-                updateCurrentPlayer(track);
-                updatePlaylistUI();
-            }
-        }
-
-        function updateProgress() {
-            const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
-            progressFill.style.width = progress + '%';
-            currentTimeSpan.textContent = formatTime(audioPlayer.currentTime);
-        }
-
-        function updateDuration() {
-            totalTimeSpan.textContent = formatTime(audioPlayer.duration);
-        }
-
-        function seekTo(e) {
-            const clickX = e.offsetX;
-            const width = progressBar.offsetWidth;
-            const duration = audioPlayer.duration;
-            audioPlayer.currentTime = (clickX / width) * duration;
-        }
-
-        function changeVolume() {
-            audioPlayer.volume = volumeSlider.value / 100;
-        }
-
-        function formatTime(seconds) {
-            const mins = Math.floor(seconds / 60);
-            const secs = Math.floor(seconds % 60);
-            return `${mins}:${secs.toString().padStart(2, '0')}`;
-        }
-
-        function handleFileUpload(e) {
-            const files = Array.from(e.target.files);
-            files.forEach(file => {
-                if (file.type.startsWith('audio/')) {
-                    const url = URL.createObjectURL(file);
-                    const track = {
-                        name: file.name.replace(/\.[^/.]+$/, ""),
-                        artist: "Artista Desconhecido",
-                        url: url,
-                        duration: "0:00"
-                    };
-                    playlist.push(track);
-                }
-            });
-            updatePlaylistUI();
-            updateStats();
-            
-            if (playlist.length === 1) {
-                loadTrack();
-            }
-        }
-
-        function updatePlaylistUI() {
-            playlistCount.textContent = `${playlist.length} músicas`;
-            
-            // Limpar lista atual (manter apenas exemplos se playlist vazia)
-            if (playlist.length === 0) return;
-            
-            musicList.innerHTML = '';
-            
-            playlist.forEach((track, index) => {
-                const musicItem = document.createElement('div');
-                musicItem.className = `music-item ${index === currentTrack ? 'playing' : ''}`;
-                musicItem.innerHTML = `
-                    <div class="album-art">🎵</div>
-                    <div class="music-info">
-                        <div class="music-title">${track.name}</div>
-                        <div class="music-artist">${track.artist}</div>
-                    </div>
-                    <div class="music-duration">${track.duration}</div>
-                    <div class="music-actions">
-                        <button class="action-btn" onclick="toggleFavorite(${index})">❤️</button>
-                        <button class="action-btn" onclick="removeTrack(${index})">🗑️</button>
-                    </div>
-                `;
-                musicItem.addEventListener('click', () => {
-                    currentTrack = index;
-                    loadTrack();
-                    if (!isPlaying) togglePlay();
-                });
-                musicList.appendChild(musicItem);
-            });
-        }
-
-        function updateCurrentPlayer(track) {
-            const currentInfo = document.querySelector('.current-info');
-            currentInfo.innerHTML = `
-                <h3>${track.name}</h3>
-                <p>${track.artist}</p>
-            `;
-        }
-
-        function updateStats() {
-            const statsNumbers = document.querySelectorAll('.stat-number');
-            if (statsNumbers.length >= 4) {
-                statsNumbers[0].textContent = playlist.length;
-                statsNumbers[1].textContent = new Set(playlist.map(t => t.artist)).size;
-                // Calcular duração total seria mais complexo, mantendo exemplo
-                statsNumbers[2].textContent = "1h 45m";
-                statsNumbers[3].textContent = "8";
-            }
-        }
-
-        function removeTrack(index) {
-            playlist.splice(index, 1);
-            if (currentTrack >= index && currentTrack > 0) {
-                currentTrack--;
-            }
-            updatePlaylistUI();
-            updateStats();
-            
-            if (playlist.length === 0) {
-                audioPlayer.pause();
-                playBtn.textContent = '▶';
-                isPlaying = false;
-                // Restaurar player padrão
-                const currentInfo = document.querySelector('.current-info');
-                currentInfo.innerHTML = `
-                    <h3>Nenhuma música selecionada</h3>
-                    <p>Adicione músicas para começar</p>
-                `;
-            } else if (index === currentTrack) {
-                loadTrack();
-            }
-        }
-
-        function toggleFavorite(index) {
-            // Implementar lógica de favoritos
-            console.log('Favorito toggled para:', playlist[index].name);
-        }
-
-        // Funcionalidade de arrastar e soltar
-        const uploadSection = document.querySelector('.upload-section');
-
-        uploadSection.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadSection.style.borderColor = '#667eea';
-            uploadSection.style.background = 'linear-gradient(135deg, #f0f4ff, #e6f0ff)';
-        });
-
-        uploadSection.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            uploadSection.style.borderColor = '#e2e8f0';
-            uploadSection.style.background = 'linear-gradient(135deg, #f8fafc, #f1f5f9)';
-        });
-
-        uploadSection.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadSection.style.borderColor = '#e2e8f0';
-            uploadSection.style.background = 'linear-gradient(135deg, #f8fafc, #f1f5f9)';
-            
-            const files = Array.from(e.dataTransfer.files);
-            files.forEach(file => {
-                if (file.type.startsWith('audio/')) {
-                    const url = URL.createObjectURL(file);
-                    const track = {
-                        name: file.name.replace(/\.[^/.]+$/, ""),
-                        artist: "Artista Desconhecido",
-                        url: url,
-                        duration: "0:00"
-                    };
-                    playlist.push(track);
-                }
-            });
-            updatePlaylistUI();
-            updateStats();
-            
-            if (playlist.length === files.filter(f => f.type.startsWith('audio/')).length) {
-                loadTrack();
-            }
-        });
-
-        // Atalhos de teclado
-        document.addEventListener('keydown', (e) => {
-            switch(e.code) {
-                case 'Space':
-                    e.preventDefault();
-                    togglePlay();
-                    break;
-                case 'ArrowLeft':
-                    if (e.ctrlKey) {
-                        e.preventDefault();
-                        previousTrack();
-                    }
-                    break;
-                case 'ArrowRight':
-                    if (e.ctrlKey) {
-                        e.preventDefault();
-                        nextTrack();
-                    }
-                    break;
-                case 'ArrowUp':
-                    if (e.ctrlKey) {
-                        e.preventDefault();
-                        volumeSlider.value = Math.min(100, parseInt(volumeSlider.value) + 10);
-                        changeVolume();
-                    }
-                    break;
-                case 'ArrowDown':
-                    if (e.ctrlKey) {
-                        e.preventDefault();
-                        volumeSlider.value = Math.max(0, parseInt(volumeSlider.value) - 10);
-                        changeVolume();
-                    }
-                    break;
-            }
-        });
-
-        // Inicialização
-        document.addEventListener('DOMContentLoaded', () => {
-            // Definir volume inicial
-            audioPlayer.volume = 0.5;
-            
-            // Adicionar tooltips aos botões
-            const tooltips = {
-                playBtn: 'Reproduzir/Pausar (Espaço)',
-                prevBtn: 'Música Anterior (Ctrl + ←)',
-                nextBtn: 'Próxima Música (Ctrl + →)',
-                shuffleBtn: 'Modo Aleatório',
-                repeatBtn: 'Repetir'
-            };
-            
-            Object.keys(tooltips).forEach(id => {
-                const element = document.getElementById(id);
-                if (element) {
-                    element.title = tooltips[id];
-                }
-            });
-            
-            // Animação inicial
-            const musicItems = document.querySelectorAll('.music-item');
-            musicItems.forEach((item, index) => {
-                item.style.animationDelay = `${index * 0.1}s`;
-            });
-        });
-
-        // Função para limpar a playlist
-        function clearPlaylist() {
-            playlist = [];
-            currentTrack = 0;
-            audioPlayer.pause();
-            playBtn.textContent = '▶';
-            isPlaying = false;
-            updatePlaylistUI();
-            updateStats();
-            
-            // Restaurar exemplos
-            musicList.innerHTML = `
-                <div class="music-item">
-                    <div class="album-art">🎵</div>
-                    <div class="music-info">
-                        <div class="music-title">Adicione suas músicas</div>
-                        <div class="music-artist">Use o botão acima ou arraste arquivos</div>
-                    </div>
-                    <div class="music-duration">0:00</div>
-                </div>
-            `;
-            
-            playlistCount.textContent = '0 músicas';
-            
-            const currentInfo = document.querySelector('.current-info');
-            currentInfo.innerHTML = `
-                <h3>Nenhuma música selecionada</h3>
-                <p>Adicione músicas para começar</p>
-            `;
-        }
-
-        // Adicionar botão para limpar playlist
-        const uploadSection2 = document.querySelector('.upload-section');
-        const clearButton = document.createElement('button');
-        clearButton.textContent = '🗑️ Limpar Playlist';
-        clearButton.className = 'file-input-button';
-        clearButton.style.marginLeft = '15px';
-        clearButton.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
-        clearButton.addEventListener('click', clearPlaylist);
+    <!-- Painel Administrador -->
+    <div id="adminMode" class="admin-container" style="display: none;">
+        <div class="admin-header">
+            <h1>🛠️ Painel Admin</h1>
+            <button id="backToPlayerBtn" class="btn-secondary">← Voltar</button>
+        </div>
         
-        const fileInputWrapper = document.querySelector('.file-input-wrapper');
-        fileInputWrapper.appendChild(clearButton);
-    </script>
+        <div class="admin-tabs">
+            <button class="tab-btn active" data-tab="upload">📁 Upload</button>
+            <button class="tab-btn" data-tab="albums">🎵 Álbuns</button>
+            <button class="tab-btn" data-tab="reports">📊 Relatórios</button>
+            <button class="tab-btn" data-tab="files">📂 Arquivos</button>
+        </div>
+        
+        <!-- Upload Tab -->
+        <div class="tab-content active" id="upload-tab">
+            <div class="upload-grid">
+                <div class="upload-card">
+                    <h4>🎵 Músicas</h4>
+                    <input type="file" id="musicUpload" accept=".mp3,.wav,.ogg" multiple>
+                    <button onclick="uploadFiles('music')" class="btn-primary">Enviar</button>
+                </div>
+                
+                <div class="upload-card">
+                    <h4>🕐 Hora Certa</h4>
+                    <input type="file" id="timeUpload" accept=".mp3,.wav,.ogg" multiple>
+                    <button onclick="uploadFiles('time')" class="btn-primary">Enviar</button>
+                </div>
+                
+                <div class="upload-card">
+                    <h4>📢 Avisos</h4>
+                    <input type="file" id="adUpload" accept=".mp3,.wav,.ogg" multiple>
+                    <button onclick="uploadFiles('ads')" class="btn-primary">Enviar</button>
+                </div>
+                
+                <div class="upload-card">
+                    <h4>🎄 Álbuns</h4>
+                    <select id="albumSelect">
+                        <option value="natal">🎄 Natal</option>
+                        <option value="pascoa">🐰 Páscoa</option>
+                        <option value="saojoao">🎪 São João</option>
+                        <option value="carnaval">🎭 Carnaval</option>
+                    </select>
+                    <input type="file" id="albumUpload" accept=".mp3,.wav,.ogg" multiple>
+                    <button onclick="uploadFiles('album')" class="btn-primary">Enviar</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Albums Tab -->
+        <div class="tab-content" id="albums-tab">
+            <div class="album-management">
+                <div class="album-selector">
+                    <h3>🎵 Álbum Ativo</h3>
+                    <select id="activeAlbumSelect">
+                        <option value="">Playlist Geral</option>
+                        <option value="natal">🎄 Natal</option>
+                        <option value="pascoa">🐰 Páscoa</option>
+                        <option value="saojoao">🎪 São João</option>
+                        <option value="carnaval">🎭 Carnaval</option>
+                    </select>
+                    <button onclick="setActiveAlbum()" class="btn-primary">Ativar</button>
+                </div>
+                
+                <div class="album-covers">
+                    <h3>🖼️ Capas dos Álbuns</h3>
+                    <div class="covers-grid" id="coversGrid"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Reports Tab -->
+        <div class="tab-content" id="reports-tab">
+            <div class="reports-controls">
+                <button onclick="resetPlayCount()" class="btn-danger">🔄 Reset</button>
+                <button onclick="refreshReports()" class="btn-secondary">🔄 Atualizar</button>
+            </div>
+            <div class="report-list" id="reportList"></div>
+        </div>
+        
+        <!-- Files Tab -->
+        <div class="tab-content" id="files-tab">
+            <div class="files-grid">
+                <div class="file-category">
+                    <h4>🎵 Músicas</h4>
+                    <div class="file-list" id="musicFiles"></div>
+                </div>
+                <div class="file-category">
+                    <h4>🕐 Hora Certa</h4>
+                    <div class="file-list" id="timeFiles"></div>
+                </div>
+                <div class="file-category">
+                    <h4>📢 Avisos</h4>
+                    <div class="file-list" id="adFiles"></div>
+                </div>
+                <div class="file-category">
+                    <h4>🎄 Álbuns</h4>
+                    <div class="file-list" id="albumFiles"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="passwordModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>🔐 Senha Admin</h3>
+            <input type="password" id="adminPassword" placeholder="Digite a senha">
+            <div class="modal-buttons">
+                <button onclick="checkPassword()" class="btn-primary">Entrar</button>
+                <button onclick="closeModal('passwordModal')" class="btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="coverModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>🖼️ Alterar Capa</h3>
+            <p>Álbum: <span id="coverAlbumName"></span></p>
+            <input type="file" id="coverUpload" accept="image/*">
+            <div class="modal-buttons">
+                <button onclick="uploadCover()" class="btn-primary">Alterar</button>
+                <button onclick="closeModal('coverModal')" class="btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="spinner"></div>
+        <p>Carregando...</p>
+    </div>
+
+    <script src="script.js"></script>
 </body>
 </html>
