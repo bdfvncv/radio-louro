@@ -3,1254 +3,1148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rádio Supermercado do Louro</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css">
+    <title>Playlist Interface Moderna</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* Reset e Base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        /* Container Principal */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 30px;
+            min-height: 100vh;
+        }
+
+        /* Seção Principal */
+        .main-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            letter-spacing: -0.02em;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #666;
+            font-weight: 400;
+        }
+
+        /* Formulário de Upload */
+        .upload-section {
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            border: 2px dashed #e2e8f0;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 40px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: left 0.5s;
+        }
+
+        .upload-section:hover::before {
+            left: 100%;
+        }
+
+        .upload-section:hover {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #f0f4ff, #e6f0ff);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.1);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            color: #667eea;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .upload-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            color: #64748b;
+            font-size: 0.95rem;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            margin-top: 20px;
+        }
+
+        #fileInput {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 14px 32px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .file-input-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Controles de Reprodução */
+        .audio-controls {
+            background: linear-gradient(135deg, #1e293b, #334155);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            color: white;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        }
+
+        .control-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+            box-shadow: 0 5px 20px rgba(255, 255, 255, 0.2);
+        }
+
+        .control-btn.play {
+            background: linear-gradient(135deg, #10b981, #059669);
+            border-color: #10b981;
+            width: 70px;
+            height: 70px;
+            font-size: 1.8rem;
+        }
+
+        .progress-container {
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #10b981, #059669);
+            width: 0%;
+            transition: width 0.1s ease;
+            border-radius: 4px;
+        }
+
+        .time-display {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 10px;
+        }
+
+        .volume-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .volume-slider {
+            flex: 1;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #10b981;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* Lista de Músicas */
+        .playlist-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+
+        .playlist-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .playlist-count {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .music-list {
+            display: grid;
+            gap: 15px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .music-item {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .music-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            border-color: #e2e8f0;
+        }
+
+        .music-item.playing {
+            background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+            border-color: #0ea5e9;
+            box-shadow: 0 8px 25px rgba(14, 165, 233, 0.15);
+        }
+
+        .music-item.playing .music-title {
+            color: #0ea5e9;
+        }
+
+        .album-art {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: #64748b;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .album-art img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+
+        .music-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .music-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .music-artist {
+            color: #64748b;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .music-duration {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+
+        .music-actions {
+            display: flex;
+            gap: 10px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .music-item:hover .music-actions {
+            opacity: 1;
+        }
+
+        .action-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(100, 116, 139, 0.1);
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .action-btn:hover {
+            background: #ef4444;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        /* Player Atual */
+        .current-player {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .current-album-art {
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+            border-radius: 20px;
+            margin: 0 auto 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            color: #94a3b8;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        }
+
+        .current-album-art img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 20px;
+        }
+
+        .current-info h3 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+
+        .current-info p {
+            color: #64748b;
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+
+        /* Estatísticas */
+        .stats-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .stats-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            border-radius: 16px;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-item:hover {
+            transform: translateY(-2px);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* Scrollbar Personalizada */
+        .music-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .music-list::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+
+        .music-list::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 4px;
+        }
+
+        .music-list::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #5a67d8, #6b46c1);
+        }
+
+        /* Estados de Loading */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: #64748b;
+            font-size: 1.1rem;
+        }
+
+        .loading::before {
+            content: '';
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e2e8f0;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsividade */
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 1fr;
+                max-width: 800px;
+            }
+            
+            .sidebar {
+                order: -1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+                gap: 20px;
+            }
+            
+            .main-section,
+            .current-player,
+            .stats-card {
+                padding: 25px;
+            }
+            
+            .header h1 {
+                font-size: 2.2rem;
+            }
+            
+            .upload-section {
+                padding: 30px 20px;
+            }
+            
+            .control-buttons {
+                gap: 15px;
+            }
+            
+            .control-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 1.2rem;
+            }
+            
+            .control-btn.play {
+                width: 60px;
+                height: 60px;
+                font-size: 1.5rem;
+            }
+            
+            .current-album-art {
+                width: 150px;
+                height: 150px;
+                font-size: 3rem;
+            }
+            
+            .music-item {
+                padding: 15px;
+                gap: 15px;
+            }
+            
+            .album-art {
+                width: 50px;
+                height: 50px;
+                font-size: 1.2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .music-item {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .music-info {
+                order: 1;
+            }
+            
+            .music-duration {
+                order: 2;
+            }
+            
+            .music-actions {
+                order: 3;
+                opacity: 1;
+                margin-top: 10px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <!-- Player Público -->
-    <div id="playerMode" class="player-container">
-        <!-- Background animado -->
-        <div class="background-gradient"></div>
-        <div class="background-mesh">
-            <div class="mesh-gradient"></div>
-        </div>
-        
-        <!-- Partículas flutuantes melhoradas -->
-        <div class="floating-particles">
-            <div class="particle particle-1"></div>
-            <div class="particle particle-2"></div>
-            <div class="particle particle-3"></div>
-            <div class="particle particle-4"></div>
-            <div class="particle particle-5"></div>
-            <div class="particle particle-6"></div>
-            <div class="particle particle-7"></div>
-            <div class="particle particle-8"></div>
-            <div class="particle particle-9"></div>
-            <div class="particle particle-10"></div>
-        </div>
+    <div class="container">
+        <!-- Seção Principal -->
+        <main class="main-section">
+            <!-- Header -->
+            <header class="header">
+                <h1>My Playlist</h1>
+                <p>Sua coleção musical personalizada</p>
+            </header>
 
-        <!-- Header moderno -->
-        <header class="player-header" data-aos="fade-down">
-            <div class="header-container">
-                <div class="logo-section">
-                    <div class="logo-icon">
-                        <div class="icon-glow"></div>
-                        <i class="fas fa-broadcast-tower"></i>
-                        <div class="signal-waves">
-                            <div class="wave wave-1"></div>
-                            <div class="wave wave-2"></div>
-                            <div class="wave wave-3"></div>
-                        </div>
-                    </div>
-                    <div class="logo-text">
-                        <h1>Rádio Supermercado do Louro</h1>
-                        <p class="tagline">
-                            <span class="highlight">Sua música</span>, 
-                            <span class="highlight">sua experiência</span> - 
-                            <span class="live-badge">
-                                <div class="live-pulse"></div>
-                                AO VIVO
-                            </span>
-                        </p>
-                    </div>
-                </div>
-                
-                <div class="header-actions">
-                    <button class="theme-toggle" onclick="toggleTheme()">
-                        <i class="fas fa-moon"></i>
-                        <i class="fas fa-sun"></i>
-                    </button>
-                    <button id="adminBtn" class="admin-access-btn glass-morphism">
-                        <div class="btn-content">
-                            <i class="fas fa-cog"></i>
-                            <span>Admin</span>
-                        </div>
-                        <div class="btn-glow"></div>
+            <!-- Upload Section -->
+            <section class="upload-section">
+                <div class="upload-icon">🎵</div>
+                <div class="upload-text">Adicione suas músicas</div>
+                <div class="upload-subtext">Arraste e solte ou clique para selecionar arquivos</div>
+                <div class="file-input-wrapper">
+                    <input type="file" id="fileInput" multiple accept="audio/*">
+                    <button class="file-input-button">
+                        📁 Escolher Arquivos
                     </button>
                 </div>
-            </div>
-        </header>
-        
-        <!-- Player principal -->
-        <main class="player-main" data-aos="fade-up">
-            <div class="player-card glass-morphism">
-                <!-- Seção do álbum -->
-                <section class="album-section">
-                    <div class="album-artwork-container">
-                        <div class="album-artwork">
-                            <div class="artwork-glow"></div>
-                            <div class="vinyl-disc">
-                                <div class="vinyl-label"></div>
-                                <div class="vinyl-grooves"></div>
-                            </div>
-                            <img id="albumCover" 
-                                 src="https://res.cloudinary.com/dygbrcrr6/image/upload/v1/radio-covers/default-cover.png" 
-                                 alt="Capa do Álbum"
-                                 class="cover-image">
-                            <div class="play-overlay">
-                                <div class="play-button">
-                                    <div class="play-pulse"></div>
-                                    <i class="fas fa-play"></i>
-                                </div>
-                            </div>
-                            <div class="spectrum-visualizer">
-                                <div class="spectrum-bar"></div>
-                                <div class="spectrum-bar"></div>
-                                <div class="spectrum-bar"></div>
-                                <div class="spectrum-bar"></div>
-                                <div class="spectrum-bar"></div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="track-info">
-                        <div class="track-details">
-                            <h2 id="albumTitle" class="album-title">Playlist Geral</h2>
-                            <h3 id="currentTrack" class="track-title">Carregando música...</h3>
-                            <p class="track-artist">Rádio Supermercado do Louro</p>
-                        </div>
-                        
-                        <div class="progress-section">
-                            <div class="progress-container">
-                                <div class="progress-track">
-                                    <div class="progress-fill" id="progressFill"></div>
-                                    <div class="progress-thumb"></div>
-                                    <div class="progress-glow"></div>
-                                </div>
-                            </div>
-                            <div class="time-display">
-                                <span id="currentTime" class="time-current">00:00</span>
-                                <span id="totalTime" class="time-total">00:00</span>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-                
-                <!-- Controles do player -->
-                <section class="player-controls">
-                    <audio id="audioPlayer" preload="auto"></audio>
-                    
-                    <div class="primary-controls">
-                        <button id="shuffleBtn" class="control-btn secondary" data-tooltip="Modo Aleatório">
-                            <i class="fas fa-shuffle"></i>
-                            <span class="btn-ripple"></span>
-                        </button>
-                        
-                        <button id="prevBtn" class="control-btn secondary" data-tooltip="Faixa Anterior">
-                            <i class="fas fa-step-backward"></i>
-                            <span class="btn-ripple"></span>
-                        </button>
-                        
-                        <button id="playPauseBtn" class="control-btn primary play-pause-btn" data-tooltip="Reproduzir/Pausar">
-                            <div class="btn-background"></div>
-                            <i class="fas fa-play play-icon"></i>
-                            <i class="fas fa-pause pause-icon" style="display: none;"></i>
-                            <span class="btn-ripple"></span>
-                        </button>
-                        
-                        <button id="skipBtn" class="control-btn secondary" data-tooltip="Próxima Faixa">
-                            <i class="fas fa-step-forward"></i>
-                            <span class="btn-ripple"></span>
-                        </button>
-                        
-                        <button id="repeatBtn" class="control-btn secondary" data-tooltip="Repetir">
-                            <i class="fas fa-repeat"></i>
-                            <span class="btn-ripple"></span>
-                        </button>
-                    </div>
-                    
-                    <!-- Controle de volume -->
-                    <div class="volume-section">
-                        <div class="volume-control">
-                            <button class="volume-btn" onclick="toggleMute()">
-                                <i class="fas fa-volume-up volume-icon"></i>
-                                <i class="fas fa-volume-mute volume-mute" style="display: none;"></i>
-                            </button>
-                            
-                            <div class="volume-slider-container">
-                                <div class="volume-track">
-                                    <div class="volume-fill" id="volumeFill"></div>
-                                    <div class="volume-thumb"></div>
-                                </div>
-                                <input type="range" id="volumeSlider" min="0" max="100" value="70" class="volume-input">
-                            </div>
-                            
-                            <div class="volume-display">
-                                <span id="volumeValue">70%</span>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-                
-                <!-- Status da reprodução -->
-                <section class="playback-status">
-                    <div class="status-grid">
-                        <div class="status-item">
-                            <div class="status-icon">
-                                <div class="equalizer-mini">
-                                    <div class="eq-bar"></div>
-                                    <div class="eq-bar"></div>
-                                    <div class="eq-bar"></div>
-                                    <div class="eq-bar"></div>
-                                </div>
-                            </div>
-                            <div class="status-info">
-                                <span id="playStatus" class="status-text">Pausado</span>
-                                <small class="status-label">Status</small>
-                            </div>
-                        </div>
-                        
-                        <div class="status-item">
-                            <div class="status-icon">
-                                <i class="fas fa-signal"></i>
-                            </div>
-                            <div class="status-info">
-                                <span id="liveIndicator" class="status-text live-status">
-                                    <div class="live-dot"></div>
-                                    AO VIVO
-                                </span>
-                                <small class="status-label">Transmissão</small>
-                            </div>
-                        </div>
-                        
-                        <div class="status-item">
-                            <div class="status-icon">
-                                <i class="fas fa-music"></i>
-                            </div>
-                            <div class="status-info">
-                                <span id="trackCount" class="status-text">0</span>
-                                <small class="status-label">Faixas</small>
-                            </div>
-                        </div>
-                        
-                        <div class="status-item">
-                            <div class="status-icon">
-                                <i class="fas fa-wifi"></i>
-                            </div>
-                            <div class="status-info">
-                                <span id="connectionStatus" class="status-text connected">Conectado</span>
-                                <small class="status-label">Conexão</small>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            </div>
-        </main>
-    </div>
+            </section>
 
-    <!-- Painel Administrativo -->
-    <div id="adminMode" class="admin-container" style="display: none;">
-        <div class="admin-background">
-            <div class="admin-gradient"></div>
-            <div class="admin-pattern"></div>
-        </div>
-        
-        <!-- Header do admin -->
-        <header class="admin-header" data-aos="fade-down">
-            <div class="admin-header-content">
-                <div class="admin-title">
-                    <div class="title-icon">
-                        <i class="fas fa-tools"></i>
-                    </div>
-                    <div class="title-text">
-                        <h1>Painel Administrativo</h1>
-                        <p>Gerencie sua rádio com controle total</p>
-                    </div>
+            <!-- Controles de Áudio -->
+            <section class="audio-controls">
+                <div class="control-buttons">
+                    <button class="control-btn" id="prevBtn">⏮</button>
+                    <button class="control-btn play" id="playBtn">▶</button>
+                    <button class="control-btn" id="nextBtn">⏭</button>
+                    <button class="control-btn" id="shuffleBtn">🔀</button>
+                    <button class="control-btn" id="repeatBtn">🔁</button>
                 </div>
                 
-                <div class="admin-actions">
-                    <button class="notification-btn" onclick="showNotifications()">
-                        <i class="fas fa-bell"></i>
-                        <span class="notification-badge">3</span>
-                    </button>
-                    
-                    <button id="backToPlayerBtn" class="back-btn glass-morphism">
-                        <i class="fas fa-arrow-left"></i>
-                        <span>Voltar ao Player</span>
-                    </button>
-                </div>
-            </div>
-        </header>
-        
-        <!-- Navegação por abas -->
-        <nav class="admin-tabs" data-aos="fade-up">
-            <div class="tabs-container">
-                <button class="tab-btn active" data-tab="upload">
-                    <div class="tab-icon">
-                        <i class="fas fa-cloud-upload-alt"></i>
-                    </div>
-                    <div class="tab-content">
-                        <span class="tab-title">Upload</span>
-                        <small class="tab-subtitle">Enviar arquivos</small>
-                    </div>
-                </button>
-                
-                <button class="tab-btn" data-tab="albums">
-                    <div class="tab-icon">
-                        <i class="fas fa-music"></i>
-                    </div>
-                    <div class="tab-content">
-                        <span class="tab-title">Álbuns</span>
-                        <small class="tab-subtitle">Gerenciar playlists</small>
-                    </div>
-                </button>
-                
-                <button class="tab-btn" data-tab="covers">
-                    <div class="tab-icon">
-                        <i class="fas fa-images"></i>
-                    </div>
-                    <div class="tab-content">
-                        <span class="tab-title">Capas</span>
-                        <small class="tab-subtitle">Imagens dos álbuns</small>
-                    </div>
-                </button>
-                
-                <button class="tab-btn" data-tab="reports">
-                    <div class="tab-icon">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <div class="tab-content">
-                        <span class="tab-title">Relatórios</span>
-                        <small class="tab-subtitle">Estatísticas</small>
-                    </div>
-                </button>
-                
-                <button class="tab-btn" data-tab="files">
-                    <div class="tab-icon">
-                        <i class="fas fa-folder-open"></i>
-                    </div>
-                    <div class="tab-content">
-                        <span class="tab-title">Arquivos</span>
-                        <small class="tab-subtitle">Gerenciar conteúdo</small>
-                    </div>
-                </button>
-            </div>
-            <div class="tab-indicator"></div>
-        </nav>
-        
-        <!-- Conteúdo das abas -->
-        <main class="admin-content">
-            
-            <!-- Aba Upload -->
-            <div class="tab-content active" id="upload-tab" data-aos="fade-up">
-                <div class="upload-grid">
-                    <!-- Card de Upload de Músicas -->
-                    <div class="upload-card glass-morphism">
-                        <div class="card-header">
-                            <div class="header-icon">
-                                <i class="fas fa-music"></i>
-                            </div>
-                            <div class="header-content">
-                                <h3>Músicas</h3>
-                                <p>Faça upload das suas faixas favoritas</p>
-                            </div>
-                        </div>
-                        
-                        <div class="upload-zone" id="musicDropzone">
-                            <div class="dropzone-content">
-                                <div class="upload-icon">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                </div>
-                                <h4>Arraste arquivos aqui</h4>
-                                <p>ou clique para selecionar</p>
-                                <input type="file" id="musicUpload" accept=".mp3,.wav,.ogg,.m4a" multiple hidden>
-                                
-                                <div class="supported-formats">
-                                    <span class="format-badge">MP3</span>
-                                    <span class="format-badge">WAV</span>
-                                    <span class="format-badge">OGG</span>
-                                    <span class="format-badge">M4A</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <button onclick="uploadFiles('music')" class="btn-primary modern-btn">
-                            <i class="fas fa-upload"></i>
-                            <span>Enviar Músicas</span>
-                            <div class="btn-glow"></div>
-                        </button>
-                    </div>
-                    
-                    <!-- Card de Hora Certa -->
-                    <div class="upload-card glass-morphism">
-                        <div class="card-header">
-                            <div class="header-icon">
-                                <i class="fas fa-clock"></i>
-                            </div>
-                            <div class="header-content">
-                                <h3>Hora Certa</h3>
-                                <p>Avisos de horário automáticos</p>
-                            </div>
-                        </div>
-                        
-                        <div class="upload-zone" id="timeDropzone">
-                            <div class="dropzone-content">
-                                <div class="upload-icon">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                </div>
-                                <h4>Arraste arquivos aqui</h4>
-                                <p>ou clique para selecionar</p>
-                                <input type="file" id="timeUpload" accept=".mp3,.wav,.ogg,.m4a" multiple hidden>
-                                
-                                <div class="supported-formats">
-                                    <span class="format-badge">MP3</span>
-                                    <span class="format-badge">WAV</span>
-                                    <span class="format-badge">OGG</span>
-                                    <span class="format-badge">M4A</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <button onclick="uploadFiles('time')" class="btn-primary modern-btn">
-                            <i class="fas fa-upload"></i>
-                            <span>Enviar Hora Certa</span>
-                            <div class="btn-glow"></div>
-                        </button>
-                    </div>
-                    
-                    <!-- Card de Avisos -->
-                    <div class="upload-card glass-morphism">
-                        <div class="card-header">
-                            <div class="header-icon">
-                                <i class="fas fa-bullhorn"></i>
-                            </div>
-                            <div class="header-content">
-                                <h3>Avisos</h3>
-                                <p>Mensagens e conteúdo promocional</p>
-                            </div>
-                        </div>
-                        
-                        <div class="upload-zone" id="adDropzone">
-                            <div class="dropzone-content">
-                                <div class="upload-icon">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                </div>
-                                <h4>Arraste arquivos aqui</h4>
-                                <p>ou clique para selecionar</p>
-                                <input type="file" id="adUpload" accept=".mp3,.wav,.ogg,.m4a" multiple hidden>
-                                
-                                <div class="supported-formats">
-                                    <span class="format-badge">MP3</span>
-                                    <span class="format-badge">WAV</span>
-                                    <span class="format-badge">OGG</span>
-                                    <span class="format-badge">M4A</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <button onclick="uploadFiles('ads')" class="btn-primary modern-btn">
-                            <i class="fas fa-upload"></i>
-                            <span>Enviar Avisos</span>
-                            <div class="btn-glow"></div>
-                        </button>
-                    </div>
-                    
-                    <!-- Card de Álbuns Temáticos -->
-                    <div class="upload-card glass-morphism">
-                        <div class="card-header">
-                            <div class="header-icon">
-                                <i class="fas fa-calendar-alt"></i>
-                            </div>
-                            <div class="header-content">
-                                <h3>Álbuns Temáticos</h3>
-                                <p>Coleções especiais organizadas</p>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="albumSelect" class="form-label">Selecionar Álbum:</label>
-                            <div class="select-container">
-                                <select id="albumSelect" class="modern-select">
-                                    <option value="natal">🎄 Natal</option>
-                                    <option value="pascoa">🐰 Páscoa</option>
-                                    <option value="saojoao">🎪 São João</option>
-                                    <option value="carnaval">🎭 Carnaval</option>
-                                    <option value="festa-junina">🌽 Festa Junina</option>
-                                    <option value="anos-80">🎸 Anos 80</option>
-                                    <option value="sertanejo">🤠 Sertanejo</option>
-                                    <option value="gospel">✝️ Gospel</option>
-                                </select>
-                                <i class="fas fa-chevron-down select-arrow"></i>
-                            </div>
-                        </div>
-                        
-                        <div class="upload-zone" id="albumDropzone">
-                            <div class="dropzone-content">
-                                <div class="upload-icon">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                </div>
-                                <h4>Arraste arquivos aqui</h4>
-                                <p>ou clique para selecionar</p>
-                                <input type="file" id="albumUpload" accept=".mp3,.wav,.ogg,.m4a" multiple hidden>
-                                
-                                <div class="supported-formats">
-                                    <span class="format-badge">MP3</span>
-                                    <span class="format-badge">WAV</span>
-                                    <span class="format-badge">OGG</span>
-                                    <span class="format-badge">M4A</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <button onclick="uploadFiles('album')" class="btn-primary modern-btn">
-                            <i class="fas fa-upload"></i>
-                            <span>Enviar ao Álbum</span>
-                            <div class="btn-glow"></div>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Aba Álbuns -->
-            <div class="tab-content" id="albums-tab">
-                <div class="albums-management">
-                    <div class="management-grid">
-                        <!-- Card de Álbum Ativo -->
-                        <div class="management-card glass-morphism">
-                            <div class="card-header">
-                                <div class="header-icon">
-                                    <i class="fas fa-play-circle"></i>
-                                </div>
-                                <div class="header-content">
-                                    <h3>Álbum Ativo</h3>
-                                    <p>Selecione qual playlist está tocando agora</p>
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="activeAlbumSelect" class="form-label">Álbum Atual:</label>
-                                <div class="select-container">
-                                    <select id="activeAlbumSelect" class="modern-select">
-                                        <option value="">📻 Playlist Geral</option>
-                                        <option value="natal">🎄 Natal</option>
-                                        <option value="pascoa">🐰 Páscoa</option>
-                                        <option value="saojoao">🎪 São João</option>
-                                        <option value="carnaval">🎭 Carnaval</option>
-                                        <option value="festa-junina">🌽 Festa Junina</option>
-                                        <option value="anos-80">🎸 Anos 80</option>
-                                        <option value="sertanejo">🤠 Sertanejo</option>
-                                        <option value="gospel">✝️ Gospel</option>
-                                    </select>
-                                    <i class="fas fa-chevron-down select-arrow"></i>
-                                </div>
-                            </div>
-                            
-                            <button onclick="setActiveAlbum()" class="btn-primary modern-btn">
-                                <i class="fas fa-check"></i>
-                                <span>Ativar Álbum</span>
-                                <div class="btn-glow"></div>
-                            </button>
-                        </div>
-                        
-                        <!-- Card de Gerenciamento da Capa Geral -->
-                        <div class="management-card glass-morphism">
-                            <div class="card-header">
-                                <div class="header-icon">
-                                    <i class="fas fa-image"></i>
-                                </div>
-                                <div class="header-content">
-                                    <h3>Capa da Playlist Geral</h3>
-                                    <p>Gerencie a imagem principal da sua rádio</p>
-                                </div>
-                            </div>
-                            
-                            <div class="cover-manager">
-                                <div class="current-cover-preview" id="generalCoverPreview">
-                                    <div class="cover-image-container">
-                                        <img src="https://res.cloudinary.com/dygbrcrr6/image/upload/v1/radio-covers/default-cover.png" 
-                                             alt="Capa Atual" 
-                                             id="currentGeneralCover" 
-                                             class="cover-preview-img">
-                                        <div class="cover-overlay">
-                                            <div class="overlay-actions">
-                                                <button onclick="changeGeneralCover()" class="action-btn edit" data-tooltip="Editar Capa">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button onclick="removeGeneralCover()" class="action-btn remove" data-tooltip="Remover Capa">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="cover-info">
-                                        <h4>Capa Ativa</h4>
-                                        <p id="coverFileName">default-cover.png</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="cover-actions">
-                                    <input type="file" id="generalCoverUpload" accept="image/*" hidden>
-                                    <button onclick="document.getElementById('generalCoverUpload').click()" class="btn-secondary modern-btn">
-                                        <i class="fas fa-plus"></i>
-                                        <span>Nova Capa</span>
-                                    </button>
-                                    <button onclick="resetToDefaultCover()" class="btn-outline modern-btn">
-                                        <i class="fas fa-undo"></i>
-                                        <span>Restaurar Padrão</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Playlist Atual -->
-                    <div class="management-card glass-morphism full-width">
-                        <div class="card-header">
-                            <div class="header-icon">
-                                <i class="fas fa-list-music"></i>
-                            </div>
-                            <div class="header-content">
-                                <h3>Playlist Atual</h3>
-                                <p>Faixas na fila de reprodução</p>
-                            </div>
-                            <div class="card-actions">
-                                <button onclick="shufflePlaylist()" class="btn-icon" data-tooltip="Embaralhar Playlist">
-                                    <i class="fas fa-shuffle"></i>
-                                </button>
-                                <button onclick="refreshPlaylist()" class="btn-icon" data-tooltip="Atualizar Lista">
-                                    <i class="fas fa-sync-alt"></i>
-                                </button>
-                                <button onclick="clearPlaylist()" class="btn-icon danger" data-tooltip="Limpar Playlist">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="playlist-container">
-                            <div class="playlist-header">
-                                <div class="playlist-stats">
-                                    <span class="stat-item">
-                                        <i class="fas fa-music"></i>
-                                        <span id="playlistCount">0 faixas</span>
-                                    </span>
-                                    <span class="stat-item">
-                                        <i class="fas fa-clock"></i>
-                                        <span id="playlistDuration">0:00</span>
-                                    </span>
-                                </div>
-                                <div class="playlist-search">
-                                    <input type="text" id="playlistSearch" placeholder="Buscar na playlist..." class="search-input">
-                                    <i class="fas fa-search search-icon"></i>
-                                </div>
-                            </div>
-                            
-                            <div class="current-playlist" id="currentPlaylist">
-                                <div class="playlist-loading">
-                                    <div class="loading-spinner"></div>
-                                    <p>Carregando playlist...</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Aba Capas -->
-            <div class="tab-content" id="covers-tab">
-                <div class="covers-management">
-                    <div class="management-card glass-morphism">
-                        <div class="card-header">
-                            <div class="header-icon">
-                                <i class="fas fa-images"></i>
-                            </div>
-                            <div class="header-content">
-                                <h3>Gerenciar Capas dos Álbuns</h3>
-                                <p>Personalize a aparência visual dos seus álbuns temáticos</p>
-                            </div>
-                            <div class="card-actions">
-                                <button onclick="refreshCovers()" class="btn-icon" data-tooltip="Atualizar Capas">
-                                    <i class="fas fa-sync-alt"></i>
-                                </button>
-                                <button onclick="uploadBulkCovers()" class="btn-icon" data-tooltip="Upload em Lote">
-                                    <i class="fas fa-upload"></i>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="covers-grid" id="coversGrid">
-                            <div class="covers-loading">
-                                <div class="loading-spinner"></div>
-                                <p>Carregando capas...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Aba Relatórios -->
-            <div class="tab-content" id="reports-tab">
-                <div class="reports-container">
-                    <div class="reports-header">
-                        <div class="header-info">
-                            <div class="header-icon">
-                                <i class="fas fa-chart-line"></i>
-                            </div>
-                            <div class="header-content">
-                                <h3>Relatórios de Reprodução</h3>
-                                <p>Acompanhe o desempenho e estatísticas da sua rádio</p>
-                            </div>
-                        </div>
-                        <div class="reports-actions">
-                            <button onclick="refreshReports()" class="btn-secondary modern-btn">
-                                <i class="fas fa-sync-alt"></i>
-                                <span>Atualizar</span>
-                            </button>
-                            <button onclick="exportReports()" class="btn-secondary modern-btn">
-                                <i class="fas fa-download"></i>
-                                <span>Exportar</span>
-                            </button>
-                            <button onclick="resetPlayCount()" class="btn-danger modern-btn">
-                                <i class="fas fa-trash"></i>
-                                <span>Reset</span>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Estatísticas principais -->
-                    <div class="stats-grid">
-                        <div class="stat-card glass-morphism">
-                            <div class="stat-icon plays">
-                                <i class="fas fa-play"></i>
-                            </div>
-                            <div class="stat-content">
-                                <div class="stat-number" id="totalPlays">0</div>
-                                <div class="stat-label">Total de Reproduções</div>
-                                <div class="stat-change positive">
-                                    <i class="fas fa-arrow-up"></i>
-                                    <span>+12%</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="stat-card glass-morphism">
-                            <div class="stat-icon tracks">
-                                <i class="fas fa-music"></i>
-                            </div>
-                            <div class="stat-content">
-                                <div class="stat-number" id="totalTracks">0</div>
-                                <div class="stat-label">Faixas Disponíveis</div>
-                                <div class="stat-change positive">
-                                    <i class="fas fa-arrow-up"></i>
-                                    <span>+5</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="stat-card glass-morphism">
-                            <div class="stat-icon duration">
-                                <i class="fas fa-clock"></i>
-                            </div>
-                            <div class="stat-content">
-                                <div class="stat-number" id="totalDuration">0h 0m</div>
-                                <div class="stat-label">Tempo Total</div>
-                                <div class="stat-change neutral">
-                                    <i class="fas fa-minus"></i>
-                                    <span>0%</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="stat-card glass-morphism">
-                            <div class="stat-icon listeners">
-                                <i class="fas fa-users"></i>
-                            </div>
-                            <div class="stat-content">
-                                <div class="stat-number" id="onlineListeners">0</div>
-                                <div class="stat-label">Ouvintes Online</div>
-                                <div class="stat-change positive">
-                                    <i class="fas fa-arrow-up"></i>
-                                    <span>+3</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Gráfico e lista de relatórios -->
-                    <div class="reports-content">
-                        <div class="reports-chart glass-morphism">
-                            <div class="chart-header">
-                                <h4>Reproduções por Período</h4>
-                                <div class="chart-controls">
-                                    <button class="period-btn active" data-period="today">Hoje</button>
-                                    <button class="period-btn" data-period="week">Semana</button>
-                                    <button class="period-btn" data-period="month">Mês</button>
-                                </div>
-                            </div>
-                            <div class="chart-container" id="playsChart">
-                                <canvas id="chartCanvas"></canvas>
-                            </div>
-                        </div>
-                        
-                        <div class="report-list glass-morphism" id="reportList">
-                            <div class="list-header">
-                                <h4>Faixas Mais Tocadas</h4>
-                                <div class="list-controls">
-                                    <button class="sort-btn" data-sort="plays">
-                                        <i class="fas fa-sort-amount-down"></i>
-                                        Por Reproduções
-                                    </button>
-                                    <button class="sort-btn" data-sort="recent">
-                                        <i class="fas fa-clock"></i>
-                                        Mais Recentes
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="report-items">
-                                <div class="report-loading">
-                                    <div class="loading-spinner"></div>
-                                    <p>Carregando relatórios...</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Aba Arquivos -->
-            <div class="tab-content" id="files-tab">
-                <div class="files-container">
-                    <div class="files-header">
-                        <div class="header-info">
-                            <div class="header-icon">
-                                <i class="fas fa-folder-open"></i>
-                            </div>
-                            <div class="header-content">
-                                <h3>Gerenciar Arquivos</h3>
-                                <p>Organize e gerencie todo o conteúdo da sua rádio</p>
-                            </div>
-                        </div>
-                        <div class="files-actions">
-                            <button onclick="refreshFiles()" class="btn-secondary modern-btn">
-                                <i class="fas fa-sync-alt"></i>
-                                <span>Atualizar</span>
-                            </button>
-                            <button onclick="selectAllFiles()" class="btn-secondary modern-btn">
-                                <i class="fas fa-check-square"></i>
-                                <span>Selecionar Todos</span>
-                            </button>
-                            <button onclick="deleteSelectedFiles()" class="btn-danger modern-btn">
-                                <i class="fas fa-trash"></i>
-                                <span>Excluir Selecionados</span>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Filtros e busca -->
-                    <div class="files-toolbar">
-                        <div class="search-container">
-                            <input type="text" id="filesSearch" placeholder="Buscar arquivos..." class="search-input">
-                            <i class="fas fa-search search-icon"></i>
-                        </div>
-                        <div class="filter-controls">
-                            <select id="categoryFilter" class="filter-select">
-                                <option value="all">Todas as Categorias</option>
-                                <option value="music">Músicas</option>
-                                <option value="time">Hora Certa</option>
-                                <option value="ads">Avisos</option>
-                                <option value="albums">Álbuns</option>
-                            </select>
-                            <select id="sortFilter" class="filter-select">
-                                <option value="name">Nome</option>
-                                <option value="date">Data</option>
-                                <option value="size">Tamanho</option>
-                                <option value="type">Tipo</option>
-                            </select>
-                            <button class="view-toggle" onclick="toggleView()" data-tooltip="Alternar Vista">
-                                <i class="fas fa-th-large"></i>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Grid de categorias de arquivos -->
-                    <div class="files-grid" id="filesGrid">
-                        <div class="file-category glass-morphism">
-                            <div class="category-header">
-                                <div class="category-icon music">
-                                    <i class="fas fa-music"></i>
-                                </div>
-                                <div class="category-info">
-                                    <h4>Músicas</h4>
-                                    <span class="file-count" id="musicCount">0 arquivos</span>
-                                </div>
-                                <div class="category-actions">
-                                    <button class="action-btn" onclick="expandCategory('music')" data-tooltip="Ver Todos">
-                                        <i class="fas fa-expand-arrows-alt"></i>
-                                    </button>
-                                    <button class="action-btn" onclick="uploadToCategory('music')" data-tooltip="Upload">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="file-list" id="musicFiles">
-                                <div class="files-loading">
-                                    <div class="loading-spinner"></div>
-                                    <p>Carregando arquivos...</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="file-category glass-morphism">
-                            <div class="category-header">
-                                <div class="category-icon time">
-                                    <i class="fas fa-clock"></i>
-                                </div>
-                                <div class="category-info">
-                                    <h4>Hora Certa</h4>
-                                    <span class="file-count" id="timeCount">0 arquivos</span>
-                                </div>
-                                <div class="category-actions">
-                                    <button class="action-btn" onclick="expandCategory('time')" data-tooltip="Ver Todos">
-                                        <i class="fas fa-expand-arrows-alt"></i>
-                                    </button>
-                                    <button class="action-btn" onclick="uploadToCategory('time')" data-tooltip="Upload">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="file-list" id="timeFiles">
-                                <div class="files-loading">
-                                    <div class="loading-spinner"></div>
-                                    <p>Carregando arquivos...</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="file-category glass-morphism">
-                            <div class="category-header">
-                                <div class="category-icon ads">
-                                    <i class="fas fa-bullhorn"></i>
-                                </div>
-                                <div class="category-info">
-                                    <h4>Avisos</h4>
-                                    <span class="file-count" id="adCount">0 arquivos</span>
-                                </div>
-                                <div class="category-actions">
-                                    <button class="action-btn" onclick="expandCategory('ads')" data-tooltip="Ver Todos">
-                                        <i class="fas fa-expand-arrows-alt"></i>
-                                    </button>
-                                    <button class="action-btn" onclick="uploadToCategory('ads')" data-tooltip="Upload">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="file-list" id="adFiles">
-                                <div class="files-loading">
-                                    <div class="loading-spinner"></div>
-                                    <p>Carregando arquivos...</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="file-category glass-morphism">
-                            <div class="category-header">
-                                <div class="category-icon albums">
-                                    <i class="fas fa-calendar-alt"></i>
-                                </div>
-                                <div class="category-info">
-                                    <h4>Álbuns Temáticos</h4>
-                                    <span class="file-count" id="albumCount">0 arquivos</span>
-                                </div>
-                                <div class="category-actions">
-                                    <button class="action-btn" onclick="expandCategory('albums')" data-tooltip="Ver Todos">
-                                        <i class="fas fa-expand-arrows-alt"></i>
-                                    </button>
-                                    <button class="action-btn" onclick="uploadToCategory('albums')" data-tooltip="Upload">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="file-list" id="albumFiles">
-                                <div class="files-loading">
-                                    <div class="loading-spinner"></div>
-                                    <p>Carregando arquivos...</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- Modals -->
-    <div id="passwordModal" class="modal" style="display: none;">
-        <div class="modal-backdrop" onclick="closeModal('passwordModal')"></div>
-        <div class="modal-content glass-morphism">
-            <div class="modal-header">
-                <div class="modal-title">
-                    <div class="title-icon">
-                        <i class="fas fa-lock"></i>
-                    </div>
-                    <div class="title-text">
-                        <h3>Acesso Administrativo</h3>
-                        <p>Autenticação necessária</p>
-                    </div>
-                </div>
-                <button onclick="closeModal('passwordModal')" class="modal-close">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            
-            <div class="modal-body">
-                <div class="auth-container">
-                    <div class="auth-icon">
-                        <div class="icon-wrapper">
-                            <i class="fas fa-shield-alt"></i>
-                        </div>
-                    </div>
-                    <p class="auth-message">Digite a senha para acessar o painel administrativo da rádio</p>
-                    
-                    <div class="input-group">
-                        <div class="input-container">
-                            <input type="password" 
-                                   id="adminPassword" 
-                                   placeholder="Digite sua senha" 
-                                   autocomplete="current-password"
-                                   class="password-input">
-                            <button class="password-toggle" onclick="togglePasswordVisibility()" type="button">
-                                <i class="fas fa-eye"></i>
-                                <i class="fas fa-eye-slash" style="display: none;"></i>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="auth-options">
-                        <label class="checkbox-container">
-                            <input type="checkbox" id="rememberMe">
-                            <span class="checkmark"></span>
-                            <span class="checkbox-label">Lembrar por 24h</span>
-                        </label>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="modal-footer">
-                <button onclick="checkPassword()" class="btn-primary modern-btn">
-                    <i class="fas fa-sign-in-alt"></i>
-                    <span>Entrar</span>
-                    <div class="btn-glow"></div>
-                </button>
-                <button onclick="closeModal('passwordModal')" class="btn-secondary modern-btn">
-                    <i class="fas fa-times"></i>
-                    <span>Cancelar</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div id="coverModal" class="modal" style="display: none;">
-        <div class="modal-backdrop" onclick="closeModal('coverModal')"></div>
-        <div class="modal-content glass-morphism">
-            <div class="modal-header">
-                <div class="modal-title">
-                    <div class="title-icon">
-                        <i class="fas fa-image"></i>
-                    </div>
-                    <div class="title-text">
-                        <h3>Gerenciar Capa do Álbum</h3>
-                        <p id="coverAlbumName">Nome do Álbum</p>
-                    </div>
-                </div>
-                <button onclick="closeModal('coverModal')" class="modal-close">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            
-            <div class="modal-body">
-                <div class="cover-management">
-                    <div class="current-cover-section">
-                        <h4>Capa Atual</h4>
-                        <div class="current-cover-display" id="currentCoverPreview">
-                            <div class="cover-placeholder">
-                                <i class="fas fa-image"></i>
-                                <p>Nenhuma capa definida</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="new-cover-section">
-                        <h4>Nova Capa</h4>
-                        <div class="cover-upload-zone" id="coverUploadZone">
-                            <div class="upload-content">
-                                <div class="upload-icon">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                </div>
-                                <h5>Arraste uma imagem aqui</h5>
-                                <p>ou clique para selecionar</p>
-                                <input type="file" id="coverUpload" accept="image/*" hidden>
-                                <div class="supported-formats">
-                                    <span class="format-badge">JPG</span>
-                                    <span class="format-badge">PNG</span>
-                                    <span class="format-badge">GIF</span>
-                                    <span class="format-badge">WEBP</span>
-                                </div>
-                            </div>
-                            <div class="preview-area" id="coverPreviewArea" style="display: none;">
-                                <img id="coverPreview" alt="Preview da nova capa">
-                                <button class="remove-preview" onclick="removeCoverPreview()">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="modal-footer">
-                <button onclick="uploadCover()" class="btn-primary modern-btn" id="uploadCoverBtn" disabled>
-                    <i class="fas fa-upload"></i>
-                    <span>Alterar Capa</span>
-                    <div class="btn-glow"></div>
-                </button>
-                <button onclick="removeCover()" class="btn-danger modern-btn" id="removeCoverBtn">
-                    <i class="fas fa-trash"></i>
-                    <span>Remover Capa</span>
-                </button>
-                <button onclick="closeModal('coverModal')" class="btn-secondary modern-btn">
-                    <i class="fas fa-times"></i>
-                    <span>Cancelar</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Loading Avançado -->
-    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
-        <div class="loading-backdrop"></div>
-        <div class="loading-content">
-            <div class="loading-animation">
-                <div class="spinner-container">
-                    <div class="spinner-ring"></div>
-                    <div class="spinner-ring"></div>
-                    <div class="spinner-ring"></div>
-                    <div class="spinner-core">
-                        <i class="fas fa-radio" id="loadingIcon"></i>
-                    </div>
-                </div>
-                <div class="loading-waves">
-                    <div class="wave"></div>
-                    <div class="wave"></div>
-                    <div class="wave"></div>
-                </div>
-            </div>
-            
-            <div class="loading-text">
-                <h3 id="loadingTitle">Processando...</h3>
-                <p id="loadingMessage">Aguarde enquanto processamos sua solicitação</p>
-            </div>
-            
-            <div class="loading-progress">
                 <div class="progress-container">
-                    <div class="progress-track">
-                        <div class="progress-fill" id="loadingProgressFill"></div>
-                        <div class="progress-glow"></div>
+                    <div class="progress-bar" id="progressBar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="time-display">
+                        <span id="currentTime">0:00</span>
+                        <span id="totalTime">0:00</span>
                     </div>
                 </div>
-                <div class="progress-info">
-                    <span id="loadingPercent">0%</span>
-                    <span id="loadingStep">Inicializando...</span>
+
+                <div class="volume-container">
+                    <span>🔊</span>
+                    <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="50">
+                    <span>100%</span>
                 </div>
-            </div>
-        </div>
+            </section>
+
+            <!-- Lista de Músicas -->
+            <section class="playlist-section">
+                <div class="playlist-header">
+                    <h2 class="playlist-title">Sua Playlist</h2>
+                    <span class="playlist-count" id="playlistCount">0 músicas</span>
+                </div>
+                
+                <div class="music-list" id="musicList">
+                    <!-- Exemplo de itens de música -->
+                    <div class="music-item playing">
+                        <div class="album-art">🎵</div>
+                        <div class="music-info">
+                            <div class="music-title">Exemplo de Música</div>
+                            <div class="music-artist">Artista Demo</div>
+                        </div>
+                        <div class="music-duration">3:45</div>
+                        <div class="music-actions">
+                            <button class="action-btn">❤️</button>
+                            <button class="action-btn">🗑️</button>
+                        </div>
+                    </div>
+                    
+                    <div class="music-item">
+                        <div class="album-art">🎶</div>
+                        <div class="music-info">
+                            <div class="music-title">Segunda Música</div>
+                            <div class="music-artist">Outro Artista</div>
+                        </div>
+                        <div class="music-duration">4:12</div>
+                        <div class="music-actions">
+                            <button class="action-btn">❤️</button>
+                            <button class="action-btn">🗑️</button>
+                        </div>
+                    </div>
+                    
+                    <div class="music-item">
+                        <div class="album-art">🎼</div>
+                        <div class="music-info">
+                            <div class="music-title">Terceira Música com Nome Muito Longo que Precisa ser Cortado</div>
+                            <div class="music-artist">Artista com Nome Longo Também</div>
+                        </div>
+                        <div class="music-duration">2:58</div>
+                        <div class="music-actions">
+                            <button class="action-btn">❤️</button>
+                            <button class="action-btn">🗑️</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <!-- Player Atual -->
+            <section class="current-player">
+                <div class="current-album-art">🎵</div>
+                <div class="current-info">
+                    <h3>Exemplo de Música</h3>
+                    <p>Artista Demo</p>
+                </div>
+            </section>
+
+            <!-- Estatísticas -->
+            <section class="stats-card">
+                <h3 class="stats-title">Estatísticas</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-number">24</span>
+                        <span class="stat-label">Músicas</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">12</span>
+                        <span class="stat-label">Artistas</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">1h 45m</span>
+                        <span class="stat-label">Duração</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">8</span>
+                        <span class="stat-label">Gêneros</span>
+                    </div>
+                </div>
+            </section>
+        </aside>
     </div>
 
-    <!-- Sistema de Notificações Toast -->
-    <div id="toastContainer" class="toast-container">
-        <!-- Notificações serão adicionadas aqui dinamicamente -->
-    </div>
+    <!-- Áudio oculto para reprodução -->
+    <audio id="audioPlayer" preload="metadata"></audio>
 
-    <!-- Configuração do Cloudinary -->
     <script>
-        // Configuração atualizada do Cloudinary
-        window.cloudinaryConfig = {
-            cloudName: 'dygbrcrr6',
-            apiKey: '853591251513134',
-            apiSecret: 'yVz8MbGa_undTqNHbOqzo-hKc-U',
-            secure: true
-        };
-        
-        // URL base para uploads
-        window.cloudinaryUploadUrl = `https://api.cloudinary.com/v1_1/${window.cloudinaryConfig.cloudName}/auto/upload`;
-        
-        // Configurações globais da aplicação
-        window.appConfig = {
-            radioName: 'Rádio Supermercado do Louro',
-            defaultCover: 'https://res.cloudinary.com/dygbrcrr6/image/upload/v1/radio-covers/default-cover.png',
-            adminPassword: 'admin123', // Altere para uma senha segura
-            maxFileSize: 50 * 1024 * 1024, // 50MB
-            allowedAudioFormats: ['.mp3', '.wav', '.ogg', '.m4a'],
-            allowedImageFormats: ['.jpg', '.jpeg', '.png', '.gif', '.webp'],
-            autoSaveInterval: 30000, // 30 segundos
-            updateCheckInterval: 60000, // 1 minuto
-            fadeTransitionTime: 300, // 300ms para transições
-        };
-        
-        // Inicialização de recursos externos
-        document.addEventListener('DOMContentLoaded', function() {
-            // Inicializar AOS (Animate On Scroll)
-            if (typeof AOS !== 'undefined') {
-                AOS.init({
-                    duration: 800,
-                    easing: 'ease-out-cubic',
-                    once: true,
-                    offset: 100
+        // Variáveis globais
+        let currentTrack = 0;
+        let isPlaying = false;
+        let playlist = [];
+        let audioPlayer = document.getElementById('audioPlayer');
+
+        // Elementos DOM
+        const playBtn = document.getElementById('playBtn');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const shuffleBtn = document.getElementById('shuffleBtn');
+        const repeatBtn = document.getElementById('repeatBtn');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const currentTimeSpan = document.getElementById('currentTime');
+        const totalTimeSpan = document.getElementById('totalTime');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const fileInput = document.getElementById('fileInput');
+        const musicList = document.getElementById('musicList');
+        const playlistCount = document.getElementById('playlistCount');
+
+        // Event Listeners
+        playBtn.addEventListener('click', togglePlay);
+        prevBtn.addEventListener('click', previousTrack);
+        nextBtn.addEventListener('click', nextTrack);
+        progressBar.addEventListener('click', seekTo);
+        volumeSlider.addEventListener('input', changeVolume);
+        fileInput.addEventListener('change', handleFileUpload);
+
+        // Atualizar progresso do áudio
+        audioPlayer.addEventListener('timeupdate', updateProgress);
+        audioPlayer.addEventListener('ended', nextTrack);
+        audioPlayer.addEventListener('loadedmetadata', updateDuration);
+
+        // Funções principais
+        function togglePlay() {
+            if (isPlaying) {
+                audioPlayer.pause();
+                playBtn.textContent = '▶';
+                isPlaying = false;
+            } else {
+                audioPlayer.play();
+                playBtn.textContent = '⏸';
+                isPlaying = true;
+            }
+        }
+
+        function previousTrack() {
+            if (currentTrack > 0) {
+                currentTrack--;
+                loadTrack();
+            }
+        }
+
+        function nextTrack() {
+            if (currentTrack < playlist.length - 1) {
+                currentTrack++;
+                loadTrack();
+            }
+        }
+
+        function loadTrack() {
+            if (playlist.length > 0) {
+                const track = playlist[currentTrack];
+                audioPlayer.src = track.url;
+                updateCurrentPlayer(track);
+                updatePlaylistUI();
+            }
+        }
+
+        function updateProgress() {
+            const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+            progressFill.style.width = progress + '%';
+            currentTimeSpan.textContent = formatTime(audioPlayer.currentTime);
+        }
+
+        function updateDuration() {
+            totalTimeSpan.textContent = formatTime(audioPlayer.duration);
+        }
+
+        function seekTo(e) {
+            const clickX = e.offsetX;
+            const width = progressBar.offsetWidth;
+            const duration = audioPlayer.duration;
+            audioPlayer.currentTime = (clickX / width) * duration;
+        }
+
+        function changeVolume() {
+            audioPlayer.volume = volumeSlider.value / 100;
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function handleFileUpload(e) {
+            const files = Array.from(e.target.files);
+            files.forEach(file => {
+                if (file.type.startsWith('audio/')) {
+                    const url = URL.createObjectURL(file);
+                    const track = {
+                        name: file.name.replace(/\.[^/.]+$/, ""),
+                        artist: "Artista Desconhecido",
+                        url: url,
+                        duration: "0:00"
+                    };
+                    playlist.push(track);
+                }
+            });
+            updatePlaylistUI();
+            updateStats();
+            
+            if (playlist.length === 1) {
+                loadTrack();
+            }
+        }
+
+        function updatePlaylistUI() {
+            playlistCount.textContent = `${playlist.length} músicas`;
+            
+            // Limpar lista atual (manter apenas exemplos se playlist vazia)
+            if (playlist.length === 0) return;
+            
+            musicList.innerHTML = '';
+            
+            playlist.forEach((track, index) => {
+                const musicItem = document.createElement('div');
+                musicItem.className = `music-item ${index === currentTrack ? 'playing' : ''}`;
+                musicItem.innerHTML = `
+                    <div class="album-art">🎵</div>
+                    <div class="music-info">
+                        <div class="music-title">${track.name}</div>
+                        <div class="music-artist">${track.artist}</div>
+                    </div>
+                    <div class="music-duration">${track.duration}</div>
+                    <div class="music-actions">
+                        <button class="action-btn" onclick="toggleFavorite(${index})">❤️</button>
+                        <button class="action-btn" onclick="removeTrack(${index})">🗑️</button>
+                    </div>
+                `;
+                musicItem.addEventListener('click', () => {
+                    currentTrack = index;
+                    loadTrack();
+                    if (!isPlaying) togglePlay();
                 });
+                musicList.appendChild(musicItem);
+            });
+        }
+
+        function updateCurrentPlayer(track) {
+            const currentInfo = document.querySelector('.current-info');
+            currentInfo.innerHTML = `
+                <h3>${track.name}</h3>
+                <p>${track.artist}</p>
+            `;
+        }
+
+        function updateStats() {
+            const statsNumbers = document.querySelectorAll('.stat-number');
+            if (statsNumbers.length >= 4) {
+                statsNumbers[0].textContent = playlist.length;
+                statsNumbers[1].textContent = new Set(playlist.map(t => t.artist)).size;
+                // Calcular duração total seria mais complexo, mantendo exemplo
+                statsNumbers[2].textContent = "1h 45m";
+                statsNumbers[3].textContent = "8";
             }
-            
-            // Detectar tema preferido do usuário
-            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
-            if (prefersDark.matches) {
-                document.body.classList.add('dark-theme');
+        }
+
+        function removeTrack(index) {
+            playlist.splice(index, 1);
+            if (currentTrack >= index && currentTrack > 0) {
+                currentTrack--;
             }
+            updatePlaylistUI();
+            updateStats();
             
-            // Listener para mudanças de tema do sistema
-            prefersDark.addEventListener('change', (e) => {
-                if (e.matches) {
-                    document.body.classList.add('dark-theme');
-                } else {
-                    document.body.classList.remove('dark-theme');
+            if (playlist.length === 0) {
+                audioPlayer.pause();
+                playBtn.textContent = '▶';
+                isPlaying = false;
+                // Restaurar player padrão
+                const currentInfo = document.querySelector('.current-info');
+                currentInfo.innerHTML = `
+                    <h3>Nenhuma música selecionada</h3>
+                    <p>Adicione músicas para começar</p>
+                `;
+            } else if (index === currentTrack) {
+                loadTrack();
+            }
+        }
+
+        function toggleFavorite(index) {
+            // Implementar lógica de favoritos
+            console.log('Favorito toggled para:', playlist[index].name);
+        }
+
+        // Funcionalidade de arrastar e soltar
+        const uploadSection = document.querySelector('.upload-section');
+
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.style.borderColor = '#667eea';
+            uploadSection.style.background = 'linear-gradient(135deg, #f0f4ff, #e6f0ff)';
+        });
+
+        uploadSection.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadSection.style.borderColor = '#e2e8f0';
+            uploadSection.style.background = 'linear-gradient(135deg, #f8fafc, #f1f5f9)';
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.style.borderColor = '#e2e8f0';
+            uploadSection.style.background = 'linear-gradient(135deg, #f8fafc, #f1f5f9)';
+            
+            const files = Array.from(e.dataTransfer.files);
+            files.forEach(file => {
+                if (file.type.startsWith('audio/')) {
+                    const url = URL.createObjectURL(file);
+                    const track = {
+                        name: file.name.replace(/\.[^/.]+$/, ""),
+                        artist: "Artista Desconhecido",
+                        url: url,
+                        duration: "0:00"
+                    };
+                    playlist.push(track);
+                }
+            });
+            updatePlaylistUI();
+            updateStats();
+            
+            if (playlist.length === files.filter(f => f.type.startsWith('audio/')).length) {
+                loadTrack();
+            }
+        });
+
+        // Atalhos de teclado
+        document.addEventListener('keydown', (e) => {
+            switch(e.code) {
+                case 'Space':
+                    e.preventDefault();
+                    togglePlay();
+                    break;
+                case 'ArrowLeft':
+                    if (e.ctrlKey) {
+                        e.preventDefault();
+                        previousTrack();
+                    }
+                    break;
+                case 'ArrowRight':
+                    if (e.ctrlKey) {
+                        e.preventDefault();
+                        nextTrack();
+                    }
+                    break;
+                case 'ArrowUp':
+                    if (e.ctrlKey) {
+                        e.preventDefault();
+                        volumeSlider.value = Math.min(100, parseInt(volumeSlider.value) + 10);
+                        changeVolume();
+                    }
+                    break;
+                case 'ArrowDown':
+                    if (e.ctrlKey) {
+                        e.preventDefault();
+                        volumeSlider.value = Math.max(0, parseInt(volumeSlider.value) - 10);
+                        changeVolume();
+                    }
+                    break;
+            }
+        });
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', () => {
+            // Definir volume inicial
+            audioPlayer.volume = 0.5;
+            
+            // Adicionar tooltips aos botões
+            const tooltips = {
+                playBtn: 'Reproduzir/Pausar (Espaço)',
+                prevBtn: 'Música Anterior (Ctrl + ←)',
+                nextBtn: 'Próxima Música (Ctrl + →)',
+                shuffleBtn: 'Modo Aleatório',
+                repeatBtn: 'Repetir'
+            };
+            
+            Object.keys(tooltips).forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.title = tooltips[id];
                 }
             });
             
-            // Precarregar imagens críticas
-            const criticalImages = [
-                window.appConfig.defaultCover,
-            ];
-            
-            criticalImages.forEach(src => {
-                const img = new Image();
-                img.src = src;
+            // Animação inicial
+            const musicItems = document.querySelectorAll('.music-item');
+            musicItems.forEach((item, index) => {
+                item.style.animationDelay = `${index * 0.1}s`;
             });
         });
-        
-        // Função para alternar tema manualmente
-        function toggleTheme() {
-            document.body.classList.toggle('dark-theme');
-            const isDark = document.body.classList.contains('dark-theme');
+
+        // Função para limpar a playlist
+        function clearPlaylist() {
+            playlist = [];
+            currentTrack = 0;
+            audioPlayer.pause();
+            playBtn.textContent = '▶';
+            isPlaying = false;
+            updatePlaylistUI();
+            updateStats();
             
-            // Salvar preferência no localStorage
-            try {
-                localStorage.setItem('theme-preference', isDark ? 'dark' : 'light');
-            } catch (e) {
-                // Fallback se localStorage não estiver disponível
-                console.warn('Could not save theme preference');
-            }
+            // Restaurar exemplos
+            musicList.innerHTML = `
+                <div class="music-item">
+                    <div class="album-art">🎵</div>
+                    <div class="music-info">
+                        <div class="music-title">Adicione suas músicas</div>
+                        <div class="music-artist">Use o botão acima ou arraste arquivos</div>
+                    </div>
+                    <div class="music-duration">0:00</div>
+                </div>
+            `;
             
-            // Feedback visual
-            showToast(
-                isDark ? 'Tema escuro ativado' : 'Tema claro ativado',
-                'success',
-                3000
-            );
+            playlistCount.textContent = '0 músicas';
+            
+            const currentInfo = document.querySelector('.current-info');
+            currentInfo.innerHTML = `
+                <h3>Nenhuma música selecionada</h3>
+                <p>Adicione músicas para começar</p>
+            `;
         }
+
+        // Adicionar botão para limpar playlist
+        const uploadSection2 = document.querySelector('.upload-section');
+        const clearButton = document.createElement('button');
+        clearButton.textContent = '🗑️ Limpar Playlist';
+        clearButton.className = 'file-input-button';
+        clearButton.style.marginLeft = '15px';
+        clearButton.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+        clearButton.addEventListener('click', clearPlaylist);
+        
+        const fileInputWrapper = document.querySelector('.file-input-wrapper');
+        fileInputWrapper.appendChild(clearButton);
     </script>
-    
-    <!-- Scripts principais -->
-    <script src="script.js"></script>
 </body>
-                            </html>
+</html>
