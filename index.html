@@ -4,6 +4,515 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rádio Supermercado do Louro</title>
+    <style>
+        /* CSS Inline para garantir carregamento */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a0a0a, #1a1a2e, #16213e);
+            color: #ffffff;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        
+        .player-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+        }
+        
+        .player-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .player-header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+        
+        .tagline {
+            font-size: 1.1rem;
+            color: #a0a0a0;
+            opacity: 0.8;
+        }
+        
+        .player-main {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        .cover-container {
+            position: relative;
+            width: 250px;
+            height: 250px;
+            margin: 0 auto 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(102, 126, 234, 0.3);
+        }
+        
+        .main-cover, .track-cover {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transition: all 0.3s ease;
+        }
+        
+        .track-cover {
+            z-index: 2;
+        }
+        
+        .main-cover {
+            z-index: 1;
+        }
+        
+        .album-info {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .album-info h3 {
+            font-size: 1.4rem;
+            margin-bottom: 10px;
+            color: #4facfe;
+        }
+        
+        .album-info p {
+            color: #a0a0a0;
+            margin-bottom: 5px;
+        }
+        
+        .player-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .btn-control {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 1.5rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-control:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+        }
+        
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+        
+        .volume-slider {
+            flex: 1;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+            -webkit-appearance: none;
+        }
+        
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #4facfe;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .now-playing {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            width: 100%;
+        }
+        
+        .equalizer {
+            display: flex;
+            gap: 3px;
+            align-items: end;
+        }
+        
+        .bar {
+            width: 4px;
+            background: linear-gradient(to top, #4facfe, #00f2fe);
+            border-radius: 2px;
+            animation: equalizer 1s ease-in-out infinite;
+        }
+        
+        .bar:nth-child(1) { height: 15px; animation-delay: 0s; }
+        .bar:nth-child(2) { height: 25px; animation-delay: 0.2s; }
+        .bar:nth-child(3) { height: 20px; animation-delay: 0.4s; }
+        .bar:nth-child(4) { height: 10px; animation-delay: 0.6s; }
+        
+        @keyframes equalizer {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(1.5); }
+        }
+        
+        .status {
+            display: flex;
+            flex-direction: column;
+            text-align: right;
+            font-size: 0.8rem;
+            color: #a0a0a0;
+            gap: 5px;
+        }
+        
+        .live-indicator {
+            color: #ff4757;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .admin-access-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50px;
+            padding: 15px 25px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .admin-access-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+        
+        /* Responsivo básico */
+        @media (max-width: 768px) {
+            .player-header h1 {
+                font-size: 2rem;
+            }
+            
+            .player-main {
+                padding: 25px;
+                margin: 0 10px;
+            }
+            
+            .cover-container {
+                width: 200px;
+                height: 200px;
+            }
+            
+            .admin-access-btn {
+                bottom: 20px;
+                right: 20px;
+                padding: 12px 20px;
+            }
+            
+            .btn-text {
+                display: none;
+            }
+        }
+        
+        /* Admin styles básicos */
+        .admin-container {
+            min-height: 100vh;
+            padding: 20px;
+            background: linear-gradient(135deg, #0a0a0a, #1a1a2e);
+            display: none;
+        }
+        
+        .btn-primary, .btn-secondary, .btn-danger {
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            color: white;
+        }
+        
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 15px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+        
+        .modal-content input {
+            width: 100%;
+            padding: 12px;
+            margin: 15px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+        }
+        
+        .modal-content input::placeholder {
+            color: #a0a0a0;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Player Público -->
+    <div id="playerMode" class="player-container">
+        <div class="player-header">
+            <h1>🎵 Rádio Supermercado do Louro</h1>
+            <p class="tagline">Sua música, sua experiência - AO VIVO</p>
+        </div>
+        
+        <div class="player-main">
+            <div class="album-cover">
+                <div class="cover-container">
+                    <img id="albumCover" src="https://s10.aconvert.com/convert/p3r68-cdx67/a9p73-3tban.png" alt="Capa do Álbum" class="main-cover">
+                    <img id="trackCover" src="" alt="Capa da Música" class="track-cover" style="display: none;">
+                </div>
+                <div class="album-info">
+                    <h3 id="albumTitle">Playlist Geral</h3>
+                    <p id="currentTrack">Carregando...</p>
+                    <p id="trackTime">00:00 / 00:00</p>
+                </div>
+            </div>
+            
+            <div class="player-controls">
+                <audio id="audioPlayer" preload="auto"></audio>
+                <div class="control-buttons">
+                    <button id="playPauseBtn" class="btn-control">
+                        <span class="play-icon">▶️</span>
+                        <span class="pause-icon" style="display: none;">⏸️</span>
+                    </button>
+                    <button id="skipBtn" class="btn-control">⏭️</button>
+                </div>
+                
+                <div class="volume-control">
+                    <span class="volume-icon">🔊</span>
+                    <input type="range" id="volumeSlider" min="0" max="100" value="70" class="volume-slider">
+                    <span id="volumeValue">70%</span>
+                </div>
+            </div>
+            
+            <div class="now-playing">
+                <div class="equalizer">
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                </div>
+                <div class="status">
+                    <span id="playStatus">Pausado</span>
+                    <span id="trackCount">Músicas: 0</span>
+                    <span id="liveIndicator" class="live-indicator">🔴 AO VIVO</span>
+                </div>
+            </div>
+        </div>
+        
+        <button id="adminBtn" class="admin-access-btn">
+            <span class="btn-icon">🔐</span>
+            <span class="btn-text">Admin</span>
+        </button>
+    </div>
+
+    <!-- Modal de Senha -->
+    <div id="passwordModal" class="modal">
+        <div class="modal-content">
+            <h3>🔐 Senha Admin</h3>
+            <input type="password" id="adminPassword" placeholder="Digite a senha">
+            <div>
+                <button onclick="checkPassword()" class="btn-primary">Entrar</button>
+                <button onclick="closeModal('passwordModal')" class="btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <p style="color: white; margin-top: 20px;">Carregando...</p>
+    </div>
+
+    <!-- CSS externo (fallback) -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- JavaScript -->
+    <script src="script.js"></script>
+    
+    <script>
+        // Script inline como fallback
+        console.log('Página carregada!');
+        
+        // Garantir que elementos básicos funcionem
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM pronto!');
+            
+            // Configurar volume básico
+            const audioPlayer = document.getElementById('audioPlayer');
+            const volumeSlider = document.getElementById('volumeSlider');
+            const volumeValue = document.getElementById('volumeValue');
+            
+            if (audioPlayer && volumeSlider && volumeValue) {
+                audioPlayer.volume = 0.7;
+                volumeSlider.addEventListener('input', function() {
+                    const volume = this.value;
+                    audioPlayer.volume = volume / 100;
+                    volumeValue.textContent = volume + '%';
+                });
+            }
+            
+            // Botão admin básico
+            const adminBtn = document.getElementById('adminBtn');
+            const passwordModal = document.getElementById('passwordModal');
+            
+            if (adminBtn && passwordModal) {
+                adminBtn.addEventListener('click', function() {
+                    passwordModal.style.display = 'flex';
+                });
+            }
+        });
+        
+        // Funções básicas inline
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+        
+        function checkPassword() {
+            const password = document.getElementById('adminPassword');
+            if (password && password.value === 'admin123') {
+                alert('Login realizado! (Funcionalidade completa requer script.js)');
+                closeModal('passwordModal');
+            } else {
+                alert('Senha incorreta!');
+                if (password) password.value = '';
+            }
+        }
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rádio Supermercado do Louro</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
