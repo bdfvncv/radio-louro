@@ -8,7 +8,7 @@
 </head>
 <body>
     <!-- Player Público -->
-    <div class="player-container">
+    <div id="playerMode" class="player-container">
         <div class="background-effects">
             <div class="floating-element floating-1"></div>
             <div class="floating-element floating-2"></div>
@@ -20,7 +20,7 @@
             <p class="tagline">Sua música, sua experiência - AO VIVO</p>
         </div>
         
-        <div class="player-main">
+        <div class="player-main glass">
             <div class="album-cover">
                 <div class="cover-container">
                     <img id="albumCover" src="https://s10.aconvert.com/convert/p3r68-cdx67/a9p73-3tban.png" alt="Capa do Álbum" class="main-cover">
@@ -43,14 +43,14 @@
                     <button id="skipBtn" class="btn-control">⏭️</button>
                 </div>
                 
-                <div class="volume-control">
+                <div class="volume-control glass">
                     <span class="volume-icon">🔊</span>
                     <input type="range" id="volumeSlider" min="0" max="100" value="70" class="volume-slider">
                     <span id="volumeValue">70%</span>
                 </div>
             </div>
             
-            <div class="now-playing">
+            <div class="now-playing glass">
                 <div class="equalizer">
                     <div class="bar"></div>
                     <div class="bar"></div>
@@ -88,23 +88,23 @@
         <!-- Upload Tab -->
         <div class="tab-content active" id="upload-tab">
             <div class="upload-grid">
-                    <div class="upload-card glass">
-                        <div class="card-icon">🎵</div>
-                        <h4>Músicas</h4>
-                        <input type="file" id="musicUpload" accept=".mp3,.wav,.ogg" multiple class="modern-file-input">
-                        <div class="upload-options">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="musicWithCover" class="modern-checkbox">
-                                <span class="checkmark"></span>
-                                <span>Incluir capas das músicas</span>
-                            </label>
-                            <input type="file" id="musicCoverUpload" accept="image/*" multiple class="modern-file-input" style="display: none;">
-                        </div>
-                        <button onclick="uploadFiles('music')" class="btn-primary">
-                            <span class="btn-icon">📤</span>
-                            <span>Enviar</span>
-                        </button>
+                <div class="upload-card glass">
+                    <div class="card-icon">🎵</div>
+                    <h4>Músicas</h4>
+                    <input type="file" id="musicUpload" accept=".mp3,.wav,.ogg" multiple class="modern-file-input">
+                    <div class="upload-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="musicWithCover" class="modern-checkbox">
+                            <span class="checkmark"></span>
+                            <span>Incluir capas das músicas</span>
+                        </label>
+                        <input type="file" id="musicCoverUpload" accept="image/*" multiple class="modern-file-input" style="display: none;">
                     </div>
+                    <button onclick="uploadFiles('music')" class="btn-primary">
+                        <span class="btn-icon">📤</span>
+                        <span>Enviar</span>
+                    </button>
+                </div>
                 
                 <div class="upload-card glass">
                     <div class="card-icon">🕐</div>
@@ -146,10 +146,10 @@
         
         <!-- Albums Tab -->
         <div class="tab-content" id="albums-tab">
-            <div class="album-management">
+            <div class="album-management glass">
                 <div class="album-selector">
                     <h3>🎵 Álbum Ativo</h3>
-                    <select id="activeAlbumSelect">
+                    <select id="activeAlbumSelect" class="modern-select">
                         <option value="">Playlist Geral</option>
                         <option value="natal">🎄 Natal</option>
                         <option value="pascoa">🐰 Páscoa</option>
@@ -172,25 +172,25 @@
                 <button onclick="resetPlayCount()" class="btn-danger">🔄 Reset</button>
                 <button onclick="refreshReports()" class="btn-secondary">🔄 Atualizar</button>
             </div>
-            <div class="report-list" id="reportList"></div>
+            <div class="report-list glass" id="reportList"></div>
         </div>
         
         <!-- Files Tab -->
         <div class="tab-content" id="files-tab">
             <div class="files-grid">
-                <div class="file-category">
+                <div class="file-category glass">
                     <h4>🎵 Músicas</h4>
                     <div class="file-list" id="musicFiles"></div>
                 </div>
-                <div class="file-category">
+                <div class="file-category glass">
                     <h4>🕐 Hora Certa</h4>
                     <div class="file-list" id="timeFiles"></div>
                 </div>
-                <div class="file-category">
+                <div class="file-category glass">
                     <h4>📢 Avisos</h4>
                     <div class="file-list" id="adFiles"></div>
                 </div>
-                <div class="file-category">
+                <div class="file-category glass">
                     <h4>🎄 Álbuns</h4>
                     <div class="file-list" id="albumFiles"></div>
                 </div>
@@ -200,7 +200,7 @@
 
     <!-- Modals -->
     <div id="passwordModal" class="modal" style="display: none;">
-        <div class="modal-content">
+        <div class="modal-content glass">
             <h3>🔐 Senha Admin</h3>
             <input type="password" id="adminPassword" placeholder="Digite a senha">
             <div class="modal-buttons">
@@ -211,7 +211,7 @@
     </div>
 
     <div id="coverModal" class="modal" style="display: none;">
-        <div class="modal-content">
+        <div class="modal-content glass">
             <h3>🖼️ Alterar Capa</h3>
             <p>Álbum: <span id="coverAlbumName"></span></p>
             <input type="file" id="coverUpload" accept="image/*">
@@ -224,7 +224,7 @@
     </div>
 
     <div id="trackCoverModal" class="modal" style="display: none;">
-        <div class="modal-content">
+        <div class="modal-content glass">
             <h3>🖼️ Adicionar Capa da Música</h3>
             <p>Música: <span id="trackCoverSongName"></span></p>
             <input type="file" id="trackCoverUpload" accept="image/*">
