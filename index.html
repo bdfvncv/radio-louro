@@ -531,9 +531,9 @@
                     <div class="bar"></div>
                 </div>
                 <div class="status">
-                    <span id="playStatus">Pausado</span>
+                    <span id="playStatus">Iniciando...</span>
                     <span id="trackCount">Músicas: 0</span>
-                    <span id="liveIndicator" class="live-indicator">🔴 AO VIVO</span>
+                    <span id="liveIndicator" class="live-indicator">🔴 CONECTANDO...</span>
                 </div>
             </div>
         </div>
@@ -596,9 +596,20 @@
         <!-- Albums Tab -->
         <div class="tab-content" id="albums-tab">
             <div style="background: rgba(255, 255, 255, 0.05); border-radius: 15px; padding: 30px;">
+                <div style="margin-bottom: 30px; padding: 20px; background: rgba(255,107,107,0.1); border-radius: 10px; border: 1px solid rgba(255,107,107,0.3);">
+                    <h3 style="color: #ff6b6b; margin-bottom: 15px;">📡 Controle de Transmissão</h3>
+                    <p style="color: #a0a0a0; margin-bottom: 15px;">A rádio está configurada para tocar automaticamente 24h. Use os controles abaixo se necessário:</p>
+                    <button onclick="toggleTransmission()" class="btn-primary" style="margin-right: 10px;">
+                        🔄 Alternar Transmissão
+                    </button>
+                    <button onclick="radioManager.playNext()" class="btn-secondary">
+                        ⏭️ Próxima Música
+                    </button>
+                </div>
+                
                 <h3 style="color: #4facfe; margin-bottom: 20px;">🎵 Álbum Ativo</h3>
                 <select id="activeAlbumSelect" style="width: 300px; padding: 12px; margin-bottom: 15px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; color: white;">
-                    <option value="">Playlist Geral</option>
+                    <option value="">Playlist Geral (Todas as músicas)</option>
                     <option value="natal">🎄 Natal</option>
                     <option value="pascoa">🐰 Páscoa</option>
                     <option value="saojoao">🎪 São João</option>
