@@ -1,212 +1,150 @@
-// 📻 RÁDIO CORE - SISTEMA DE TRANSMISSÃO 24 HORAS
-// =================================================
+// 📻 SISTEMA DE TRANSMISSÃO 24 HORAS
+console.log('📻 Carregando sistema de transmissão...');
 
-class RadioTransmission {
+class RadioCore {
     constructor() {
-        this.isInitialized = false;
-        this.audioContext = null;
         this.audioElement = null;
-        this.gainNode = null;
         this.intervalIds = new Map();
-        this.failureCount = 0;
-        this.lastTrackChange = Date.now();
+        this.isInitialized = false;
         
-        // Bind methods
-        this.handleTrackEnd = this.handleTrackEnd.bind(this);
-        this.handleAudioError = this.handleAudioError.bind(this);
-        this.updateUI = this.updateUI.bind(this);
-        
-        console.log('📻 RadioTransmission inicializada');
+        console.log('📻 RadioCore inicializado');
     }
     
     async initialize() {
         if (this.isInitialized) return;
         
         try {
-            // Inicializar contexto de áudio
-            await this.initAudioContext();
-            
             // Configurar elemento de áudio
-            this.setupAudioElement();
+            this.audioElement = document.getElementById('radioStream');
+            if (!this.audioElement) {
+                throw new Error('Elemento de áudio não encontrado');
+            }
             
-            // Iniciar sistemas de monitoramento
+            // Configurar propriedades do áudio
+            this.audioElement.volume = RADIO_CONFIG.radio.audio.defaultVolume;
+            this.audioElement.preload = 'auto';
+            
+            // Event listeners
+            this.audioElement.addEventListener('ended', () => this.playNext());
+            this.audioElement.addEventListener('error', (e) => this.handleError(e));
+            this.audioElement.addEventListener('canplay', () => {
+                if (RADIO_STATE.transmission.isLive && !RADIO_STATE.transmission.isPlaying) {
+                    this.playCurrentTrack();
+                }
+            });
+            
+            // Iniciar sistema
             this.startHeartbeat();
             this.startTimeChecker();
-            this.startUIUpdater();
             
-            // Marcar como inicializada
             this.isInitialized = true;
-            STATE.transmission.isLive = true;
-            STATE.transmission.startTime = Date.now();
+            RADIO_UTILS.log('Sistema de transmissão inicializado');
             
-            UTILS.log('info', '✅ Sistema de transmissão inicializado');
-            
-            // Iniciar transmissão automaticamente
-            setTimeout(() => {
-                this.startTransmission();
-            }, 1000);
-            
+            return true;
         } catch (error) {
-            UTILS.log('error', '❌ Erro na inicialização da transmissão', error);
-            throw error;
+            console.error('❌ Erro na inicialização:', error);
+            return false;
         }
-    }
-    
-    async initAudioContext() {
-        try {
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            
-            // Configurar Web Audio API para melhor controle
-            this.gainNode = this.audioContext.createGain();
-            this.gainNode.connect(this.audioContext.destination);
-            this.gainNode.gain.value = CONFIG.radio.audio.defaultVolume;
-            
-            UTILS.log('debug', 'AudioContext inicializado');
-        } catch (error) {
-            UTILS.log('warn', 'Fallback para áudio HTML5', error);
-        }
-    }
-    
-    setupAudioElement() {
-        this.audioElement = document.getElementById('radioStream');
-        if (!this.audioElement) {
-            throw new Error('Elemento de áudio não encontrado');
-        }
-        
-        // Configurar propriedades do áudio
-        this.audioElement.preload = 'auto';
-        this.audioElement.volume = CONFIG.radio.audio.defaultVolume;
-        
-        // Event listeners para controle da transmissão
-        this.audioElement.addEventListener('ended', this.handleTrackEnd);
-        this.audioElement.addEventListener('error', this.handleAudioError);
-        this.audioElement.addEventListener('canplay', () => {
-            if (STATE.transmission.isLive && !STATE.transmission.isPlaying) {
-                this.playCurrentTrack();
-            }
-        });
-        
-        // Conectar ao Web Audio Context se disponível
-        if (this.audioContext && this.gainNode) {
-            const source = this.audioContext.createMediaElementSource(this.audioElement);
-            source.connect(this.gainNode);
-        }
-        
-        UTILS.log('debug', 'Elemento de áudio configurado');
     }
     
     startTransmission() {
-        if (!STATE.transmission.isLive) return;
+        if (RADIO_STATE.transmission.isLive) return;
         
-        UTILS.log('info', '🔴 Iniciando transmissão ao vivo');
+        RADIO_UTILS.log('🔴 Iniciando transmissão ao vivo');
+        
+        RADIO_STATE.transmission.isLive = true;
+        RADIO_STATE.transmission.startTime = Date.now();
         
         // Resetar contadores
-        STATE.schedule.tracksSinceTime = 0;
-        STATE.schedule.tracksSinceAd = 0;
-        STATE.schedule.lastTimeAnnouncement = Date.now();
+        RADIO_STATE.schedule.tracksSinceTime = 0;
+        RADIO_STATE.schedule.tracksSinceAd = 0;
         
         // Tocar primeira música
-        this.playNextTrack();
+        setTimeout(() => this.playNext(), 1000);
+        
+        this.updateUI();
     }
     
     stopTransmission() {
-        UTILS.log('info', '⚫ Parando transmissão');
+        RADIO_UTILS.log('⚫ Parando transmissão');
         
-        STATE.transmission.isLive = false;
-        STATE.transmission.isPlaying = false;
+        RADIO_STATE.transmission.isLive = false;
+        RADIO_STATE.transmission.isPlaying = false;
         
         if (this.audioElement) {
             this.audioElement.pause();
             this.audioElement.src = '';
         }
         
-        // Limpar intervalos
-        this.intervalIds.forEach((id, name) => {
-            clearInterval(id);
-            this.intervalIds.delete(name);
-        });
-        
         this.updateUI();
     }
     
-    async playNextTrack() {
+    playNext() {
+        if (!RADIO_STATE.transmission.isLive) return;
+        
         try {
-            if (!STATE.transmission.isLive) return;
-            
-            // Selecionar próxima faixa baseada na programação
             const nextTrack = this.selectNextTrack();
             
             if (!nextTrack) {
-                UTILS.log('warn', '⚠️ Nenhuma música disponível, aguardando...');
-                setTimeout(() => this.playNextTrack(), 30000);
+                RADIO_UTILS.log('⚠️ Nenhuma música disponível');
+                this.showMessage('Aguardando upload de músicas...');
+                setTimeout(() => this.playNext(), 30000);
                 return;
             }
             
             // Configurar nova faixa
-            STATE.transmission.currentTrack = nextTrack;
-            this.lastTrackChange = Date.now();
+            RADIO_STATE.transmission.currentTrack = nextTrack;
             
-            // Aplicar crossfade se habilitado
-            if (CONFIG.radio.audio.fadeTransitions && STATE.transmission.isPlaying) {
-                await this.crossfadeToTrack(nextTrack);
-            } else {
-                await this.loadAndPlayTrack(nextTrack);
-            }
-            
-            // Atualizar estatísticas
+            this.loadAndPlayTrack(nextTrack);
             this.updatePlayStats(nextTrack);
-            
-            // Atualizar UI
             this.updateUI();
             
-            UTILS.log('info', `🎵 Tocando: ${nextTrack.name}`);
+            RADIO_UTILS.log(`🎵 Tocando: ${nextTrack.name}`);
             
         } catch (error) {
-            UTILS.log('error', '❌ Erro ao reproduzir próxima música', error);
-            this.handlePlaybackError(error);
+            console.error('❌ Erro ao reproduzir:', error);
+            this.handlePlaybackError();
         }
     }
     
     selectNextTrack() {
-        // 1. Verificar se é hora de tocar hora certa
-        const timeSinceLastTime = Date.now() - STATE.schedule.lastTimeAnnouncement;
-        const timeInterval = CONFIG.radio.schedule.timeAnnouncementInterval * 60 * 1000;
-        
-        if (timeSinceLastTime >= timeInterval && STATE.library.time.length > 0) {
-            STATE.schedule.lastTimeAnnouncement = Date.now();
-            STATE.schedule.tracksSinceTime = 0;
-            STATE.schedule.tracksSinceAd++;
-            return this.getRandomFromPlaylist(STATE.library.time);
+        // 1. Verificar se deve tocar hora certa
+        if (RADIO_STATE.schedule.tracksSinceTime >= RADIO_CONFIG.radio.schedule.timeInterval && 
+            RADIO_STATE.library.time.length > 0) {
+            RADIO_STATE.schedule.tracksSinceTime = 0;
+            RADIO_STATE.schedule.tracksSinceAd++;
+            return this.getRandomFromPlaylist(RADIO_STATE.library.time);
         }
         
-        // 2. Verificar se é hora de tocar aviso
-        const adInterval = CONFIG.radio.schedule.adInterval;
-        if (STATE.schedule.tracksSinceAd >= adInterval && STATE.library.ads.length > 0) {
-            STATE.schedule.tracksSinceAd = 0;
-            STATE.schedule.tracksSinceTime++;
-            return this.getRandomFromPlaylist(STATE.library.ads);
+        // 2. Verificar se deve tocar aviso
+        if (RADIO_STATE.schedule.tracksSinceAd >= RADIO_CONFIG.radio.schedule.adInterval && 
+            RADIO_STATE.library.ads.length > 0) {
+            RADIO_STATE.schedule.tracksSinceAd = 0;
+            RADIO_STATE.schedule.tracksSinceTime++;
+            return this.getRandomFromPlaylist(RADIO_STATE.library.ads);
         }
         
         // 3. Tocar música regular
-        STATE.schedule.tracksSinceTime++;
-        STATE.schedule.tracksSinceAd++;
+        RADIO_STATE.schedule.tracksSinceTime++;
+        RADIO_STATE.schedule.tracksSinceAd++;
         
         // Verificar se há álbum ativo
-        if (STATE.schedule.activeAlbum && STATE.library.albums[STATE.schedule.activeAlbum]?.length > 0) {
-            return this.getRandomFromPlaylist(STATE.library.albums[STATE.schedule.activeAlbum]);
+        if (RADIO_STATE.schedule.activeAlbum && 
+            RADIO_STATE.library.albums[RADIO_STATE.schedule.activeAlbum]?.length > 0) {
+            return this.getRandomFromPlaylist(RADIO_STATE.library.albums[RADIO_STATE.schedule.activeAlbum]);
         }
         
         // Playlist geral
-        return this.getRandomFromPlaylist(STATE.library.music);
+        return this.getRandomFromPlaylist(RADIO_STATE.library.music);
     }
     
     getRandomFromPlaylist(playlist) {
         if (!playlist || playlist.length === 0) return null;
         
-        // Evitar repetir a música anterior se houver mais opções
-        if (playlist.length > 1 && STATE.transmission.currentTrack) {
+        // Evitar repetir a música anterior
+        if (playlist.length > 1 && RADIO_STATE.transmission.currentTrack) {
             const filtered = playlist.filter(track => 
-                track.name !== STATE.transmission.currentTrack.name
+                track.name !== RADIO_STATE.transmission.currentTrack.name
             );
             if (filtered.length > 0) {
                 playlist = filtered;
@@ -220,412 +158,265 @@ class RadioTransmission {
         if (!track || !this.audioElement) return;
         
         try {
-            // Carregar nova faixa
             this.audioElement.src = track.url;
+            this.showMessage(track.name);
             
-            // Aguardar carregamento e reproduzir
-            await new Promise((resolve, reject) => {
-                const onCanPlay = () => {
-                    this.audioElement.removeEventListener('canplay', onCanPlay);
-                    this.audioElement.removeEventListener('error', onError);
-                    resolve();
-                };
-                
-                const onError = (error) => {
-                    this.audioElement.removeEventListener('canplay', onCanPlay);
-                    this.audioElement.removeEventListener('error', onError);
-                    reject(error);
-                };
-                
-                this.audioElement.addEventListener('canplay', onCanPlay);
-                this.audioElement.addEventListener('error', onError);
-                
-                this.audioElement.load();
-                
-                // Timeout de 30 segundos
-                setTimeout(() => {
-                    this.audioElement.removeEventListener('canplay', onCanPlay);
-                    this.audioElement.removeEventListener('error', onError);
-                    reject(new Error('Timeout ao carregar faixa'));
-                }, 30000);
-            });
-            
-            // Reproduzir
-            await this.playCurrentTrack();
+            if (RADIO_STATE.transmission.isLive) {
+                await this.playCurrentTrack();
+            }
             
         } catch (error) {
-            UTILS.log('error', 'Erro ao carregar faixa', error);
+            console.error('❌ Erro ao carregar faixa:', error);
             throw error;
         }
     }
     
-    async crossfadeToTrack(nextTrack) {
-        if (!CONFIG.radio.audio.fadeTransitions || !this.gainNode) {
-            return await this.loadAndPlayTrack(nextTrack);
-        }
-        
-        try {
-            const fadeDuration = CONFIG.radio.audio.crossfadeDuration / 1000;
-            const currentTime = this.audioContext.currentTime;
-            
-            // Fade out da música atual
-            this.gainNode.gain.cancelScheduledValues(currentTime);
-            this.gainNode.gain.setValueAtTime(this.gainNode.gain.value, currentTime);
-            this.gainNode.gain.linearRampToValueAtTime(0, currentTime + fadeDuration);
-            
-            // Aguardar fade out
-            await new Promise(resolve => setTimeout(resolve, fadeDuration * 1000));
-            
-            // Carregar nova faixa
-            await this.loadAndPlayTrack(nextTrack);
-            
-            // Fade in da nova música
-            this.gainNode.gain.cancelScheduledValues(this.audioContext.currentTime);
-            this.gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
-            this.gainNode.gain.linearRampToValueAtTime(
-                CONFIG.radio.audio.defaultVolume, 
-                this.audioContext.currentTime + fadeDuration
-            );
-            
-        } catch (error) {
-            UTILS.log('warn', 'Erro no crossfade, usando transição normal', error);
-            await this.loadAndPlayTrack(nextTrack);
-        }
-    }
-    
     async playCurrentTrack() {
-        if (!this.audioElement || !STATE.transmission.isLive) return;
+        if (!this.audioElement || !RADIO_STATE.transmission.isLive) return;
         
         try {
-            // Resumir contexto de áudio se suspenso
-            if (this.audioContext && this.audioContext.state === 'suspended') {
-                await this.audioContext.resume();
-            }
-            
             await this.audioElement.play();
-            STATE.transmission.isPlaying = true;
-            this.failureCount = 0; // Reset contador de falhas
+            RADIO_STATE.transmission.isPlaying = true;
             
         } catch (error) {
             if (error.name === 'NotAllowedError') {
-                UTILS.log('warn', 'Autoplay bloqueado, aguardando interação do usuário');
+                RADIO_UTILS.log('⚠️ Autoplay bloqueado');
                 this.showAutoplayPrompt();
             } else {
-                UTILS.log('error', 'Erro ao reproduzir faixa', error);
+                console.error('❌ Erro ao reproduzir:', error);
                 throw error;
             }
         }
     }
     
     showAutoplayPrompt() {
-        // Criar prompt discreto para ativar áudio
         const prompt = document.createElement('div');
-        prompt.className = 'autoplay-prompt';
         prompt.innerHTML = `
-            <div class="prompt-content">
-                <span class="prompt-icon">🔊</span>
-                <span class="prompt-text">Clique para ativar o áudio da rádio</span>
+            <div style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); 
+                        background: rgba(255,107,107,0.9); color: white; padding: 15px 25px; 
+                        border-radius: 25px; z-index: 9999; cursor: pointer; font-weight: 600;">
+                🔊 Clique para ativar o áudio da rádio
             </div>
-        `;
-        
-        prompt.style.cssText = `
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255, 107, 107, 0.95);
-            color: white;
-            padding: 15px 25px;
-            border-radius: 25px;
-            z-index: 9999;
-            cursor: pointer;
-            font-weight: 600;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
-            animation: pulse 2s infinite;
         `;
         
         document.body.appendChild(prompt);
         
-        const activateAudio = async () => {
+        const enableAudio = async () => {
             try {
                 await this.playCurrentTrack();
                 prompt.remove();
             } catch (error) {
-                UTILS.log('error', 'Erro ao ativar áudio', error);
+                console.error('❌ Erro ao ativar áudio:', error);
             }
         };
         
-        prompt.addEventListener('click', activateAudio);
-        
-        // Auto-remover após 15 segundos
-        setTimeout(() => {
-            if (prompt.parentNode) {
-                prompt.remove();
-            }
-        }, 15000);
-    }
-    
-    handleTrackEnd() {
-        if (!STATE.transmission.isLive) return;
-        
-        UTILS.log('debug', 'Faixa finalizada, próxima em 1 segundo');
-        
-        // Pequena pausa antes da próxima música
-        setTimeout(() => {
-            this.playNextTrack();
-        }, 1000);
-    }
-    
-    handleAudioError(event) {
-        this.failureCount++;
-        const error = event.target.error;
-        
-        UTILS.log('error', `Erro de áudio (${this.failureCount}/5)`, {
-            code: error?.code,
-            message: error?.message,
-            currentTrack: STATE.transmission.currentTrack?.name
-        });
-        
-        // Tentar recuperação automática
-        if (this.failureCount < CONFIG.radio.transmission.maxRetries) {
-            setTimeout(() => {
-                this.handlePlaybackError(error);
-            }, CONFIG.radio.transmission.retryDelay);
-        } else {
-            UTILS.log('error', 'Muitas falhas consecutivas, parando transmissão');
-            this.stopTransmission();
-        }
-    }
-    
-    async handlePlaybackError(error) {
-        if (!CONFIG.radio.transmission.autoRestart) return;
-        
-        UTILS.log('info', '🔄 Tentando recuperar transmissão...');
-        
-        try {
-            // Tentar próxima música
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            if (STATE.transmission.isLive) {
-                this.playNextTrack();
-            }
-            
-        } catch (recoveryError) {
-            UTILS.log('error', 'Falha na recuperação automática', recoveryError);
-            
-            // Se há faixas de emergência, usar
-            if (CONFIG.radio.transmission.fallback.enabled && 
-                CONFIG.radio.transmission.fallback.emergencyTracks.length > 0) {
-                this.playEmergencyTrack();
-            }
-        }
-    }
-    
-    playEmergencyTrack() {
-        const emergencyTracks = CONFIG.radio.transmission.fallback.emergencyTracks;
-        const randomTrack = emergencyTracks[Math.floor(Math.random() * emergencyTracks.length)];
-        
-        UTILS.log('info', '🚨 Reproduzindo faixa de emergência');
-        this.loadAndPlayTrack(randomTrack);
+        prompt.addEventListener('click', enableAudio);
+        setTimeout(() => prompt.remove(), 15000);
     }
     
     updatePlayStats(track) {
-        STATE.stats.totalPlayed++;
-        STATE.stats.playHistory[track.name] = (STATE.stats.playHistory[track.name] || 0) + 1;
+        RADIO_STATE.stats.totalPlayed++;
+        RADIO_STATE.stats.playHistory[track.name] = (RADIO_STATE.stats.playHistory[track.name] || 0) + 1;
+        RADIO_UTILS.save();
+    }
+    
+    handleError(event) {
+        const error = event.target.error;
+        console.error('❌ Erro de áudio:', error);
+        this.handlePlaybackError();
+    }
+    
+    handlePlaybackError() {
+        RADIO_UTILS.log('🔄 Tentando recuperar transmissão...');
         
-        // Adicionar ao histórico recente
-        STATE.schedule.playHistory.unshift({
-            track,
-            timestamp: Date.now(),
-            duration: track.duration || 0
-        });
-        
-        // Manter apenas os últimos 50 itens
-        if (STATE.schedule.playHistory.length > 50) {
-            STATE.schedule.playHistory = STATE.schedule.playHistory.slice(0, 50);
-        }
+        setTimeout(() => {
+            if (RADIO_STATE.transmission.isLive) {
+                this.playNext();
+            }
+        }, 3000);
     }
     
     startHeartbeat() {
         const heartbeatId = setInterval(() => {
-            STATE.transmission.lastHeartbeat = Date.now();
-            STATE.transmission.uptime = Date.now() - STATE.transmission.startTime;
-            
-            // Verificar se a transmissão ainda está ativa
-            const timeSinceLastTrack = Date.now() - this.lastTrackChange;
-            const maxSilence = CONFIG.radio.transmission.fallback.silenceThreshold;
-            
-            if (timeSinceLastTrack > maxSilence && STATE.transmission.isLive) {
-                UTILS.log('warn', '⚠️ Possível problema na transmissão detectado');
-                this.handlePlaybackError(new Error('Transmissão silenciosa detectada'));
-            }
-            
-        }, CONFIG.radio.transmission.heartbeatInterval);
+            this.updateUI();
+        }, 5000);
         
         this.intervalIds.set('heartbeat', heartbeatId);
     }
     
     startTimeChecker() {
-        // Verificar a cada minuto se é hora de tocar hora certa
-        const timeCheckerId = setInterval(() => {
+        const timeCheckId = setInterval(() => {
             const now = new Date();
-            const minutes = now.getMinutes();
-            
-            // Hora certa nos minutos 00
-            if (minutes === 0 && STATE.library.time.length > 0) {
-                const timeSinceLastTime = Date.now() - STATE.schedule.lastTimeAnnouncement;
-                const minInterval = 50 * 60 * 1000; // Mínimo 50 minutos entre horas certas
-                
-                if (timeSinceLastTime > minInterval) {
-                    UTILS.log('info', '🕐 Forçando hora certa');
-                    STATE.schedule.tracksSinceTime = 999; // Força próxima hora certa
+            if (now.getMinutes() === 0 && RADIO_STATE.library.time.length > 0) {
+                const timeSinceLastCheck = Date.now() - RADIO_STATE.schedule.lastTimeCheck;
+                if (timeSinceLastCheck > 50 * 60 * 1000) { // 50 minutos
+                    RADIO_UTILS.log('🕐 Forçando hora certa');
+                    RADIO_STATE.schedule.tracksSinceTime = 999;
+                    RADIO_STATE.schedule.lastTimeCheck = Date.now();
                 }
             }
-        }, 60000);
+        }, 60000); // Verificar a cada minuto
         
-        this.intervalIds.set('timeChecker', timeCheckerId);
-    }
-    
-    startUIUpdater() {
-        const uiUpdateId = setInterval(() => {
-            this.updateUI();
-        }, 5000); // Atualizar UI a cada 5 segundos
-        
-        this.intervalIds.set('uiUpdater', uiUpdateId);
+        this.intervalIds.set('timeChecker', timeCheckId);
     }
     
     updateUI() {
         try {
-            // Atualizar status de transmissão
+            // Status ao vivo
             const liveStatus = document.getElementById('liveStatus');
             if (liveStatus) {
-                liveStatus.textContent = STATE.transmission.isLive ? 'AO VIVO' : 'OFFLINE';
-                liveStatus.className = STATE.transmission.isLive ? 'live-active' : 'live-inactive';
+                liveStatus.textContent = RADIO_STATE.transmission.isLive ? 'AO VIVO' : 'OFFLINE';
             }
             
-            // Atualizar música atual
+            // Música atual
             const nowPlaying = document.getElementById('nowPlaying');
-            if (nowPlaying && STATE.transmission.currentTrack) {
-                nowPlaying.textContent = STATE.transmission.currentTrack.name;
+            if (nowPlaying) {
+                if (RADIO_STATE.transmission.currentTrack) {
+                    nowPlaying.textContent = RADIO_STATE.transmission.currentTrack.name;
+                } else if (RADIO_STATE.transmission.isLive) {
+                    nowPlaying.textContent = 'Carregando próxima música...';
+                } else {
+                    nowPlaying.textContent = 'Transmissão pausada';
+                }
             }
             
-            // Atualizar informações de transmissão
+            // Status de transmissão
             const transmissionStatus = document.getElementById('transmissionStatus');
             if (transmissionStatus) {
-                transmissionStatus.textContent = STATE.transmission.isPlaying ? 'Transmitindo' : 'Pausado';
+                transmissionStatus.textContent = RADIO_STATE.transmission.isLive ? 'Transmitindo' : 'Offline';
             }
             
+            // Contador de músicas
             const songsCount = document.getElementById('songsCount');
             if (songsCount) {
-                songsCount.textContent = STATE.stats.totalPlayed.toString();
+                songsCount.textContent = RADIO_STATE.stats.totalPlayed.toString();
             }
             
+            // Última atualização
             const lastUpdate = document.getElementById('lastUpdate');
             if (lastUpdate) {
                 lastUpdate.textContent = new Date().toLocaleTimeString('pt-BR');
             }
             
-            // Atualizar histórico recente
-            this.updateRecentTracks();
+            // Botão play/pause
+            const playBtn = document.getElementById('playStopBtn');
+            if (playBtn) {
+                const icon = playBtn.querySelector('.control-icon');
+                const text = playBtn.querySelector('.control-text');
+                
+                if (RADIO_STATE.transmission.isLive) {
+                    if (icon) icon.textContent = '⏸️';
+                    if (text) text.textContent = 'PAUSAR';
+                    playBtn.classList.add('playing');
+                } else {
+                    if (icon) icon.textContent = '▶️';
+                    if (text) text.textContent = 'ESCUTAR';
+                    playBtn.classList.remove('playing');
+                }
+            }
             
-            // Atualizar equalizer visual
-            this.updateEqualizer();
+            // Admin status
+            this.updateAdminUI();
             
         } catch (error) {
-            UTILS.log('error', 'Erro ao atualizar UI', error);
+            console.error('❌ Erro ao atualizar UI:', error);
         }
     }
     
-    updateRecentTracks() {
-        const trackHistory = document.getElementById('trackHistory');
-        if (!trackHistory || STATE.schedule.playHistory.length === 0) return;
+    updateAdminUI() {
+        // Status online no admin
+        const onlineStatus = document.getElementById('onlineStatus');
+        if (onlineStatus) {
+            onlineStatus.textContent = RADIO_STATE.transmission.isLive ? '🔴 AO VIVO' : '⚫ OFFLINE';
+        }
         
-        const recentTracks = STATE.schedule.playHistory.slice(0, CONFIG.ui.maxRecentTracks);
+        // Música atual no admin
+        const currentTrackAdmin = document.getElementById('currentTrackAdmin');
+        if (currentTrackAdmin) {
+            currentTrackAdmin.textContent = RADIO_STATE.transmission.currentTrack?.name || 'Nenhuma';
+        }
         
-        trackHistory.innerHTML = recentTracks.map(item => {
-            const timeAgo = this.getTimeAgo(item.timestamp);
-            return `
-                <div class="track-item">
-                    <span class="track-name">${item.track.name}</span>
-                    <span class="track-time">${timeAgo}</span>
-                </div>
-            `;
-        }).join('') || '<div class="track-item loading">Nenhuma música tocada ainda</div>';
+        // Total de faixas
+        const totalTracks = document.getElementById('totalTracks');
+        if (totalTracks) {
+            const total = this.getTotalTracks();
+            totalTracks.textContent = total.toString();
+        }
+        
+        // Tempo online
+        const uptime = document.getElementById('uptime');
+        if (uptime && RADIO_STATE.transmission.startTime) {
+            const uptimeMs = Date.now() - RADIO_STATE.transmission.startTime;
+            uptime.textContent = RADIO_UTILS.formatTime(uptimeMs / 1000);
+        }
+        
+        // Botão de transmissão
+        const transmissionBtn = document.getElementById('transmissionBtnText');
+        if (transmissionBtn) {
+            transmissionBtn.textContent = RADIO_STATE.transmission.isLive ? 
+                '⏸️ PAUSAR TRANSMISSÃO' : '▶️ INICIAR TRANSMISSÃO';
+        }
     }
     
-    updateEqualizer() {
-        if (!STATE.transmission.isPlaying) return;
+    getTotalTracks() {
+        let total = 0;
+        total += RADIO_STATE.library.music.length;
+        total += RADIO_STATE.library.time.length;
+        total += RADIO_STATE.library.ads.length;
         
-        const eqBars = document.querySelectorAll('.eq-bar');
-        eqBars.forEach((bar, index) => {
-            const height = Math.random() * 100 + 20;
-            bar.style.height = `${height}%`;
-            bar.style.animationDelay = `${index * 0.1}s`;
+        Object.values(RADIO_STATE.library.albums).forEach(album => {
+            total += album.length;
         });
+        
+        return total;
     }
     
-    getTimeAgo(timestamp) {
-        const now = Date.now();
-        const diff = now - timestamp;
-        const minutes = Math.floor(diff / 60000);
-        
-        if (minutes < 1) return 'agora';
-        if (minutes === 1) return '1 min';
-        if (minutes < 60) return `${minutes} min`;
-        
-        const hours = Math.floor(minutes / 60);
-        if (hours === 1) return '1h';
-        return `${hours}h`;
+    showMessage(message) {
+        const nowPlaying = document.getElementById('nowPlaying');
+        if (nowPlaying) {
+            nowPlaying.textContent = message;
+        }
     }
     
-    // Métodos públicos para controle da transmissão
+    // Métodos públicos
     toggleTransmission() {
-        if (STATE.transmission.isLive) {
+        if (RADIO_STATE.transmission.isLive) {
             this.stopTransmission();
         } else {
-            STATE.transmission.isLive = true;
             this.startTransmission();
         }
-        this.updateUI();
     }
     
     skipToNext() {
-        if (STATE.transmission.isLive) {
-            UTILS.log('info', '⏭️ Pulando para próxima música');
-            this.playNextTrack();
+        if (RADIO_STATE.transmission.isLive) {
+            this.playNext();
         }
     }
     
     setVolume(volume) {
         const normalizedVolume = Math.max(0, Math.min(1, volume));
-        CONFIG.radio.audio.defaultVolume = normalizedVolume;
+        RADIO_CONFIG.radio.audio.defaultVolume = normalizedVolume;
         
         if (this.audioElement) {
             this.audioElement.volume = normalizedVolume;
         }
         
-        if (this.gainNode) {
-            this.gainNode.gain.value = normalizedVolume;
-        }
-        
-        STATE.transmission.volume = normalizedVolume;
-        UTILS.save();
+        RADIO_STATE.transmission.volume = normalizedVolume;
+        RADIO_UTILS.save();
     }
     
     getStatus() {
         return {
-            isLive: STATE.transmission.isLive,
-            isPlaying: STATE.transmission.isPlaying,
-            currentTrack: STATE.transmission.currentTrack,
-            uptime: STATE.transmission.uptime,
-            totalPlayed: STATE.stats.totalPlayed,
-            volume: STATE.transmission.volume,
-            failureCount: this.failureCount
+            isLive: RADIO_STATE.transmission.isLive,
+            isPlaying: RADIO_STATE.transmission.isPlaying,
+            currentTrack: RADIO_STATE.transmission.currentTrack,
+            totalPlayed: RADIO_STATE.stats.totalPlayed,
+            totalTracks: this.getTotalTracks()
         };
     }
 }
 
-// Instância global da transmissão
-window.RadioCore = new RadioTransmission();
+// Criar instância global
+window.RadioCore = new RadioCore();
+
+console.log('✅ RadioCore carregado com sucesso!');
