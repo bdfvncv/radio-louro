@@ -149,7 +149,7 @@
                     <h4>Biblioteca Musical</h4>
                     <p>Adicionar músicas à programação geral</p>
                     <input type="file" id="musicUpload" accept=".mp3,.wav,.ogg,.m4a" multiple class="file-input">
-                    <button onclick="uploadFiles('music')" class="btn-primary">📤 Enviar Músicas</button>
+                    <button onclick="window.uploadFiles('music')" class="btn-primary">📤 Enviar Músicas</button>
                 </div>
                 
                 <div class="upload-card">
@@ -157,7 +157,7 @@
                     <h4>Hora Certa</h4>
                     <p>Vinhetas para anúncio da hora</p>
                     <input type="file" id="timeUpload" accept=".mp3,.wav,.ogg,.m4a" multiple class="file-input">
-                    <button onclick="uploadFiles('time')" class="btn-primary">📤 Enviar Vinhetas</button>
+                    <button onclick="window.uploadFiles('time')" class="btn-primary">📤 Enviar Vinhetas</button>
                 </div>
                 
                 <div class="upload-card">
@@ -165,7 +165,7 @@
                     <h4>Avisos & Comerciais</h4>
                     <p>Vinhetas e avisos comerciais</p>
                     <input type="file" id="adUpload" accept=".mp3,.wav,.ogg,.m4a" multiple class="file-input">
-                    <button onclick="uploadFiles('ads')" class="btn-primary">📤 Enviar Avisos</button>
+                    <button onclick="window.uploadFiles('ads')" class="btn-primary">📤 Enviar Avisos</button>
                 </div>
                 
                 <div class="upload-card">
@@ -179,16 +179,16 @@
                         <option value="carnaval">🎭 Carnaval</option>
                     </select>
                     <input type="file" id="albumUpload" accept=".mp3,.wav,.ogg,.m4a" multiple class="file-input">
-                    <button onclick="uploadFiles('album')" class="btn-primary">📤 Enviar ao Álbum</button>
+                    <button onclick="window.uploadFiles('album')" class="btn-primary">📤 Enviar ao Álbum</button>
                 </div>
             </div>
         </div>
         
         <!-- Controles Adicionais -->
         <div class="additional-controls">
-            <button onclick="skipTrack()" class="btn-secondary">⏭️ Próxima Música</button>
-            <button onclick="resetStats()" class="btn-danger">🔄 Resetar Stats</button>
-            <button onclick="showStats()" class="btn-secondary">📊 Ver Estatísticas</button>
+            <button onclick="window.skipTrack()" class="btn-secondary">⏭️ Próxima Música</button>
+            <button onclick="window.resetStats()" class="btn-danger">🔄 Resetar Stats</button>
+            <button onclick="window.showStats()" class="btn-secondary">📊 Ver Estatísticas</button>
         </div>
     </div>
 
@@ -199,8 +199,8 @@
             <p>Digite a senha para acessar o painel de controle:</p>
             <input type="password" id="adminPassword" placeholder="Senha do administrador" class="modal-input">
             <div class="modal-buttons">
-                <button onclick="checkAdminPassword()" class="btn-primary">🔓 Entrar</button>
-                <button onclick="closeModal('passwordModal')" class="btn-secondary">❌ Cancelar</button>
+                <button onclick="window.checkAdminPassword()" class="btn-primary">🔓 Entrar</button>
+                <button onclick="window.closeModal('passwordModal')" class="btn-secondary">❌ Cancelar</button>
             </div>
         </div>
     </div>
@@ -211,7 +211,7 @@
         <p class="loading-text">Processando...</p>
     </div>
 
-    <!-- Scripts -->
+    <!-- Scripts na ordem correta -->
     <script src="config.js"></script>
     <script src="radio-core.js"></script>
     <script src="admin-panel.js"></script>
