@@ -1,21 +1,18 @@
 // 🛠️ PAINEL ADMINISTRATIVO
 console.log('🛠️ Carregando painel administrativo...');
 
-class AdminPanel {
-    constructor() {
-        this.isAuthenticated = false;
-        console.log('🛠️ AdminPanel inicializado');
-    }
+window.AdminPanel = {
+    isAuthenticated: false,
     
     async authenticate(password) {
-        if (password === RADIO_CONFIG.admin.defaultPassword) {
+        if (password === window.RADIO_CONFIG.admin.defaultPassword) {
             this.isAuthenticated = true;
             this.showPanel();
-            RADIO_UTILS.log('🔓 Admin autenticado');
+            window.RADIO_UTILS.log('🔓 Admin autenticado');
             return true;
         }
         return false;
-    }
+    },
     
     showPanel() {
         const radioPlayer = document.getElementById('radioPlayer');
@@ -24,8 +21,8 @@ class AdminPanel {
         if (radioPlayer) radioPlayer.style.display = 'none';
         if (adminPanel) adminPanel.style.display = 'block';
         
-        this.updateStatus();
-    }
+        console.log('🛠️ Painel admin aberto');
+    },
     
     hidePanel() {
         const radioPlayer = document.getElementById('radioPlayer');
@@ -33,7 +30,9 @@ class AdminPanel {
         
         if (radioPlayer) radioPlayer.style.display = 'block';  
         if (adminPanel) adminPanel.style.display = 'none';
-    }
+        
+        console.log('📻 Voltando ao player principal');
+    },
     
     async uploadFiles(category, albumType = '') {
         const fileInput = this.getFileInput(category);
@@ -43,6 +42,8 @@ class AdminPanel {
         }
         
         const files = Array.from(fileInput.files);
+        console.log(`📤 Iniciando upload de ${files.length} arquivo(s) para ${category}`);
+        
         this.showLoading(true, `Enviando ${files.length} arquivo(s)...`);
         
         try {
@@ -52,6 +53,7 @@ class AdminPanel {
                 const file = files[i];
                 this.updateLoadingText(`Enviando ${file.name}... (${i + 1}/${files.length})`);
                 
+                console.log(`Uploading file: ${file.name}`);
                 const uploadedFile = await this.uploadToCloudinary(file, category, albumType);
                 uploadedFiles.push(uploadedFile);
                 
@@ -60,16 +62,16 @@ class AdminPanel {
             }
             
             // Salvar estado
-            RADIO_UTILS.save();
+            window.RADIO_UTILS.save();
             
             // Limpar input
             fileInput.value = '';
             
-            // Se não há música tocando, iniciar
-            if (RADIO_STATE.transmission.isLive && !RADIO_STATE.transmission.currentTrack) {
+            // Se não há música tocando e a rádio está ao vivo, iniciar
+            if (window.RADIO_STATE.transmission.isLive && !window.RADIO_STATE.transmission.currentTrack) {
                 setTimeout(() => {
                     if (window.RadioCore) {
-                        RadioCore.playNext();
+                        window.RadioCore.playNext();
                     }
                 }, 1000);
             }
@@ -79,15 +81,15 @@ class AdminPanel {
                 'success'
             );
             
-            RADIO_UTILS.log(`📤 ${files.length} arquivos enviados para ${category}`);
+            window.RADIO_UTILS.log(`📤 ${files.length} arquivos enviados para ${category}`);
             
         } catch (error) {
             console.error('❌ Erro no upload:', error);
-            this.showNotification('Erro no upload. Tente novamente.', 'error');
+            this.showNotification('Erro no upload. Verifique sua conexão e tente novamente.', 'error');
         } finally {
             this.showLoading(false);
         }
-    }
+    },
     
     getFileInput(category) {
         const inputs = {
@@ -97,24 +99,26 @@ class AdminPanel {
             album: document.getElementById('albumUpload')
         };
         return inputs[category];
-    }
+    },
     
     async uploadToCloudinary(file, category, albumType = '') {
         const formData = new FormData();
         const folder = category === 'album' ? `albums/${albumType}` : category;
         
         formData.append('file', file);
-        formData.append('upload_preset', RADIO_CONFIG.cloudinary.uploadPreset);
+        formData.append('upload_preset', window.RADIO_CONFIG.cloudinary.uploadPreset);
         formData.append('folder', `radio-louro/${folder}`);
         formData.append('resource_type', 'auto');
         
-        const response = await fetch(RADIO_UTILS.getCloudinaryURL(), {
+        const response = await fetch(window.RADIO_UTILS.getCloudinaryURL(), {
             method: 'POST',
             body: formData
         });
         
         if (!response.ok) {
-            throw new Error(`Upload falhou: ${response.statusText}`);
+            const errorText = await response.text();
+            console.error('Cloudinary error:', errorText);
+            throw new Error(`Upload falhou: ${response.status} - ${response.statusText}`);
         }
         
         const data = await response.json();
@@ -130,82 +134,84 @@ class AdminPanel {
             category: category,
             album: albumType || null
         };
-    }
+    },
     
     addToLibrary(file, category, albumType = '') {
         if (category === 'album') {
-            if (!RADIO_STATE.library.albums[albumType]) {
-                RADIO_STATE.library.albums[albumType] = [];
+            if (!window.RADIO_STATE.library.albums[albumType]) {
+                window.RADIO_STATE.library.albums[albumType] = [];
             }
-            RADIO_STATE.library.albums[albumType].push(file);
+            window.RADIO_STATE.library.albums[albumType].push(file);
+            console.log(`📁 Arquivo adicionado ao álbum ${albumType}: ${file.name}`);
         } else {
-            if (!RADIO_STATE.library[category]) {
-                RADIO_STATE.library[category] = [];
+            if (!window.RADIO_STATE.library[category]) {
+                window.RADIO_STATE.library[category] = [];
             }
-            RADIO_STATE.library[category].push(file);
+            window.RADIO_STATE.library[category].push(file);
+            console.log(`📁 Arquivo adicionado à categoria ${category}: ${file.name}`);
         }
-    }
+    },
     
     toggleTransmission() {
         if (window.RadioCore) {
-            RadioCore.toggleTransmission();
-            this.updateStatus();
+            window.RadioCore.toggleTransmission();
             
-            const status = RADIO_STATE.transmission.isLive ? 'iniciada' : 'pausada';
+            const status = window.RADIO_STATE.transmission.isLive ? 'iniciada' : 'pausada';
             this.showNotification(`Transmissão ${status}!`, 'info');
+            
+            console.log(`🎛️ Transmissão ${status}`);
         }
-    }
+    },
     
     skipTrack() {
-        if (window.RadioCore && RADIO_STATE.transmission.isLive) {
-            RadioCore.skipToNext();
+        if (window.RadioCore && window.RADIO_STATE.transmission.isLive) {
+            window.RadioCore.skipToNext();
             this.showNotification('Pulando para próxima música...', 'info');
+            
+            console.log('⏭️ Música pulada manualmente');
         }
-    }
+    },
     
     resetStats() {
         if (!confirm('Tem certeza que deseja resetar todas as estatísticas?')) return;
         
-        RADIO_STATE.stats = {
+        window.RADIO_STATE.stats = {
             totalPlayed: 0,
             playHistory: {},
             sessionStart: Date.now()
         };
         
-        RADIO_UTILS.save();
+        window.RADIO_UTILS.save();
         this.showNotification('Estatísticas resetadas!', 'success');
-        RADIO_UTILS.log('🔄 Estatísticas resetadas');
-    }
+        window.RADIO_UTILS.log('🔄 Estatísticas resetadas');
+    },
     
     showStats() {
-        if (Object.keys(RADIO_STATE.stats.playHistory).length === 0) {
+        if (Object.keys(window.RADIO_STATE.stats.playHistory).length === 0) {
             this.showNotification('Nenhuma estatística disponível ainda.', 'info');
             return;
         }
         
-        const stats = Object.entries(RADIO_STATE.stats.playHistory)
+        const stats = Object.entries(window.RADIO_STATE.stats.playHistory)
             .sort(([,a], [,b]) => b - a)
             .slice(0, 10);
         
-        let message = '📊 TOP 10 MÚSICAS:\n\n';
+        let message = '📊 TOP 10 MÚSICAS MAIS TOCADAS:\n\n';
         stats.forEach(([track, count], index) => {
             message += `${index + 1}. ${track} - ${count}x\n`;
         });
         
+        message += `\n🎵 Total de músicas tocadas: ${window.RADIO_STATE.stats.totalPlayed}`;
+        
         alert(message);
-    }
-    
-    updateStatus() {
-        // Esta função é chamada pelo RadioCore
-        // Apenas garantir que existe
-    }
+    },
     
     updateLoadingText(text) {
         const loadingText = document.querySelector('.loading-text');
         if (loadingText) {
             loadingText.textContent = text;
         }
-    }
+    },
     
     showLoading(show, message = 'Carregando...') {
         const overlay = document.getElementById('loadingOverlay');
@@ -215,9 +221,13 @@ class AdminPanel {
                 this.updateLoadingText(message);
             }
         }
-    }
+    },
     
     showNotification(message, type = 'info') {
+        // Remover notificações anteriores
+        const existing = document.querySelectorAll('.notification');
+        existing.forEach(n => n.remove());
+        
         const notification = document.createElement('div');
         notification.className = `notification notification-${type}`;
         
@@ -270,20 +280,17 @@ class AdminPanel {
             }
         }, 4000);
     }
-}
-
-// Criar instância global
-window.AdminPanel = new AdminPanel();
-
-// Funções globais para compatibilidade com HTML
-window.uploadFiles = (category) => {
-    const albumType = category === 'album' ? document.getElementById('albumSelect')?.value : '';
-    AdminPanel.uploadFiles(category, albumType);
 };
 
-window.toggleTransmission = () => AdminPanel.toggleTransmission();
-window.skipTrack = () => AdminPanel.skipTrack();
-window.resetStats = () => AdminPanel.resetStats();
-window.showStats = () => AdminPanel.showStats();
+// Funções globais para uso no HTML
+window.uploadFiles = (category) => {
+    const albumType = category === 'album' ? document.getElementById('albumSelect')?.value : '';
+    window.AdminPanel.uploadFiles(category, albumType);
+};
+
+window.toggleTransmission = () => window.AdminPanel.toggleTransmission();
+window.skipTrack = () => window.AdminPanel.skipTrack();
+window.resetStats = () => window.AdminPanel.resetStats();
+window.showStats = () => window.AdminPanel.showStats();
 
 console.log('✅ AdminPanel carregado com sucesso!');
