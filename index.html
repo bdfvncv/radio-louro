@@ -5,35 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎵 Rádio Supermercado do Louro - AO VIVO 24h</title>
     <link rel="stylesheet" href="styles.css">
-    <link rel="icon" href="https://s10.aconvert.com/convert/p3r68-cdx67/a9p73-3tban.png">
-    
-    <!-- Meta Tags para Rádio -->
-    <meta name="description" content="Rádio Supermercado do Louro - Transmissão AO VIVO 24 horas por dia">
-    <meta name="keywords" content="rádio online, música ao vivo, transmissão 24h">
-    <meta property="og:title" content="🎵 Rádio Supermercado do Louro - AO VIVO">
-    <meta property="og:description" content="Sua rádio favorita transmitindo 24h por dia!">
-    <meta property="og:image" content="https://s10.aconvert.com/convert/p3r68-cdx67/a9p73-3tban.png">
 </head>
 <body>
-    <!-- Efeitos de Background -->
-    <div class="background-effects">
-        <div class="floating-element floating-1"></div>
-        <div class="floating-element floating-2"></div>
-        <div class="floating-element floating-3"></div>
-    </div>
-
     <!-- Player Principal da Rádio -->
     <div id="radioPlayer" class="radio-container">
         <div class="radio-header">
             <h1>🎵 Rádio Supermercado do Louro</h1>
             <p class="tagline">TRANSMISSÃO AO VIVO 24 HORAS</p>
+            
             <div class="live-badge">
                 <span class="live-dot"></span>
                 <span id="liveStatus">CONECTANDO...</span>
             </div>
         </div>
         
-        <div class="radio-main glass">
+        <div class="radio-main">
             <!-- Visualizador da Rádio -->
             <div class="radio-display">
                 <div class="cover-container">
@@ -58,8 +44,8 @@
             
             <!-- Controles da Rádio -->
             <div class="radio-controls">
-                <!-- Player de Áudio (Oculto) -->
-                <audio id="radioStream" preload="auto" crossorigin="anonymous"></audio>
+                <!-- Player de Áudio -->
+                <audio id="radioStream" preload="auto"></audio>
                 
                 <div class="main-controls">
                     <button id="playStopBtn" class="btn-control main-btn">
@@ -116,7 +102,7 @@
             </div>
         </div>
         
-        <!-- Botão Admin (Discreto) -->
+        <!-- Botão Admin -->
         <button id="adminAccessBtn" class="admin-btn-discrete">⚙️</button>
     </div>
 
@@ -126,16 +112,14 @@
             <h1>🛠️ Centro de Controle da Rádio</h1>
             <div class="admin-actions">
                 <button id="backToRadioBtn" class="btn-secondary">📻 Voltar à Rádio</button>
-                <div class="transmission-controls">
-                    <button id="toggleTransmissionBtn" class="btn-primary">
-                        <span id="transmissionBtnText">🔴 PAUSAR TRANSMISSÃO</span>
-                    </button>
-                </div>
+                <button id="toggleTransmissionBtn" class="btn-primary">
+                    <span id="transmissionBtnText">🔴 PAUSAR TRANSMISSÃO</span>
+                </button>
             </div>
         </div>
         
         <!-- Status da Transmissão -->
-        <div class="transmission-status-panel glass">
+        <div class="transmission-status-panel">
             <h3>📡 Status da Transmissão</h3>
             <div class="status-grid">
                 <div class="status-item">
@@ -157,20 +141,10 @@
             </div>
         </div>
         
-        <!-- Navegação por Abas -->
-        <div class="admin-tabs">
-            <button class="tab-btn active" data-tab="upload">📁 Upload</button>
-            <button class="tab-btn" data-tab="playlist">🎵 Playlist</button>
-            <button class="tab-btn" data-tab="schedule">⏰ Programação</button>
-            <button class="tab-btn" data-tab="reports">📊 Relatórios</button>
-            <button class="tab-btn" data-tab="settings">⚙️ Configurações</button>
-        </div>
-        
-        <!-- Conteúdo das Abas -->
-        <div class="tab-content active" id="upload-tab">
+        <!-- Upload de Arquivos -->
+        <div class="upload-section">
             <div class="upload-grid">
-                <!-- Upload de Músicas -->
-                <div class="upload-card glass">
+                <div class="upload-card">
                     <div class="card-icon">🎵</div>
                     <h4>Biblioteca Musical</h4>
                     <p>Adicionar músicas à programação geral</p>
@@ -178,8 +152,7 @@
                     <button onclick="uploadFiles('music')" class="btn-primary">📤 Enviar Músicas</button>
                 </div>
                 
-                <!-- Upload Hora Certa -->
-                <div class="upload-card glass">
+                <div class="upload-card">
                     <div class="card-icon">🕐</div>
                     <h4>Hora Certa</h4>
                     <p>Vinhetas para anúncio da hora</p>
@@ -187,8 +160,7 @@
                     <button onclick="uploadFiles('time')" class="btn-primary">📤 Enviar Vinhetas</button>
                 </div>
                 
-                <!-- Upload Avisos -->
-                <div class="upload-card glass">
+                <div class="upload-card">
                     <div class="card-icon">📢</div>
                     <h4>Avisos & Comerciais</h4>
                     <p>Vinhetas e avisos comerciais</p>
@@ -196,8 +168,7 @@
                     <button onclick="uploadFiles('ads')" class="btn-primary">📤 Enviar Avisos</button>
                 </div>
                 
-                <!-- Upload Álbuns -->
-                <div class="upload-card glass">
+                <div class="upload-card">
                     <div class="card-icon">🎄</div>
                     <h4>Álbuns Temáticos</h4>
                     <p>Músicas para ocasiões especiais</p>
@@ -213,130 +184,17 @@
             </div>
         </div>
         
-        <div class="tab-content" id="playlist-tab">
-            <div class="playlist-management glass">
-                <div class="playlist-header">
-                    <h3>🎵 Gerenciamento da Playlist</h3>
-                    <div class="playlist-controls">
-                        <button onclick="shufflePlaylist()" class="btn-secondary">🔀 Embaralhar</button>
-                        <button onclick="skipCurrent()" class="btn-primary">⏭️ Próxima</button>
-                    </div>
-                </div>
-                <div id="playlistContent" class="playlist-content">
-                    <div class="loading">Carregando playlist...</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="tab-content" id="schedule-tab">
-            <div class="schedule-panel glass">
-                <h3>⏰ Programação Automática</h3>
-                
-                <div class="schedule-config">
-                    <div class="config-section">
-                        <h4>🎵 Álbum Ativo</h4>
-                        <select id="activeAlbumSelect" class="config-select">
-                            <option value="">📻 Playlist Geral</option>
-                            <option value="natal">🎄 Natal</option>
-                            <option value="pascoa">🐰 Páscoa</option>
-                            <option value="saojoao">🎪 São João</option>
-                            <option value="carnaval">🎭 Carnaval</option>
-                        </select>
-                        <button onclick="setActiveAlbum()" class="btn-primary">✅ Ativar</button>
-                    </div>
-                    
-                    <div class="config-section">
-                        <h4>⏰ Configurações de Tempo</h4>
-                        <div class="time-settings">
-                            <label>
-                                <span>Hora Certa (minutos):</span>
-                                <input type="number" id="timeInterval" min="30" max="120" value="60">
-                            </label>
-                            <label>
-                                <span>Avisos (músicas):</span>
-                                <input type="number" id="adInterval" min="3" max="15" value="7">
-                            </label>
-                        </div>
-                        <button onclick="updateSchedule()" class="btn-primary">💾 Salvar</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="tab-content" id="reports-tab">
-            <div class="reports-panel glass">
-                <div class="reports-header">
-                    <h3>📊 Relatórios de Transmissão</h3>
-                    <div class="reports-controls">
-                        <button onclick="refreshReports()" class="btn-secondary">🔄 Atualizar</button>
-                        <button onclick="resetStats()" class="btn-danger">🗑️ Resetar</button>
-                        <button onclick="exportReports()" class="btn-primary">📥 Exportar</button>
-                    </div>
-                </div>
-                <div id="reportsContent" class="reports-content">
-                    <div class="loading">Carregando relatórios...</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="tab-content" id="settings-tab">
-            <div class="settings-panel glass">
-                <h3>⚙️ Configurações da Rádio</h3>
-                
-                <div class="settings-grid">
-                    <div class="setting-group">
-                        <h4>🎵 Configurações de Áudio</h4>
-                        <div class="setting-item">
-                            <label>
-                                <input type="checkbox" id="fadeTransitions" checked>
-                                <span>Transições suaves entre músicas</span>
-                            </label>
-                        </div>
-                        <div class="setting-item">
-                            <label>
-                                <input type="checkbox" id="autoNormalize" checked>
-                                <span>Normalização automática de volume</span>
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <div class="setting-group">
-                        <h4>📡 Transmissão</h4>
-                        <div class="setting-item">
-                            <label>
-                                <input type="checkbox" id="autoRestart" checked>
-                                <span>Reinício automático em caso de erro</span>
-                            </label>
-                        </div>
-                        <div class="setting-item">
-                            <label>
-                                <input type="checkbox" id="continuousPlay" checked>
-                                <span>Reprodução contínua 24h</span>
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <div class="setting-group">
-                        <h4>🔐 Segurança</h4>
-                        <div class="setting-item">
-                            <button onclick="changeAdminPassword()" class="btn-secondary">🔑 Alterar Senha</button>
-                        </div>
-                        <div class="setting-item">
-                            <button onclick="backupData()" class="btn-primary">💾 Backup Dados</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="save-settings">
-                    <button onclick="saveSettings()" class="btn-primary">💾 Salvar Configurações</button>
-                </div>
-            </div>
+        <!-- Controles Adicionais -->
+        <div class="additional-controls">
+            <button onclick="skipTrack()" class="btn-secondary">⏭️ Próxima Música</button>
+            <button onclick="resetStats()" class="btn-danger">🔄 Resetar Stats</button>
+            <button onclick="showStats()" class="btn-secondary">📊 Ver Estatísticas</button>
         </div>
     </div>
 
-    <!-- Modais -->
+    <!-- Modal de Senha Admin -->
     <div id="passwordModal" class="modal">
-        <div class="modal-content glass">
+        <div class="modal-content">
             <h3>🔐 Acesso Administrativo</h3>
             <p>Digite a senha para acessar o painel de controle:</p>
             <input type="password" id="adminPassword" placeholder="Senha do administrador" class="modal-input">
@@ -347,6 +205,7 @@
         </div>
     </div>
 
+    <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-spinner"></div>
         <p class="loading-text">Processando...</p>
