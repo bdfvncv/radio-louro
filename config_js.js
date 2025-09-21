@@ -13,8 +13,8 @@ window.RADIO_CONFIG = {
         defaultCover: 'https://s10.aconvert.com/convert/p3r68-cdx67/a9p73-3tban.png',
         
         schedule: {
-            timeInterval: 60,     // Hora certa a cada 60 minutos
-            adInterval: 7,        // Avisos a cada 7 músicas
+            timeInterval: 10,     // Hora certa a cada 10 músicas (para teste mais rápido)
+            adInterval: 5,        // Avisos a cada 5 músicas
             tracksBetweenTime: 0,
             tracksBetweenAd: 0
         },
@@ -77,7 +77,7 @@ window.RADIO_STATE = {
 window.RADIO_UTILS = {
     save() {
         try {
-            localStorage.setItem('radioState', JSON.stringify(RADIO_STATE));
+            localStorage.setItem('radioState', JSON.stringify(window.RADIO_STATE));
             return true;
         } catch (error) {
             console.warn('Erro ao salvar:', error);
@@ -90,10 +90,14 @@ window.RADIO_UTILS = {
             const saved = localStorage.getItem('radioState');
             if (saved) {
                 const parsed = JSON.parse(saved);
-                Object.assign(RADIO_STATE, parsed);
+                // Mesclar dados salvos mantendo estrutura atual
+                window.RADIO_STATE.library = parsed.library || window.RADIO_STATE.library;
+                window.RADIO_STATE.stats = parsed.stats || window.RADIO_STATE.stats;
+                window.RADIO_STATE.schedule.activeAlbum = parsed.schedule?.activeAlbum || null;
+                
                 // Reset transmission state
-                RADIO_STATE.transmission.isLive = false;
-                RADIO_STATE.transmission.isPlaying = false;
+                window.RADIO_STATE.transmission.isLive = false;
+                window.RADIO_STATE.transmission.isPlaying = false;
                 console.log('📦 Estado carregado do localStorage');
             }
             return true;
@@ -114,7 +118,7 @@ window.RADIO_UTILS = {
     },
     
     getCloudinaryURL() {
-        return `https://api.cloudinary.com/v1_1/${RADIO_CONFIG.cloudinary.cloudName}/auto/upload`;
+        return `https://api.cloudinary.com/v1_1/${window.RADIO_CONFIG.cloudinary.cloudName}/auto/upload`;
     }
 };
 
