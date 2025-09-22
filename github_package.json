@@ -1,0 +1,155 @@
+{
+  "name": "radio-supermercado-louro",
+  "version": "1.0.0",
+  "description": "Sistema completo de rádio online 24h com streaming ao vivo, painel administrativo e PWA avançado",
+  "main": "src/index.html",
+  "scripts": {
+    "start": "npx serve src -p 3000",
+    "dev": "npx live-server src --port=3000 --open=/",
+    "build": "node scripts/build.js",
+    "test": "npx jest",
+    "lint": "npx eslint src/**.js",
+    "deploy": "npm run build && npx gh-pages -d dist",
+    "serve": "npx http-server src -p 3000 -c-1",
+    "lighthouse": "npx lighthouse http://localhost:3000 --output=html --output-path=./reports/lighthouse.html",
+    "analyze": "npx webpack-bundle-analyzer dist/static/js/*.js",
+    "pwa-audit": "npx pwa-builder-cli audit http://localhost:3000"
+  },
+  "keywords": [
+    "radio",
+    "streaming",
+    "online-radio",
+    "web-radio",
+    "pwa",
+    "icecast",
+    "shoutcast",
+    "audio-streaming",
+    "music-player",
+    "live-stream",
+    "brasil",
+    "cloudinary",
+    "admin-panel",
+    "responsive",
+    "mobile-first"
+  ],
+  "author": {
+    "name": "Equipe Supermercado do Louro",
+    "email": "contato@radiosupermercadodolouro.com",
+    "url": "https://github.com/seu-usuario"
+  },
+  "license": "MIT",
+  "homepage": "https://seu-usuario.github.io/radio-supermercado-louro",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/seu-usuario/radio-supermercado-louro.git"
+  },
+  "bugs": {
+    "url": "https://github.com/seu-usuario/radio-supermercado-louro/issues",
+    "email": "contato@radiosupermercadodolouro.com"
+  },
+  "devDependencies": {
+    "eslint": "^8.45.0",
+    "jest": "^29.6.1",
+    "lighthouse": "^10.4.0",
+    "live-server": "^1.2.2",
+    "serve": "^14.2.0",
+    "http-server": "^14.1.1",
+    "gh-pages": "^5.0.0",
+    "webpack-bundle-analyzer": "^4.9.0",
+    "cssnano": "^6.0.1",
+    "terser": "^5.19.2",
+    "imagemin": "^8.0.1",
+    "imagemin-mozjpeg": "^10.0.0",
+    "imagemin-pngquant": "^9.0.2"
+  },
+  "dependencies": {},
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead",
+    "not ie 11"
+  ],
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=7.0.0"
+  },
+  "pwa": {
+    "name": "Rádio Supermercado do Louro",
+    "short_name": "Rádio Louro",
+    "theme_color": "#667eea",
+    "background_color": "#0a0a0a",
+    "display": "standalone",
+    "start_url": "/"
+  },
+  "directories": {
+    "doc": "docs",
+    "example": "examples",
+    "test": "tests"
+  },
+  "files": [
+    "src/**/*",
+    "docs/**/*",
+    "README.md",
+    "LICENSE",
+    "manifest.json"
+  ],
+  "funding": [
+    {
+      "type": "github",
+      "url": "https://github.com/sponsors/seu-usuario"
+    },
+    {
+      "type": "buymeacoffee",
+      "url": "https://www.buymeacoffee.com/radiolouro"
+    }
+  ],
+  "config": {
+    "port": 3000,
+    "host": "localhost"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "setupFilesAfterEnv": ["<rootDir>/tests/setup.js"],
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/config.js",
+      "!src/sw.js"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": ["text", "lcov", "html"]
+  },
+  "eslintConfig": {
+    "env": {
+      "browser": true,
+      "es6": true,
+      "serviceworker": true
+    },
+    "extends": [
+      "eslint:recommended"
+    ],
+    "parserOptions": {
+      "ecmaVersion": 2020,
+      "sourceType": "module"
+    },
+    "rules": {
+      "no-unused-vars": "warn",
+      "no-console": "off",
+      "prefer-const": "error",
+      "no-var": "error"
+    }
+  },
+  "lighthouse": {
+    "extends": "lighthouse:default",
+    "settings": {
+      "emulatedFormFactor": "mobile",
+      "throttling": {
+        "rttMs": 40,
+        "throughputKbps": 10240,
+        "cpuSlowdownMultiplier": 1,
+        "requestLatencyMs": 0,
+        "downloadThroughputKbps": 0,
+        "uploadThroughputKbps": 0
+      }
+    }
+  }
+}

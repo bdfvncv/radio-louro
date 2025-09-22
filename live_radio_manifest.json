@@ -1,0 +1,168 @@
+{
+  "name": "Rádio Supermercado do Louro",
+  "short_name": "Rádio Louro",
+  "description": "Sua rádio online 24 horas - Transmissão ao vivo com a melhor música",
+  "version": "1.0.0",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#667eea",
+  "background_color": "#0a0a0a",
+  "lang": "pt-BR",
+  "scope": "/",
+  
+  "icons": [
+    {
+      "src": "https://s10.aconvert.com/convert/p3r68-cdx67/a9p73-3tban.png",
+      "type": "image/png",
+      "sizes": "72x72",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://s10.aconvert.com/convert/p3r68-cdx67/a9p73-3tban.png",
+      "type": "image/png",
+      "sizes": "96x96",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://s10.aconvert.com/convert/p3r68-cdx67/a9p73-3tban.png",
+      "type": "image/png",
+      "sizes": "128x128",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://s10.aconvert.com/convert/p3r68-cdx67/a9p73-3tban.png",
+      "type": "image/png",
+      "sizes": "144x144",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://s10.aconvert.com/convert/p3r68-cdx67/a9p73-3tban.png",
+      "type": "image/png",
+      "sizes": "152x152",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://s10.aconvert.com/convert/p3r68-cdx67/a9p73-3tban.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://s10.aconvert.com/convert/p3r68-cdx67/a9p73-3tban.png",
+      "type": "image/png",
+      "sizes": "384x384",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://s10.aconvert.com/convert/p3r68-cdx67/a9p73-3tban.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  
+  "screenshots": [
+    {
+      "src": "https://via.placeholder.com/540x720/667eea/ffffff?text=Rádio+Player",
+      "type": "image/png",
+      "sizes": "540x720",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "https://via.placeholder.com/1024x768/667eea/ffffff?text=Rádio+Desktop",
+      "type": "image/png", 
+      "sizes": "1024x768",
+      "form_factor": "wide"
+    }
+  ],
+  
+  "categories": [
+    "music",
+    "entertainment",
+    "multimedia"
+  ],
+  
+  "shortcuts": [
+    {
+      "name": "Ouvir Rádio",
+      "short_name": "Ouvir",
+      "description": "Iniciar transmissão ao vivo",
+      "url": "/?action=play",
+      "icons": [
+        {
+          "src": "https://s10.aconvert.com/convert/p3r68-cdx67/a9p73-3tban.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Painel Admin",
+      "short_name": "Admin",
+      "description": "Acessar área administrativa",
+      "url": "/?admin=true",
+      "icons": [
+        {
+          "src": "https://s10.aconvert.com/convert/p3r68-cdx67/a9p73-3tban.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  
+  "related_applications": [],
+  "prefer_related_applications": false,
+  
+  "protocols": [
+    {
+      "protocol": "web+radio",
+      "url": "/?stream=%s"
+    }
+  ],
+  
+  "file_handlers": [
+    {
+      "action": "/",
+      "accept": {
+        "audio/*": [".mp3", ".wav", ".ogg", ".m4a"]
+      }
+    }
+  ],
+  
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "audio",
+          "accept": ["audio/*"]
+        }
+      ]
+    }
+  },
+  
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  
+  "scope_extensions": [
+    {"origin": "https://res.cloudinary.com"}
+  ],
+  
+  "handle_links": "preferred",
+  
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ]
+}
