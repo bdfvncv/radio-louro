@@ -208,6 +208,8 @@ window.saveSettings = () => {
 const CONFIG = {
     cloudinary: {
         cloudName: 'dygbrcrr6',
+        apiKey: '853591251513134',
+        apiSecret: 'yVz8MbGa_undTqNHbOqzo-hKc-U',
         uploadPreset: 'radio_preset'
     },
     radio: {
@@ -1583,4 +1585,4 @@ if (typeof window !== 'undefined') {
         dom,
         app
     };
-}
+                    }
