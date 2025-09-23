@@ -1,990 +1,508 @@
-// Funções globais para compatibilidade com HTML
-window.uploadFiles = (category) => fileManager.uploadFiles(category);
-window.checkPassword = () => adminManager.checkPassword();
-window.closeModal = (modalId) => adminManager.hideModal(modalId);
-window.radioManager = radioManager; // Para acesso no autoplay prompt
-
-// Funções para gerenciamento de playlist
-window.shufflePlaylist = () => {
-    Object.keys(radioState.playlists).forEach(key => {
-        if (Array.isArray(radioState.playlists[key])) {
-            radioState.playlists[key] = shuffleArray(radioState.playlists[key]);
-        } else if (typeof radioState.playlists[key] === 'object') {
-            Object.keys(radioState.playlists[key]).forEach(albumKey => {
-                radioState.playlists[key][albumKey] = shuffleArray(radioState.playlists[key][albumKey]);
-            });
-        }
-    });
-    radioState.save();
-    adminManager.updatePlaylistView();
-    notifications.success('Playlists embaralhadas!');
-};
-
-window.clearPlaylist = () => {
-    if (confirm('Tem certeza que deseja limpar TODAS as playlists? Esta ação não pode ser desfeita!')) {
-        radioState.playlists = {
-            music: [],
-            time: [],
-            ads: [],
-            albums: { natal: [], pascoa: [], saojoao: [], carnaval: [] }
-        };
-        radioState.save();
-        adminManager.updatePlaylistView();
-        notifications.success('Todas as playlists foram limpas');
-    }
-};
-
-window.exportPlaylist = () => {
-    const dataStr = JSON.stringify(radioState.playlists, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `radio-playlist-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    
-    notifications.success('Playlist exportada!');
-};
-
-// Funções para álbuns
-window.setActiveAlbum = () => {
-    const select = dom.get('activeAlbumSelect');
-    if (!select) return;
-    
-    const selectedAlbum = select.value;
-    radioState.activeAlbum = selectedAlbum || null;
-    radioState.save();
-    
-    // Atualizar UI do player
-    updateAlbumDisplay();
-    
-    const message = selectedAlbum ? 
-        `Álbum "${getAlbumData()[selectedAlbum]?.title}" ativado!` : 
-        'Voltou para playlist geral';
-    
-    notifications.success(message);
-    
-    // Se não há música tocando, iniciar com novo álbum
-    if (radioState.isLive && !radioState.currentTrack) {
-        setTimeout(() => radioManager.playNext(), 1000);
-    }
-};
-
-window.openCoverModal = (albumKey) => {
-    // Criar modal para upload de capa
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.innerHTML = `
-        <div class="modal-content glass">
-            <h3>🖼️ Alterar Capa - ${getAlbumData()[albumKey]?.title}</h3>
-            <input type="file" id="tempCoverUpload" accept="image/*" class="modal-input">
-            <div class="modal-buttons">
-                <button onclick="uploadAlbumCover('${albumKey}')" class="btn-primary">Alterar</button>
-                <button onclick="removeCover('${albumKey}')" class="btn-danger">Remover</button>
-                <button onclick="this.closest('.modal').remove()" class="btn-secondary">Cancelar</button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-    modal.classList.add('show');
-};
-
-window.uploadAlbumCover = async (albumKey) => {
-    const fileInput = document.getElementById('tempCoverUpload');
-    const file = fileInput?.files[0];
-    
-    if (!file) {
-        notifications.warning('Selecione uma imagem!');
-        return;
-    }
-    
-    try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('upload_preset', CONFIG.cloudinary.uploadPreset);
-        formData.append('folder', 'radio-louro/covers');
-        
-        const response = await fetch(`https://api.cloudinary.com/v1_1/${CONFIG.cloudinary.cloudName}/image/upload`, {
-            method: 'POST',
-            body: formData
-        });
-        
-        if (!response.ok) throw new Error('Erro no upload');
-        
-        const data = await response.json();
-        radioState.albumCovers[albumKey] = data.secure_url;
-        radioState.save();
-        
-        adminManager.updateCoversGrid();
-        updateAlbumDisplay();
-        
-        document.querySelector('.modal')?.remove();
-        notifications.success('Capa alterada com sucesso!');
-        
-    } catch (error) {
-        notifications.error('Erro ao fazer upload da capa');
-    }
-};
-
-window.removeCover = (albumKey) => {
-    if (!confirm('Tem certeza que deseja remover esta capa?')) return;
-    
-    delete radioState.albumCovers[albumKey];
-    radioState.save();
-    
-    adminManager.updateCoversGrid();
-    updateAlbumDisplay();
-    
-    document.querySelector('.modal')?.remove();
-    notifications.success('Capa removida!');
-};
-
-// Funções para relatórios
-window.refreshReports = () => {
-    adminManager.updateReports();
-    notifications.info('Relatórios atualizados');
-};
-
-window.exportReports = () => {
-    const stats = radioState.getStats();
-    const reportData = {
-        generatedAt: new Date().toISOString(),
-        statistics: stats,
-        playHistory: radioState.playHistory,
-        topTracks: Object.entries(radioState.playHistory)
-            .sort(([,a], [,b]) => b - a)
-            .slice(0, 20)
-    };
-    
-    const dataStr = JSON.stringify(reportData, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `radio-relatorio-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    
-    notifications.success('Relatório exportado!');
-};
-
-window.resetPlayCount = () => {
-    if (!confirm('Tem certeza que deseja resetar todos os contadores de reprodução?')) return;
-    
-    radioState.playHistory = {};
-    radioState.playCount = 0;
-    radioState.save();
-    
-    adminManager.updateReports();
-    radioManager.updateStats();
-    notifications.success('Contadores resetados!');
-};
-
-// Funções para configurações
-window.saveSettings = () => {
-    try {
-        // Salvar configurações de áudio
-        const defaultVolume = document.getElementById('defaultVolume')?.value;
-        const autoPlay = document.getElementById('autoPlay')?.checked;
-        const fadeTransitions = document.getElementById('fadeTransitions')?.checked;
-        
-        // Salvar configurações de programação
-        const hourlyTime = document.getElementById('hourlyTime')?.checked;
-        const adInterval = document.getElementById('adInterval')?.value;
-        const randomOrder = document.getElementById('randomOrder')/**
- * RÁDIO SUPERMERCADO DO LOURO - SISTEMA 24/7
- * Transmissão contínua com programação automática
- * ============================================
- */
-
-// Configurações globais
-const CONFIG = {
-    cloudinary: {
-        cloudName: 'dygbrcrr6',
-        apiKey: '853591251513134',
-        apiSecret: 'yVz8MbGa_undTqNHbOqzo-hKc-U',
-        uploadPreset: 'radio_preset'
-    },
-    radio: {
-        autoRestart: true,
-        fadeTime: 3000,
-        hourlyTimeCheck: true,
-        adInterval: { min: 5, max: 8 }, // Intervalo de músicas entre anúncios
-        maxRetries: 3,
-        retryDelay: 5000,
-        bufferSize: 3 // Número de faixas para pré-carregar
-    },
-    ui: {
-        updateInterval: 1000,
-        fadeInTime: 500,
-        animationDuration: 300
-    }
-};
-
-// Estado global da aplicação
-class RadioState {
-    constructor() {
-        this.isLive = false;
-        this.isPlaying = false;
-        this.currentTrack = null;
-        this.volume = 70;
-        this.playCount = 0;
-        this.startTime = Date.now();
-        this.lastTimeCheck = 0;
-        this.tracksSinceAd = 0;
-        this.activeAlbum = null;
-        this.retryCount = 0;
-        
-        // Playlists
-        this.playlists = {
-            music: [],
-            time: [],
-            ads: [],
-            albums: {
-                natal: [],
-                pascoa: [],
-                saojoao: [],
-                carnaval: []
+await audioPlayer.play();
+                    if (notificationManager) {
+                        notificationManager.success('🎵 Rádio AO VIVO ativada!');
+                    }
+                } catch (e) {
+                    console.error('Erro ao ativar áudio:', e);
+                }
             }
+            document.removeEventListener('click', enableAudio);
+            document.removeEventListener('touchstart', enableAudio);
         };
         
-        // Histórico e estatísticas
-        this.playHistory = {};
-        this.albumCovers = {};
-        this.listeners = 0;
-        this.errors = [];
+        document.addEventListener('click', enableAudio);
+        document.addEventListener('touchstart', enableAudio);
     }
     
-    // Salvar estado no localStorage (se disponível)
-    save() {
-        try {
-            const stateToSave = {
-                playlists: this.playlists,
-                playHistory: this.playHistory,
-                albumCovers: this.albumCovers,
-                playCount: this.playCount,
-                activeAlbum: this.activeAlbum,
-                volume: this.volume
-            };
-            localStorage.setItem('radioState', JSON.stringify(stateToSave));
-            console.log('✅ Estado salvo com sucesso');
-        } catch (error) {
-            console.warn('⚠️ Não foi possível salvar o estado:', error.message);
-        }
-    }
-    
-    // Carregar estado do localStorage
-    load() {
-        try {
-            const saved = localStorage.getItem('radioState');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                this.playlists = { ...this.playlists, ...parsed.playlists };
-                this.playHistory = parsed.playHistory || {};
-                this.albumCovers = parsed.albumCovers || {};
-                this.playCount = parsed.playCount || 0;
-                this.activeAlbum = parsed.activeAlbum || null;
-                this.volume = parsed.volume || 70;
-                console.log('✅ Estado carregado com sucesso');
-            }
-        } catch (error) {
-            console.warn('⚠️ Erro ao carregar estado:', error.message);
-        }
-    }
-    
-    // Obter estatísticas
-    getStats() {
-        const totalMusic = this.playlists.music.length;
-        const totalAlbumMusic = Object.values(this.playlists.albums).reduce((sum, album) => sum + album.length, 0);
-        const totalTime = this.playlists.time.length;
-        const totalAds = this.playlists.ads.length;
-        
-        return {
-            totalTracks: totalMusic + totalAlbumMusic,
-            totalMusic,
-            totalAlbumMusic,
-            totalTime,
-            totalAds,
-            totalPlayed: this.playCount,
-            uptime: Date.now() - this.startTime,
-            listeners: this.listeners,
-            errors: this.errors.length
-        };
-    }
-}
-
-// Instância global do estado
-const radioState = new RadioState();
-
-// Gerenciador de elementos DOM
-class DOMManager {
-    constructor() {
-        this.elements = {};
-        this.initialized = false;
-    }
-    
-    init() {
-        if (this.initialized) return true;
-        
-        const elementIds = [
-            'audioPlayer', 'playPauseBtn', 'skipBtn', 'volumeBtn', 'volumeSlider',
-            'volumeValue', 'albumCover', 'trackCover', 'albumTitle', 'currentTrack',
-            'trackTime', 'radioStatus', 'trackCount', 'listenersCount', 'progressFill',
-            'playerMode', 'adminMode', 'adminBtn', 'backToPlayerBtn', 'passwordModal',
-            'adminPassword', 'loadingOverlay', 'visualizer'
-        ];
-        
-        let missing = [];
-        elementIds.forEach(id => {
-            const element = document.getElementById(id);
-            if (element) {
-                this.elements[id] = element;
-            } else {
-                missing.push(id);
-            }
-        });
-        
-        if (missing.length > 0) {
-            console.warn('⚠️ Elementos não encontrados:', missing);
-        }
-        
-        // Verificar elementos críticos
-        const critical = ['audioPlayer', 'playPauseBtn', 'currentTrack'];
-        const missingCritical = critical.filter(id => !this.elements[id]);
-        
-        if (missingCritical.length > 0) {
-            console.error('❌ Elementos críticos ausentes:', missingCritical);
-            return false;
-        }
-        
-        this.initialized = true;
-        console.log('✅ DOM inicializado:', Object.keys(this.elements).length, 'elementos');
-        return true;
-    }
-    
-    get(id) {
-        return this.elements[id];
-    }
-    
-    updateText(id, text) {
-        const element = this.elements[id];
-        if (element) {
-            element.textContent = text;
-        }
-    }
-    
-    updateHTML(id, html) {
-        const element = this.elements[id];
-        if (element) {
-            element.innerHTML = html;
-        }
-    }
-}
-
-// Instância global do DOM
-const dom = new DOMManager();
-
-// Gerenciador de rádio 24/7
-class Radio24Manager {
-    constructor() {
-        this.isInitialized = false;
-        this.intervals = {};
-        this.audioBuffer = [];
-        this.currentRetries = 0;
-        this.nextTrackPreloaded = false;
-    }
-    
-    async init() {
-        if (this.isInitialized) return;
-        
-        console.log('🎵 Iniciando sistema de rádio 24/7...');
-        
-        if (!dom.init()) {
-            throw new Error('Falha na inicialização do DOM');
-        }
-        
-        // Configurar eventos de áudio
-        this.setupAudioEvents();
-        
-        // Configurar controles
-        this.setupControls();
-        
-        // Iniciar transmissão automática
-        await this.startTransmission();
-        
-        // Iniciar checkers automáticos
-        this.startAutomaticChecks();
-        
-        this.isInitialized = true;
-        console.log('✅ Rádio 24/7 inicializada com sucesso!');
-    }
-    
-    setupAudioEvents() {
-        const audio = dom.get('audioPlayer');
-        if (!audio) return;
-        
-        audio.addEventListener('ended', () => this.playNext());
-        audio.addEventListener('error', (e) => this.handleAudioError(e));
-        audio.addEventListener('canplay', () => this.handleCanPlay());
-        audio.addEventListener('timeupdate', () => this.updateProgress());
-        audio.addEventListener('loadstart', () => console.log('🔄 Carregando faixa...'));
-        audio.addEventListener('loadeddata', () => console.log('✅ Faixa carregada'));
-        
-        // Configurar volume inicial
-        audio.volume = radioState.volume / 100;
-    }
-    
-    setupControls() {
-        // Play/Pause
-        const playBtn = dom.get('playPauseBtn');
-        if (playBtn) {
-            playBtn.addEventListener('click', () => this.togglePlayback());
-        }
-        
-        // Skip
-        const skipBtn = dom.get('skipBtn');
-        if (skipBtn) {
-            skipBtn.addEventListener('click', () => this.playNext());
-        }
-        
-        // Volume
-        const volumeSlider = dom.get('volumeSlider');
-        if (volumeSlider) {
-            volumeSlider.addEventListener('input', (e) => this.setVolume(e.target.value));
-        }
-        
-        const volumeBtn = dom.get('volumeBtn');
-        if (volumeBtn) {
-            volumeBtn.addEventListener('click', () => this.toggleMute());
-        }
-    }
-    
-    async startTransmission() {
-        console.log('🔴 Iniciando transmissão ao vivo...');
+    startTransmission() {
+        console.log('📡 Iniciando transmissão AO VIVO...');
         
         radioState.isLive = true;
-        radioState.startTime = Date.now();
+        this.isTransmitting = true;
         
-        // Atualizar UI
-        this.updateRadioStatus('AO VIVO', 'live');
-        this.updatePlayButton(true);
+        // Verificar hora certa a cada minuto
+        this.intervals.timeCheck = setInterval(() => {
+            try {
+                this.checkTimeAnnouncement();
+            } catch (error) {
+                console.error('Erro na verificação de hora:', error);
+            }
+        }, 60000);
         
         // Iniciar primeira música
-        await this.playNext();
+        setTimeout(() => {
+            this.playNext();
+        }, 2000);
         
-        // Simular ouvintes (para demonstração)
-        this.simulateListeners();
+        // Atualizar interface
+        this.updateAllStatus();
+    }
+    
+    startUptimeCounter() {
+        this.intervals.uptime = setInterval(() => {
+            if (radioState.isLive) {
+                radioState.totalUptime = Date.now() - radioState.sessionStartTime;
+                this.updateUptimeDisplay();
+            }
+        }, 1000);
+    }
+    
+    startHeartbeat() {
+        this.intervals.heartbeat = setInterval(() => {
+            if (radioState.isLive && this.isTransmitting) {
+                this.checkTransmissionHealth();
+            }
+        }, 30000);
+    }
+    
+    checkTransmissionHealth() {
+        const audioPlayer = safeGetElement('audioPlayer');
+        if (!audioPlayer) return;
+        
+        // Se não há música tocando há muito tempo, tocar próxima
+        if (audioPlayer.paused && radioState.isLive && !radioState.isMuted) {
+            console.log('💗 Heartbeat: Retomando transmissão...');
+            this.playNext();
+        }
+    }
+    
+    setupAutoReconnect() {
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && radioState.isLive) {
+                console.log('👁️ Página visível, verificando transmissão...');
+                
+                setTimeout(() => {
+                    const audioPlayer = safeGetElement('audioPlayer');
+                    if (audioPlayer && audioPlayer.paused && !radioState.isMuted) {
+                        console.log('🔄 Reconectando transmissão...');
+                        this.playNext();
+                    }
+                }, 1000);
+            }
+        });
+        
+        window.addEventListener('online', () => {
+            console.log('🌐 Conexão restaurada');
+            if (radioState.isLive && !this.isTransmitting) {
+                this.restartTransmission();
+            }
+        });
+    }
+    
+    checkTimeAnnouncement() {
+        if (!radioState.enableTimeAnnouncements) return;
+        
+        const now = new Date();
+        const minutes = now.getMinutes();
+        
+        if (minutes === 0 && radioState.playlists.time.length > 0) {
+            const timeSinceLastTime = Date.now() - (radioState.lastTimeCheck || 0);
+            
+            if (timeSinceLastTime > 55 * 60 * 1000) {
+                console.log('🕐 Hora certa programada!');
+                radioState.lastTimeCheck = Date.now();
+                radioState.tracksSinceTime = 999;
+                setTimeout(() => this.playNext(), 5000);
+            }
+        }
     }
     
     async playNext() {
         try {
-            const nextTrack = this.getNextTrack();
+            const nextTrack = this.selectNextTrack();
             
             if (!nextTrack) {
-                console.warn('⚠️ Nenhuma faixa disponível, aguardando...');
-                dom.updateText('currentTrack', 'Aguardando novas músicas...');
-                setTimeout(() => this.playNext(), 30000);
+                console.log('⚠️ Nenhuma música disponível, aguardando...');
+                this.scheduleRetry();
                 return;
             }
             
-            await this.loadAndPlayTrack(nextTrack);
-            this.updatePlayHistory(nextTrack);
-            this.preloadNextTrack();
+            // Atualizar estado
+            radioState.currentTrack = nextTrack;
+            
+            // Configurar áudio
+            const audioPlayer = safeGetElement('audioPlayer');
+            if (audioPlayer) {
+                audioPlayer.src = nextTrack.url;
+                
+                // Atualizar interface
+                this.updateNowPlaying(nextTrack);
+                this.updatePlayHistory(nextTrack);
+                this.addToRecentTracks(nextTrack);
+                
+                // Reproduzir se não estiver mutado
+                if (radioState.isLive && !radioState.isMuted) {
+                    await this.attemptAutoplay();
+                }
+                
+                console.log(`🎵 Tocando: ${nextTrack.name}`);
+            }
             
         } catch (error) {
-            console.error('❌ Erro ao reproduzir próxima faixa:', error);
-            this.handlePlaybackError();
+            console.error('❌ Erro ao reproduzir próxima música:', error);
+            this.handleAudioError();
         }
     }
     
-    getNextTrack() {
-        // Verificar se é hora de tocar hora certa
-        if (this.shouldPlayTimeAnnouncement()) {
-            const timeTrack = this.getRandomFromPlaylist('time');
-            if (timeTrack) {
-                console.log('🕐 Tocando hora certa');
-                radioState.lastTimeCheck = Date.now();
-                radioState.tracksSinceAd++;
-                return timeTrack;
-            }
-        }
-        
-        // Verificar se é hora de tocar anúncio
-        if (this.shouldPlayAd()) {
-            const adTrack = this.getRandomFromPlaylist('ads');
-            if (adTrack) {
-                console.log('📢 Tocando anúncio');
-                radioState.tracksSinceAd = 0;
-                return adTrack;
-            }
-        }
-        
-        // Tocar música normal
-        const musicTrack = this.getMusicTrack();
-        if (musicTrack) {
+    selectNextTrack() {
+        // 1. Verificar se deve tocar hora certa
+        if (radioState.tracksSinceTime >= 999 && radioState.playlists.time.length > 0) {
+            radioState.tracksSinceTime = 0;
             radioState.tracksSinceAd++;
+            return this.getRandomTrack(radioState.playlists.time);
         }
         
-        return musicTrack;
-    }
-    
-    shouldPlayTimeAnnouncement() {
-        if (radioState.playlists.time.length === 0) return false;
+        // 2. Verificar se deve tocar aviso/comercial
+        if (radioState.enableAds && radioState.tracksSinceAd >= this.getAdInterval() && radioState.playlists.ads.length > 0) {
+            radioState.tracksSinceAd = 0;
+            radioState.tracksSinceTime++;
+            return this.getRandomTrack(radioState.playlists.ads);
+        }
         
-        const now = new Date();
-        const minutes = now.getMinutes();
-        const timeSinceLastCheck = Date.now() - radioState.lastTimeCheck;
+        // 3. Tocar música normal
+        let playlist = radioState.playlists.music;
         
-        return minutes === 0 && timeSinceLastCheck > 55 * 60 * 1000; // 55 minutos
-    }
-    
-    shouldPlayAd() {
-        if (radioState.playlists.ads.length === 0) return false;
-        
-        const { min, max } = CONFIG.radio.adInterval;
-        const interval = min + Math.floor(Math.random() * (max - min + 1));
-        
-        return radioState.tracksSinceAd >= interval;
-    }
-    
-    getMusicTrack() {
-        // Álbum ativo tem prioridade
+        // Usar álbum ativo se selecionado
         if (radioState.activeAlbum && radioState.playlists.albums[radioState.activeAlbum].length > 0) {
-            return this.getRandomFromPlaylist('albums', radioState.activeAlbum);
+            playlist = radioState.playlists.albums[radioState.activeAlbum];
         }
         
-        // Playlist geral
-        return this.getRandomFromPlaylist('music');
+        radioState.tracksSinceTime++;
+        radioState.tracksSinceAd++;
+        
+        return playlist.length > 0 ? this.getRandomTrack(playlist) : null;
     }
     
-    getRandomFromPlaylist(type, albumKey = null) {
-        let playlist;
+    getRandomTrack(playlist) {
+        if (playlist.length === 0) return null;
         
-        if (type === 'albums' && albumKey) {
-            playlist = radioState.playlists.albums[albumKey];
-        } else {
-            playlist = radioState.playlists[type];
-        }
-        
-        if (!playlist || playlist.length === 0) return null;
-        
-        // Evitar repetir a música atual
-        let filteredPlaylist = playlist;
-        if (radioState.currentTrack && playlist.length > 1) {
-            filteredPlaylist = playlist.filter(track => track.name !== radioState.currentTrack.name);
-        }
-        
-        if (filteredPlaylist.length === 0) {
-            filteredPlaylist = playlist;
-        }
-        
-        const randomIndex = Math.floor(Math.random() * filteredPlaylist.length);
-        return filteredPlaylist[randomIndex];
-    }
-    
-    async loadAndPlayTrack(track) {
-        const audio = dom.get('audioPlayer');
-        if (!audio) throw new Error('Player de áudio não encontrado');
-        
-        console.log(`🎵 Carregando: ${track.name}`);
-        
-        // Atualizar estado
-        radioState.currentTrack = track;
-        
-        // Atualizar UI
-        dom.updateText('currentTrack', track.name);
-        this.updateAlbumCover(track);
-        
-        // Carregar e reproduzir
-        audio.src = track.url;
-        
-        if (radioState.isLive) {
-            try {
-                await audio.play();
-                radioState.isPlaying = true;
-                this.updatePlayButton(true);
-                console.log(`▶️ Reproduzindo: ${track.name}`);
-            } catch (error) {
-                if (error.name === 'NotAllowedError') {
-                    console.log('🔇 Autoplay bloqueado, aguardando interação do usuário');
-                    this.showAutoplayPrompt();
-                } else {
-                    throw error;
-                }
+        // Evitar repetir música imediatamente anterior
+        if (playlist.length > 1 && radioState.currentTrack) {
+            const filteredPlaylist = playlist.filter(track => 
+                track.name !== radioState.currentTrack.name
+            );
+            if (filteredPlaylist.length > 0) {
+                playlist = filteredPlaylist;
             }
         }
+        
+        return playlist[Math.floor(Math.random() * playlist.length)];
     }
     
-    updateAlbumCover(track) {
-        const mainCover = dom.get('albumCover');
-        const trackCover = dom.get('trackCover');
+    getAdInterval() {
+        return 5 + Math.floor(Math.random() * 4); // 5-8 músicas
+    }
+    
+    scheduleRetry() {
+        setTimeout(() => {
+            if (radioState.isLive) {
+                this.playNext();
+            }
+        }, 30000);
         
-        if (!mainCover || !trackCover) return;
+        const currentTrack = safeGetElement('currentTrack');
+        if (currentTrack) {
+            currentTrack.textContent = 'Aguardando músicas... Será retomada automaticamente.';
+        }
+    }
+    
+    handleAudioError() {
+        console.error('🚨 Erro no áudio, tentando recuperar...');
+        
+        this.reconnectAttempts++;
+        
+        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+            setTimeout(() => {
+                if (radioState.isLive) {
+                    this.playNext();
+                }
+            }, 5000);
+            
+            if (notificationManager) {
+                notificationManager.error(`⚠️ Erro de áudio - Tentativa ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
+            }
+        } else {
+            console.log('🔄 Muitos erros, reiniciando...');
+            this.reconnectAttempts = 0;
+            this.restartTransmission();
+        }
+    }
+    
+    updateNowPlaying(track) {
+        const currentTrack = safeGetElement('currentTrack');
+        const albumTitle = safeGetElement('albumTitle');
+        
+        if (currentTrack) {
+            currentTrack.textContent = track.name;
+        }
+        
+        if (albumTitle) {
+            const albumInfo = radioState.activeAlbum && albumData[radioState.activeAlbum] 
+                ? albumData[radioState.activeAlbum] 
+                : albumData.general;
+            albumTitle.textContent = albumInfo.title;
+        }
+        
+        this.updateTrackCover(track);
+    }
+    
+    updateTrackCover(track) {
+        const trackCover = safeGetElement('trackCover');
+        const albumCover = safeGetElement('albumCover');
+        
+        if (!trackCover || !albumCover) return;
         
         if (track.coverUrl) {
             trackCover.src = track.coverUrl;
             trackCover.style.display = 'block';
-            mainCover.style.opacity = '0.5';
+            albumCover.style.display = 'none';
         } else {
             trackCover.style.display = 'none';
-            mainCover.style.opacity = '1';
+            albumCover.style.display = 'block';
+            
+            const coverUrl = radioState.activeAlbum && radioState.albumCovers[radioState.activeAlbum]
+                ? radioState.albumCovers[radioState.activeAlbum]
+                : radioState.albumCovers.general || 'https://s10.aconvert.com/convert/p3r68-cdx67/a9p73-3tban.png';
+            
+            albumCover.src = coverUrl;
         }
     }
     
     updatePlayHistory(track) {
         radioState.playHistory[track.name] = (radioState.playHistory[track.name] || 0) + 1;
         radioState.playCount++;
-        radioState.save();
-        this.updateStats();
+        radioState.dailyPlayCount++;
+        
+        this.updateStatsDisplay();
     }
     
-    updateProgress() {
-        const audio = dom.get('audioPlayer');
-        const progressFill = dom.get('progressFill');
-        const trackTime = dom.get('trackTime');
+    addToRecentTracks(track) {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         
-        if (!audio || !progressFill || !trackTime) return;
+        radioState.recentTracks.unshift({
+            name: track.name,
+            time: timeStr,
+            timestamp: now.getTime()
+        });
         
-        const current = audio.currentTime;
-        const duration = audio.duration;
+        if (radioState.recentTracks.length > 10) {
+            radioState.recentTracks = radioState.recentTracks.slice(0, 10);
+        }
         
-        if (isNaN(duration)) return;
-        
-        const progress = (current / duration) * 100;
-        progressFill.style.width = `${progress}%`;
-        
-        trackTime.textContent = `${this.formatTime(current)} / ${this.formatTime(duration)}`;
+        this.updateRecentTracksDisplay();
     }
     
-    formatTime(seconds) {
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    updateRecentTracksDisplay() {
+        const recentList = safeGetElement('recentList');
+        if (!recentList) return;
+        
+        if (radioState.recentTracks.length === 0) {
+            recentList.innerHTML = '<p style="color: #a0a0a0;">Aguardando transmissão...</p>';
+            return;
+        }
+        
+        recentList.innerHTML = radioState.recentTracks.map(track => `
+            <div class="recent-item">
+                <span class="recent-track">${track.name}</span>
+                <span class="recent-time">${track.time}</span>
+            </div>
+        `).join('');
     }
     
-    togglePlayback() {
-        const audio = dom.get('audioPlayer');
-        if (!audio) return;
+    updateTransmissionStatus(isPlaying) {
+        const status = radioState.isLive && isPlaying && !radioState.isMuted ? 'AO VIVO' : 
+                     radioState.isMuted ? 'SILENCIADO' : 
+                     radioState.isLive ? 'CONECTANDO...' : 'OFFLINE';
         
-        if (radioState.isPlaying) {
-            audio.pause();
-            radioState.isPlaying = false;
-            radioState.isLive = false;
-            this.updatePlayButton(false);
-            this.updateRadioStatus('PAUSADO', 'paused');
-            console.log('⏸️ Transmissão pausada');
-        } else {
-            audio.play().then(() => {
-                radioState.isPlaying = true;
-                radioState.isLive = true;
-                this.updatePlayButton(true);
-                this.updateRadioStatus('AO VIVO', 'live');
-                console.log('▶️ Transmissão retomada');
-            }).catch(console.error);
+        const liveStatus = safeGetElement('liveStatus');
+        const playStatus = safeGetElement('playStatus');
+        const adminStatus = safeGetElement('adminBroadcastStatus');
+        
+        if (liveStatus) {
+            liveStatus.textContent = status;
+        }
+        
+        if (playStatus) {
+            playStatus.textContent = status;
+        }
+        
+        if (adminStatus) {
+            adminStatus.innerHTML = radioState.isLive ? 
+                '<div class="live-dot"></div><span>AO VIVO</span>' : 
+                '<div class="live-dot" style="background: #666;"></div><span>OFFLINE</span>';
         }
     }
     
-    setVolume(value) {
-        const audio = dom.get('audioPlayer');
-        if (!audio) return;
+    updateStatsDisplay() {
+        const trackCount = safeGetElement('trackCount');
+        const dailyStats = safeGetElement('dailyStats');
         
-        radioState.volume = parseInt(value);
-        audio.volume = radioState.volume / 100;
-        dom.updateText('volumeValue', `${radioState.volume}%`);
-        radioState.save();
-    }
-    
-    toggleMute() {
-        const audio = dom.get('audioPlayer');
-        const volumeSlider = dom.get('volumeSlider');
+        if (trackCount) {
+            trackCount.textContent = radioState.dailyPlayCount.toString();
+        }
         
-        if (!audio || !volumeSlider) return;
-        
-        if (audio.volume > 0) {
-            this.previousVolume = radioState.volume;
-            this.setVolume(0);
-            volumeSlider.value = 0;
-        } else {
-            const restoreVolume = this.previousVolume || 70;
-            this.setVolume(restoreVolume);
-            volumeSlider.value = restoreVolume;
+        if (dailyStats) {
+            dailyStats.textContent = `${radioState.dailyPlayCount} músicas hoje`;
         }
     }
     
-    updatePlayButton(isPlaying) {
-        const btn = dom.get('playPauseBtn');
-        if (!btn) return;
+    updateUptimeDisplay() {
+        const uptime = this.formatUptime(radioState.totalUptime);
+        const uptimeElement = safeGetElement('uptime');
         
-        const playIcon = btn.querySelector('.play-icon');
-        const pauseIcon = btn.querySelector('.pause-icon');
-        
-        if (isPlaying) {
-            if (playIcon) playIcon.style.display = 'none';
-            if (pauseIcon) pauseIcon.style.display = 'inline';
-            btn.classList.add('playing');
-        } else {
-            if (playIcon) playIcon.style.display = 'inline';
-            if (pauseIcon) pauseIcon.style.display = 'none';
-            btn.classList.remove('playing');
+        if (uptimeElement) {
+            uptimeElement.textContent = uptime;
         }
-    }
-    
-    updateRadioStatus(text, className = '') {
-        const status = dom.get('radioStatus');
-        if (!status) return;
-        
-        status.textContent = text;
-        status.className = 'status-value';
-        if (className) {
-            status.classList.add(className);
-        }
-    }
-    
-    updateStats() {
-        const stats = radioState.getStats();
-        
-        dom.updateText('trackCount', stats.totalPlayed.toString());
-        dom.updateText('listenersCount', stats.listeners.toString());
-        
-        // Atualizar dashboard se estiver visível
-        this.updateDashboard(stats);
-    }
-    
-    updateDashboard(stats) {
-        dom.updateText('totalTracks', stats.totalTracks.toString());
-        dom.updateText('totalPlayed', stats.totalPlayed.toString());
-        dom.updateText('uptime', this.formatUptime(stats.uptime));
-        dom.updateText('dashboardTrack', radioState.currentTrack?.name || 'Nenhuma');
     }
     
     formatUptime(milliseconds) {
-        const seconds = Math.floor(milliseconds / 1000);
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        const remainingSeconds = seconds % 60;
+        const totalSeconds = Math.floor(milliseconds / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
         
-        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
     
-    simulateListeners() {
-        // Simular número de ouvintes para demonstração
-        const baseListeners = 15;
-        const variation = 10;
-        
-        setInterval(() => {
-            radioState.listeners = baseListeners + Math.floor(Math.random() * variation);
-            this.updateStats();
-        }, 30000); // Atualizar a cada 30 segundos
-        
-        // Definir número inicial
-        radioState.listeners = baseListeners + Math.floor(Math.random() * variation);
+    updateAllStatus() {
+        const audioPlayer = safeGetElement('audioPlayer');
+        this.updateTransmissionStatus(radioState.isLive && audioPlayer && !audioPlayer.paused);
+        this.updateStatsDisplay();
+        this.updateUptimeDisplay();
+        this.updateRecentTracksDisplay();
     }
     
-    startAutomaticChecks() {
-        // Verificar status da transmissão a cada minuto
-        this.intervals.statusCheck = setInterval(() => {
-            this.checkTransmissionHealth();
-        }, 60000);
+    // Métodos de controle público
+    toggleMute() {
+        radioState.isMuted = !radioState.isMuted;
+        const audioPlayer = safeGetElement('audioPlayer');
         
-        // Atualizar UI a cada segundo
-        this.intervals.uiUpdate = setInterval(() => {
-            this.updateStats();
-            this.updateVisualizerBars();
-        }, CONFIG.ui.updateInterval);
+        if (!audioPlayer) return;
         
-        // Salvar estado a cada 5 minutos
-        this.intervals.save = setInterval(() => {
-            radioState.save();
-        }, 300000);
-    }
-    
-    checkTransmissionHealth() {
-        const audio = dom.get('audioPlayer');
-        if (!audio) return;
-        
-        // Verificar se deve estar tocando mas não está
-        if (radioState.isLive && audio.paused && radioState.currentTrack) {
-            console.warn('⚠️ Transmissão interrompida, tentando recuperar...');
-            this.handlePlaybackError();
+        if (radioState.isMuted) {
+            audioPlayer.pause();
+            console.log('🔇 Áudio silenciado');
+        } else {
+            if (radioState.currentTrack) {
+                this.attemptAutoplay();
+            } else {
+                this.playNext();
+            }
+            console.log('🔊 Áudio ativado');
         }
         
-        // Verificar se o áudio travou
-        if (radioState.isLive && !audio.paused) {
-            const currentTime = audio.currentTime;
-            setTimeout(() => {
-                if (audio.currentTime === currentTime && !audio.paused) {
-                    console.warn('⚠️ Áudio travado, reiniciando faixa...');
-                    this.handlePlaybackError();
-                }
-            }, 5000);
+        this.updateMuteButton();
+        this.updateAllStatus();
+    }
+    
+    updateMuteButton() {
+        const muteBtn = safeGetElement('muteBtn');
+        if (!muteBtn) return;
+        
+        const icon = muteBtn.querySelector('.volume-icon');
+        if (icon) {
+            icon.textContent = radioState.isMuted ? '🔇' : '🔊';
+        }
+        muteBtn.className = radioState.isMuted ? 'btn-control muted' : 'btn-control';
+        muteBtn.title = radioState.isMuted ? 'Ativar áudio' : 'Silenciar áudio';
+    }
+    
+    forceNext() {
+        console.log('⏭️ Próxima música forçada');
+        this.playNext();
+        if (notificationManager) {
+            notificationManager.info('⏭️ Próxima música');
         }
     }
     
-    updateVisualizerBars() {
-        const visualizer = dom.get('visualizer');
-        if (!visualizer || !radioState.isPlaying) return;
-        
-        const bars = visualizer.querySelectorAll('.bar');
-        bars.forEach(bar => {
-            const height = Math.random() * 30 + 10;
-            bar.style.height = `${height}px`;
-        });
-    }
-    
-    handleAudioError(error) {
-        console.error('❌ Erro de áudio:', error);
-        radioState.errors.push({
-            type: 'audio',
-            message: error.message || 'Erro desconhecido',
-            timestamp: Date.now(),
-            track: radioState.currentTrack?.name
-        });
-        
-        this.handlePlaybackError();
-    }
-    
-    handleCanPlay() {
-        this.currentRetries = 0; // Resetar contador de tentativas
-        console.log('✅ Áudio pronto para reprodução');
-    }
-    
-    handlePlaybackError() {
-        this.currentRetries++;
-        
-        if (this.currentRetries > CONFIG.radio.maxRetries) {
-            console.error('❌ Máximo de tentativas excedido, pausando transmissão');
-            this.updateRadioStatus('ERRO', 'error');
+    forceTimeAnnouncement() {
+        if (radioState.playlists.time.length === 0) {
+            if (notificationManager) {
+                notificationManager.error('❌ Nenhum arquivo de hora certa disponível');
+            }
             return;
         }
         
-        console.log(`🔄 Tentativa ${this.currentRetries} de recuperação...`);
+        console.log('🕐 Hora certa forçada');
+        radioState.tracksSinceTime = 999;
+        this.playNext();
         
-        setTimeout(() => {
-            if (radioState.isLive) {
-                this.playNext();
-            }
-        }, CONFIG.radio.retryDelay);
-    }
-    
-    preloadNextTrack() {
-        // Pré-carregar próxima faixa para transição suave
-        setTimeout(() => {
-            const nextTrack = this.getNextTrack();
-            if (nextTrack) {
-                const preloadAudio = new Audio(nextTrack.url);
-                preloadAudio.preload = 'metadata';
-                console.log('🔄 Pré-carregando próxima faixa:', nextTrack.name);
-            }
-        }, 5000);
-    }
-    
-    showAutoplayPrompt() {
-        const prompt = document.createElement('div');
-        prompt.className = 'autoplay-prompt';
-        prompt.innerHTML = `
-            <div class="prompt-content glass">
-                <h3>🎵 Ativar Rádio</h3>
-                <p>Clique para iniciar a transmissão ao vivo</p>
-                <button class="btn-primary" onclick="this.parentElement.parentElement.remove(); radioManager.resumePlayback()">
-                    ▶️ Iniciar Rádio
-                </button>
-            </div>
-        `;
-        
-        prompt.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(13, 40, 24, 0.9);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 20000;
-        `;
-        
-        document.body.appendChild(prompt);
-    }
-    
-    async resumePlayback() {
-        const audio = dom.get('audioPlayer');
-        if (!audio) return;
-        
-        try {
-            await audio.play();
-            radioState.isPlaying = true;
-            radioState.isLive = true;
-            this.updatePlayButton(true);
-            this.updateRadioStatus('AO VIVO', 'live');
-            console.log('▶️ Reprodução retomada pelo usuário');
-        } catch (error) {
-            console.error('❌ Erro ao retomar reprodução:', error);
+        if (notificationManager) {
+            notificationManager.info('🕐 Hora certa será tocada');
         }
     }
     
-    stop() {
-        // Limpar todos os intervalos
+    forceAd() {
+        if (radioState.playlists.ads.length === 0) {
+            if (notificationManager) {
+                notificationManager.error('❌ Nenhum aviso disponível');
+            }
+            return;
+        }
+        
+        console.log('📢 Aviso forçado');
+        radioState.tracksSinceAd = 999;
+        this.playNext();
+        
+        if (notificationManager) {
+            notificationManager.info('📢 Aviso será tocado');
+        }
+    }
+    
+    restartTransmission() {
+        console.log('🔄 Reiniciando transmissão...');
+        
+        // Parar tudo
         Object.values(this.intervals).forEach(interval => {
-            clearInterval(interval);
+            if (interval) clearInterval(interval);
         });
         
-        // Parar áudio
-        const audio = dom.get('audioPlayer');
-        if (audio) {
-            audio.pause();
-            audio.src = '';
+        radioState.isLive = false;
+        this.isTransmitting = false;
+        
+        const audioPlayer = safeGetElement('audioPlayer');
+        if (audioPlayer) {
+            audioPlayer.pause();
         }
         
-        // Resetar estado
-        radioState.isLive = false;
-        radioState.isPlaying = false;
+        // Reiniciar após 2 segundos
+        setTimeout(() => {
+            this.safeInit();
+        }, 2000);
         
-        console.log('🔴 Transmissão encerrada');
+        if (notificationManager) {
+            notificationManager.info('🔄 Reiniciando transmissão...');
+        }
     }
 }
 
-// Instância global do gerenciador de rádio
-const radioManager = new Radio24Manager();
-
-// Gerenciador de upload e arquivos
-class FileManager {
-    constructor() {
-        this.uploadQueue = [];
-        this.isUploading = false;
-    }
-    
-    async uploadFiles(category) {
-        const albumType = category === 'album' ? dom.get('albumSelect')?.value : '';
-        const fileInput = this.getFileInput(category);
-        
-        if (!fileInput || fileInput.files.length === 0) {
-            alert('Selecione pelo menos um arquivo!');
-            return;
-        }
-        
-        this.showUploadModal();
-        
+// ================================
+// GERENCIADOR DE ARQUIVOS SEGURO
+// ================================
+class SafeFileManager {
+    async uploadFiles(category, albumType = '') {
         try {
+            const fileInput = this.getFileInput(category);
+            if (!fileInput || fileInput.files.length === 0) {
+                if (notificationManager) {
+                    notificationManager.error('❌ Selecione pelo menos um arquivo!');
+                }
+                return;
+            }
+            
+            showLoading(true, 'Enviando arquivos...');
+            
             const files = Array.from(fileInput.files);
             const uploadedFiles = [];
             
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                this.updateUploadProgress((i / files.length) * 100, `Enviando ${file.name}...`);
-                
+            for (const file of files) {
+                showLoading(true, `Enviando: ${file.name}`);
                 const uploadedFile = await this.uploadToCloudinary(file, category, albumType);
                 uploadedFiles.push(uploadedFile);
             }
             
-            // Adicionar arquivos à playlist apropriada
+            // Adicionar aos playlists
             uploadedFiles.forEach(file => {
                 if (category === 'album') {
                     radioState.playlists.albums[albumType].push(file);
@@ -993,32 +511,37 @@ class FileManager {
                 }
             });
             
-            radioState.save();
+            this.saveData();
             fileInput.value = '';
+            this.refreshFilesList();
             
-            this.updateUploadProgress(100, 'Upload concluído!');
+            // Se não há música tocando, iniciar
+            if (radioState.isLive && !radioState.currentTrack && liveRadio) {
+                setTimeout(() => liveRadio.playNext(), 1000);
+            }
             
-            setTimeout(() => {
-                this.hideUploadModal();
-                alert(`${files.length} arquivo(s) enviado(s) com sucesso!`);
-                radioManager.updateStats();
-            }, 1000);
+            if (notificationManager) {
+                notificationManager.success(`✅ ${files.length} arquivo(s) enviado(s) com sucesso!`);
+            }
             
         } catch (error) {
-            console.error('❌ Erro no upload:', error);
-            this.hideUploadModal();
-            alert('Erro no upload. Verifique sua conexão e tente novamente.');
+            console.error('Erro no upload:', error);
+            if (notificationManager) {
+                notificationManager.error('❌ Erro no upload. Tente novamente.');
+            }
+        } finally {
+            showLoading(false);
         }
     }
     
     getFileInput(category) {
         const inputs = {
-            music: 'musicUpload',
-            time: 'timeUpload',
-            ads: 'adUpload',
-            album: 'albumUpload'
+            music: safeGetElement('musicUpload'),
+            time: safeGetElement('timeUpload'),
+            ads: safeGetElement('adUpload'),
+            album: safeGetElement('albumUpload')
         };
-        return dom.get(inputs[category]);
+        return inputs[category];
     }
     
     async uploadToCloudinary(file, category, albumType = '') {
@@ -1026,563 +549,1325 @@ class FileManager {
         const folder = category === 'album' ? `albums/${albumType}` : category;
         
         formData.append('file', file);
-        formData.append('upload_preset', CONFIG.cloudinary.uploadPreset);
+        formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
         formData.append('folder', `radio-louro/${folder}`);
-        formData.append('resource_type', 'auto');
         
-        const response = await fetch(`https://api.cloudinary.com/v1_1/${CONFIG.cloudinary.cloudName}/auto/upload`, {
+        const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/auto/upload`, {
             method: 'POST',
             body: formData
         });
         
         if (!response.ok) {
-            throw new Error(`Erro HTTP: ${response.status}`);
+            throw new Error(`Erro no upload: ${response.status}`);
         }
         
         const data = await response.json();
-        
         return {
-            name: file.name.replace(/\.[^/.]+$/, ''), // Remove extensão
+            name: file.name,
             url: data.secure_url,
             publicId: data.public_id,
-            uploadedAt: new Date().toISOString(),
-            type: category,
-            albumType: albumType || null
+            uploadedAt: new Date().toISOString()
         };
     }
     
-    showUploadModal() {
-        const modal = dom.get('uploadModal');
-        if (modal) {
-            modal.classList.add('show');
-            this.updateUploadProgress(0, 'Preparando upload...');
-        }
+    refreshFilesList() {
+        ['music', 'time', 'ads'].forEach(category => {
+            this.refreshCategoryFiles(category);
+        });
+        this.refreshAlbumFiles();
+        this.updatePlaylistStatus();
     }
     
-    hideUploadModal() {
-        const modal = dom.get('uploadModal');
-        if (modal) {
-            modal.classList.remove('show');
-        }
-    }
-    
-    updateUploadProgress(percentage, status) {
-        const progress = dom.get('uploadProgress');
-        const statusText = dom.get('uploadStatus');
+    refreshCategoryFiles(category) {
+        const container = safeGetElement(`${category}Files`);
+        if (!container) return;
         
-        if (progress) {
-            progress.style.width = `${percentage}%`;
+        const files = radioState.playlists[category] || [];
+        
+        if (files.length === 0) {
+            container.innerHTML = '<p style="color: #a0a0a0; text-align: center;">Nenhum arquivo encontrado</p>';
+            return;
         }
-        if (statusText) {
-            statusText.textContent = status;
+        
+        container.innerHTML = files.map((file, index) => `
+            <div class="file-item">
+                <div class="file-info">
+                    <span class="file-name">${file.name}</span>
+                </div>
+                <div class="file-actions">
+                    <button onclick="previewFile('${file.url}')" class="btn-secondary btn-small" title="Prévia">🎵</button>
+                    <button onclick="deleteFile('${category}', ${index})" class="btn-danger btn-small" title="Excluir">🗑️</button>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    refreshAlbumFiles() {
+        const container = safeGetElement('albumFiles');
+        if (!container) return;
+        
+        let html = '';
+        
+        Object.keys(radioState.playlists.albums).forEach(albumKey => {
+            const album = albumData[albumKey];
+            const files = radioState.playlists.albums[albumKey] || [];
+            
+            html += `
+                <div style="margin-bottom: 20px;">
+                    <h5 style="color: #4facfe; margin-bottom: 10px; font-size: 1.1rem;">${album.title}</h5>
+                    ${files.length === 0 ? 
+                        '<p style="color: #a0a0a0; font-size: 0.9rem; margin-left: 15px;">Nenhum arquivo</p>' :
+                        files.map((file, index) => `
+                            <div class="file-item">
+                                <div class="file-info">
+                                    <span class="file-name">${file.name}</span>
+                                </div>
+                                <div class="file-actions">
+                                    <button onclick="previewFile('${file.url}')" class="btn-secondary btn-small" title="Prévia">🎵</button>
+                                    <button onclick="deleteAlbumFile('${albumKey}', ${index})" class="btn-danger btn-small" title="Excluir">🗑️</button>
+                                </div>
+                            </div>
+                        `).join('')
+                    }
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    }
+    
+    updatePlaylistStatus() {
+        const playlistStatus = safeGetElement('playlistStatus');
+        if (!playlistStatus) return;
+        
+        const totalMusic = radioState.playlists.music.length;
+        const totalAlbumMusic = Object.values(radioState.playlists.albums)
+            .reduce((sum, album) => sum + album.length, 0);
+        const totalTime = radioState.playlists.time.length;
+        const totalAds = radioState.playlists.ads.length;
+        
+        playlistStatus.innerHTML = `
+            <div style="font-size: 0.9rem; color: #a0a0a0;">
+                🎵 ${totalMusic} músicas gerais<br>
+                🎄 ${totalAlbumMusic} músicas de álbuns<br>
+                🕐 ${totalTime} arquivos de hora<br>
+                📢 ${totalAds} avisos
+            </div>
+        `;
+    }
+    
+    saveData() {
+        try {
+            localStorage.setItem('radioState', JSON.stringify({
+                playlists: radioState.playlists,
+                playHistory: radioState.playHistory,
+                albumCovers: radioState.albumCovers,
+                activeAlbum: radioState.activeAlbum,
+                volume: radioState.volume,
+                enableTimeAnnouncements: radioState.enableTimeAnnouncements,
+                enableAds: radioState.enableAds
+            }));
+        } catch (error) {
+            console.error('Erro ao salvar dados:', error);
+        }
+    }
+    
+    loadData() {
+        try {
+            const stored = localStorage.getItem('radioState');
+            if (stored) {
+                const data = JSON.parse(stored);
+                
+                radioState.playlists = data.playlists || radioState.playlists;
+                radioState.playHistory = data.playHistory || {};
+                radioState.albumCovers = data.albumCovers || { general: null };
+                radioState.activeAlbum = data.activeAlbum || null;
+                radioState.volume = data.volume || 70;
+                radioState.enableTimeAnnouncements = data.enableTimeAnnouncements ?? true;
+                radioState.enableAds = data.enableAds ?? true;
+                
+                console.log('✅ Dados carregados');
+            }
+        } catch (error) {
+            console.error('Erro ao carregar dados:', error);
         }
     }
 }
 
-// Instância global do gerenciador de arquivos
-const fileManager = new FileManager();
+// ================================
+// GERENCIADOR DE ÁLBUNS SEGURO
+// ================================
+class SafeAlbumManager {
+    setupCoversGrid() {
+        const coversGrid = safeGetElement('coversGrid');
+        if (!coversGrid) return;
+        
+        let html = '';
+        
+        Object.keys(albumData).forEach(albumKey => {
+            const album = albumData[albumKey];
+            let coverUrl;
+            
+            if (albumKey === 'general') {
+                coverUrl = radioState.albumCovers.general || 
+                    'https://s10.aconvert.com/convert/p3r68-cdx67/a9p73-3tban.png';
+            } else {
+                coverUrl = radioState.albumCovers[albumKey] || 
+                    `https://via.placeholder.com/200x200/333/fff?text=${encodeURIComponent(album.title)}`;
+            }
+            
+            html += `
+                <div class="cover-item">
+                    <img src="${coverUrl}" alt="${album.title}" onerror="this.src='https://via.placeholder.com/200x200/333/fff?text=Erro'">
+                    <h4>${album.title}</h4>
+                    <p style="color: #a0a0a0; font-size: 0.9rem; margin-bottom: 15px;">${album.description}</p>
+                    <button onclick="openCoverModal('${albumKey}')" class="btn-secondary btn-small">
+                        🖼️ Alterar Capa
+                    </button>
+                </div>
+            `;
+        });
+        
+        coversGrid.innerHTML = html;
+    }
+    
+    setActiveAlbum() {
+        const activeAlbumSelect = safeGetElement('activeAlbumSelect');
+        if (!activeAlbumSelect) return;
+        
+        const selectedAlbum = activeAlbumSelect.value;
+        radioState.activeAlbum = selectedAlbum || null;
+        
+        if (fileManager) {
+            fileManager.saveData();
+        }
+        
+        this.updateAlbumDisplay();
+        
+        const message = selectedAlbum ? 
+            `🎵 Álbum "${albumData[selectedAlbum].title}" ativado!` : 
+            '📻 Playlist geral ativa';
+        
+        if (notificationManager) {
+            notificationManager.success(message);
+        }
+        
+        console.log(selectedAlbum ? 
+            `📻 Álbum ativo: ${albumData[selectedAlbum].title}` : 
+            '📻 Playlist geral ativa'
+        );
+    }
+    
+    updateAlbumDisplay() {
+        const albumCover = safeGetElement('albumCover');
+        const albumTitle = safeGetElement('albumTitle');
+        const activeAlbumSelect = safeGetElement('activeAlbumSelect');
+        
+        if (albumCover && albumTitle) {
+            try {
+                if (radioState.activeAlbum && albumData[radioState.activeAlbum]) {
+                    const album = albumData[radioState.activeAlbum];
+                    const coverUrl = radioState.albumCovers[radioState.activeAlbum] || 
+                        `https://via.placeholder.com/300x300/333/fff?text=${encodeURIComponent(album.title)}`;
+                    
+                    albumCover.src = coverUrl;
+                    albumTitle.textContent = album.title;
+                } else {
+                    const coverUrl = radioState.albumCovers.general || 
+                        'https://s10.aconvert.com/convert/p3r68-cdx67/a9p73-3tban.png';
+                    
+                    albumCover.src = coverUrl;
+                    albumTitle.textContent = albumData.general.title;
+                }
+            } catch (error) {
+                console.error('Erro ao atualizar display do álbum:', error);
+            }
+        }
+        
+        if (activeAlbumSelect) {
+            activeAlbumSelect.value = radioState.activeAlbum || '';
+        }
+    }
+}
 
-// Gerenciador de interface administrativa
-class AdminManager {
-    constructor() {
-        this.currentTab = 'dashboard';
-        this.isLoggedIn = false;
+// ================================
+// INICIALIZAÇÃO SEGURA
+// ================================
+function safeInitElements() {
+    try {
+        // Inicializar cache de elementos críticos
+        elements.audioPlayer = safeGetElement('audioPlayer', true);
+        elements.muteBtn = safeGetElement('muteBtn', true);
+        elements.currentTrack = safeGetElement('currentTrack', true);
+        
+        console.log('✅ Elementos críticos verificados');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Erro ao verificar elementos:', error);
+        return false;
     }
-    
-    init() {
-        this.setupEventListeners();
-        this.setupTabs();
-    }
-    
-    setupEventListeners() {
-        // Botão admin
-        const adminBtn = dom.get('adminBtn');
+}
+
+function safeSetupEventListeners() {
+    try {
+        // Controles principais
+        const muteBtn = safeGetElement('muteBtn');
+        if (muteBtn) {
+            muteBtn.addEventListener('click', () => {
+                if (liveRadio) liveRadio.toggleMute();
+            });
+        }
+        
+        const skipBtn = safeGetElement('skipBtn');
+        if (skipBtn) {
+            skipBtn.addEventListener('click', () => {
+                if (liveRadio) liveRadio.forceNext();
+            });
+        }
+        
+        const reloadBtn = safeGetElement('reloadBtn');
+        if (reloadBtn) {
+            reloadBtn.addEventListener('click', () => {
+                if (liveRadio) liveRadio.restartTransmission();
+            });
+        }
+        
+        const volumeSlider = safeGetElement('volumeSlider');
+        if (volumeSlider) {
+            volumeSlider.addEventListener('input', updateVolume);
+        }
+        
+        // Admin
+        const adminBtn = safeGetElement('adminBtn');
         if (adminBtn) {
-            adminBtn.addEventListener('click', () => this.showPasswordModal());
+            adminBtn.addEventListener('click', openPasswordModal);
         }
         
-        // Voltar ao player
-        const backBtn = dom.get('backToPlayerBtn');
-        if (backBtn) {
-            backBtn.addEventListener('click', () => this.showPlayerMode());
+        const backToPlayerBtn = safeGetElement('backToPlayerBtn');
+        if (backToPlayerBtn) {
+            backToPlayerBtn.addEventListener('click', showPlayerMode);
         }
         
-        // Enter na senha
-        const passwordInput = dom.get('adminPassword');
-        if (passwordInput) {
-            passwordInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    this.checkPassword();
+        const toggleBroadcast = safeGetElement('toggleBroadcast');
+        if (toggleBroadcast) {
+            toggleBroadcast.addEventListener('click', toggleBroadcastState);
+        }
+        
+        const adminPassword = safeGetElement('adminPassword');
+        if (adminPassword) {
+            adminPassword.addEventListener('keypress', e => {
+                if (e.key === 'Enter') checkPassword();
+            });
+        }
+        
+        // Tabs
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', e => switchTab(e.target.dataset.tab));
+        });
+        
+        // Checkboxes
+        const enableTimeAnnouncements = safeGetElement('enableTimeAnnouncements');
+        if (enableTimeAnnouncements) {
+            enableTimeAnnouncements.addEventListener('change', (e) => {
+                radioState.enableTimeAnnouncements = e.target.checked;
+                if (fileManager) fileManager.saveData();
+                if (notificationManager) {
+                    notificationManager.info(e.target.checked ? 
+                        '🕐 Anúncios de hora ativados' : 
+                        '🕐 Anúncios de hora desativados'
+                    );
                 }
             });
         }
-    }
-    
-    setupTabs() {
-        const tabButtons = document.querySelectorAll('.tab-btn');
-        tabButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const tabName = e.target.dataset.tab;
-                this.switchTab(tabName);
+        
+        const enableAds = safeGetElement('enableAds');
+        if (enableAds) {
+            enableAds.addEventListener('change', (e) => {
+                radioState.enableAds = e.target.checked;
+                if (fileManager) fileManager.saveData();
+                if (notificationManager) {
+                    notificationManager.info(e.target.checked ? 
+                        '📢 Avisos comerciais ativados' : 
+                        '📢 Avisos comerciais desativados'
+                    );
+                }
             });
-        });
+        }
+        
+        console.log('✅ Event listeners configurados com segurança');
+        
+    } catch (error) {
+        console.error('❌ Erro ao configurar listeners:', error);
+    }
+}
+
+function safeInitializeRadio() {
+    if (isInitialized) {
+        console.warn('⚠️ Rádio já inicializada');
+        return;
     }
     
-    showPasswordModal() {
-        const modal = dom.get('passwordModal');
-        if (modal) {
-            modal.classList.add('show');
-            const input = dom.get('adminPassword');
-            if (input) {
-                input.focus();
-            }
+    console.log('🚀 Inicialização segura da Rádio AO VIVO 24h...');
+    
+    try {
+        // Verificar elementos críticos
+        if (!safeInitElements()) {
+            console.error('❌ Falha na verificação dos elementos');
+            setTimeout(safeInitializeRadio, 3000); // Tentar novamente
+            return;
+        }
+        
+        isInitialized = true;
+        
+        // Inicializar gerenciadores
+        notificationManager = new SafeNotificationManager();
+        fileManager = new SafeFileManager();
+        albumManager = new SafeAlbumManager();
+        
+        // Carregar dados salvos
+        fileManager.loadData();
+        
+        // Configurar volume inicial
+        const audioPlayer = safeGetElement('audioPlayer');
+        const volumeSlider = safeGetElement('volumeSlider');
+        const volumeValue = safeGetElement('volumeValue');
+        
+        if (audioPlayer && volumeSlider && volumeValue) {
+            audioPlayer.volume = radioState.volume / 100;
+            volumeSlider.value = radioState.volume;
+            volumeValue.textContent = radioState.volume + '%';
+        }
+        
+        // Configurar checkboxes
+        const enableTimeAnnouncements = safeGetElement('enableTimeAnnouncements');
+        const enableAds = safeGetElement('enableAds');
+        
+        if (enableTimeAnnouncements) {
+            enableTimeAnnouncements.checked = radioState.enableTimeAnnouncements;
+        }
+        if (enableAds) {
+            enableAds.checked = radioState.enableAds;
+        }
+        
+        // Setup event listeners
+        safeSetupEventListeners();
+        
+        // Inicializar rádio AO VIVO (após pequeno delay)
+        setTimeout(() => {
+            liveRadio = new SafeLiveRadio24h();
+        }, 2000);
+        
+        // Atualizar interfaces
+        setTimeout(() => {
+            if (albumManager) albumManager.updateAlbumDisplay();
+            if (fileManager) fileManager.refreshFilesList();
+        }, 3000);
+        
+        console.log('✅ Sistema de Rádio AO VIVO 24h inicializado com segurança!');
+        
+        // Adicionar faixas de exemplo se necessário (descomente para testar)
+        // setTimeout(addSampleTracks, 5000);
+        
+    } catch (error) {
+        console.error('❌ Erro crítico na inicialização:', error);
+        
+        // Tentar recuperação
+        setTimeout(() => {
+            console.log('🔄 Tentando recuperação...');
+            isInitialized = false;
+            safeInitializeRadio();
+        }, 5000);
+    }
+}
+
+// ================================
+// FUNÇÕES DE CONTROLE DA INTERFACE
+// ================================
+function updateVolume() {
+    const volumeSlider = safeGetElement('volumeSlider');
+    const audioPlayer = safeGetElement('audioPlayer');
+    const volumeValue = safeGetElement('volumeValue');
+    
+    if (!volumeSlider || !audioPlayer || !volumeValue) return;
+    
+    const volume = parseInt(volumeSlider.value);
+    radioState.volume = volume;
+    audioPlayer.volume = volume / 100;
+    volumeValue.textContent = volume + '%';
+    
+    if (fileManager) {
+        fileManager.saveData();
+    }
+}
+
+function toggleBroadcastState() {
+    if (!liveRadio) return;
+    
+    const broadcastIcon = safeGetElement('broadcastIcon');
+    const broadcastText = safeGetElement('broadcastText');
+    
+    if (radioState.isLive) {
+        liveRadio.restartTransmission(); // Para e reinicia
+        if (broadcastIcon) broadcastIcon.textContent = '▶️';
+        if (broadcastText) broadcastText.textContent = 'INICIAR TRANSMISSÃO';
+    } else {
+        liveRadio.startTransmission();
+        if (broadcastIcon) broadcastIcon.textContent = '🔴';
+        if (broadcastText) broadcastText.textContent = 'PAUSAR TRANSMISSÃO';
+    }
+}
+
+// Admin Panel
+function openPasswordModal() {
+    const passwordModal = safeGetElement('passwordModal');
+    const adminPassword = safeGetElement('adminPassword');
+    
+    if (passwordModal) {
+        passwordModal.style.display = 'flex';
+        if (adminPassword) {
+            adminPassword.focus();
         }
     }
+}
+
+function checkPassword() {
+    const adminPassword = safeGetElement('adminPassword');
+    if (!adminPassword) return;
     
-    checkPassword() {
-        const passwordInput = dom.get('adminPassword');
-        if (!passwordInput) return;
-        
-        const password = passwordInput.value;
-        
-        // Senha padrão (em produção, use hash e verificação segura)
-        if (password === 'admin123') {
-            this.isLoggedIn = true;
-            this.hideModal('passwordModal');
-            this.showAdminMode();
-            passwordInput.value = '';
-        } else {
-            alert('Senha incorreta!');
-            passwordInput.value = '';
-            passwordInput.focus();
+    const password = adminPassword.value.trim();
+    
+    if (password === 'admin123') {
+        closeModal('passwordModal');
+        showAdminMode();
+        if (notificationManager) {
+            notificationManager.success('🔑 Acesso administrativo autorizado');
         }
+    } else {
+        if (notificationManager) {
+            notificationManager.error('❌ Senha incorreta!');
+        }
+        adminPassword.value = '';
+        adminPassword.focus();
     }
+}
+
+function showAdminMode() {
+    const playerMode = safeGetElement('playerMode');
+    const adminMode = safeGetElement('adminMode');
     
-    showAdminMode() {
-        const playerMode = dom.get('playerMode');
-        const adminMode = dom.get('adminMode');
-        
-        if (playerMode) playerMode.style.display = 'none';
-        if (adminMode) adminMode.style.display = 'block';
-        
-        this.switchTab('dashboard');
-        this.updateDashboardData();
-    }
+    if (playerMode) playerMode.style.display = 'none';
+    if (adminMode) adminMode.style.display = 'block';
     
-    showPlayerMode() {
-        const playerMode = dom.get('playerMode');
-        const adminMode = dom.get('adminMode');
-        
-        if (playerMode) playerMode.style.display = 'flex';
-        if (adminMode) adminMode.style.display = 'none';
-    }
+    // Atualizar dados administrativos
+    if (fileManager) fileManager.refreshFilesList();
+    refreshReports();
+    if (albumManager) albumManager.setupCoversGrid();
+    updateScheduleInfo();
+}
+
+function showPlayerMode() {
+    const playerMode = safeGetElement('playerMode');
+    const adminMode = safeGetElement('adminMode');
     
-    switchTab(tabName) {
-        // Remover classe active de todos os botões e conteúdos
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    if (playerMode) playerMode.style.display = 'flex';
+    if (adminMode) adminMode.style.display = 'none';
+}
+
+function switchTab(tabName) {
+    try {
+        // Remove active de todos
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
         
-        // Adicionar classe active nos elementos selecionados
+        tabBtns.forEach(btn => btn.classList.remove('active'));
+        tabContents.forEach(content => content.classList.remove('active'));
+        
+        // Adiciona active nos selecionados
         const tabBtn = document.querySelector(`[data-tab="${tabName}"]`);
         const tabContent = document.getElementById(`${tabName}-tab`);
         
         if (tabBtn) tabBtn.classList.add('active');
         if (tabContent) tabContent.classList.add('active');
         
-        this.currentTab = tabName;
-        
-        // Executar ações específicas da aba
-        this.handleTabSwitch(tabName);
-    }
-    
-    handleTabSwitch(tabName) {
+        // Executa ações específicas da aba
         switch (tabName) {
-            case 'dashboard':
-                this.updateDashboardData();
+            case 'broadcast':
+                updateScheduleInfo();
+                break;
+            case 'files':
+                if (fileManager) fileManager.refreshFilesList();
                 break;
             case 'reports':
-                this.updateReports();
+                refreshReports();
                 break;
-            case 'playlist':
-                this.updatePlaylistView();
+            case 'albums':
+                if (albumManager) albumManager.setupCoversGrid();
                 break;
-            default:
+            case 'schedule':
+                updateScheduleInfo();
                 break;
         }
-    }
-    
-    updateDashboardData() {
-        const stats = radioState.getStats();
-        radioManager.updateDashboard(stats);
-        
-        // Atualizar controles do dashboard
-        const toggleBtn = document.getElementById('toggleRadio');
-        if (toggleBtn) {
-            toggleBtn.innerHTML = radioState.isLive ? '🔴 Parar Transmissão' : '🟢 Iniciar Transmissão';
-            toggleBtn.onclick = () => this.toggleTransmission();
-        }
-        
-        const restartBtn = document.getElementById('restartRadio');
-        if (restartBtn) {
-            restartBtn.onclick = () => this.restartRadio();
-        }
-    }
-    
-    toggleTransmission() {
-        if (radioState.isLive) {
-            radioManager.togglePlayback();
-            alert('Transmissão pausada');
-        } else {
-            radioManager.togglePlayback();
-            alert('Transmissão iniciada');
-        }
-        this.updateDashboardData();
-    }
-    
-    restartRadio() {
-        if (confirm('Tem certeza que deseja reiniciar a rádio?')) {
-            radioManager.playNext();
-            alert('Rádio reiniciada');
-        }
-    }
-    
-    updateReports() {
-        // Implementar visualização de relatórios
-        console.log('Atualizando relatórios...');
-    }
-    
-    updatePlaylistView() {
-        // Implementar visualização de playlist
-        console.log('Atualizando visualização de playlist...');
-    }
-    
-    hideModal(modalId) {
-        const modal = dom.get(modalId);
-        if (modal) {
-            modal.classList.remove('show');
-        }
+    } catch (error) {
+        console.error('Erro ao trocar tab:', error);
     }
 }
 
-// Instância global do gerenciador admin
-const adminManager = new AdminManager();
-
-// Funções globais para compatibilidade com HTML
-window.uploadFiles = (category) => fileManager.uploadFiles(category);
-window.checkPassword = () => adminManager.checkPassword();
-window.closeModal = (modalId) => adminManager.hideModal(modalId);
-window.radioManager = radioManager; // Para acesso no autoplay prompt
-
-// Utilitários
-class Utils {
-    static formatBytes(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-    
-    static formatDuration(seconds) {
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        const remainingSeconds = Math.floor(seconds % 60);
+function updateScheduleInfo() {
+    try {
+        // Próximo anúncio de hora
+        const nextHour = new Date();
+        nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
         
-        if (hours > 0) {
-            return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+        const nextTimeCheck = safeGetElement('nextTimeCheck');
+        if (nextTimeCheck) {
+            nextTimeCheck.textContent = radioState.enableTimeAnnouncements ? 
+                `Próxima: ${nextHour.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` :
+                'Desabilitado';
         }
-        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-    }
-    
-    static debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
-    
-    static throttle(func, limit) {
-        let inThrottle;
-        return function() {
-            const args = arguments;
-            const context = this;
-            if (!inThrottle) {
-                func.apply(context, args);
-                inThrottle = true;
-                setTimeout(() => inThrottle = false, limit);
+        
+        // Próximo aviso
+        const nextAd = safeGetElement('nextAd');
+        if (nextAd) {
+            const nextAdTracks = Math.max(0, 5 - radioState.tracksSinceAd);
+            nextAd.textContent = radioState.enableAds ? 
+                `Próximo em: ${nextAdTracks} músicas` :
+                'Desabilitado';
+        }
+        
+        // Próxima ação
+        const nextAction = safeGetElement('nextAction');
+        if (nextAction) {
+            let action = 'Música aleatória';
+            
+            if (radioState.tracksSinceTime >= 999 && radioState.playlists.time.length > 0) {
+                action = '🕐 Hora certa';
+            } else if (radioState.enableAds && radioState.tracksSinceAd >= 5 && radioState.playlists.ads.length > 0) {
+                action = '📢 Aviso comercial';
+            } else if (radioState.activeAlbum) {
+                action = `🎵 Música do álbum ${albumData[radioState.activeAlbum].title}`;
             }
-        };
+            
+            nextAction.textContent = action;
+        }
+    } catch (error) {
+        console.error('Erro ao atualizar info da programação:', error);
     }
 }
 
-// Sistema de notificações
-class NotificationManager {
-    constructor() {
-        this.notifications = [];
-        this.container = null;
-        this.init();
+// ================================
+// FUNÇÕES DE UPLOAD E GERENCIAMENTO
+// ================================
+function uploadFiles(category) {
+    try {
+        const albumType = category === 'album' ? safeGetElement('albumSelect')?.value : '';
+        if (fileManager) {
+            fileManager.uploadFiles(category, albumType);
+        }
+    } catch (error) {
+        console.error('Erro no upload:', error);
+    }
+}
+
+function setActiveAlbum() {
+    if (albumManager) {
+        albumManager.setActiveAlbum();
+    }
+}
+
+function deleteFile(category, index) {
+    if (!confirm('⚠️ Tem certeza que deseja excluir este arquivo?\n\nEsta ação não pode ser desfeita.')) return;
+    
+    try {
+        const fileName = radioState.playlists[category][index]?.name || 'arquivo';
+        
+        radioState.playlists[category].splice(index, 1);
+        
+        if (fileManager) {
+            fileManager.saveData();
+            fileManager.refreshFilesList();
+        }
+        
+        if (notificationManager) {
+            notificationManager.success(`🗑️ Arquivo "${fileName}" excluído!`);
+        }
+    } catch (error) {
+        console.error('Erro ao excluir arquivo:', error);
+        if (notificationManager) {
+            notificationManager.error('❌ Erro ao excluir arquivo');
+        }
+    }
+}
+
+function deleteAlbumFile(albumKey, index) {
+    if (!confirm('⚠️ Tem certeza que deseja excluir este arquivo?\n\nEsta ação não pode ser desfeita.')) return;
+    
+    try {
+        const fileName = radioState.playlists.albums[albumKey][index]?.name || 'arquivo';
+        
+        radioState.playlists.albums[albumKey].splice(index, 1);
+        
+        if (fileManager) {
+            fileManager.saveData();
+            fileManager.refreshFilesList();
+        }
+        
+        if (notificationManager) {
+            notificationManager.success(`🗑️ Arquivo "${fileName}" excluído do álbum!`);
+        }
+    } catch (error) {
+        console.error('Erro ao excluir arquivo do álbum:', error);
+        if (notificationManager) {
+            notificationManager.error('❌ Erro ao excluir arquivo');
+        }
+    }
+}
+
+function previewFile(url) {
+    try {
+        const audio = new Audio(url);
+        audio.volume = 0.3;
+        audio.play().then(() => {
+            if (notificationManager) {
+                notificationManager.info('🎵 Prévia do arquivo (3 segundos)');
+            }
+            setTimeout(() => {
+                audio.pause();
+                audio.currentTime = 0;
+            }, 3000);
+        }).catch(() => {
+            if (notificationManager) {
+                notificationManager.error('❌ Erro ao reproduzir prévia');
+            }
+        });
+    } catch (error) {
+        console.error('Erro na prévia:', error);
+    }
+}
+
+// Gerenciamento de capas
+function openCoverModal(albumKey) {
+    const coverAlbumName = safeGetElement('coverAlbumName');
+    const coverModal = safeGetElement('coverModal');
+    
+    if (coverAlbumName) {
+        coverAlbumName.textContent = albumData[albumKey].title;
+    }
+    if (coverModal) {
+        coverModal.dataset.albumKey = albumKey;
+        coverModal.style.display = 'flex';
+    }
+}
+
+async function uploadCover() {
+    const coverModal = safeGetElement('coverModal');
+    const coverUpload = safeGetElement('coverUpload');
+    
+    if (!coverModal || !coverUpload) return;
+    
+    const albumKey = coverModal.dataset.albumKey;
+    const file = coverUpload.files[0];
+    
+    if (!file) {
+        if (notificationManager) {
+            notificationManager.error('❌ Selecione uma imagem!');
+        }
+        return;
     }
     
-    init() {
-        // Criar container de notificações
-        this.container = document.createElement('div');
-        this.container.className = 'notification-container';
-        this.container.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 10001;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            max-width: 400px;
+    showLoading(true, 'Enviando capa...');
+    
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
+        formData.append('folder', 'radio-louro/covers');
+        
+        const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/image/upload`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) throw new Error('Erro no upload da imagem');
+        
+        const data = await response.json();
+        radioState.albumCovers[albumKey] = data.secure_url;
+        
+        if (fileManager) fileManager.saveData();
+        if (albumManager) {
+            albumManager.setupCoversGrid();
+            albumManager.updateAlbumDisplay();
+        }
+        
+        closeModal('coverModal');
+        if (notificationManager) {
+            notificationManager.success('🖼️ Capa alterada com sucesso!');
+        }
+        
+    } catch (error) {
+        console.error('Erro no upload da capa:', error);
+        if (notificationManager) {
+            notificationManager.error('❌ Erro ao alterar a capa');
+        }
+    } finally {
+        showLoading(false);
+    }
+}
+
+function removeCover() {
+    const coverModal = safeGetElement('coverModal');
+    if (!coverModal) return;
+    
+    const albumKey = coverModal.dataset.albumKey;
+    
+    if (!radioState.albumCovers[albumKey]) {
+        if (notificationManager) {
+            notificationManager.error('❌ Não há capa para remover!');
+        }
+        return;
+    }
+    
+    if (!confirm('⚠️ Tem certeza que deseja remover esta capa?')) return;
+    
+    delete radioState.albumCovers[albumKey];
+    
+    if (fileManager) fileManager.saveData();
+    if (albumManager) {
+        albumManager.setupCoversGrid();
+        albumManager.updateAlbumDisplay();
+    }
+    
+    closeModal('coverModal');
+    if (notificationManager) {
+        notificationManager.success('🗑️ Capa removida!');
+    }
+}
+
+// ================================
+// RELATÓRIOS E ESTATÍSTICAS
+// ================================
+function refreshReports() {
+    const reportList = safeGetElement('reportList');
+    if (!reportList) return;
+    
+    try {
+        if (Object.keys(radioState.playHistory).length === 0) {
+            reportList.innerHTML = `
+                <div style="text-align: center; color: #a0a0a0; padding: 40px;">
+                    <h4>📊 Nenhuma estatística ainda</h4>
+                    <p>As músicas reproduzidas aparecerão aqui automaticamente</p>
+                </div>
+            `;
+            return;
+        }
+        
+        const sortedHistory = Object.entries(radioState.playHistory)
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, 50);
+        
+        reportList.innerHTML = `
+            <div style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 10px;">
+                <h4 style="color: #4facfe; margin-bottom: 10px;">📈 Estatísticas Gerais</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; font-size: 0.9rem;">
+                    <div><strong style="color: #ff6b7a;">Total:</strong> ${radioState.playCount}</div>
+                    <div><strong style="color: #ff6b7a;">Hoje:</strong> ${radioState.dailyPlayCount}</div>
+                    <div><strong style="color: #ff6b7a;">Únicas:</strong> ${Object.keys(radioState.playHistory).length}</div>
+                    <div><strong style="color: #ff6b7a;">Uptime:</strong> ${liveRadio ? liveRadio.formatUptime(radioState.totalUptime) : '00:00:00'}</div>
+                </div>
+            </div>
+            <h4 style="color: #4facfe; margin-bottom: 15px;">🎵 Top Músicas</h4>
+            ${sortedHistory.map(([track, count], index) => `
+                <div class="report-item">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <span style="color: #666; font-weight: bold; min-width: 30px;">#${index + 1}</span>
+                        <span class="track-name">${track}</span>
+                    </div>
+                    <span class="play-count">${count}x</span>
+                </div>
+            `).join('')}
         `;
-        document.body.appendChild(this.container);
+    } catch (error) {
+        console.error('Erro ao atualizar relatórios:', error);
+        reportList.innerHTML = '<p style="color: #ff6b7a;">❌ Erro ao carregar relatórios</p>';
+    }
+}
+
+function exportReports() {
+    try {
+        const data = {
+            timestamp: new Date().toISOString(),
+            stats: {
+                totalPlays: radioState.playCount,
+                dailyPlays: radioState.dailyPlayCount,
+                uniqueTracks: Object.keys(radioState.playHistory).length,
+                uptime: radioState.totalUptime
+            },
+            playHistory: radioState.playHistory,
+            recentTracks: radioState.recentTracks
+        };
+        
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `radio-relatorio-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        if (notificationManager) {
+            notificationManager.success('📥 Relatório exportado!');
+        }
+        
+    } catch (error) {
+        console.error('Erro ao exportar:', error);
+        if (notificationManager) {
+            notificationManager.error('❌ Erro ao exportar');
+        }
+    }
+}
+
+function resetPlayCount() {
+    if (!confirm('⚠️ ATENÇÃO!\n\nIsto irá resetar TODAS as estatísticas. Tem certeza?')) return;
+    
+    radioState.playHistory = {};
+    radioState.playCount = 0;
+    radioState.dailyPlayCount = 0;
+    radioState.recentTracks = [];
+    
+    if (fileManager) fileManager.saveData();
+    refreshReports();
+    
+    if (liveRadio) {
+        liveRadio.updateStatsDisplay();
+        liveRadio.updateRecentTracksDisplay();
+    }
+    
+    if (notificationManager) {
+        notificationManager.success('🗑️ Estatísticas resetadas!');
+    }
+}
+
+// ================================
+// FUNÇÕES DE CONTROLE MANUAL (ADMIN)
+// ================================
+function forceNextTrack() {
+    if (liveRadio) {
+        liveRadio.forceNext();
+    }
+}
+
+function forceTimeAnnouncement() {
+    if (liveRadio) {
+        liveRadio.forceTimeAnnouncement();
+    }
+}
+
+function forceAd() {
+    if (liveRadio) {
+        liveRadio.forceAd();
+    }
+}
+
+function restartTransmission() {
+    if (!confirm('🔄 Tem certeza que deseja reiniciar a transmissão?')) return;
+    
+    if (liveRadio) {
+        liveRadio.restartTransmission();
+    }
+}
+
+// ================================
+// FUNÇÕES UTILITÁRIAS
+// ================================
+function showLoading(show, text = 'Carregando...') {
+    const loadingOverlay = safeGetElement('loadingOverlay');
+    const loadingText = safeGetElement('loadingText');
+    
+    if (loadingOverlay) {
+        loadingOverlay.style.display = show ? 'flex' : 'none';
+    }
+    if (show && loadingText) {
+        loadingText.textContent = text;
+    }
+}
+
+function closeModal(modalId) {
+    const modal = safeGetElement(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    
+    // Limpar campos específicos
+    if (modalId === 'passwordModal') {
+        const adminPassword = safeGetElement('adminPassword');
+        if (adminPassword) adminPassword.value = '';
+    }
+    if (modalId === 'coverModal') {
+        const coverUpload = safeGetElement('coverUpload');
+        if (coverUpload) coverUpload.value = '';
+    }
+}
+
+// Adicionar músicas de exemplo para teste (descomente se quiser testar)
+function addSampleTracks() {
+    if (radioState.playlists.music.length === 0) {
+        console.log('📻 Adicionando faixas de exemplo...');
+        
+        const sampleTracks = [
+            {
+                name: '🎵 Música de Exemplo 1',
+                url: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
+                publicId: 'sample1',
+                uploadedAt: new Date().toISOString()
+            },
+            {
+                name: '🎵 Música de Exemplo 2',
+                url: 'https://www.soundjay.com/misc/sounds/bell-ringing-04.wav',
+                publicId: 'sample2',
+                uploadedAt: new Date().toISOString()
+            }
+        ];
+        
+        radioState.playlists.music = sampleTracks;
+        
+        if (fileManager) {
+            fileManager.saveData();
+        }
+        
+        console.log('✅ Faixas de exemplo adicionadas');
+        
+        if (notificationManager) {
+            notificationManager.info('🎵 Músicas de exemplo adicionadas');
+        }
+    }
+}
+
+// Simulação de ouvintes
+function simulateListenerCount() {
+    const listenersCount = safeGetElement('listenersCount');
+    if (listenersCount) {
+        const baseCount = 12;
+        const variation = Math.floor(Math.random() * 8) - 4;
+        const count = Math.max(1, baseCount + variation);
+        listenersCount.textContent = `🎧 ${count} ouvintes online`;
+    }
+}
+
+// ================================
+// TRATAMENTO DE ERROS E CLEANUP
+// ================================
+window.addEventListener('error', (e) => {
+    console.error('❌ Erro global:', e.error);
+    
+    // Tentar recuperar transmissão se necessário
+    if (radioState.isLive && liveRadio && !liveRadio.isTransmitting) {
+        setTimeout(() => {
+            console.log('🔄 Tentando recuperar...');
+            if (liveRadio) liveRadio.restartTransmission();
+        }, 3000);
+    }
+});
+
+window.addEventListener('beforeunload', () => {
+    if (fileManager) {
+        fileManager.saveData();
+    }
+    console.log('📻 Salvando estado...');
+});
+
+// ================================
+// INICIALIZAÇÃO FINAL SEGURA
+// ================================
+function startRadioSystem() {
+    try {
+        console.log('🎵 Iniciando Sistema de Rádio AO VIVO 24h...');
+        console.log('📻 Versão: 2.0 SEGURA - Transmissão Contínua');
+        
+        // Aguardar DOM estar pronto
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(safeInitializeRadio, 1000);
+            });
+        } else {
+            setTimeout(safeInitializeRadio, 1000);
+        }
+        
+        // Iniciar recursos extras após carregamento
+        setTimeout(() => {
+            simulateListenerCount();
+            setInterval(simulateListenerCount, 45000);
+        }, 10000);
+        
+    } catch (error) {
+        console.error('❌ Erro crítico no sistema:', error);
+        
+        // Fallback: tentar novamente
+        setTimeout(() => {
+            console.log('🔄 Tentativa de recuperação do sistema...');
+            startRadioSystem();
+        }, 5000);
+    }
+}
+
+// INICIALIZAR O SISTEMA
+startRadioSystem();
+
+console.log('✅ Sistema de Rádio AO VIVO 24h carregado com segurança!');
+console.log('🔴 Aguardando inicialização completa...');// 🔴 RÁDIO SUPERMERCADO DO LOURO - TRANSMISSÃO AO VIVO 24h
+// ============================================================
+// VERSÃO CORRIGIDA - SEM TRAVAMENTO
+
+console.log('🚀 Carregando Sistema de Rádio AO VIVO 24h...');
+
+// Configuração da Cloudinary
+const CLOUDINARY_CONFIG = {
+    cloudName: 'dygbrcrr6',
+    apiKey: '853591251513134',
+    apiSecret: 'yVz8MbGa_undTqNHbOqzo-hKc-U',
+    uploadPreset: 'radio_preset'
+};
+
+// Estado da Rádio AO VIVO
+let radioState = {
+    // Transmissão
+    isLive: true,                    // SEMPRE AO VIVO
+    autoPlay: true,                  // Reprodução automática
+    isMuted: false,                  // Estado do mute
+    
+    // Música atual
+    currentTrack: null,
+    volume: 70,
+    
+    // Estatísticas
+    playCount: 0,
+    dailyPlayCount: 0,
+    totalUptime: 0,
+    sessionStartTime: Date.now(),
+    
+    // Controle de programação
+    activeAlbum: null,
+    tracksSinceTime: 0,
+    tracksSinceAd: 0,
+    lastTimeCheck: 0,
+    
+    // Configurações
+    enableTimeAnnouncements: true,
+    enableAds: true,
+    
+    // Playlists
+    playlists: {
+        music: [],
+        time: [],
+        ads: [],
+        albums: { natal: [], pascoa: [], saojoao: [], carnaval: [] }
+    },
+    
+    // Histórico e capas
+    playHistory: {},
+    recentTracks: [],
+    albumCovers: { general: null }
+};
+
+// Dados dos álbuns
+const albumData = {
+    general: { title: '📻 Rádio AO VIVO 24h', description: 'Transmissão contínua' },
+    natal: { title: '🎄 Natal', description: 'Músicas natalinas' },
+    pascoa: { title: '🐰 Páscoa', description: 'Celebrando a ressurreição' },
+    saojoao: { title: '🎪 São João', description: 'Forró e festa junina' },
+    carnaval: { title: '🎭 Carnaval', description: 'Marchinha e alegria' }
+};
+
+// Cache de elementos DOM
+let elements = {};
+let isInitialized = false;
+
+// Instâncias dos gerenciadores
+let liveRadio, fileManager, albumManager, notificationManager;
+
+// ================================
+// VERIFICAÇÃO SEGURA DE ELEMENTOS
+// ================================
+function safeGetElement(id, required = false) {
+    try {
+        const element = document.getElementById(id);
+        if (!element && required) {
+            console.warn(`⚠️ Elemento obrigatório não encontrado: ${id}`);
+        }
+        return element;
+    } catch (error) {
+        console.error(`❌ Erro ao buscar elemento ${id}:`, error);
+        return null;
+    }
+}
+
+// ================================
+// SISTEMA DE NOTIFICAÇÕES SEGURO
+// ================================
+class SafeNotificationManager {
+    constructor() {
+        this.container = safeGetElement('notifications');
+        this.fallbackConsole = !this.container;
     }
     
     show(message, type = 'info', duration = 5000) {
-        const notification = document.createElement('div');
-        notification.className = `notification notification-${type} glass`;
-        
-        const icons = {
-            success: '✅',
-            error: '❌',
-            warning: '⚠️',
-            info: 'ℹ️'
-        };
-        
-        notification.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 10px; padding: 15px;">
-                <span style="font-size: 1.2em;">${icons[type] || icons.info}</span>
-                <span style="flex: 1; color: white;">${message}</span>
-                <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: white; cursor: pointer; font-size: 1.2em;">×</button>
-            </div>
-        `;
-        
-        notification.style.cssText = `
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            backdrop-filter: blur(20px);
-            animation: slideIn 0.3s ease-out;
-            cursor: pointer;
-        `;
-        
-        // Adicionar animação CSS
-        if (!document.querySelector('#notification-styles')) {
-            const style = document.createElement('style');
-            style.id = 'notification-styles';
-            style.textContent = `
-                @keyframes slideIn {
-                    from { transform: translateX(100%); opacity: 0; }
-                    to { transform: translateX(0); opacity: 1; }
-                }
-                .notification:hover {
-                    background: rgba(255, 255, 255, 0.15) !important;
-                }
+        try {
+            if (this.fallbackConsole) {
+                console.log(`${type.toUpperCase()}: ${message}`);
+                return;
+            }
+            
+            if (!this.container) return;
+            
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: white; font-size: 1.2rem; cursor: pointer;">×</button>
+                </div>
             `;
-            document.head.appendChild(style);
-        }
-        
-        this.container.appendChild(notification);
-        
-        // Auto-remover após duração especificada
-        if (duration > 0) {
+            
+            this.container.appendChild(notification);
+            
+            // Auto remover
             setTimeout(() => {
-                if (notification.parentElement) {
-                    notification.style.animation = 'slideIn 0.3s ease-out reverse';
-                    setTimeout(() => notification.remove(), 300);
+                if (notification && notification.parentElement) {
+                    notification.remove();
                 }
             }, duration);
-        }
-        
-        // Remover ao clicar
-        notification.addEventListener('click', () => {
-            notification.style.animation = 'slideIn 0.3s ease-out reverse';
-            setTimeout(() => notification.remove(), 300);
-        });
-        
-        this.notifications.push(notification);
-        
-        // Limitar número de notificações
-        if (this.notifications.length > 5) {
-            const oldest = this.notifications.shift();
-            if (oldest.parentElement) {
-                oldest.remove();
-            }
+        } catch (error) {
+            console.error('Erro na notificação:', error);
         }
     }
     
-    success(message, duration) {
-        this.show(message, 'success', duration);
-    }
-    
-    error(message, duration) {
-        this.show(message, 'error', duration);
-    }
-    
-    warning(message, duration) {
-        this.show(message, 'warning', duration);
-    }
-    
-    info(message, duration) {
-        this.show(message, 'info', duration);
-    }
+    success(message) { this.show(message, 'success'); }
+    error(message) { this.show(message, 'error'); }
+    info(message) { this.show(message, 'info'); }
 }
 
-// Instância global de notificações
-const notifications = new NotificationManager();
-
-// Inicialização da aplicação
-class App {
+// ================================
+// RÁDIO AO VIVO 24h - CLASSE PRINCIPAL SEGURA
+// ================================
+class SafeLiveRadio24h {
     constructor() {
-        this.initialized = false;
-        this.startTime = Date.now();
+        this.intervals = {
+            transmission: null,
+            timeCheck: null,
+            uptime: null,
+            heartbeat: null
+        };
+        
+        this.isTransmitting = false;
+        this.reconnectAttempts = 0;
+        this.maxReconnectAttempts = 3;
+        
+        // Inicialização segura
+        setTimeout(() => this.safeInit(), 1000);
     }
     
-    async init() {
-        if (this.initialized) return;
+    safeInit() {
+        try {
+            console.log('🔴 Inicializando sistema de transmissão...');
+            
+            this.setupAudioEvents();
+            this.startTransmission();
+            this.startUptimeCounter();
+            this.startHeartbeat();
+            this.setupAutoReconnect();
+            
+            console.log('✅ Sistema de transmissão inicializado!');
+            
+            if (notificationManager) {
+                notificationManager.success('🔴 Rádio AO VIVO iniciada!');
+            }
+        } catch (error) {
+            console.error('❌ Erro na inicialização da rádio:', error);
+            this.handleInitError(error);
+        }
+    }
+    
+    handleInitError(error) {
+        console.log('🔄 Tentando recuperar da inicialização...');
         
-        console.log('🚀 Iniciando Rádio Supermercado do Louro...');
+        setTimeout(() => {
+            try {
+                this.safeInit();
+            } catch (retryError) {
+                console.error('❌ Erro na recuperação:', retryError);
+                if (notificationManager) {
+                    notificationManager.error('❌ Erro ao inicializar rádio - Verifique console');
+                }
+            }
+        }, 5000);
+    }
+    
+    setupAudioEvents() {
+        const audioPlayer = safeGetElement('audioPlayer');
+        if (!audioPlayer) {
+            console.warn('⚠️ AudioPlayer não encontrado');
+            return;
+        }
         
         try {
-            // Mostrar loading
-            this.showLoading();
+            audioPlayer.addEventListener('ended', () => {
+                console.log('🎵 Música terminou, próxima...');
+                this.playNext();
+            });
             
-            // Aguardar DOM estar pronto
-            await this.waitForDOM();
+            audioPlayer.addEventListener('error', (e) => {
+                console.error('❌ Erro no áudio:', e);
+                this.handleAudioError();
+            });
             
-            // Carregar estado salvo
-            radioState.load();
+            audioPlayer.addEventListener('canplay', () => {
+                if (radioState.isLive && !radioState.isMuted) {
+                    this.attemptAutoplay();
+                }
+            });
             
-            // Inicializar gerenciadores
-            await radioManager.init();
-            adminManager.init();
+            audioPlayer.addEventListener('play', () => {
+                this.updateTransmissionStatus(true);
+            });
             
-            // Configurar eventos globais
-            this.setupGlobalEvents();
+            audioPlayer.addEventListener('pause', () => {
+                if (!radioState.isMuted) {
+                    this.updateTransmissionStatus(false);
+                }
+            });
             
-            // Ocultar loading
-            this.hideLoading();
-            
-            this.initialized = true;
-            
-            notifications.success('Rádio iniciada com sucesso! Transmitindo 24/7', 3000);
-            console.log('✅ Aplicação inicializada com sucesso!');
+            console.log('✅ Eventos de áudio configurados');
             
         } catch (error) {
-            console.error('❌ Erro na inicialização:', error);
-            this.hideLoading();
-            notifications.error('Erro ao inicializar a rádio. Recarregue a página.', 0);
+            console.error('❌ Erro ao configurar eventos de áudio:', error);
         }
     }
     
-    waitForDOM() {
-        return new Promise((resolve) => {
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', resolve);
-            } else {
-                resolve();
-            }
-        });
-    }
-    
-    setupGlobalEvents() {
-        // Prevenir que a página pare a transmissão
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden && radioState.isLive) {
-                console.log('👁️ Página visível novamente, verificando transmissão...');
-                setTimeout(() => {
-                    const audio = dom.get('audioPlayer');
-                    if (audio && audio.paused && radioState.currentTrack) {
-                        audio.play().catch(console.error);
-                    }
-                }, 1000);
-            }
-        });
+    async attemptAutoplay() {
+        const audioPlayer = safeGetElement('audioPlayer');
+        if (!audioPlayer) return;
         
-        // Salvar estado antes de sair
-        window.addEventListener('beforeunload', () => {
-            radioState.save();
-            console.log('💾 Estado salvo antes de sair');
-        });
-        
-        // Tratamento de erros globais
-        window.addEventListener('error', (event) => {
-            console.error('❌ Erro global:', event.error);
-            notifications.error('Ocorreu um erro inesperado', 5000);
-        });
-        
-        // Recuperação automática de conectividade
-        window.addEventListener('online', () => {
-            console.log('🌐 Conexão restaurada');
-            notifications.success('Conexão restaurada', 3000);
-            
-            if (radioState.isLive && !radioState.isPlaying) {
-                setTimeout(() => radioManager.playNext(), 2000);
-            }
-        });
-        
-        window.addEventListener('offline', () => {
-            console.log('🌐 Conexão perdida');
-            notifications.warning('Conexão perdida - tentando reconectar...', 5000);
-        });
-    }
-    
-    showLoading() {
-        const loading = dom.get('loadingOverlay');
-        if (loading) {
-            loading.classList.remove('hide');
+        try {
+            await audioPlayer.play();
+            console.log('✅ Autoplay bem-sucedido');
+            this.reconnectAttempts = 0;
+        } catch (error) {
+            console.warn('⚠️ Autoplay bloqueado:', error.message);
+            this.showAutoplayPrompt();
         }
     }
     
-    hideLoading() {
-        const loading = dom.get('loadingOverlay');
-        if (loading) {
-            loading.classList.add('hide');
-            setTimeout(() => {
-                loading.style.display = 'none';
-            }, 500);
+    showAutoplayPrompt() {
+        if (notificationManager) {
+            notificationManager.info('🔊 Clique em qualquer lugar para ativar o áudio da rádio', 'info', 10000);
         }
-    }
-}
-
-// Instância global da aplicação
-const app = new App();
-
-// Inicialização automática
-(function() {
-    'use strict';
-    
-    // Aguardar um pouco para garantir que todos os recursos carreguem
-    setTimeout(() => {
-        app.init().catch(error => {
-            console.error('❌ Falha crítica na inicialização:', error);
-            
-            // Tentar reinicializar após delay
-            setTimeout(() => {
-                window.location.reload();
-            }, 5000);
-        });
-    }, 100);
-    
-    console.log('📻 Sistema de rádio 24/7 carregado');
-})();
-
-// Exportar para debug no console
-if (typeof window !== 'undefined') {
-    window.RadioDebug = {
-        radioState,
-        radioManager,
-        adminManager,
-        fileManager,
-        notifications,
-        dom,
-        app
-    };
-                    }
+        
+        const enableAudio = async () => {
+            const audioPlayer = safeGetElement('audioPlayer');
+            if (radioState.isLive && audioPlayer) {
+                try {
+                    await audioPlayer.play();
+                    if (notification
