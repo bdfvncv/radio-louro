@@ -219,7 +219,187 @@
             </div>
         </div>
         
-        <!-- Outros tabs... (será adicionado no próximo arquivo) -->
+        <!-- Playlist Tab -->
+        <div class="tab-content" id="playlist-tab">
+            <div class="playlist-management glass">
+                <div class="playlist-controls">
+                    <h3>🎵 Gerenciamento de Playlist</h3>
+                    <div class="controls-row">
+                        <button onclick="shufflePlaylist()" class="btn-secondary">🔀 Embaralhar</button>
+                        <button onclick="clearPlaylist()" class="btn-danger">🗑️ Limpar Tudo</button>
+                        <button onclick="exportPlaylist()" class="btn-primary">💾 Exportar</button>
+                    </div>
+                </div>
+                
+                <div class="files-grid">
+                    <div class="file-category glass">
+                        <h4>🎵 Músicas Gerais</h4>
+                        <div id="musicFilesList" class="file-list"></div>
+                    </div>
+                    
+                    <div class="file-category glass">
+                        <h4>🕐 Hora Certa</h4>
+                        <div id="timeFilesList" class="file-list"></div>
+                    </div>
+                    
+                    <div class="file-category glass">
+                        <h4>📢 Avisos & Publicidade</h4>
+                        <div id="adsFilesList" class="file-list"></div>
+                    </div>
+                    
+                    <div class="file-category glass">
+                        <h4>💿 Álbuns Temáticos</h4>
+                        <div id="albumFilesList" class="file-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Albums Tab -->
+        <div class="tab-content" id="albums-tab">
+            <div class="album-management glass">
+                <div class="album-selector">
+                    <h3>💿 Controle de Álbuns</h3>
+                    <p>Ative um álbum para tocar apenas músicas específicas:</p>
+                    
+                    <div class="album-control-row">
+                        <select id="activeAlbumSelect" class="modern-select">
+                            <option value="">📻 Playlist Geral (Todas as músicas)</option>
+                            <option value="natal">🎄 Especial de Natal</option>
+                            <option value="pascoa">🐰 Especial de Páscoa</option>
+                            <option value="saojoao">🎪 Especial São João</option>
+                            <option value="carnaval">🎭 Especial Carnaval</option>
+                        </select>
+                        <button onclick="setActiveAlbum()" class="btn-primary">Ativar Álbum</button>
+                    </div>
+                </div>
+                
+                <div class="covers-section">
+                    <h3>🖼️ Capas dos Álbuns</h3>
+                    <div id="coversGrid" class="covers-grid"></div>
+                </div>
+                
+                <div class="album-stats">
+                    <h3>📊 Estatísticas dos Álbuns</h3>
+                    <div id="albumStats" class="stats-grid"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Reports Tab -->
+        <div class="tab-content" id="reports-tab">
+            <div class="reports-section glass">
+                <div class="reports-controls">
+                    <h3>📈 Relatórios e Estatísticas</h3>
+                    <div class="controls-row">
+                        <button onclick="refreshReports()" class="btn-primary">🔄 Atualizar</button>
+                        <button onclick="exportReports()" class="btn-secondary">📤 Exportar</button>
+                        <button onclick="resetPlayCount()" class="btn-danger">🗑️ Resetar Contadores</button>
+                    </div>
+                </div>
+                
+                <div class="reports-grid">
+                    <div class="report-card glass">
+                        <h4>🎵 Músicas Mais Tocadas</h4>
+                        <div id="topTracksReport" class="report-content"></div>
+                    </div>
+                    
+                    <div class="report-card glass">
+                        <h4>📊 Estatísticas Gerais</h4>
+                        <div id="generalStatsReport" class="report-content"></div>
+                    </div>
+                    
+                    <div class="report-card glass">
+                        <h4>⏱️ Histórico por Hora</h4>
+                        <div id="hourlyReport" class="report-content"></div>
+                    </div>
+                    
+                    <div class="report-card glass">
+                        <h4>🗂️ Por Categoria</h4>
+                        <div id="categoryReport" class="report-content"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Settings Tab -->
+        <div class="tab-content" id="settings-tab">
+            <div class="settings-section glass">
+                <h3>⚙️ Configurações da Rádio</h3>
+                
+                <div class="settings-grid">
+                    <div class="setting-card glass">
+                        <h4>🔊 Configurações de Áudio</h4>
+                        <div class="setting-item">
+                            <label>Volume Padrão:</label>
+                            <input type="range" id="defaultVolume" min="0" max="100" value="70">
+                            <span id="defaultVolumeValue">70%</span>
+                        </div>
+                        <div class="setting-item">
+                            <label>
+                                <input type="checkbox" id="autoPlay" checked>
+                                Iniciar automaticamente
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label>
+                                <input type="checkbox" id="fadeTransitions" checked>
+                                Transições suaves entre faixas
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-card glass">
+                        <h4>⏰ Programação</h4>
+                        <div class="setting-item">
+                            <label>
+                                <input type="checkbox" id="hourlyTime" checked>
+                                Hora certa a cada hora
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label>Intervalo de anúncios (músicas):</label>
+                            <input type="number" id="adInterval" min="3" max="15" value="6">
+                        </div>
+                        <div class="setting-item">
+                            <label>
+                                <input type="checkbox" id="randomOrder" checked>
+                                Ordem aleatória
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-card glass">
+                        <h4>🔐 Segurança</h4>
+                        <div class="setting-item">
+                            <label>Nova senha admin:</label>
+                            <input type="password" id="newPassword" placeholder="Digite nova senha">
+                        </div>
+                        <div class="setting-item">
+                            <label>Confirmar senha:</label>
+                            <input type="password" id="confirmPassword" placeholder="Confirme a senha">
+                        </div>
+                        <button onclick="changePassword()" class="btn-primary">Alterar Senha</button>
+                    </div>
+                    
+                    <div class="setting-card glass">
+                        <h4>💾 Dados</h4>
+                        <div class="setting-item">
+                            <button onclick="backupData()" class="btn-secondary">📤 Fazer Backup</button>
+                            <button onclick="restoreData()" class="btn-secondary">📥 Restaurar Backup</button>
+                        </div>
+                        <div class="setting-item">
+                            <button onclick="clearAllData()" class="btn-danger">🗑️ Limpar Todos os Dados</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="settings-actions">
+                    <button onclick="saveSettings()" class="btn-primary">💾 Salvar Configurações</button>
+                    <button onclick="resetSettings()" class="btn-secondary">🔄 Restaurar Padrão</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Modals -->
