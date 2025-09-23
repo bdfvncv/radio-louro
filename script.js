@@ -1,4 +1,204 @@
-/**
+// Funções globais para compatibilidade com HTML
+window.uploadFiles = (category) => fileManager.uploadFiles(category);
+window.checkPassword = () => adminManager.checkPassword();
+window.closeModal = (modalId) => adminManager.hideModal(modalId);
+window.radioManager = radioManager; // Para acesso no autoplay prompt
+
+// Funções para gerenciamento de playlist
+window.shufflePlaylist = () => {
+    Object.keys(radioState.playlists).forEach(key => {
+        if (Array.isArray(radioState.playlists[key])) {
+            radioState.playlists[key] = shuffleArray(radioState.playlists[key]);
+        } else if (typeof radioState.playlists[key] === 'object') {
+            Object.keys(radioState.playlists[key]).forEach(albumKey => {
+                radioState.playlists[key][albumKey] = shuffleArray(radioState.playlists[key][albumKey]);
+            });
+        }
+    });
+    radioState.save();
+    adminManager.updatePlaylistView();
+    notifications.success('Playlists embaralhadas!');
+};
+
+window.clearPlaylist = () => {
+    if (confirm('Tem certeza que deseja limpar TODAS as playlists? Esta ação não pode ser desfeita!')) {
+        radioState.playlists = {
+            music: [],
+            time: [],
+            ads: [],
+            albums: { natal: [], pascoa: [], saojoao: [], carnaval: [] }
+        };
+        radioState.save();
+        adminManager.updatePlaylistView();
+        notifications.success('Todas as playlists foram limpas');
+    }
+};
+
+window.exportPlaylist = () => {
+    const dataStr = JSON.stringify(radioState.playlists, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `radio-playlist-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    notifications.success('Playlist exportada!');
+};
+
+// Funções para álbuns
+window.setActiveAlbum = () => {
+    const select = dom.get('activeAlbumSelect');
+    if (!select) return;
+    
+    const selectedAlbum = select.value;
+    radioState.activeAlbum = selectedAlbum || null;
+    radioState.save();
+    
+    // Atualizar UI do player
+    updateAlbumDisplay();
+    
+    const message = selectedAlbum ? 
+        `Álbum "${getAlbumData()[selectedAlbum]?.title}" ativado!` : 
+        'Voltou para playlist geral';
+    
+    notifications.success(message);
+    
+    // Se não há música tocando, iniciar com novo álbum
+    if (radioState.isLive && !radioState.currentTrack) {
+        setTimeout(() => radioManager.playNext(), 1000);
+    }
+};
+
+window.openCoverModal = (albumKey) => {
+    // Criar modal para upload de capa
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content glass">
+            <h3>🖼️ Alterar Capa - ${getAlbumData()[albumKey]?.title}</h3>
+            <input type="file" id="tempCoverUpload" accept="image/*" class="modal-input">
+            <div class="modal-buttons">
+                <button onclick="uploadAlbumCover('${albumKey}')" class="btn-primary">Alterar</button>
+                <button onclick="removeCover('${albumKey}')" class="btn-danger">Remover</button>
+                <button onclick="this.closest('.modal').remove()" class="btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.classList.add('show');
+};
+
+window.uploadAlbumCover = async (albumKey) => {
+    const fileInput = document.getElementById('tempCoverUpload');
+    const file = fileInput?.files[0];
+    
+    if (!file) {
+        notifications.warning('Selecione uma imagem!');
+        return;
+    }
+    
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', CONFIG.cloudinary.uploadPreset);
+        formData.append('folder', 'radio-louro/covers');
+        
+        const response = await fetch(`https://api.cloudinary.com/v1_1/${CONFIG.cloudinary.cloudName}/image/upload`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) throw new Error('Erro no upload');
+        
+        const data = await response.json();
+        radioState.albumCovers[albumKey] = data.secure_url;
+        radioState.save();
+        
+        adminManager.updateCoversGrid();
+        updateAlbumDisplay();
+        
+        document.querySelector('.modal')?.remove();
+        notifications.success('Capa alterada com sucesso!');
+        
+    } catch (error) {
+        notifications.error('Erro ao fazer upload da capa');
+    }
+};
+
+window.removeCover = (albumKey) => {
+    if (!confirm('Tem certeza que deseja remover esta capa?')) return;
+    
+    delete radioState.albumCovers[albumKey];
+    radioState.save();
+    
+    adminManager.updateCoversGrid();
+    updateAlbumDisplay();
+    
+    document.querySelector('.modal')?.remove();
+    notifications.success('Capa removida!');
+};
+
+// Funções para relatórios
+window.refreshReports = () => {
+    adminManager.updateReports();
+    notifications.info('Relatórios atualizados');
+};
+
+window.exportReports = () => {
+    const stats = radioState.getStats();
+    const reportData = {
+        generatedAt: new Date().toISOString(),
+        statistics: stats,
+        playHistory: radioState.playHistory,
+        topTracks: Object.entries(radioState.playHistory)
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, 20)
+    };
+    
+    const dataStr = JSON.stringify(reportData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `radio-relatorio-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    notifications.success('Relatório exportado!');
+};
+
+window.resetPlayCount = () => {
+    if (!confirm('Tem certeza que deseja resetar todos os contadores de reprodução?')) return;
+    
+    radioState.playHistory = {};
+    radioState.playCount = 0;
+    radioState.save();
+    
+    adminManager.updateReports();
+    radioManager.updateStats();
+    notifications.success('Contadores resetados!');
+};
+
+// Funções para configurações
+window.saveSettings = () => {
+    try {
+        // Salvar configurações de áudio
+        const defaultVolume = document.getElementById('defaultVolume')?.value;
+        const autoPlay = document.getElementById('autoPlay')?.checked;
+        const fadeTransitions = document.getElementById('fadeTransitions')?.checked;
+        
+        // Salvar configurações de programação
+        const hourlyTime = document.getElementById('hourlyTime')?.checked;
+        const adInterval = document.getElementById('adInterval')?.value;
+        const randomOrder = document.getElementById('randomOrder')/**
  * RÁDIO SUPERMERCADO DO LOURO - SISTEMA 24/7
  * Transmissão contínua com programação automática
  * ============================================
