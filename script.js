@@ -9,7 +9,7 @@ const CLOUDINARY_CONFIG = {
     cloudName: 'dygbrcrr6',
     apiKey: '853591251513134',
     apiSecret: 'yVz8MbGa_undTqNHbOqzo-hKc-U',
-    uploadPreset: 'ml_default' // Preset padrão, pode ser alterado se necessário
+    uploadPreset: 'radio_preset' // Preset padrão, pode ser alterado se necessário
 };
 
 // Estado global da rádio
