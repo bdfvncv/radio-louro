@@ -8,12 +8,14 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
+    <!-- Background Elements -->
     <div class="background-effects">
         <div class="floating-element floating-1"></div>
         <div class="floating-element floating-2"></div>
         <div class="floating-element floating-3"></div>
     </div>
 
+    <!-- Header with Live Status -->
     <header class="radio-header">
         <div class="header-content">
             <div class="logo-section">
@@ -27,6 +29,7 @@
         </div>
     </header>
 
+    <!-- Main Player Section -->
     <main class="main-content">
         <div class="player-section">
             <div class="now-playing-card">
@@ -81,12 +84,15 @@
             </div>
         </div>
 
+        <!-- Programming Schedule -->
         <div class="schedule-section">
             <h2><i class="fas fa-calendar-alt"></i> Programação de Hoje</h2>
             <div id="scheduleContainer" class="schedule-container">
-                </div>
+                <!-- Schedule items will be populated by JavaScript -->
+            </div>
         </div>
 
+        <!-- Station Info -->
         <div class="info-section">
             <div class="info-cards">
                 <div class="info-card">
@@ -112,114 +118,165 @@
             </div>
         </div>
 
+        <!-- Recent Tracks -->
         <div class="recent-section">
             <h2><i class="fas fa-history"></i> Tocadas Recentemente</h2>
             <div id="recentTracks" class="recent-tracks">
-                </div>
+                <!-- Recent tracks will be populated by JavaScript -->
+            </div>
         </div>
     </main>
 
+    <!-- Admin Access -->
     <button id="adminAccessBtn" class="admin-access-btn">
         <i class="fas fa-cog"></i>
         <span>Admin</span>
     </button>
 
+    <!-- Admin Panel -->
     <div id="adminPanel" class="admin-panel">
         <div class="admin-header">
-            <h3><i class="fas fa-cogs"></i> Painel Administrativo</h3>
-            <button id="closeAdminBtn" class="close-btn">&times;</button>
+            <h2><i class="fas fa-broadcast-tower"></i> Painel de Controle</h2>
+            <button id="closeAdminBtn" class="close-btn">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
+
         <div class="admin-tabs">
-            <button class="admin-tab active" data-tab="broadcast">Transmissão</button>
-            <button class="admin-tab" data-tab="upload">Upload</button>
-            <button class="admin-tab" data-tab="schedule">Programação</button>
-            <button class="admin-tab" data-tab="reports">Relatórios</button>
+            <button class="tab-btn active" data-tab="broadcast">
+                <i class="fas fa-play-circle"></i> Transmissão
+            </button>
+            <button class="tab-btn" data-tab="content">
+                <i class="fas fa-upload"></i> Conteúdo
+            </button>
+            <button class="tab-btn" data-tab="schedule">
+                <i class="fas fa-calendar"></i> Programação
+            </button>
+            <button class="tab-btn" data-tab="reports">
+                <i class="fas fa-chart-bar"></i> Relatórios
+            </button>
         </div>
-        
-        <div class="tab-content show" id="broadcast">
-            <h4>Status da Transmissão</h4>
-            <div class="control-group">
-                <span id="broadcastStatus" class="status-indicator live">AO VIVO</span>
-                <button id="toggleBroadcast" class="btn-secondary">
-                    <i class="fas fa-stop-circle"></i> Parar
-                </button>
-            </div>
-            <h4>Controles Manuais</h4>
-            <div class="control-group">
-                <button id="playNextBtn" class="btn-primary">
-                    <i class="fas fa-forward"></i> Próxima Música
-                </button>
-                <button id="playTimeBtn" class="btn-secondary">
-                    <i class="fas fa-clock"></i> Inserir Hora Certa
-                </button>
-                <button id="playAdBtn" class="btn-secondary">
-                    <i class="fas fa-ad"></i> Inserir Anúncio
-                </button>
-            </div>
-            <h4>Gerenciar Programação</h4>
-            <div class="control-group">
-                <select id="activeProgramSelect" class="select-field"></select>
-                <button id="setProgramBtn" class="btn-primary">
-                    <i class="fas fa-play-circle"></i> Definir como Ativo
-                </button>
+
+        <div class="tab-content active" id="broadcast-tab">
+            <div class="broadcast-controls">
+                <div class="control-section">
+                    <h3>Status da Transmissão</h3>
+                    <div class="broadcast-status">
+                        <div id="broadcastStatus" class="status-indicator live">
+                            <div class="status-dot"></div>
+                            <span>AO VIVO</span>
+                        </div>
+                        <button id="toggleBroadcast" class="btn-secondary">
+                            <i class="fas fa-pause"></i> Pausar Transmissão
+                        </button>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>Controles Manuais</h3>
+                    <div class="manual-controls">
+                        <button id="playNextBtn" class="btn-primary">
+                            <i class="fas fa-forward"></i> Próxima Música
+                        </button>
+                        <button id="playTimeBtn" class="btn-primary">
+                            <i class="fas fa-clock"></i> Tocar Hora Certa
+                        </button>
+                        <button id="playAdBtn" class="btn-primary">
+                            <i class="fas fa-bullhorn"></i> Tocar Aviso
+                        </button>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>Programação Ativa</h3>
+                    <select id="activeProgramSelect" class="program-select">
+                        <option value="">Programação Automática</option>
+                        <option value="morning">Programa Matinal</option>
+                        <option value="afternoon">Programa Vespertino</option>
+                        <option value="night">Programa Noturno</option>
+                        <option value="weekend">Programa Fim de Semana</option>
+                    </select>
+                    <button id="setProgramBtn" class="btn-primary">Ativar</button>
+                </div>
             </div>
         </div>
-        
-        <div class="tab-content" id="upload">
-            <h4>Upload de Conteúdo</h4>
-            <div class="upload-section">
-                <div class="upload-item">
-                    <label for="musicUpload">Músicas</label>
-                    <input type="file" id="musicUpload" multiple accept="audio/*">
-                    <button onclick="uploadContent('music')" class="btn-primary">Upload</button>
+
+        <div class="tab-content" id="content-tab">
+            <div class="upload-sections">
+                <div class="upload-section">
+                    <h3><i class="fas fa-music"></i> Músicas</h3>
+                    <input type="file" id="musicUpload" accept=".mp3,.wav,.ogg" multiple class="file-input">
+                    <button onclick="uploadContent('music')" class="btn-primary">
+                        <i class="fas fa-upload"></i> Enviar Músicas
+                    </button>
                     <div id="musicList" class="content-list"></div>
                 </div>
-                <div class="upload-item">
-                    <label for="timeUpload">Horas Certas</label>
-                    <input type="file" id="timeUpload" multiple accept="audio/*">
-                    <button onclick="uploadContent('time')" class="btn-primary">Upload</button>
+
+                <div class="upload-section">
+                    <h3><i class="fas fa-clock"></i> Hora Certa</h3>
+                    <input type="file" id="timeUpload" accept=".mp3,.wav,.ogg" multiple class="file-input">
+                    <button onclick="uploadContent('time')" class="btn-primary">
+                        <i class="fas fa-upload"></i> Enviar Hora Certa
+                    </button>
                     <div id="timeList" class="content-list"></div>
                 </div>
-                <div class="upload-item">
-                    <label for="adsUpload">Anúncios</label>
-                    <input type="file" id="adsUpload" multiple accept="audio/*">
-                    <button onclick="uploadContent('ads')" class="btn-primary">Upload</button>
+
+                <div class="upload-section">
+                    <h3><i class="fas fa-bullhorn"></i> Avisos</h3>
+                    <input type="file" id="adsUpload" accept=".mp3,.wav,.ogg" multiple class="file-input">
+                    <button onclick="uploadContent('ads')" class="btn-primary">
+                        <i class="fas fa-upload"></i> Enviar Avisos
+                    </button>
                     <div id="adsList" class="content-list"></div>
                 </div>
-                <div class="upload-item">
-                    <label for="jinglesUpload">Vinhetas</label>
-                    <input type="file" id="jinglesUpload" multiple accept="audio/*">
-                    <button onclick="uploadContent('jingles')" class="btn-primary">Upload</button>
+
+                <div class="upload-section">
+                    <h3><i class="fas fa-microphone"></i> Vinhetas</h3>
+                    <input type="file" id="jinglesUpload" accept=".mp3,.wav,.ogg" multiple class="file-input">
+                    <button onclick="uploadContent('jingles')" class="btn-primary">
+                        <i class="fas fa-upload"></i> Enviar Vinhetas
+                    </button>
                     <div id="jinglesList" class="content-list"></div>
                 </div>
             </div>
         </div>
-        
-        <div class="tab-content" id="schedule">
-            <h4>Adicionar Item à Programação</h4>
-            <div class="form-group">
-                <input type="time" id="scheduleTime" required>
-                <select id="scheduleType">
-                    <option value="program">Programa</option>
-                    <option value="time">Hora Certa</option>
-                    <option value="ads">Anúncio</option>
-                    <option value="jingles">Vinheta</option>
-                </select>
+
+        <div class="tab-content" id="schedule-tab">
+            <div class="schedule-management">
+                <h3>Configurar Programação</h3>
+                <div class="schedule-form">
+                    <input type="time" id="scheduleTime" class="schedule-input">
+                    <select id="scheduleType" class="schedule-select">
+                        <option value="music">Música</option>
+                        <option value="ads">Avisos</option>
+                        <option value="time">Hora Certa</option>
+                        <option value="program">Programa Especial</option>
+                    </select>
+                    <input type="text" id="scheduleTitle" placeholder="Título do programa/conteúdo" class="schedule-input">
+                    <button id="addScheduleBtn" class="btn-primary">
+                        <i class="fas fa-plus"></i> Adicionar
+                    </button>
+                </div>
+                <div id="scheduleList" class="schedule-list"></div>
             </div>
-            <div class="form-group">
-                <input type="text" id="scheduleTitle" placeholder="Título da Programação" required>
-            </div>
-            <button id="addScheduleBtn" class="btn-primary">Adicionar</button>
-            <div id="scheduleList" class="content-list"></div>
         </div>
-        
-        <div class="tab-content" id="reports">
-            <h4>Relatório de Reprodução</h4>
-            <button id="refreshReportsBtn" class="btn-secondary">Atualizar</button>
-            <div id="reportsList" class="content-list"></div>
+
+        <div class="tab-content" id="reports-tab">
+            <div class="reports-section">
+                <div class="reports-header">
+                    <h3>Estatísticas de Reprodução</h3>
+                    <button id="refreshReportsBtn" class="btn-secondary">
+                        <i class="fas fa-sync"></i> Atualizar
+                    </button>
+                </div>
+                <div id="reportsList" class="reports-list">
+                    <!-- Reports will be populated by JavaScript -->
+                </div>
+            </div>
         </div>
     </div>
-    
+
+    <!-- Password Modal -->
     <div id="passwordModal" class="modal">
         <div class="modal-content">
             <h3><i class="fas fa-lock"></i> Acesso Administrativo</h3>
@@ -235,6 +292,7 @@
         </div>
     </div>
 
+    <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay">
         <div class="spinner">
             <div class="spinner-ring"></div>
@@ -244,6 +302,7 @@
         <p>Processando...</p>
     </div>
 
+    <!-- Footer -->
     <footer class="radio-footer">
         <div class="footer-content">
             <p>&copy; 2024 Rádio Supermercado do Louro - Transmitindo 24 horas por dia</p>
@@ -254,6 +313,6 @@
         </div>
     </footer>
 
-    <script src="radio_station_js.js"></script>
+    <script src="radio.js"></script>
 </body>
 </html>
