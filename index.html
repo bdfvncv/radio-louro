@@ -5,99 +5,73 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rádio Supermercado do Louro</title>
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
+
     <div class="background-effects">
-        <div class="floating-element float-1"></div>
-        <div class="floating-element float-2"></div>
-        <div class="floating-element float-3"></div>
-        <div class="floating-element float-4"></div>
+        <div class="floating-element" style="top: 10%; left: 15%; animation-duration: 15s; width: 100px; height: 100px; background-color: rgba(102, 126, 234, 0.6);"></div>
+        <div class="floating-element" style="top: 80%; left: 70%; animation-duration: 20s; width: 120px; height: 120px; background-color: rgba(255, 119, 198, 0.6);"></div>
+        <div class="floating-element" style="top: 50%; left: 40%; animation-duration: 18s; width: 80px; height: 80px; background-color: rgba(79, 172, 254, 0.6);"></div>
     </div>
 
-    <main class="main-container">
-        <div class="player-container">
-            <div class="player-header">
-                <img src="https://res.cloudinary.com/dygbrcrr6/image/upload/v1633333333/radio_logo.png" alt="Rádio Logo" class="player-logo">
-                <h1>Rádio Supermercado do Louro</h1>
-                <p>A trilha sonora do seu dia!</p>
-            </div>
+    <div class="player-container">
+        
+        <header class="player-header">
+            <h1>Rádio Supermercado do Louro</h1>
+            <p id="live-status" class="live-status">
+                <span class="live-pulse"></span> Ao Vivo Agora
+            </p>
+        </header>
 
-            <div class="player-card">
-                <div class="player-cover">
-                    <img id="trackCover" src="https://res.cloudinary.com/dygbrcrr6/image/upload/v1633333333/default_cover.png" alt="Capa do Álbum">
+        <div class="player-card">
+            <div class="player-controls-group">
+                <div class="player-album-cover">
+                    <img id="coverImage" src="https://res.cloudinary.com/dygbrcrr6/image/upload/v1/radio-covers/general_cover" alt="Capa do Álbum">
                 </div>
+                
                 <div class="player-info">
-                    <div class="live-status-container">
-                        <span id="liveIndicator" class="live-indicator paused">● PAUSADO</span>
-                    </div>
-                    <h2 id="trackTitle"></h2>
-                    <p id="albumName"></p>
+                    <h3 id="currentTrackTitle">Carregando Rádio...</h3>
+                    <p id="artistName">...</p>
                 </div>
-                <div class="player-controls">
-                    <button id="prevTrackBtn"><i class="fas fa-backward"></i></button>
-                    <button id="playPauseBtn"><i class="fas fa-play"></i></button>
-                    <button id="nextTrackBtn"><i class="fas fa-forward"></i></button>
-                </div>
-                <audio id="audioPlayer" src="" preload="auto"></audio>
-                <div class="progress-container">
-                    <div id="progressBar" class="progress-bar"></div>
-                    <div class="time-display">
-                        <span id="currentTime">0:00</span>
-                        <span id="durationTime">0:00</span>
-                    </div>
-                </div>
-                <div class="volume-container">
-                    <i class="fas fa-volume-down"></i>
-                    <input type="range" id="volumeSlider" min="0" max="100" value="70">
-                    <i class="fas fa-volume-up"></i>
-                </div>
-            </div>
 
-            <div class="live-mode-controls">
-                <button id="liveModeToggle" class="btn-primary">
-                    <i class="fas fa-power-off"></i> Ficar ao Vivo 24/7
-                </button>
+                <div class="player-controls">
+                    <button id="playPauseBtn" class="play-pause-btn">
+                        <ion-icon name="play-outline"></ion-icon>
+                    </button>
+                    <div class="volume-control">
+                        <ion-icon name="volume-high-outline"></ion-icon>
+                        <input type="range" id="volumeSlider" min="0" max="100" value="70">
+                    </div>
+                </div>
             </div>
             
-            <div class="admin-access">
-                <button onclick="openModal('passwordModal')" class="btn-admin"><i class="fas fa-user-shield"></i> Acesso Admin</button>
-            </div>
+            <audio id="audioPlayer" controls style="display: none;"></audio>
         </div>
+        
+        <main class="main-content">
+            <section class="covers-section">
+                <div class="covers-grid" id="albumCoversGrid">
+                    </div>
+            </section>
+            
+            <section class="reports-section">
+                <div class="report-list">
+                    <div class="reports-controls">
+                        <select id="playlistSelect">
+                            <option value="music">Músicas</option>
+                            <option value="ads">Comerciais</option>
+                            <option value="time">Vinhetas de Tempo</option>
+                        </select>
+                        <button onclick="toggleAdminPanel()" class="btn-secondary">⚙️ Admin</button>
+                        <button onclick="openModal('alertModal')" class="btn-primary">🚨 Avisos</button>
+                    </div>
 
-        <div class="content-panel">
-            <section class="program-section">
-                <h2><i class="fas fa-clock"></i> Programação da Rádio</h2>
-                <div class="program-list">
-                    <div class="program-item">
-                        <span class="program-time">Agora:</span>
-                        <span class="program-title">Músicas do Momento</span>
-                    </div>
-                    <div class="program-item">
-                        <span class="program-time">Próximo:</span>
-                        <span class="program-title">Aviso: Horário de pico</span>
-                    </div>
-                    <div class="program-item">
-                        <span class="program-time">Em Breve:</span>
-                        <span class="program-title">Álbum de Ofertas da Semana</span>
-                    </div>
+                    <div id="fileList">
+                        </div>
                 </div>
             </section>
-
-            <section class="announcements-section">
-                <h2><i class="fas fa-bullhorn"></i> Avisos e Recados</h2>
-                <div class="announcement-list" id="announcementList">
-                    <p class="no-announcements">Nenhum aviso no momento.</p>
-                </div>
-            </section>
-
-            <section class="album-section">
-                <h2><i class="fas fa-compact-disc"></i> Álbuns</h2>
-                <div class="cover-list" id="albumList">
-                    </div>
-            </section>
-        </div>
-    </main>
+        </main>
+    </div>
 
     <div id="passwordModal" class="modal">
         <div class="modal-content">
@@ -123,12 +97,41 @@
         </div>
     </div>
 
+    <div id="adminPanel" class="modal">
+        <div class="modal-content">
+            <h3>⚙️ Painel Admin</h3>
+            <p><strong>Aviso:</strong> A rádio está em modo de reprodução automática 24/7. As alterações só serão aplicadas após o reinício da transmissão.</p>
+            <div class="admin-controls">
+                <input type="file" id="fileInput" accept=".mp3,.wav,.aac">
+                <button onclick="uploadFiles()" class="btn-primary">📤 Fazer Upload</button>
+            </div>
+            <div class="admin-controls">
+                <select id="albumSelect"></select>
+                <button onclick="loadAlbumFiles()" class="btn-secondary">Carregar</button>
+            </div>
+            <div id="albumFiles"></div>
+        </div>
+    </div>
+    
+    <div id="alertModal" class="modal">
+        <div class="modal-content">
+            <h3>🚨 Avisos da Rádio</h3>
+            <textarea id="alertText" rows="5" placeholder="Digite aqui os avisos..."></textarea>
+            <div class="modal-buttons">
+                <button onclick="saveAlert()" class="btn-primary">Salvar</button>
+                <button onclick="closeModal('alertModal')" class="btn-secondary">Fechar</button>
+            </div>
+        </div>
+    </div>
+
     <div id="loadingOverlay" class="loading-overlay">
         <div class="spinner"></div>
         <p style="color: white; margin-top: 20px;">Carregando...</p>
     </div>
 
-    <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <script src="https://widget.cloudinary.com/v2.0/global/all.js" type="text/javascript"></script>
     <script src="script.js"></script>
 </body>
 </html>
