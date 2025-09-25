@@ -1,271 +1,5 @@
-});
-}
+// ===== RÁDIO SUPERMERCADO DO LOURO - SISTEMA PROFISSIONAL 24H =====
 
-// ===== GERENCIAMENTO DE PROGRAMAÇÃO =====
-function addScheduleItem() {
-    const time = elements.scheduleTime?.value;
-    const type = elements.scheduleType?.value;
-    const title = elements.scheduleTitle?.value;
-    
-    if (!time || !title) {
-        showError('Preencha todos os campos obrigatórios');
-        return;
-    }
-    
-    const newItem = {
-        time: time,
-        title: title,
-        description: `Programação especial - ${title}`,
-        type: type || 'program'
-    };
-    
-    // Verificar se já existe um item neste horário
-    const existingIndex = radioState.schedule.findIndex(item => item.time === time);
-    if (existingIndex !== -1) {
-        if (!confirm('Já existe uma programação neste horário. Substituir?')) return;
-        radioState.schedule[existingIndex] = newItem;
-    } else {
-        radioState.schedule.push(newItem);
-    }
-    
-    // Ordenar por horário
-    radioState.schedule.sort((a, b) => a.time.localeCompare(b.time));
-    
-    saveData();
-    updateScheduleDisplay();
-    
-    // Limpar formulário
-    if (elements.scheduleTime) elements.scheduleTime.value = '';
-    if (elements.scheduleTitle) elements.scheduleTitle.value = '';
-    
-    showSuccess('Item de programação adicionado!');
-}
-
-function removeScheduleItem(index) {
-    if (confirm('Remover este item da programação?')) {
-        radioState.schedule.splice(index, 1);
-        saveData();
-        updateScheduleDisplay();
-        showSuccess('Item removido da programação');
-    }
-}
-
-function updateScheduleDisplay() {
-    // Atualizar programação principal
-    if (elements.scheduleContainer) {
-        const html = radioState.schedule.map((item, index) => {
-            const now = new Date();
-            const itemTime = item.time.split(':');
-            const itemDate = new Date();
-            itemDate.setHours(parseInt(itemTime[0]), parseInt(itemTime[1]), 0, 0);
-            
-            const isActive = Math.abs(now - itemDate) < 1800000; // 30 minutos de tolerância
-            
-            return `
-                <div class="schedule-item ${isActive ? 'active' : ''}">
-                    <div class="schedule-time">${item.time}</div>
-                    <div class="schedule-title">${item.title}</div>
-                    <div class="schedule-description">${item.description}</div>
-                </div>
-            `;
-        }).join('');
-        
-        elements.scheduleContainer.innerHTML = html || '<p style="color: var(--medium-gray);">Nenhuma programação cadastrada</p>';
-    }
-    
-    // Atualizar lista de administração
-    if (elements.scheduleList) {
-        const adminHtml = radioState.schedule.map((item, index) => `
-            <div class="content-item">
-                <div>
-                    <strong>${item.time}</strong> - ${item.title}
-                    <br><small style="color: var(--medium-gray);">${item.description}</small>
-                </div>
-                <button onclick="removeScheduleItem(${index})" class="btn-danger">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        `).join('');
-        
-        elements.scheduleList.innerHTML = adminHtml || '<p style="color: var(--medium-gray);">Nenhuma programação cadastrada</p>';
-    }
-}
-
-// ===== RELATÓRIOS =====
-function refreshReports() {
-    if (!elements.reportsList) return;
-    
-    const history = Object.entries(radioState.playHistory)
-        .sort(([,a], [,b]) => b - a)
-        .slice(0, 20); // Top 20
-    
-    if (history.length === 0) {
-        elements.reportsList.innerHTML = '<p style="color: var(--medium-gray);">Nenhuma música reproduzida ainda</p>';
-        return;
-    }
-    
-    const html = history.map(([track, count]) => `
-        <div class="report-item">
-            <span class="report-track">${track}</span>
-            <span class="report-count">${count}x</span>
-        </div>
-    `).join('');
-    
-    elements.reportsList.innerHTML = html;
-}
-
-// ===== UTILITÁRIOS =====
-function updateUI() {
-    if (elements.volumeSlider && elements.volumeDisplay) {
-        elements.volumeSlider.value = radioState.volume;
-        elements.volumeDisplay.textContent = `${radioState.volume}%`;
-        updateVolumeIcon(radioState.volume);
-    }
-    
-    updateScheduleDisplay();
-    
-    if (radioManager) {
-        radioManager.displayRecentTracks();
-        radioManager.updateCurrentTime();
-    }
-}
-
-function showLoading(show) {
-    if (elements.loadingOverlay) {
-        if (show) {
-            elements.loadingOverlay.classList.add('show');
-        } else {
-            elements.loadingOverlay.classList.remove('show');
-        }
-    }
-}
-
-function showError(message) {
-    console.error('Erro:', message);
-    
-    // Criar toast de erro
-    const toast = document.createElement('div');
-    toast.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: linear-gradient(135deg, #ff6b6b, #ff4757);
-        color: white;
-        padding: 15px 25px;
-        border-radius: 10px;
-        font-weight: 600;
-        z-index: 10000;
-        box-shadow: 0 4px 20px rgba(255, 107, 107, 0.4);
-        animation: slideInRight 0.3s ease;
-    `;
-    toast.textContent = message;
-    
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.style.animation = 'slideOutRight 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
-
-// ===== TRATAMENTO DE ERROS =====
-window.addEventListener('error', (e) => {
-    console.error('Erro global capturado:', e.error);
-    
-    // Tentar recuperar a transmissão se houver erro crítico
-    if (radioState.isLive && radioManager && !radioState.isPlaying) {
-        setTimeout(() => {
-            console.log('Tentando recuperar transmissão...');
-            radioManager.playNext();
-        }, 5000);
-    }
-});
-
-// Manter transmissão ativa mesmo quando a página perde foco
-document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && radioState.isLive && elements.audioPlayer) {
-        // Verificar se o áudio parou e tentar reativar
-        setTimeout(() => {
-            if (elements.audioPlayer.paused && radioState.isLive) {
-                elements.audioPlayer.play().catch(() => {
-                    console.log('Erro ao retomar reprodução');
-                });
-            }
-        }, 1000);
-    }
-});
-
-// Salvar dados antes de sair da página
-window.addEventListener('beforeunload', () => {
-    saveData();
-});
-
-// ===== ANIMAÇÕES CSS DINÂMICAS =====
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideInRight {
-        from {
-            opacity: 0;
-            transform: translateX(100%);
-        }
-        to {
-            opacity: 1;
-            transform: translateX(0);
-        }
-    }
-    
-    @keyframes slideOutRight {
-        from {
-            opacity: 1;
-            transform: translateX(0);
-        }
-        to {
-            opacity: 0;
-            transform: translateX(100%);
-        }
-    }
-    
-    .toast-enter {
-        animation: slideInRight 0.3s ease;
-    }
-    
-    .toast-exit {
-        animation: slideOutRight 0.3s ease;
-    }
-`;
-document.head.appendChild(style);
-
-// ===== INICIALIZAÇÃO FINAL =====
-console.log('🚀 Sistema de Rádio 24h carregado com sucesso!');
-console.log('📻 Aguardando inicialização do DOM...');Right 0.3s ease;
-    `;
-    toast.textContent = message;
-    
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.style.animation = 'slideOutRight 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
-    }, 4000);
-}
-
-function showSuccess(message) {
-    console.log('Sucesso:', message);
-    
-    // Criar toast de sucesso
-    const toast = document.createElement('div');
-    toast.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: linear-gradient(135deg, var(--accent-green), var(--light-green));
-        color: white;
-        padding: 15px 25px;
-        border-radius: 10px;
-        font-weight: 600;
-        z-index: 10000;
-        box-shadow: 0 4px 20px var(--glow-color);
-        animation: slideIn// ===== RÁDIO SUPERMERCADO DO LOURO - SISTEMA PROFISSIONAL 24H =====
 // Configurações da Cloudinary (atualizadas)
 const CLOUDINARY_CONFIG = {
     cloudName: 'dygbrcrr6',
@@ -316,6 +50,7 @@ let radioState = {
 // Elementos DOM
 let elements = {};
 let radioManager = null;
+let uploadManager = null;
 let isInitialized = false;
 
 // ===== INICIALIZAÇÃO =====
@@ -326,6 +61,7 @@ document.addEventListener('DOMContentLoaded', function() {
         initializeElements();
         loadStoredData();
         initializeRadioManager();
+        initializeUploadManager();
         setupEventListeners();
         startLiveBroadcast();
         updateUI();
@@ -418,7 +154,7 @@ class RadioManager {
         this.scheduleCheckInterval = null;
         
         this.setupAudioEvents();
-        console.log('🔊 RadioManager inicializado');
+        console.log('📻 RadioManager inicializado');
     }
     
     setupAudioEvents() {
@@ -450,7 +186,7 @@ class RadioManager {
         });
         
         audio.addEventListener('ended', () => {
-            console.log('⏭️ Música finalizada, próxima...');
+            console.log('⭐ Música finalizada, próxima...');
             this.playNext();
         });
         
@@ -866,6 +602,10 @@ function initializeRadioManager() {
     radioManager = new RadioManager();
 }
 
+function initializeUploadManager() {
+    uploadManager = new UploadManager();
+}
+
 function setupEventListeners() {
     // Player controls
     if (elements.playPauseBtn) {
@@ -996,7 +736,7 @@ function toggleMute() {
     if (!elements.volumeSlider || !elements.audioPlayer) return;
     
     if (radioState.volume === 0) {
-        // Desmutear - voltar ao volume anterior ou 70%
+        // Desmutar - voltar ao volume anterior ou 70%
         const previousVolume = radioState.previousVolume || 70;
         radioState.volume = previousVolume;
         elements.volumeSlider.value = previousVolume;
@@ -1122,8 +862,6 @@ function playAdvertisement() {
 }
 
 // ===== UPLOAD DE CONTEÚDO =====
-const uploadManager = new UploadManager();
-
 function uploadContent(category) {
     const inputMap = {
         music: elements.musicUpload,
@@ -1173,3 +911,234 @@ function updateContentLists() {
         container.innerHTML = html;
     });
 }
+
+// ===== GERENCIAMENTO DE PROGRAMAÇÃO =====
+function addScheduleItem() {
+    const time = elements.scheduleTime?.value;
+    const type = elements.scheduleType?.value;
+    const title = elements.scheduleTitle?.value;
+    
+    if (!time || !title) {
+        showError('Preencha todos os campos obrigatórios');
+        return;
+    }
+    
+    const newItem = {
+        time: time,
+        title: title,
+        description: `Programação especial - ${title}`,
+        type: type || 'program'
+    };
+    
+    // Verificar se já existe um item neste horário
+    const existingIndex = radioState.schedule.findIndex(item => item.time === time);
+    if (existingIndex !== -1) {
+        if (!confirm('Já existe uma programação neste horário. Substituir?')) return;
+        radioState.schedule[existingIndex] = newItem;
+    } else {
+        radioState.schedule.push(newItem);
+    }
+    
+    // Ordenar por horário
+    radioState.schedule.sort((a, b) => a.time.localeCompare(b.time));
+    
+    saveData();
+    updateScheduleDisplay();
+    
+    // Limpar formulário
+    if (elements.scheduleTime) elements.scheduleTime.value = '';
+    if (elements.scheduleTitle) elements.scheduleTitle.value = '';
+    
+    showSuccess('Item de programação adicionado!');
+}
+
+function removeScheduleItem(index) {
+    if (confirm('Remover este item da programação?')) {
+        radioState.schedule.splice(index, 1);
+        saveData();
+        updateScheduleDisplay();
+        showSuccess('Item removido da programação');
+    }
+}
+
+function updateScheduleDisplay() {
+    // Atualizar programação principal
+    if (elements.scheduleContainer) {
+        const html = radioState.schedule.map((item, index) => {
+            const now = new Date();
+            const itemTime = item.time.split(':');
+            const itemDate = new Date();
+            itemDate.setHours(parseInt(itemTime[0]), parseInt(itemTime[1]), 0, 0);
+            
+            const isActive = Math.abs(now - itemDate) < 1800000; // 30 minutos de tolerância
+            
+            return `
+                <div class="schedule-item ${isActive ? 'active' : ''}">
+                    <div class="schedule-time">${item.time}</div>
+                    <div class="schedule-title">${item.title}</div>
+                    <div class="schedule-description">${item.description}</div>
+                </div>
+            `;
+        }).join('');
+        
+        elements.scheduleContainer.innerHTML = html || '<p style="color: var(--medium-gray);">Nenhuma programação cadastrada</p>';
+    }
+    
+    // Atualizar lista de administração
+    if (elements.scheduleList) {
+        const adminHtml = radioState.schedule.map((item, index) => `
+            <div class="content-item">
+                <div>
+                    <strong>${item.time}</strong> - ${item.title}
+                    <br><small style="color: var(--medium-gray);">${item.description}</small>
+                </div>
+                <button onclick="removeScheduleItem(${index})" class="btn-danger">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `).join('');
+        
+        elements.scheduleList.innerHTML = adminHtml || '<p style="color: var(--medium-gray);">Nenhuma programação cadastrada</p>';
+    }
+}
+
+// ===== RELATÓRIOS =====
+function refreshReports() {
+    if (!elements.reportsList) return;
+    
+    const history = Object.entries(radioState.playHistory)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 20); // Top 20
+    
+    if (history.length === 0) {
+        elements.reportsList.innerHTML = '<p style="color: var(--medium-gray);">Nenhuma música reproduzida ainda</p>';
+        return;
+    }
+    
+    const html = history.map(([track, count]) => `
+        <div class="report-item">
+            <span class="report-track">${track}</span>
+            <span class="report-count">${count}x</span>
+        </div>
+    `).join('');
+    
+    elements.reportsList.innerHTML = html;
+}
+
+// ===== UTILITÁRIOS =====
+function updateUI() {
+    if (elements.volumeSlider && elements.volumeDisplay) {
+        elements.volumeSlider.value = radioState.volume;
+        elements.volumeDisplay.textContent = `${radioState.volume}%`;
+        updateVolumeIcon(radioState.volume);
+    }
+    
+    updateScheduleDisplay();
+    
+    if (radioManager) {
+        radioManager.displayRecentTracks();
+        radioManager.updateCurrentTime();
+    }
+}
+
+function showLoading(show) {
+    if (elements.loadingOverlay) {
+        if (show) {
+            elements.loadingOverlay.classList.add('show');
+        } else {
+            elements.loadingOverlay.classList.remove('show');
+        }
+    }
+}
+
+function showError(message) {
+    console.error('Erro:', message);
+    
+    // Criar toast de erro
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #ff6b6b, #ff4757);
+        color: white;
+        padding: 15px 25px;
+        border-radius: 10px;
+        font-weight: 600;
+        z-index: 10000;
+        box-shadow: 0 4px 20px rgba(255, 107, 107, 0.4);
+        animation: slideInRight 0.3s ease;
+    `;
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+function showSuccess(message) {
+    console.log('Sucesso:', message);
+    
+    // Criar toast de sucesso
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, var(--accent-green), var(--light-green));
+        color: white;
+        padding: 15px 25px;
+        border-radius: 10px;
+        font-weight: 600;
+        z-index: 10000;
+        box-shadow: 0 4px 20px var(--glow-color);
+        animation: slideInRight 0.3s ease;
+    `;
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+}
+
+// ===== TRATAMENTO DE ERROS =====
+window.addEventListener('error', (e) => {
+    console.error('Erro global capturado:', e.error);
+    
+    // Tentar recuperar a transmissão se houver erro crítico
+    if (radioState.isLive && radioManager && !radioState.isPlaying) {
+        setTimeout(() => {
+            console.log('Tentando recuperar transmissão...');
+            radioManager.playNext();
+        }, 5000);
+    }
+});
+
+// Manter transmissão ativa mesmo quando a página perde foco
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && radioState.isLive && elements.audioPlayer) {
+        // Verificar se o áudio parou e tentar reativar
+        setTimeout(() => {
+            if (elements.audioPlayer.paused && radioState.isLive) {
+                elements.audioPlayer.play().catch(() => {
+                    console.log('Erro ao retomar reprodução');
+                });
+            }
+        }, 1000);
+    }
+});
+
+// Salvar dados antes de sair da página
+window.addEventListener('beforeunload', () => {
+    saveData();
+});
+
+// ===== INICIALIZAÇÃO FINAL =====
+console.log('🚀 Sistema de Rádio 24h carregado com sucesso!');
+console.log('📻 Aguardando inicialização do DOM...');
