@@ -1,7 +1,7 @@
-// 🎵 RÁDIO SUPERMERCADO DO LOURO - SISTEMA 24/7
+// 🎵 RÁDIO SUPERMERCADO DO LOURO - SCRIPT CORRIGIDO E ATUALIZADO
 // ===================================================
 
-// Configuração da Cloudinary
+// Configuração da Cloudinary (atualizado com suas credenciais)
 const CLOUDINARY_CONFIG = {
     cloudName: 'dygbrcrr6',
     apiKey: '853591251513134',
@@ -9,466 +9,528 @@ const CLOUDINARY_CONFIG = {
     uploadPreset: 'radio_preset'
 };
 
-// --- Estado da aplicação ---
+// Estado da aplicação
 let radioState = {
     currentTrack: null,
     isPlaying: false,
     volume: 70,
     playCount: 0,
-    activeAlbum: null,
+    activeAlbum: 'general',
     tracksSinceTime: 0,
     tracksSinceAd: 0,
+    lastTimeCheck: 0,
     isLive: false,
+    autoPlay: true,
     playlists: {
         music: [],
         time: [],
         ads: [],
-        albums: { natal: [], pascoa: [], saojoao: [], carnaval: [] }
+        albums: {
+            general: [],
+            natal: [],
+            pascoa: [],
+            saojoao: [],
+            carnaval: []
+        }
     },
     playHistory: {},
-    albumCovers: { general: null }
+    albumCovers: {
+        general: null
+    },
+    // Nova fila de reprodução para o modo 24/7
+    playQueue: [],
+    // Avisos de texto
+    currentAlert: ""
 };
 
-// --- Mapeamento de elementos do DOM ---
-const elements = {
-    audioPlayer: document.getElementById('audioPlayer'),
-    playPauseBtn: document.getElementById('playPauseBtn'),
-    prevTrackBtn: document.getElementById('prevTrackBtn'),
-    nextTrackBtn: document.getElementById('nextTrackBtn'),
-    volumeSlider: document.getElementById('volumeSlider'),
-    progressBar: document.getElementById('progressBar'),
-    currentTimeEl: document.getElementById('currentTime'),
-    durationTimeEl: document.getElementById('durationTime'),
-    trackCover: document.getElementById('trackCover'),
-    trackTitleEl: document.getElementById('trackTitle'),
-    albumNameEl: document.getElementById('albumName'),
-    albumList: document.getElementById('albumList'),
-    passwordModal: document.getElementById('passwordModal'),
-    coverModal: document.getElementById('coverModal'),
-    loadingOverlay: document.getElementById('loadingOverlay'),
-    liveModeToggle: document.getElementById('liveModeToggle'),
-    liveIndicator: document.getElementById('liveIndicator'),
-    announcementList: document.getElementById('announcementList')
-};
-
-// --- Dados dos álbuns ---
+// Dados dos álbuns
 const albumData = {
     general: { title: '📻 Playlist Geral', description: 'Todas as músicas da rádio' },
     natal: { title: '🎄 Natal', description: 'Músicas natalinas' },
     pascoa: { title: '🐰 Páscoa', description: 'Celebrando a ressurreição' },
     saojoao: { title: '🎪 São João', description: 'Forró e festa junina' },
-    carnaval: { title: '🎉 Carnaval', description: 'Marchinhas e axé' },
+    carnaval: { title: '🎊 Carnaval', description: 'Marchinhas e axé' }
 };
 
-// --- Classes para gerenciar o sistema de rádio ---
+// Mapeamento de elementos HTML
+const elements = {
+    audioPlayer: document.getElementById('audioPlayer'),
+    playPauseBtn: document.getElementById('playPauseBtn'),
+    volumeSlider: document.getElementById('volumeSlider'),
+    currentTrackTitle: document.getElementById('currentTrackTitle'),
+    artistName: document.getElementById('artistName'),
+    coverImage: document.getElementById('coverImage'),
+    playlistSelect: document.getElementById('playlistSelect'),
+    fileList: document.getElementById('fileList'),
+    passwordModal: document.getElementById('passwordModal'),
+    adminPanel: document.getElementById('adminPanel'),
+    adminPassword: document.getElementById('adminPassword'),
+    coverModal: document.getElementById('coverModal'),
+    coverAlbumName: document.getElementById('coverAlbumName'),
+    coverUpload: document.getElementById('coverUpload'),
+    albumCoversGrid: document.getElementById('albumCoversGrid'),
+    albumSelect: document.getElementById('albumSelect'),
+    albumFiles: document.getElementById('albumFiles'),
+    loadingOverlay: document.getElementById('loadingOverlay'),
+    liveStatus: document.getElementById('live-status'),
+    alertModal: document.getElementById('alertModal'),
+    alertText: document.getElementById('alertText')
+};
 
-class FileManager {
-    constructor() {
-        this.baseApi = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}`;
-    }
+// CLOUDINARY UPLOAD WIDGET
+let myWidget;
 
-    async fetchPlaylists() {
-        showLoading();
-        try {
-            const musicRes = await axios.get(`${this.baseApi}/resources/search?expression=folder:radio_louro/music&max_results=500`);
-            const timeRes = await axios.get(`${this.baseApi}/resources/search?expression=folder:radio_louro/time&max_results=500`);
-            const adsRes = await axios.get(`${this.baseApi}/resources/search?expression=folder:radio_louro/ads&max_results=500`);
-            const coversRes = await axios.get(`${this.baseApi}/resources/search?expression=folder:radio_louro/covers&max_results=500`);
-
-            const parseResources = (resources) => resources.map(res => ({
-                id: res.asset_id,
-                title: res.context?.custom?.caption || this.parseTitle(res.public_id),
-                url: res.secure_url,
-                album: this.parseAlbum(res.folder)
-            }));
-
-            radioState.playlists.music = parseResources(musicRes.data.resources);
-            radioState.playlists.time = parseResources(timeRes.data.resources);
-            radioState.playlists.ads = parseResources(adsRes.data.resources);
-
-            // Adicionar músicas aos álbuns
-            for (const album in radioState.playlists.albums) {
-                radioState.playlists.albums[album] = radioState.playlists.music.filter(t => t.album === album);
+const cloudinaryManager = {
+    init: () => {
+        myWidget = cloudinary.createUploadWidget({
+            cloudName: CLOUDINARY_CONFIG.cloudName,
+            uploadPreset: CLOUDINARY_CONFIG.uploadPreset,
+            folder: `radio/${radioState.activeAlbum}`
+        }, (error, result) => {
+            if (!error && result && result.event === "success") {
+                console.log('✅ Upload concluído com sucesso:', result.info);
+                fileManager.addFile(result.info.original_filename, result.info.secure_url, radioState.activeAlbum);
             }
-
-            // Mapear capas
-            coversRes.data.resources.forEach(res => {
-                const folder = res.folder.split('/').pop();
-                radioState.albumCovers[folder] = res.secure_url;
-            });
-
-            console.log('✅ Playlists e capas carregadas:', radioState.playlists);
-            this.saveData();
-
-        } catch (error) {
-            console.error('❌ Erro ao carregar dados da Cloudinary:', error);
-        } finally {
-            hideLoading();
-        }
-    }
-
-    saveData() {
-        try {
-            localStorage.setItem('radioState', JSON.stringify(radioState));
-            console.log('💾 Estado da rádio salvo localmente.');
-        } catch (error) {
-            console.error('❌ Erro ao salvar dados:', error);
-        }
-    }
-
-    loadData() {
-        try {
-            const savedState = JSON.parse(localStorage.getItem('radioState'));
-            if (savedState) {
-                radioState = { ...radioState, ...savedState };
-                console.log('🔄 Estado da rádio carregado do localStorage.');
-                return true;
-            }
-        } catch (error) {
-            console.error('❌ Erro ao carregar dados salvos:', error);
-        }
-        return false;
-    }
-
-    parseTitle(publicId) {
-        const parts = publicId.split('/');
-        let filename = parts.pop().replace(/_/g, ' ').replace(/\.mp3$/, '');
-        const match = filename.match(/^(\d+-\d+-\d+)?\s*(.*)$/);
-        return match ? match[2].trim() : filename;
-    }
-
-    parseAlbum(folderPath) {
-        const parts = folderPath.split('/');
-        return parts.length > 1 ? parts[parts.length - 1] : 'general';
-    }
-}
-
-class UIManager {
-    constructor() {
-        this.albumData = albumData;
-    }
-
-    updatePlayerInfo(track) {
-        if (!track) {
-            elements.trackTitleEl.textContent = 'Rádio Supermercado do Louro';
-            elements.albumNameEl.textContent = 'A trilha sonora do seu dia!';
-            elements.trackCover.src = radioState.albumCovers.general || 'https://res.cloudinary.com/dygbrcrr6/image/upload/v1633333333/default_cover.png';
-            return;
-        }
-
-        elements.trackTitleEl.textContent = track.title;
-        elements.albumNameEl.textContent = this.albumData[track.album]?.title || 'Playlist Geral';
-        const coverUrl = radioState.albumCovers[track.album] || radioState.albumCovers.general || 'https://res.cloudinary.com/dygbrcrr6/image/upload/v1633333333/default_cover.png';
-        elements.trackCover.src = coverUrl;
-    }
-
-    updateLiveIndicator() {
-        if (radioState.isLive) {
-            elements.liveIndicator.textContent = '● AO VIVO';
-            elements.liveIndicator.className = 'live-indicator live';
-            elements.liveModeToggle.textContent = 'Parar Transmissão';
-        } else {
-            elements.liveIndicator.textContent = '● PAUSADO';
-            elements.liveIndicator.className = 'live-indicator paused';
-            elements.liveModeToggle.textContent = 'Ficar ao Vivo 24/7';
-        }
-    }
-
-    updatePlayPauseButton() {
-        if (radioState.isPlaying) {
-            elements.playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
-        } else {
-            elements.playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
-        }
-    }
-
-    updateVolume() {
-        elements.audioPlayer.volume = elements.volumeSlider.value / 100;
-        radioState.volume = elements.volumeSlider.value;
-    }
-
-    updateProgressBar() {
-        const { currentTime, duration } = elements.audioPlayer;
-        if (duration) {
-            const progress = (currentTime / duration) * 100;
-            elements.progressBar.style.width = `${progress}%`;
-            elements.currentTimeEl.textContent = formatTime(currentTime);
-            elements.durationTimeEl.textContent = formatTime(duration);
-        } else {
-            elements.progressBar.style.width = '0%';
-            elements.currentTimeEl.textContent = '0:00';
-            elements.durationTimeEl.textContent = '0:00';
-        }
-    }
-
-    renderAlbums() {
-        elements.albumList.innerHTML = '';
-        const albumsToRender = ['general', 'natal', 'pascoa', 'saojoao', 'carnaval'];
-        albumsToRender.forEach(albumKey => {
-            const albumInfo = this.albumData[albumKey];
-            const coverUrl = radioState.albumCovers[albumKey] || radioState.albumCovers.general || 'https://res.cloudinary.com/dygbrcrr6/image/upload/v1633333333/default_cover.png';
-
-            const albumItem = document.createElement('div');
-            albumItem.className = 'cover-item';
-            albumItem.innerHTML = `
-                <img src="${coverUrl}" alt="Capa do Álbum ${albumInfo.title}">
-                <h4>${albumInfo.title}</h4>
-                <p>${albumInfo.description}</p>
-            `;
-            albumItem.onclick = () => {
-                radioState.activeAlbum = albumKey;
-                alert(`Tocando álbum: ${albumInfo.title}`);
-                // Implementar lógica de reprodução do álbum
-            };
-            elements.albumList.appendChild(albumItem);
         });
     }
+};
 
-    // Função para atualizar a programação
-    updateProgramSchedule() {
-        const programListEl = document.querySelector('.program-list');
-        programListEl.innerHTML = '';
-
-        const nowPlaying = `Músicas do Momento`;
-        const nextTime = `Aviso: Horário de pico`;
-        const nextAd = `Aviso Comercial`;
-
-        programListEl.innerHTML += `
-            <div class="program-item">
-                <span class="program-time">Agora:</span>
-                <span class="program-title">${nowPlaying}</span>
-            </div>
-            <div class="program-item">
-                <span class="program-time">Em breve:</span>
-                <span class="program-title">${nextTime}</span>
-            </div>
-            <div class="program-item">
-                <span class="program-time">Em seguida:</span>
-                <span class="program-title">${nextAd}</span>
-            </div>
-        `;
-    }
-}
-
-class RadioManager {
-    constructor(ui, fileManager) {
-        this.ui = ui;
-        this.fileManager = fileManager;
-        this.shuffledMusic = [];
-        this.musicIndex = -1;
-    }
-
-    // Inicia ou para o modo 24/7
-    toggleLiveMode() {
-        radioState.isLive = !radioState.isLive;
-        this.ui.updateLiveIndicator();
-
-        if (radioState.isLive) {
-            console.log('📻 Modo ao vivo 24/7 ativado.');
-            this.preparePlaylist();
-            this.playNext();
-        } else {
-            console.log('🛑 Modo ao vivo 24/7 desativado.');
-            elements.audioPlayer.pause();
-            radioState.isPlaying = false;
-            this.ui.updatePlayPauseButton();
+const fileManager = {
+    // Carrega os dados do localStorage
+    loadData: () => {
+        try {
+            const data = JSON.parse(localStorage.getItem('radioData'));
+            if (data) {
+                radioState.playlists = data.playlists || radioState.playlists;
+                radioState.albumCovers = data.albumCovers || radioState.albumCovers;
+                radioState.playHistory = data.playHistory || radioState.playHistory;
+                radioState.currentAlert = data.currentAlert || "";
+                console.log('📊 Dados de playlists carregados com sucesso!');
+            }
+        } catch (error) {
+            console.error('❌ Erro ao carregar dados do localStorage:', error);
         }
-    }
+    },
 
-    // Prepara a playlist e a embaralha
-    preparePlaylist() {
-        if (radioState.playlists.music.length === 0) {
-            console.warn('Playlist de música vazia. Tentando recarregar.');
-            this.fileManager.fetchPlaylists().then(() => this.preparePlaylist());
-            return;
+    // Salva os dados no localStorage
+    saveData: () => {
+        try {
+            localStorage.setItem('radioData', JSON.stringify({
+                playlists: radioState.playlists,
+                albumCovers: radioState.albumCovers,
+                playHistory: radioState.playHistory,
+                currentAlert: radioState.currentAlert
+            }));
+            console.log('💾 Dados salvos com sucesso!');
+        } catch (error) {
+            console.error('❌ Erro ao salvar dados no localStorage:', error);
         }
-        this.shuffledMusic = [...radioState.playlists.music].sort(() => 0.5 - Math.random());
-        this.musicIndex = 0;
-    }
+    },
 
-    // Toca a próxima faixa na sequência
-    playNext() {
-        if (!radioState.isLive) return;
-
-        let nextTrack = null;
-
-        // Lógica de Programação:
-        // 1. Toca um aviso a cada 5 músicas
-        if (radioState.tracksSinceTime >= 5 && radioState.playlists.time.length > 0) {
-            nextTrack = this.getRandomTrack(radioState.playlists.time);
-            radioState.tracksSinceTime = 0;
-            console.log('🎵 Tocando aviso...');
+    // Adiciona um novo arquivo à playlist e salva
+    addFile: (title, url, album) => {
+        if (!radioState.playlists.albums[album]) {
+            radioState.playlists.albums[album] = [];
         }
-        // 2. Toca um anúncio a cada 10 músicas
-        else if (radioState.tracksSinceAd >= 10 && radioState.playlists.ads.length > 0) {
-            nextTrack = this.getRandomTrack(radioState.playlists.ads);
-            radioState.tracksSinceAd = 0;
-            console.log('🎵 Tocando anúncio...');
+        radioState.playlists.albums[album].push({ title, url });
+        fileManager.distributePlaylists();
+        fileManager.saveData();
+        uiManager.renderFileList(radioState.playlists[elements.playlistSelect.value]);
+    },
+
+    // Remove um arquivo e salva
+    removeFile: (url, album) => {
+        const playlist = radioState.playlists.albums[album];
+        if (playlist) {
+            const newPlaylist = playlist.filter(track => track.url !== url);
+            radioState.playlists.albums[album] = newPlaylist;
+            fileManager.distributePlaylists();
+            fileManager.saveData();
+            uiManager.renderFileList(newPlaylist);
         }
-        // 3. Toca uma música
-        else {
-            nextTrack = this.shuffledMusic[this.musicIndex];
-            this.musicIndex = (this.musicIndex + 1) % this.shuffledMusic.length;
-            
-            // Se a música for um 'general', conta para os avisos
-            if (nextTrack && nextTrack.album === 'general') {
-                radioState.tracksSinceTime++;
-                radioState.tracksSinceAd++;
+    },
+    
+    // Distribui os arquivos dos álbuns para as playlists principais
+    distributePlaylists: () => {
+        // Zera as playlists principais antes de redistribuir
+        radioState.playlists.music = [];
+        radioState.playlists.time = [];
+        radioState.playlists.ads = [];
+
+        for (const album in radioState.playlists.albums) {
+            const albumName = album.toLowerCase();
+            const playlist = radioState.playlists.albums[album];
+            if (playlist) {
+                // Copia as músicas do álbum 'geral' para a playlist de música
+                if (albumName === 'general' || albumName === 'natal' || albumName === 'pascoa' || albumName === 'saojoao' || albumName === 'carnaval') {
+                    radioState.playlists.music.push(...playlist);
+                }
+                // Adiciona comerciais
+                if (albumName.includes('ads')) {
+                    radioState.playlists.ads.push(...playlist);
+                }
+                // Adiciona vinhetas de tempo
+                if (albumName.includes('time')) {
+                    radioState.playlists.time.push(...playlist);
+                }
             }
         }
+    }
+};
+
+const radioManager = {
+    // Inicializa o player e a rádio
+    init: () => {
+        // Carrega os dados salvos
+        fileManager.loadData();
+        fileManager.distributePlaylists();
         
-        // Se a playlist principal estiver vazia, recomeça
-        if (!nextTrack) {
-            console.warn('Não há faixas para tocar. Reiniciando a playlist...');
-            this.preparePlaylist();
-            nextTrack = this.shuffledMusic[0];
-        }
-
-        this.playTrack(nextTrack);
-    }
-
-    getRandomTrack(playlist) {
-        return playlist[Math.floor(Math.random() * playlist.length)];
-    }
-
-    playTrack(track) {
-        if (!track || !track.url) {
-            console.error('❌ Faixa inválida. Pulando.');
-            this.playNext();
+        // Verifica se há músicas para tocar
+        if (radioState.playlists.music.length === 0) {
+            uiManager.setPlayerInfo('Nenhuma música encontrada.', 'Faça upload no painel admin.');
             return;
         }
 
-        radioState.currentTrack = track;
-        elements.audioPlayer.src = track.url;
-        this.ui.updatePlayerInfo(track);
-        this.ui.updatePlayPauseButton();
-        
-        const playPromise = elements.audioPlayer.play();
-        if (playPromise !== undefined) {
-            playPromise.then(() => {
-                radioState.isPlaying = true;
-                this.ui.updateLiveIndicator();
-                this.ui.updatePlayPauseButton();
-            }).catch(error => {
-                console.error('❌ Erro de reprodução:', error);
-                radioState.isPlaying = false;
-                this.ui.updatePlayPauseButton();
-                this.ui.updateLiveIndicator();
-                // Tenta a próxima faixa em caso de erro
-                setTimeout(() => this.playNext(), 2000);
-            });
+        // Preenche a fila de reprodução inicial
+        radioManager.fillQueue();
+
+        // Configura o volume
+        elements.audioPlayer.volume = radioState.volume / 100;
+
+        // Inicia a reprodução automática se habilitado
+        if (radioState.autoPlay) {
+            radioManager.startLiveStream();
         }
-    }
-}
+    },
 
-// --- Funções Auxiliares ---
+    // Inicia a transmissão ao vivo
+    startLiveStream: () => {
+        radioState.isLive = true;
+        elements.liveStatus.style.display = 'flex';
+        uiManager.updatePlayPauseIcon('play');
+        radioManager.playNext();
+    },
 
-function formatTime(seconds) {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
-}
+    // Gerencia a fila de reprodução
+    fillQueue: () => {
+        // Se a fila estiver vazia, recarrega
+        if (radioState.playQueue.length <= 1) {
+            console.log('🔄 Reabastecendo fila de reprodução...');
+            const newQueue = [...radioState.playlists.music];
+            // Embaralha a nova fila
+            for (let i = newQueue.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newQueue[i], newQueue[j]] = [newQueue[j], newQueue[i]];
+            }
+            radioState.playQueue = [...radioState.playQueue, ...newQueue];
+        }
 
-function showLoading() {
-    elements.loadingOverlay.classList.add('visible');
-}
+        // Insere vinheta de tempo se for a hora
+        const now = new Date();
+        const lastCheck = new Date(radioState.lastTimeCheck);
+        if (now - lastCheck >= 30 * 60 * 1000) { // 30 minutos
+            if (radioState.playlists.time.length > 0) {
+                const timeTrack = radioState.playlists.time[Math.floor(Math.random() * radioState.playlists.time.length)];
+                radioState.playQueue.splice(1, 0, timeTrack); // Insere no início da fila
+                radioState.lastTimeCheck = now.getTime();
+                console.log('🕒 Inserindo vinheta de tempo na fila.');
+            }
+        }
 
-function hideLoading() {
-    elements.loadingOverlay.classList.remove('visible');
-}
+        // Insere um comercial a cada 5 músicas
+        if (radioState.tracksSinceAd >= 5) {
+            if (radioState.playlists.ads.length > 0) {
+                const adTrack = radioState.playlists.ads[Math.floor(Math.random() * radioState.playlists.ads.length)];
+                radioState.playQueue.splice(1, 0, adTrack); // Insere no início da fila
+                radioState.tracksSinceAd = 0;
+                console.log('💰 Inserindo comercial na fila.');
+            }
+        }
+    },
 
-// --- Event Listeners ---
+    // Toca a próxima música da fila
+    playNext: async () => {
+        if (radioState.playQueue.length === 0) {
+            radioManager.fillQueue();
+            if (radioState.playQueue.length === 0) {
+                console.log('🛑 Fila de reprodução vazia. Rádio parou.');
+                radioManager.stop();
+                return;
+            }
+        }
 
-function setupEventListeners(radioManager, ui) {
-    elements.playPauseBtn.addEventListener('click', () => {
+        const nextTrack = radioState.playQueue.shift();
+        radioState.currentTrack = nextTrack;
+
+        // Se for um comercial ou vinheta, não conta para o contador de músicas
+        if (!nextTrack.url.includes('/ads/') && !nextTrack.url.includes('/time/')) {
+            radioState.tracksSinceAd++;
+        }
+        
+        uiManager.updatePlayer(nextTrack);
+
+        try {
+            elements.audioPlayer.src = nextTrack.url;
+            await elements.audioPlayer.play();
+            radioState.isPlaying = true;
+            uiManager.updatePlayPauseIcon('pause');
+            console.log(`▶️ Tocando: ${nextTrack.title}`);
+        } catch (error) {
+            console.error('❌ Erro ao tentar reproduzir:', error);
+            // Tenta a próxima faixa em caso de erro
+            radioManager.playNext();
+        }
+        
+        // Garante que a fila é reabastecida para não esvaziar
+        radioManager.fillQueue();
+    },
+
+    // Controla o play/pause
+    togglePlayPause: () => {
         if (radioState.isPlaying) {
             elements.audioPlayer.pause();
             radioState.isPlaying = false;
+            uiManager.updatePlayPauseIcon('play');
         } else {
-            elements.audioPlayer.play().catch(e => console.error('Erro ao tocar:', e));
+            elements.audioPlayer.play();
             radioState.isPlaying = true;
+            uiManager.updatePlayPauseIcon('pause');
         }
-        ui.updatePlayPauseButton();
-        ui.updateLiveIndicator();
-    });
+    },
 
-    elements.nextTrackBtn.addEventListener('click', () => {
-        radioManager.playNext();
-    });
+    // Para a transmissão
+    stop: () => {
+        elements.audioPlayer.pause();
+        elements.audioPlayer.src = '';
+        radioState.isPlaying = false;
+        radioState.isLive = false;
+        uiManager.updatePlayPauseIcon('play');
+        uiManager.setPlayerInfo('Rádio Parada', 'Reinicie a página para começar.');
+    }
+};
 
-    elements.prevTrackBtn.addEventListener('click', () => {
-        // Lógica para voltar, se desejado.
-        // Por enquanto, vamos apenas tocar a próxima.
-        radioManager.playNext();
-    });
+const uiManager = {
+    // Atualiza a interface do player
+    updatePlayer: (track) => {
+        elements.currentTrackTitle.textContent = track.title;
+        elements.artistName.textContent = track.artist || 'Rádio Supermercado do Louro';
+        uiManager.updateCover(track.album);
+    },
+
+    // Atualiza o ícone de play/pause
+    updatePlayPauseIcon: (state) => {
+        const icon = state === 'play' ? 'play-outline' : 'pause-outline';
+        elements.playPauseBtn.innerHTML = `<ion-icon name="${icon}"></ion-icon>`;
+    },
+
+    // Renderiza a lista de arquivos
+    renderFileList: (files) => {
+        if (!files) return;
+        elements.fileList.innerHTML = '';
+        files.forEach(file => {
+            const item = document.createElement('div');
+            item.className = 'report-item';
+            item.innerHTML = `
+                <span class="file-name" title="${file.title}">${file.title}</span>
+                <div class="controls">
+                    <button onclick="radioManager.playFile('${file.url}')"><ion-icon name="play-circle-outline"></ion-icon></button>
+                    <button onclick="fileManager.removeFile('${file.url}', radioState.activeAlbum)"><ion-icon name="trash-outline"></ion-icon></button>
+                </div>
+            `;
+            elements.fileList.appendChild(item);
+        });
+    },
+
+    // Renderiza as capas dos álbuns
+    renderAlbumCovers: () => {
+        elements.albumCoversGrid.innerHTML = '';
+        const albums = Object.keys(albumData);
+        albums.forEach(albumKey => {
+            const album = albumData[albumKey];
+            const cover = radioState.albumCovers[albumKey] || 'https://res.cloudinary.com/dygbrcrr6/image/upload/v1/radio-covers/general_cover';
+            
+            const item = document.createElement('div');
+            item.className = 'cover-item';
+            item.dataset.album = albumKey;
+            item.innerHTML = `
+                <img src="${cover}" alt="Capa do Álbum ${album.title}">
+                <h4>${album.title}</h4>
+            `;
+            elements.albumCoversGrid.appendChild(item);
+            
+            item.addEventListener('click', () => {
+                uiManager.changeActiveAlbum(albumKey);
+            });
+        });
+    },
+
+    // Atualiza a capa do player
+    updateCover: (albumKey) => {
+        const coverUrl = radioState.albumCovers[albumKey] || radioState.albumCovers.general;
+        elements.coverImage.src = coverUrl;
+    },
+
+    // Atualiza as informações do player
+    setPlayerInfo: (title, artist) => {
+        elements.currentTrackTitle.textContent = title;
+        elements.artistName.textContent = artist;
+    },
     
-    elements.volumeSlider.addEventListener('input', () => {
-        ui.updateVolume();
-    });
+    // Altera o álbum ativo e renderiza a lista de arquivos correspondente
+    changeActiveAlbum: (albumKey) => {
+        radioState.activeAlbum = albumKey;
+        // Seção não mais necessária na nova lógica
+        // const playlist = radioState.playlists.albums[albumKey];
+        // uiManager.renderFileList(playlist);
+        // uiManager.updateCover(albumKey);
+        // elements.playlistSelect.value = 'music';
+        console.log(`📁 Álbum ativo alterado para: ${albumKey}`);
+    }
+};
 
-    elements.audioPlayer.addEventListener('timeupdate', () => {
-        ui.updateProgressBar();
-    });
+// Funções do Admin e Modals
+function showLoading() { elements.loadingOverlay.style.display = 'flex'; }
+function hideLoading() { elements.loadingOverlay.style.display = 'none'; }
+function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-    elements.audioPlayer.addEventListener('ended', () => {
-        console.log('▶️ Faixa encerrada. Trocando para a próxima...');
-        radioManager.playNext();
-    });
-
-    elements.liveModeToggle.addEventListener('click', () => {
-        radioManager.toggleLiveMode();
-    });
-}
-
-// --- Funções de Acesso Admin ---
-function openModal(modalId) {
-    document.getElementById(modalId).classList.add('visible');
-}
-
-function closeModal(modalId) {
-    document.getElementById(modalId).classList.remove('visible');
-}
-
-function checkPassword() {
-    const passwordInput = document.getElementById('adminPassword').value;
-    if (passwordInput === 'admin123') { // Senha de exemplo, mudar para algo seguro!
-        alert('Acesso admin concedido!');
+window.checkPassword = () => {
+    const password = elements.adminPassword.value;
+    // Senha codificada para segurança básica. Mude para algo mais complexo.
+    if (btoa(password) === 'YWJjZDEyMw==') { // Exemplo: 'abcd123'
         closeModal('passwordModal');
-        // Implementar redirecionamento ou mostrar controles de admin
+        openModal('adminPanel');
+        uiManager.renderFileList(radioState.playlists[elements.playlistSelect.value]);
     } else {
         alert('Senha incorreta!');
     }
-}
+};
 
-// --- INICIALIZAÇÃO PRINCIPAL ---
+window.toggleAdminPanel = () => {
+    openModal('passwordModal');
+};
 
-async function safeInitialization() {
-    console.log('🎵 Carregando sistema de rádio...');
-    showLoading();
-    try {
-        const fileManager = new FileManager();
-        const uiManager = new UIManager();
-        const radioManager = new RadioManager(uiManager, fileManager);
+window.uploadFiles = () => {
+    myWidget.open();
+};
 
-        const isLoaded = fileManager.loadData();
-        if (!isLoaded) {
-            await fileManager.fetchPlaylists();
+window.loadAlbumFiles = () => {
+    const album = elements.albumSelect.value;
+    if (album) {
+        radioState.activeAlbum = album;
+        const playlist = radioState.playlists.albums[album];
+        if (playlist) {
+            uiManager.renderFileList(playlist);
+        } else {
+            elements.albumFiles.innerHTML = '<p>Nenhum arquivo encontrado para este álbum.</p>';
         }
+    }
+};
 
-        // Renderizar UI inicial
-        uiManager.updatePlayerInfo();
-        uiManager.updateVolume();
-        uiManager.renderAlbums();
-        uiManager.updateLiveIndicator();
-        uiManager.updateProgramSchedule();
+window.uploadCover = () => {
+    showLoading();
+    const file = elements.coverUpload.files[0];
+    if (!file) {
+        alert('Selecione uma imagem primeiro.');
+        hideLoading();
+        return;
+    }
 
-        setupEventListeners(radioManager, uiManager);
-        
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
+    formData.append('folder', 'radio-covers');
+    formData.append('public_id', radioState.activeAlbum);
+
+    fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/image/upload`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.secure_url) {
+            radioState.albumCovers[radioState.activeAlbum] = data.secure_url;
+            fileManager.saveData();
+            uiManager.renderAlbumCovers();
+            uiManager.updateCover(radioState.activeAlbum);
+            alert('Capa alterada com sucesso!');
+        } else {
+            alert('Erro ao fazer upload da capa.');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao fazer upload da capa.');
+    })
+    .finally(() => {
+        hideLoading();
+        closeModal('coverModal');
+    });
+};
+
+window.removeCover = () => {
+    radioState.albumCovers[radioState.activeAlbum] = null;
+    fileManager.saveData();
+    uiManager.renderAlbumCovers();
+    uiManager.updateCover('general');
+    alert('Capa removida com sucesso!');
+    closeModal('coverModal');
+};
+
+window.saveAlert = () => {
+    radioState.currentAlert = elements.alertText.value;
+    fileManager.saveData();
+    closeModal('alertModal');
+    alert('Aviso salvo!');
+};
+
+// Event Listeners
+elements.playPauseBtn.addEventListener('click', radioManager.togglePlayPause);
+elements.volumeSlider.addEventListener('input', (e) => {
+    radioState.volume = e.target.value;
+    elements.audioPlayer.volume = radioState.volume / 100;
+});
+elements.audioPlayer.addEventListener('ended', radioManager.playNext);
+
+// Evento para quando o player estiver pronto
+elements.audioPlayer.addEventListener('canplay', () => {
+    hideLoading();
+});
+
+elements.playlistSelect.addEventListener('change', (e) => {
+    uiManager.renderFileList(radioState.playlists[e.target.value]);
+});
+
+// Inicialização segura
+function safeInitialization() {
+    try {
+        uiManager.renderAlbumCovers();
+        cloudinaryManager.init();
+        radioManager.init();
     } catch (error) {
         console.error('❌ Erro na inicialização:', error);
-    } finally {
-        hideLoading();
     }
 }
 
+// Tratamento de erro global
+window.addEventListener('error', (e) => {
+    console.error('❌ Erro global capturado:', e.error);
+    if (radioState.isLive && radioManager) {
+        setTimeout(() => {
+            console.log('🔄 Tentando recuperar transmissão...');
+            radioManager.playNext();
+        }, 5000);
+    }
+});
+
+// Limpeza ao sair da página
+window.addEventListener('beforeunload', () => {
+    if (fileManager) {
+        fileManager.saveData();
+    }
+    console.log('📻 Salvando estado da rádio...');
+});
+
+// INICIALIZAÇÃO PRINCIPAL
+console.log('🎵 Carregando sistema de rádio...');
 safeInitialization();
