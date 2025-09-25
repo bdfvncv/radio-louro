@@ -1,5 +1,4 @@
 // ===== RÁDIO SUPERMERCADO DO LOURO - SISTEMA PROFISSIONAL 24H =====
-
 // Configurações da Cloudinary (atualizadas)
 const CLOUDINARY_CONFIG = {
     cloudName: 'dygbrcrr6',
@@ -50,7 +49,6 @@ let radioState = {
 // Elementos DOM
 let elements = {};
 let radioManager = null;
-let uploadManager = null;
 let isInitialized = false;
 
 // ===== INICIALIZAÇÃO =====
@@ -61,7 +59,6 @@ document.addEventListener('DOMContentLoaded', function() {
         initializeElements();
         loadStoredData();
         initializeRadioManager();
-        initializeUploadManager();
         setupEventListeners();
         startLiveBroadcast();
         updateUI();
@@ -152,90 +149,73 @@ class RadioManager {
         this.broadcastInterval = null;
         this.timeUpdateInterval = null;
         this.scheduleCheckInterval = null;
-        
         this.setupAudioEvents();
-        console.log('📻 RadioManager inicializado');
+        console.log('🔊 RadioManager inicializado');
     }
-    
+
     setupAudioEvents() {
         if (!elements.audioPlayer) return;
-        
         const audio = elements.audioPlayer;
-        
         audio.addEventListener('loadstart', () => {
             console.log('📻 Carregando áudio...');
         });
-        
         audio.addEventListener('canplay', () => {
             console.log('✅ Áudio pronto para reprodução');
             if (radioState.isLive && radioState.isPlaying) {
                 audio.play().catch(e => console.log('Autoplay bloqueado:', e.message));
             }
         });
-        
         audio.addEventListener('playing', () => {
             radioState.isPlaying = true;
             this.updatePlayButton();
             console.log('▶️ Reprodução iniciada');
         });
-        
         audio.addEventListener('pause', () => {
             radioState.isPlaying = false;
             this.updatePlayButton();
             console.log('⏸️ Reprodução pausada');
         });
-        
         audio.addEventListener('ended', () => {
-            console.log('⭐ Música finalizada, próxima...');
+            console.log('⏭️ Música finalizada, próxima...');
             this.playNext();
         });
-        
         audio.addEventListener('timeupdate', () => {
             this.updateTimeDisplay();
         });
-        
         audio.addEventListener('error', (e) => {
             console.error('❌ Erro no áudio:', e);
             setTimeout(() => this.playNext(), 3000);
         });
-        
         // Configurar volume inicial
         audio.volume = radioState.volume / 100;
     }
-    
+
     startBroadcast() {
         if (radioState.isLive) return;
-        
         console.log('🔴 INICIANDO TRANSMISSÃO AO VIVO');
         radioState.isLive = true;
         radioState.startTime = Date.now();
-        
         // Atualizar interface
         this.updateBroadcastStatus();
         this.updateLiveIndicator();
-        
         // Iniciar intervalos
         this.startScheduleCheck();
         this.startTimeUpdate();
-        
         // Primeira música
         setTimeout(() => {
             this.playNext();
         }, 1000);
-        
         // Simular ouvintes
         this.startListenersSimulation();
     }
-    
+
     stopBroadcast() {
         console.log('⏹️ PARANDO TRANSMISSÃO');
         radioState.isLive = false;
         radioState.isPlaying = false;
-        
         if (elements.audioPlayer) {
             elements.audioPlayer.pause();
         }
-        
         // Parar intervalos
         if (this.scheduleCheckInterval) {
             clearInterval(this.scheduleCheckInterval);
@@ -243,673 +223,396 @@ class RadioManager {
         if (this.timeUpdateInterval) {
             clearInterval(this.timeUpdateInterval);
         }
-        
         this.updateBroadcastStatus();
         this.updateLiveIndicator();
     }
-    
+
     playNext() {
         const nextTrack = this.getNextTrack();
         if (!nextTrack) {
-            console.log('⚠️ Nenhuma música disponível');
-            setTimeout(() => this.playNext(), 10000);
+            console.log('⚠️ Nenhuma música na playlist, aguardando...');
             return;
         }
+
+        console.log(`🎵 Tocando: ${nextTrack.name}`);
+        radioState.currentTrack = nextTrack;
+        this.updateTrackInfo(nextTrack);
         
-        this.loadTrack(nextTrack);
-    }
-    
-    getNextTrack() {
-        // Verificar se precisa tocar hora certa (a cada hora)
-        const now = new Date();
-        if (now.getMinutes() === 0 && 
-            (Date.now() - radioState.lastTimeAnnouncement) > 3500000 && // 58 minutos
-            radioState.content.time.length > 0) {
-            radioState.lastTimeAnnouncement = Date.now();
-            return this.getRandomFromCategory('time');
-        }
-        
-        // Verificar se precisa tocar propaganda (a cada 5-7 músicas)
-        if (radioState.tracksPlayed > 0 && 
-            radioState.tracksPlayed % (5 + Math.floor(Math.random() * 3)) === 0 &&
-            (Date.now() - radioState.lastAdvertisement) > 300000 && // 5 minutos mínimo
-            radioState.content.ads.length > 0) {
-            radioState.lastAdvertisement = Date.now();
-            return this.getRandomFromCategory('ads');
-        }
-        
-        // Tocar vinheta ocasionalmente (10% chance)
-        if (Math.random() < 0.1 && radioState.content.jingles.length > 0) {
-            return this.getRandomFromCategory('jingles');
-        }
-        
-        // Música normal
-        return this.getRandomFromCategory('music');
-    }
-    
-    getRandomFromCategory(category) {
-        const items = radioState.content[category];
-        if (!items || items.length === 0) return null;
-        
-        // Evitar repetir a música atual
-        let availableItems = items;
-        if (radioState.currentTrack && items.length > 1) {
-            availableItems = items.filter(item => item.url !== radioState.currentTrack.url);
-        }
-        
-        if (availableItems.length === 0) availableItems = items;
-        
-        return availableItems[Math.floor(Math.random() * availableItems.length)];
-    }
-    
-    loadTrack(track) {
-        if (!track || !elements.audioPlayer) return;
-        
-        console.log(`🎵 Carregando: ${track.name}`);
-        
-        radioState.currentTrack = track;
-        elements.audioPlayer.src = track.url;
-        
-        // Atualizar interface
-        this.updateTrackDisplay(track);
-        this.updateRecentTracks(track);
-        
-        // Estatísticas
-        this.updatePlayHistory(track);
-        radioState.tracksPlayed++;
-        
-        // Reproduzir se estiver ao vivo
-        if (radioState.isLive) {
-            elements.audioPlayer.play().catch(e => {
-                console.log('Erro no autoplay:', e.message);
+        const audio = elements.audioPlayer;
+        if (audio) {
+            audio.src = nextTrack.url;
+            audio.play().catch(e => {
+                console.error('Autoplay bloqueado:', e);
+                // Exibir botão de play para o usuário
+                this.updatePlayButton();
             });
         }
-    }
-    
-    updateTrackDisplay(track) {
-        if (elements.currentTrack) {
-            elements.currentTrack.textContent = track.name || 'Música sem título';
-        }
         
-        if (elements.artistName) {
-            elements.artistName.textContent = track.artist || 'Rádio Supermercado do Louro';
+        // Atualizar histórico
+        radioState.playHistory[nextTrack.name] = (radioState.playHistory[nextTrack.name] || 0) + 1;
+        radioState.recentTracks.unshift(nextTrack);
+        if (radioState.recentTracks.length > 5) {
+            radioState.recentTracks.pop();
         }
-        
-        if (elements.trackCover && track.coverUrl) {
-            elements.trackCover.src = track.coverUrl;
-        }
-    }
-    
-    updateRecentTracks(track) {
-        radioState.recentTracks.unshift({
-            name: track.name || 'Música sem título',
-            artist: track.artist || 'Artista desconhecido',
-            time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-            cover: track.coverUrl || 'https://via.placeholder.com/50x50/1a4332/ffffff?text=♪'
-        });
-        
-        // Manter apenas as últimas 10
-        if (radioState.recentTracks.length > 10) {
-            radioState.recentTracks = radioState.recentTracks.slice(0, 10);
-        }
-        
         this.displayRecentTracks();
-    }
-    
-    updatePlayHistory(track) {
-        const trackName = track.name || 'Música sem título';
-        radioState.playHistory[trackName] = (radioState.playHistory[trackName] || 0) + 1;
+        
         saveData();
     }
     
-    updateTimeDisplay() {
-        if (!elements.audioPlayer || !elements.currentTime || !elements.duration) return;
-        
-        const current = elements.audioPlayer.currentTime || 0;
-        const duration = elements.audioPlayer.duration || 0;
-        
-        elements.currentTime.textContent = this.formatTime(current);
-        elements.duration.textContent = this.formatTime(duration);
-        
-        // Atualizar barra de progresso
-        if (elements.progressFill && duration > 0) {
-            const progress = (current / duration) * 100;
-            elements.progressFill.style.width = `${progress}%`;
-        }
-    }
-    
-    formatTime(seconds) {
-        if (isNaN(seconds) || seconds < 0) return '00:00';
-        
-        const minutes = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
-        return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-    
-    startScheduleCheck() {
-        this.scheduleCheckInterval = setInterval(() => {
-            this.checkSchedule();
-        }, 60000); // Verificar a cada minuto
-        
-        this.checkSchedule(); // Verificar imediatamente
-    }
-    
-    startTimeUpdate() {
-        this.timeUpdateInterval = setInterval(() => {
-            this.updateCurrentTime();
-        }, 1000);
-        
-        this.updateCurrentTime();
-    }
-    
-    checkSchedule() {
+    getNextTrack() {
         const now = new Date();
-        const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-        
-        const currentProgram = radioState.schedule.find(item => item.time === currentTime);
-        
-        if (currentProgram && currentProgram !== radioState.currentProgram) {
-            console.log(`📅 Programa agendado: ${currentProgram.title}`);
-            radioState.currentProgram = currentProgram;
-            this.updateProgramDisplay();
+        const hour = now.getHours();
+        const minute = now.getMinutes();
+
+        // Checar programação especial
+        const currentScheduleItem = radioState.schedule.find(item => {
+            const [itemHour, itemMinute] = item.time.split(':').map(Number);
+            return hour === itemHour && minute === itemMinute;
+        });
+
+        if (currentScheduleItem) {
+            switch (currentScheduleItem.type) {
+                case 'time':
+                    return this.getRandomContent('time');
+                case 'ads':
+                    return this.getRandomContent('ads');
+                case 'jingles':
+                    return this.getRandomContent('jingles');
+                default:
+                    return this.getRandomContent('music');
+            }
         }
+        
+        // Lógica de rotação
+        if (radioState.tracksPlayed % 5 === 0 && radioState.content.ads.length > 0) {
+            radioState.tracksPlayed = 0;
+            return this.getRandomContent('ads');
+        }
+        
+        if (radioState.tracksPlayed % 3 === 0 && radioState.content.jingles.length > 0) {
+            return this.getRandomContent('jingles');
+        }
+        
+        return this.getRandomContent('music');
     }
     
-    updateCurrentTime() {
-        if (elements.currentHour) {
+    getRandomContent(category) {
+        const playlist = radioState.content[category] || [];
+        if (playlist.length === 0) return null;
+        const randomIndex = Math.floor(Math.random() * playlist.length);
+        return playlist[randomIndex];
+    }
+    
+    updateTrackInfo(track) {
+        if (!elements.currentTrack || !elements.artistName || !elements.trackCover || !elements.nextTrackInfo) return;
+        
+        elements.currentTrack.textContent = track.name || 'Música Desconhecida';
+        elements.artistName.textContent = track.artist || 'Artista Desconhecido';
+        elements.trackCover.src = track.cover || 'https://via.placeholder.com/200x200/1a4332/ffffff?text=RADIO';
+        
+        const nextTrack = this.getNextTrack();
+        if (nextTrack) {
+            elements.nextTrackInfo.textContent = nextTrack.name || 'Próxima música';
+        } else {
+            elements.nextTrackInfo.textContent = 'Preparando...';
+        }
+        
+        const currentProgram = radioState.schedule.find(item => {
+            const [itemHour, itemMinute] = item.time.split(':').map(Number);
             const now = new Date();
-            elements.currentHour.textContent = now.toLocaleTimeString('pt-BR', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            });
-        }
-    }
-    
-    updateProgramDisplay() {
-        if (!radioState.currentProgram) return;
+            const hour = now.getHours();
+            const minute = now.getMinutes();
+            return hour === itemHour && minute === itemMinute;
+        });
         
         if (elements.currentProgram) {
-            elements.currentProgram.textContent = radioState.currentProgram.title;
+            elements.currentProgram.textContent = currentProgram?.title || 'Programação Automática';
         }
-        
         if (elements.programDescription) {
-            elements.programDescription.textContent = radioState.currentProgram.description;
+            elements.programDescription.textContent = currentProgram?.description || 'O melhor da música 24h por dia';
         }
-        
-        if (elements.currentDjInfo) {
-            elements.currentDjInfo.textContent = radioState.currentProgram.title;
-        }
-    }
-    
-    startListenersSimulation() {
-        // Simular número de ouvintes (entre 50-200)
-        const updateListeners = () => {
-            const baseListeners = 75;
-            const variation = Math.floor(Math.random() * 125);
-            radioState.listeners = baseListeners + variation;
-            
-            if (elements.listenersCount) {
-                elements.listenersCount.textContent = radioState.listeners.toString();
-            }
-        };
-        
-        updateListeners();
-        setInterval(updateListeners, 30000); // Atualizar a cada 30 segundos
-    }
-    
-    displayRecentTracks() {
-        if (!elements.recentTracks) return;
-        
-        const html = radioState.recentTracks.map(track => `
-            <div class="recent-track">
-                <img src="${track.cover}" alt="Capa" class="recent-track-cover">
-                <div class="recent-track-info">
-                    <div class="recent-track-title">${track.name}</div>
-                    <div class="recent-track-artist">${track.artist}</div>
-                </div>
-                <div class="recent-track-time">${track.time}</div>
-            </div>
-        `).join('');
-        
-        elements.recentTracks.innerHTML = html || '<p style="color: var(--medium-gray); text-align: center;">Nenhuma música tocada ainda</p>';
     }
     
     updatePlayButton() {
         if (!elements.playPauseBtn) return;
-        
         const icon = elements.playPauseBtn.querySelector('i');
         if (radioState.isPlaying) {
-            icon.className = 'fas fa-pause';
+            icon.classList.remove('fa-play');
+            icon.classList.add('fa-pause');
         } else {
-            icon.className = 'fas fa-play';
+            icon.classList.remove('fa-pause');
+            icon.classList.add('fa-play');
         }
     }
-    
+
+    updateTimeDisplay() {
+        if (!elements.audioPlayer || !elements.currentTime || !elements.duration || !elements.progressFill) return;
+        
+        const audio = elements.audioPlayer;
+        const current = audio.currentTime;
+        const total = audio.duration;
+        
+        if (!isNaN(total)) {
+            const currentMinutes = Math.floor(current / 60);
+            const currentSeconds = Math.floor(current % 60).toString().padStart(2, '0');
+            const totalMinutes = Math.floor(total / 60);
+            const totalSeconds = Math.floor(total % 60).toString().padStart(2, '0');
+            
+            elements.currentTime.textContent = `${currentMinutes}:${currentSeconds}`;
+            elements.duration.textContent = `${totalMinutes}:${totalSeconds}`;
+            
+            const progress = (current / total) * 100;
+            elements.progressFill.style.width = `${progress}%`;
+        }
+    }
+
     updateBroadcastStatus() {
         if (!elements.broadcastStatus || !elements.toggleBroadcast) return;
-        
-        const statusEl = elements.broadcastStatus;
-        const toggleBtn = elements.toggleBroadcast;
-        
         if (radioState.isLive) {
-            statusEl.className = 'status-indicator live';
-            statusEl.innerHTML = '<div class="status-dot"></div><span>AO VIVO</span>';
-            toggleBtn.innerHTML = '<i class="fas fa-pause"></i> Pausar Transmissão';
+            elements.broadcastStatus.textContent = 'AO VIVO';
+            elements.broadcastStatus.classList.add('live');
+            elements.toggleBroadcast.innerHTML = '<i class="fas fa-stop-circle"></i> Parar';
         } else {
-            statusEl.className = 'status-indicator offline';
-            statusEl.innerHTML = '<div class="status-dot"></div><span>OFFLINE</span>';
-            toggleBtn.innerHTML = '<i class="fas fa-play"></i> Iniciar Transmissão';
+            elements.broadcastStatus.textContent = 'OFFLINE';
+            elements.broadcastStatus.classList.remove('live');
+            elements.toggleBroadcast.innerHTML = '<i class="fas fa-play-circle"></i> Iniciar';
+        }
+    }
+
+    updateLiveIndicator() {
+        if (!elements.liveIndicator) return;
+        if (radioState.isLive) {
+            elements.liveIndicator.classList.add('live-dot');
+        } else {
+            elements.liveIndicator.classList.remove('live-dot');
         }
     }
     
-    updateLiveIndicator() {
-        if (elements.liveIndicator) {
-            elements.liveIndicator.style.animation = radioState.isLive ? 'pulse 2s infinite' : 'none';
-        }
+    displayRecentTracks() {
+        if (!elements.recentTracks) return;
+        const html = radioState.recentTracks.map(track => `
+            <div class="recent-item">
+                <img src="${track.cover}" alt="Capa" class="recent-cover">
+                <div class="recent-info">
+                    <strong>${track.name}</strong>
+                    <small>${track.artist}</small>
+                </div>
+            </div>
+        `).join('');
+        elements.recentTracks.innerHTML = html || '<p style="color: var(--medium-gray);">Nenhuma música tocada recentemente</p>';
+    }
+
+    // Intervalos de atualização
+    startScheduleCheck() {
+        this.scheduleCheckInterval = setInterval(() => {
+            const now = new Date();
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+
+            const activeProgram = radioState.schedule.find(p => {
+                const [pHour, pMinute] = p.time.split(':').map(Number);
+                return pHour === currentHour && pMinute === currentMinute;
+            });
+
+            if (activeProgram && activeProgram.title !== radioState.currentProgram?.title) {
+                console.log(`✅ Nova programação: ${activeProgram.title}`);
+                radioState.currentProgram = activeProgram;
+                updateUI();
+                
+                // Inserir música de programa
+                if (activeProgram.type === 'program') {
+                    this.playNext();
+                } else {
+                    this.playNext();
+                }
+            }
+            
+            if (elements.currentHour) {
+                const hourString = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                elements.currentHour.textContent = hourString;
+            }
+            
+        }, 10000); // Checa a cada 10 segundos
+    }
+    
+    startTimeUpdate() {
+        this.timeUpdateInterval = setInterval(() => {
+            if (elements.audioPlayer && radioState.isPlaying) {
+                this.updateTimeDisplay();
+            }
+        }, 1000);
+    }
+    
+    startListenersSimulation() {
+        setInterval(() => {
+            if (radioState.isLive) {
+                const baseListeners = 100;
+                const fluctuation = Math.floor(Math.random() * 21) - 10; // -10 a +10
+                radioState.listeners = baseListeners + fluctuation;
+                if (elements.listenersCount) {
+                    elements.listenersCount.textContent = radioState.listeners;
+                }
+            }
+        }, 15000);
     }
 }
 
-// ===== GERENCIADOR DE UPLOAD =====
+// ===== GERENCIAMENTO DE UPLOAD (Simulado) =====
 class UploadManager {
-    async uploadFiles(category, files) {
-        if (!files || files.length === 0) {
-            showError('Selecione pelo menos um arquivo');
-            return;
-        }
-        
-        showLoading(true);
-        
-        try {
-            const uploadPromises = Array.from(files).map(file => this.uploadFile(file, category));
-            const results = await Promise.all(uploadPromises);
-            
-            results.forEach(result => {
-                if (result) {
-                    radioState.content[category].push(result);
-                }
-            });
-            
-            saveData();
-            updateContentLists();
-            showSuccess(`${files.length} arquivo(s) enviado(s) com sucesso!`);
-            
-            // Se a rádio estiver ao vivo e não tiver música atual, começar a tocar
-            if (radioState.isLive && !radioState.currentTrack && category === 'music') {
-                setTimeout(() => radioManager.playNext(), 1000);
-            }
-            
-        } catch (error) {
-            console.error('Erro no upload:', error);
-            showError('Erro no upload: ' + error.message);
-        } finally {
-            showLoading(false);
-        }
+    constructor() {
+        this.cloudinaryConfig = CLOUDINARY_CONFIG;
+        console.log('☁️ UploadManager inicializado');
     }
     
-    async uploadFile(file, category) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
-        formData.append('folder', `radio-louro/${category}`);
+    async uploadFiles(category, files) {
+        showLoading(true);
+        console.log(`⏳ Uploading ${files.length} files to ${category}...`);
         
-        // Adicionar tags baseadas na categoria
-        const tags = {
-            music: 'music,radio',
-            time: 'time-announcement,radio',
-            ads: 'advertisement,radio',
-            jingles: 'jingle,radio'
-        };
-        
-        if (tags[category]) {
-            formData.append('tags', tags[category]);
+        for (const file of files) {
+            // Simulação de upload
+            const fileUrl = `https://res.cloudinary.com/${this.cloudinaryConfig.cloudName}/audio/upload/v1234567890/radio-louro/${category}/${file.name}`;
+            const newItem = {
+                name: file.name,
+                url: fileUrl,
+                artist: 'Artista Desconhecido', // Simulado
+                cover: 'https://via.placeholder.com/200x200/1a4332/ffffff?text=RADIO' // Simulado
+            };
+            radioState.content[category].push(newItem);
         }
         
-        const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/auto/upload`, {
-            method: 'POST',
-            body: formData
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        
-        return {
-            name: file.name.replace(/\.[^/.]+$/, ''), // Remove extensão
-            url: data.secure_url,
-            publicId: data.public_id,
-            category: category,
-            uploadedAt: new Date().toISOString(),
-            duration: data.duration || null,
-            size: file.size,
-            coverUrl: null // Pode ser adicionado depois
-        };
+        showLoading(false);
+        showSuccess(`${files.length} arquivos enviados para ${category}`);
+        updateContentLists();
+        saveData();
     }
     
     deleteFile(category, index) {
-        if (!confirm('Tem certeza que deseja excluir este arquivo?')) return;
-        
         radioState.content[category].splice(index, 1);
         saveData();
         updateContentLists();
-        showSuccess('Arquivo excluído com sucesso!');
+        showSuccess('Arquivo removido com sucesso!');
     }
 }
 
-// ===== SETUP E EVENT LISTENERS =====
-function initializeRadioManager() {
-    radioManager = new RadioManager();
-}
-
-function initializeUploadManager() {
-    uploadManager = new UploadManager();
-}
-
+// ===== EVENT LISTENERS =====
 function setupEventListeners() {
-    // Player controls
     if (elements.playPauseBtn) {
-        elements.playPauseBtn.addEventListener('click', togglePlayPause);
+        elements.playPauseBtn.addEventListener('click', () => {
+            if (elements.audioPlayer?.paused) {
+                elements.audioPlayer.play().catch(e => console.log('Autoplay bloqueado:', e.message));
+            } else {
+                elements.audioPlayer?.pause();
+            }
+            radioManager.updatePlayButton();
+        });
     }
-    
+
     if (elements.volumeSlider) {
-        elements.volumeSlider.addEventListener('input', updateVolume);
+        elements.volumeSlider.addEventListener('input', (e) => {
+            const volume = e.target.value;
+            radioState.volume = volume;
+            if (elements.audioPlayer) {
+                elements.audioPlayer.volume = volume / 100;
+            }
+            if (elements.volumeDisplay) {
+                elements.volumeDisplay.textContent = `${volume}%`;
+            }
+            updateVolumeIcon(volume);
+            saveData();
+        });
     }
-    
+
     if (elements.volumeBtn) {
-        elements.volumeBtn.addEventListener('click', toggleMute);
+        elements.volumeBtn.addEventListener('click', () => {
+            if (elements.audioPlayer) {
+                if (elements.audioPlayer.volume > 0) {
+                    elements.audioPlayer.muted = true;
+                    updateVolumeIcon(0);
+                } else {
+                    elements.audioPlayer.muted = false;
+                    updateVolumeIcon(radioState.volume);
+                }
+            }
+        });
     }
     
     // Admin access
     if (elements.adminAccessBtn) {
-        elements.adminAccessBtn.addEventListener('click', showPasswordModal);
-    }
-    
-    if (elements.closeAdminBtn) {
-        elements.closeAdminBtn.addEventListener('click', hideAdminPanel);
-    }
-    
-    // Password modal
-    if (elements.confirmPasswordBtn) {
-        elements.confirmPasswordBtn.addEventListener('click', checkPassword);
+        elements.adminAccessBtn.addEventListener('click', () => {
+            elements.passwordModal?.classList.add('show');
+        });
     }
     
     if (elements.cancelPasswordBtn) {
-        elements.cancelPasswordBtn.addEventListener('click', hidePasswordModal);
+        elements.cancelPasswordBtn.addEventListener('click', () => {
+            elements.passwordModal?.classList.remove('show');
+            if (elements.adminPassword) elements.adminPassword.value = '';
+        });
     }
-    
-    if (elements.adminPassword) {
-        elements.adminPassword.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') checkPassword();
+
+    if (elements.confirmPasswordBtn) {
+        elements.confirmPasswordBtn.addEventListener('click', () => {
+            const password = elements.adminPassword?.value;
+            if (password === 'radio-louro-2024') {
+                elements.adminPanel?.classList.add('show');
+                elements.passwordModal?.classList.remove('show');
+                showSuccess('Acesso administrativo concedido!');
+            } else {
+                showError('Senha incorreta!');
+            }
+            if (elements.adminPassword) elements.adminPassword.value = '';
+        });
+    }
+
+    if (elements.closeAdminBtn) {
+        elements.closeAdminBtn.addEventListener('click', () => {
+            elements.adminPanel?.classList.remove('show');
         });
     }
     
     // Admin tabs
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => switchTab(e.target.dataset.tab));
+    document.querySelectorAll('.admin-tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+            e.target.classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('show'));
+            const tabId = e.target.getAttribute('data-tab');
+            document.getElementById(tabId)?.classList.add('show');
+        });
     });
-    
-    // Broadcast controls
+
+    // Admin controls
     if (elements.toggleBroadcast) {
-        elements.toggleBroadcast.addEventListener('click', toggleBroadcast);
+        elements.toggleBroadcast.addEventListener('click', () => {
+            if (radioState.isLive) {
+                radioManager.stopBroadcast();
+            } else {
+                radioManager.startBroadcast();
+            }
+        });
     }
-    
     if (elements.playNextBtn) {
         elements.playNextBtn.addEventListener('click', () => radioManager.playNext());
     }
     
-    if (elements.playTimeBtn) {
-        elements.playTimeBtn.addEventListener('click', playTimeAnnouncement);
-    }
-    
-    if (elements.playAdBtn) {
-        elements.playAdBtn.addEventListener('click', playAdvertisement);
-    }
-    
-    // Schedule management
+    // Schedule controls
     if (elements.addScheduleBtn) {
         elements.addScheduleBtn.addEventListener('click', addScheduleItem);
+    }
+    if (elements.scheduleTitle) {
+        elements.scheduleTitle.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addScheduleItem();
+        });
     }
     
     // Reports
     if (elements.refreshReportsBtn) {
         elements.refreshReportsBtn.addEventListener('click', refreshReports);
     }
-    
-    console.log('🔗 Event listeners configurados');
-}
 
-function startLiveBroadcast() {
-    // Iniciar transmissão automaticamente após 2 segundos
-    setTimeout(() => {
-        if (radioManager) {
-            radioManager.startBroadcast();
-        }
-    }, 2000);
-}
-
-// ===== FUNÇÕES DE CONTROLE =====
-function togglePlayPause() {
-    if (!elements.audioPlayer || !radioState.isLive) return;
-    
-    if (radioState.isPlaying) {
-        elements.audioPlayer.pause();
-    } else {
-        elements.audioPlayer.play().catch(e => {
-            console.log('Erro ao reproduzir:', e.message);
-            showError('Erro ao iniciar reprodução. Clique novamente.');
-        });
-    }
-}
-
-function updateVolume() {
-    if (!elements.volumeSlider || !elements.audioPlayer) return;
-    
-    const volume = parseInt(elements.volumeSlider.value);
-    radioState.volume = volume;
-    elements.audioPlayer.volume = volume / 100;
-    
-    if (elements.volumeDisplay) {
-        elements.volumeDisplay.textContent = `${volume}%`;
-    }
-    
-    // Atualizar ícone do volume
-    updateVolumeIcon(volume);
-    
-    saveData();
-}
-
-function updateVolumeIcon(volume) {
-    if (!elements.volumeBtn) return;
-    
-    const icon = elements.volumeBtn.querySelector('i');
-    if (volume === 0) {
-        icon.className = 'fas fa-volume-mute';
-    } else if (volume < 50) {
-        icon.className = 'fas fa-volume-down';
-    } else {
-        icon.className = 'fas fa-volume-up';
-    }
-}
-
-function toggleMute() {
-    if (!elements.volumeSlider || !elements.audioPlayer) return;
-    
-    if (radioState.volume === 0) {
-        // Desmutar - voltar ao volume anterior ou 70%
-        const previousVolume = radioState.previousVolume || 70;
-        radioState.volume = previousVolume;
-        elements.volumeSlider.value = previousVolume;
-        elements.audioPlayer.volume = previousVolume / 100;
-    } else {
-        // Mutar
-        radioState.previousVolume = radioState.volume;
-        radioState.volume = 0;
-        elements.volumeSlider.value = 0;
-        elements.audioPlayer.volume = 0;
-    }
-    
-    updateVolumeIcon(radioState.volume);
-    if (elements.volumeDisplay) {
-        elements.volumeDisplay.textContent = `${radioState.volume}%`;
-    }
-    
-    saveData();
-}
-
-// ===== FUNÇÕES ADMIN =====
-function showPasswordModal() {
-    if (elements.passwordModal) {
-        elements.passwordModal.classList.add('show');
-        if (elements.adminPassword) {
-            elements.adminPassword.focus();
-        }
-    }
-}
-
-function hidePasswordModal() {
-    if (elements.passwordModal) {
-        elements.passwordModal.classList.remove('show');
-        if (elements.adminPassword) {
-            elements.adminPassword.value = '';
-        }
-    }
-}
-
-function checkPassword() {
-    if (!elements.adminPassword) return;
-    
-    const password = elements.adminPassword.value;
-    if (password === 'admin123') {
-        hidePasswordModal();
-        showAdminPanel();
-    } else {
-        showError('Senha incorreta!');
-        elements.adminPassword.value = '';
-        elements.adminPassword.focus();
-    }
-}
-
-function showAdminPanel() {
-    if (elements.adminPanel) {
-        elements.adminPanel.classList.add('open');
-        updateContentLists();
-        updateScheduleDisplay();
-        refreshReports();
-    }
-}
-
-function hideAdminPanel() {
-    if (elements.adminPanel) {
-        elements.adminPanel.classList.remove('open');
-    }
-}
-
-function switchTab(tabName) {
-    // Remove active de todos os botões e conteúdos
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-    
-    // Adiciona active nos elementos selecionados
-    const tabBtn = document.querySelector(`[data-tab="${tabName}"]`);
-    const tabContent = document.getElementById(`${tabName}-tab`);
-    
-    if (tabBtn) tabBtn.classList.add('active');
-    if (tabContent) tabContent.classList.add('active');
-    
-    // Ações específicas por aba
-    if (tabName === 'content') {
-        updateContentLists();
-    } else if (tabName === 'schedule') {
-        updateScheduleDisplay();
-    } else if (tabName === 'reports') {
-        refreshReports();
-    }
-}
-
-function toggleBroadcast() {
-    if (radioState.isLive) {
-        radioManager.stopBroadcast();
-    } else {
-        radioManager.startBroadcast();
-    }
-}
-
-function playTimeAnnouncement() {
-    if (radioState.content.time.length === 0) {
-        showError('Nenhuma hora certa cadastrada');
-        return;
-    }
-    
-    const timeTrack = radioManager.getRandomFromCategory('time');
-    if (timeTrack) {
-        radioManager.loadTrack(timeTrack);
-        showSuccess('Tocando hora certa');
-    }
-}
-
-function playAdvertisement() {
-    if (radioState.content.ads.length === 0) {
-        showError('Nenhum aviso cadastrado');
-        return;
-    }
-    
-    const adTrack = radioManager.getRandomFromCategory('ads');
-    if (adTrack) {
-        radioManager.loadTrack(adTrack);
-        showSuccess('Tocando aviso');
-    }
-}
-
-// ===== UPLOAD DE CONTEÚDO =====
-function uploadContent(category) {
-    const inputMap = {
-        music: elements.musicUpload,
-        time: elements.timeUpload,
-        ads: elements.adsUpload,
-        jingles: elements.jinglesUpload
-    };
-    
-    const input = inputMap[category];
-    if (!input || !input.files.length) {
-        showError('Selecione pelo menos um arquivo');
-        return;
-    }
-    
-    uploadManager.uploadFiles(category, input.files).then(() => {
-        input.value = ''; // Limpar input
-    });
-}
-
-function deleteContent(category, index) {
-    uploadManager.deleteFile(category, index);
-}
-
-function updateContentLists() {
-    const categories = ['music', 'time', 'ads', 'jingles'];
-    
-    categories.forEach(category => {
-        const container = elements[`${category}List`];
-        if (!container) return;
-        
-        const items = radioState.content[category] || [];
-        
-        if (items.length === 0) {
-            container.innerHTML = '<p style="color: var(--medium-gray);">Nenhum arquivo encontrado</p>';
-            return;
-        }
-        
-        const html = items.map((item, index) => `
-            <div class="content-item">
-                <span class="content-name">${item.name}</span>
-                <button onclick="deleteContent('${category}', ${index})" class="btn-danger">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        `).join('');
-        
-        container.innerHTML = html;
-    });
+    // Initial content lists update
+    updateContentLists();
 }
 
 // ===== GERENCIAMENTO DE PROGRAMAÇÃO =====
@@ -1041,6 +744,45 @@ function updateUI() {
     }
 }
 
+function updateVolumeIcon(volume) {
+    if (!elements.volumeBtn) return;
+    const icon = elements.volumeBtn.querySelector('i');
+    if (volume === 0) {
+        icon.className = 'fas fa-volume-mute';
+    } else if (volume <= 50) {
+        icon.className = 'fas fa-volume-down';
+    } else {
+        icon.className = 'fas fa-volume-up';
+    }
+}
+
+function updateContentLists() {
+    const categories = ['music', 'time', 'ads', 'jingles'];
+    
+    categories.forEach(category => {
+        const container = elements[`${category}List`];
+        if (!container) return;
+        
+        const items = radioState.content[category] || [];
+        
+        if (items.length === 0) {
+            container.innerHTML = '<p style="color: var(--medium-gray);">Nenhum arquivo encontrado</p>';
+            return;
+        }
+        
+        const html = items.map((item, index) => `
+            <div class="content-item">
+                <span class="content-name">${item.name}</span>
+                <button onclick="deleteContent('${category}', ${index})" class="btn-danger">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `).join('');
+        
+        container.innerHTML = html;
+    });
+}
+
 function showLoading(show) {
     if (elements.loadingOverlay) {
         if (show) {
@@ -1076,7 +818,7 @@ function showError(message) {
     setTimeout(() => {
         toast.style.animation = 'slideOutRight 0.3s ease';
         setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    }, 4000);
 }
 
 function showSuccess(message) {
@@ -1138,6 +880,41 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('beforeunload', () => {
     saveData();
 });
+
+// ===== ANIMAÇÕES CSS DINÂMICAS =====
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideInRight {
+        from {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    
+    @keyframes slideOutRight {
+        from {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        to {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+    }
+    
+    .toast-enter {
+        animation: slideInRight 0.3s ease;
+    }
+    
+    .toast-exit {
+        animation: slideOutRight 0.3s ease;
+    }
+`;
+document.head.appendChild(style);
 
 // ===== INICIALIZAÇÃO FINAL =====
 console.log('🚀 Sistema de Rádio 24h carregado com sucesso!');
