@@ -24,8 +24,8 @@
         <div class="player-main">
             <div class="album-cover">
                 <div class="cover-container">
-                    <img id="albumCover" src="https://res.cloudinary.com/dygbrcrr6/image/upload/v1735075200/radio-louro/covers/default-cover.png" alt="Capa do Álbum" class="main-cover">
-                    <img id="trackCover" src="" alt="Capa da Música" class="track-cover" style="display: none;">
+                    <img id="albumCover" src="https://res.cloudinary.com/dygbrcrr6/image/upload/v1735075200/radio-louro/covers/default-cover.png" alt="Capa do Album" class="main-cover">
+                    <img id="trackCover" src="" alt="Capa da Musica" class="track-cover" style="display: none;">
                     <div class="playing-indicator">
                         <div class="equalizer">
                             <div class="bar"></div>
@@ -52,7 +52,7 @@
                     <button id="playPauseBtn" class="btn-control btn-main" title="Play/Pause">
                         <span class="play-icon">▶️</span>
                     </button>
-                    <button id="skipBtn" class="btn-control" title="Próxima">
+                    <button id="skipBtn" class="btn-control" title="Proxima">
                         <span>⭐</span>
                     </button>
                 </div>
@@ -68,7 +68,7 @@
                 <div class="transmission-info">
                     <div class="status-info">
                         <span id="playStatus">AO VIVO</span>
-                        <span id="trackCount">Músicas: 0</span>
+                        <span id="trackCount">Musicas: 0</span>
                     </div>
                     <div class="listeners-count">
                         <span id="listenersCount">🎧 1 ouvinte</span>
@@ -105,7 +105,7 @@
                         🔄 Alternar Transmissão
                     </button>
                     <button onclick="radioManager.playNext()" class="btn-secondary">
-                        ⏭️ Próxima Música
+                        ⏭️ Proxima Musica
                     </button>
                 </div>
             </div>
@@ -115,7 +115,7 @@
                 <div class="stats-grid">
                     <div class="stat-item">
                         <span class="stat-number" id="totalTracks">0</span>
-                        <span class="stat-label">Total de Músicas</span>
+                        <span class="stat-label">Total de Musicas</span>
                     </div>
                     <div class="stat-item">
                         <span class="stat-number" id="playedTracks">0</span>
@@ -123,7 +123,7 @@
                     </div>
                     <div class="stat-item">
                         <span class="stat-number" id="currentAlbumTracks">0</span>
-                        <span class="stat-label">Álbum Atual</span>
+                        <span class="stat-label">Album Atual</span>
                     </div>
                 </div>
             </div>
@@ -131,8 +131,8 @@
         
         <div class="admin-tabs">
             <button class="tab-btn active" data-tab="upload">📤 Upload</button>
-            <button class="tab-btn" data-tab="albums">🎵 Álbuns</button>
-            <button class="tab-btn" data-tab="reports">📊 Relatórios</button>
+            <button class="tab-btn" data-tab="albums">🎵 Albums</button>
+            <button class="tab-btn" data-tab="reports">📊 Relatorios</button>
             <button class="tab-btn" data-tab="files">📂 Arquivos</button>
         </div>
         
@@ -142,11 +142,11 @@
                 <div class="upload-card">
                     <div class="card-header">
                         <span class="card-icon">🎵</span>
-                        <h4>Músicas Gerais</h4>
+                        <h4>Musicas Gerais</h4>
                     </div>
                     <input type="file" id="musicUpload" accept=".mp3,.wav,.ogg,.m4a" multiple class="file-input">
                     <button onclick="uploadFiles('music')" class="btn-primary full-width">
-                        📤 Enviar Músicas
+                        📤 Enviar Musicas
                     </button>
                 </div>
                 
@@ -175,17 +175,17 @@
                 <div class="upload-card">
                     <div class="card-header">
                         <span class="card-icon">🎄</span>
-                        <h4>Álbuns Especiais</h4>
+                        <h4>Albums Especiais</h4>
                     </div>
                     <select id="albumSelect" class="album-select">
                         <option value="natal">🎄 Natal</option>
-                        <option value="pascoa">🐰 Páscoa</option>
+                        <option value="pascoa">🐰 Pascoa</option>
                         <option value="saojoao">🎪 São João</option>
                         <option value="carnaval">🎭 Carnaval</option>
                     </select>
                     <input type="file" id="albumUpload" accept=".mp3,.wav,.ogg,.m4a" multiple class="file-input">
                     <button onclick="uploadFiles('album')" class="btn-primary full-width">
-                        📤 Enviar para Álbum
+                        📤 Enviar para Album
                     </button>
                 </div>
             </div>
@@ -195,20 +195,20 @@
         <div class="tab-content" id="albums-tab">
             <div class="album-management">
                 <div class="album-selector">
-                    <h3>🎵 Controle de Álbum Ativo</h3>
+                    <h3>🎵 Controle de Album Ativo</h3>
                     <div class="album-control">
                         <select id="activeAlbumSelect" class="album-select-large">
-                            <option value="">📻 Playlist Geral (Todas as músicas)</option>
+                            <option value="">📻 Playlist Geral (Todas as musicas)</option>
                             <option value="natal">🎄 Natal</option>
-                            <option value="pascoa">🐰 Páscoa</option>
+                            <option value="pascoa">🐰 Pascoa</option>
                             <option value="saojoao">🎪 São João</option>
                             <option value="carnaval">🎭 Carnaval</option>
                         </select>
-                        <button onclick="setActiveAlbum()" class="btn-primary">✅ Ativar Álbum</button>
+                        <button onclick="setActiveAlbum()" class="btn-primary">✅ Ativar Album</button>
                     </div>
                 </div>
                 
-                <h3>🖼️ Capas dos Álbuns</h3>
+                <h3>🖼️ Capas dos Albums</h3>
                 <div id="coversGrid" class="covers-grid"></div>
             </div>
         </div>
@@ -217,7 +217,7 @@
         <div class="tab-content" id="reports-tab">
             <div class="reports-section">
                 <div class="reports-header">
-                    <h3>📊 Relatório de Reprodução</h3>
+                    <h3>📊 Relatorio de Reprodução</h3>
                     <div class="reports-actions">
                         <button onclick="refreshReports()" class="btn-secondary">🔄 Atualizar</button>
                         <button onclick="resetPlayCount()" class="btn-danger">🗑️ Limpar Dados</button>
@@ -232,7 +232,7 @@
             <div class="files-section">
                 <div class="files-grid">
                     <div class="file-category">
-                        <h4>🎵 Músicas Gerais</h4>
+                        <h4>🎵 Musicas Gerais</h4>
                         <div id="musicFiles" class="file-list"></div>
                     </div>
                     <div class="file-category">
@@ -244,7 +244,7 @@
                         <div id="adFiles" class="file-list"></div>
                     </div>
                     <div class="file-category">
-                        <h4>🎄 Álbuns Especiais</h4>
+                        <h4>🎄 Albums Especiais</h4>
                         <div id="albumFiles" class="file-list"></div>
                     </div>
                 </div>
@@ -267,8 +267,8 @@
 
     <div id="coverModal" class="modal">
         <div class="modal-content">
-            <h3>🖼️ Alterar Capa do Álbum</h3>
-            <p>Álbum: <strong id="coverAlbumName"></strong></p>
+            <h3>🖼️ Alterar Capa do Album</h3>
+            <p>Album: <strong id="coverAlbumName"></strong></p>
             <input type="file" id="coverUpload" accept="image/*" class="modal-input">
             <div class="modal-buttons">
                 <button onclick="uploadCover()" class="btn-primary">✅ Alterar</button>
