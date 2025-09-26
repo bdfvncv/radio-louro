@@ -3,1614 +3,377 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rádio Supermercado do Louro - 24 Horas no Ar</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        /* ===== RESET E BASE ===== */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --primary-green: #1a4332;
-            --secondary-green: #2d5a45;
-            --accent-green: #40a578;
-            --light-green: #9dcc5a;
-            --dark-bg: #0d1b14;
-            --darker-bg: #061208;
-            --white: #ffffff;
-            --light-gray: #f0f0f0;
-            --medium-gray: #b0b0b0;
-            --dark-gray: #404040;
-            --shadow-color: rgba(26, 67, 50, 0.3);
-            --glow-color: rgba(157, 204, 90, 0.5);
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, var(--darker-bg) 0%, var(--dark-bg) 50%, var(--primary-green) 100%);
-            color: var(--white);
-            min-height: 100vh;
-            overflow-x: hidden;
-            line-height: 1.6;
-        }
-
-        /* ===== BACKGROUND EFFECTS ===== */
-        .background-effects {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: -1;
-            overflow: hidden;
-        }
-
-        .floating-element {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(60px);
-            opacity: 0.4;
-            animation: float 25s ease-in-out infinite;
-        }
-
-        .floating-1 {
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, var(--accent-green), transparent);
-            top: 10%;
-            left: 10%;
-            animation-delay: 0s;
-        }
-
-        .floating-2 {
-            width: 300px;
-            height: 300px;
-            background: radial-gradient(circle, var(--light-green), transparent);
-            top: 60%;
-            right: 15%;
-            animation-delay: -10s;
-        }
-
-        .floating-3 {
-            width: 350px;
-            height: 350px;
-            background: radial-gradient(circle, var(--secondary-green), transparent);
-            bottom: 20%;
-            left: 50%;
-            animation-delay: -20s;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translate(0, 0) rotate(0deg); }
-            25% { transform: translate(50px, -30px) rotate(90deg); }
-            50% { transform: translate(-30px, 40px) rotate(180deg); }
-            75% { transform: translate(30px, -20px) rotate(270deg); }
-        }
-
-        /* ===== HEADER ===== */
-        .radio-header {
-            background: linear-gradient(135deg, var(--primary-green), var(--secondary-green));
-            padding: 1rem 0;
-            box-shadow: 0 4px 20px var(--shadow-color);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid var(--accent-green);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .header-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo-section {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .logo-section i {
-            font-size: 2.5rem;
-            color: var(--light-green);
-            animation: pulse 2s infinite;
-        }
-
-        .logo-section h1 {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--white);
-            text-shadow: 0 2px 10px var(--shadow-color);
-        }
-
-        .live-status {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 0.5rem 1rem;
-            border-radius: 25px;
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--accent-green);
-        }
-
-        .live-dot {
-            width: 12px;
-            height: 12px;
-            background: #ff4757;
-            border-radius: 50%;
-            animation: pulse 1.5s infinite;
-            box-shadow: 0 0 20px rgba(255, 71, 87, 0.7);
-        }
-
-        .live-status span {
-            font-weight: 700;
-            color: var(--white);
-            font-size: 0.9rem;
-        }
-
-        /* ===== MAIN CONTENT ===== */
-        .main-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-        }
-
-        /* ===== PLAYER SECTION ===== */
-        .player-section {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 2rem;
-        }
-
-        .now-playing-card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            border-radius: 20px;
-            padding: 2rem;
-            border: 1px solid var(--accent-green);
-            box-shadow: 0 10px 40px var(--shadow-color);
-            max-width: 800px;
-            width: 100%;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .now-playing-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, var(--light-green), var(--accent-green));
-        }
-
-        .program-info {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        .program-info h2 {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: var(--light-green);
-            margin-bottom: 0.5rem;
-        }
-
-        .program-info p {
-            color: var(--medium-gray);
-            font-size: 1rem;
-        }
-
-        .track-display {
-            display: flex;
-            gap: 2rem;
-            align-items: center;
-            margin-bottom: 2rem;
-        }
-
-        .cover-container {
-            position: relative;
-            width: 200px;
-            height: 200px;
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 8px 30px var(--shadow-color);
-            border: 2px solid var(--accent-green);
-        }
-
-        .track-cover {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.3s ease;
-        }
-
-        .cover-container:hover .track-cover {
-            transform: scale(1.1);
-        }
-
-        .equalizer-overlay {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            display: flex;
-            gap: 3px;
-            align-items: end;
-        }
-
-        .equalizer-overlay .bar {
-            width: 4px;
-            background: linear-gradient(to top, var(--light-green), var(--accent-green));
-            border-radius: 2px;
-            animation: equalizer 1s ease-in-out infinite;
-        }
-
-        .equalizer-overlay .bar:nth-child(1) { height: 15px; animation-delay: 0s; }
-        .equalizer-overlay .bar:nth-child(2) { height: 25px; animation-delay: 0.2s; }
-        .equalizer-overlay .bar:nth-child(3) { height: 20px; animation-delay: 0.4s; }
-        .equalizer-overlay .bar:nth-child(4) { height: 18px; animation-delay: 0.6s; }
-        .equalizer-overlay .bar:nth-child(5) { height: 12px; animation-delay: 0.8s; }
-
-        @keyframes equalizer {
-            0%, 100% { transform: scaleY(0.5); opacity: 0.5; }
-            50% { transform: scaleY(1); opacity: 1; }
-        }
-
-        .track-info {
-            flex: 1;
-        }
-
-        .track-info h3 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: var(--white);
-            margin-bottom: 0.5rem;
-        }
-
-        .track-info p {
-            color: var(--medium-gray);
-            margin-bottom: 1rem;
-            font-size: 1.1rem;
-        }
-
-        .time-display {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            color: var(--medium-gray);
-            font-size: 0.9rem;
-        }
-
-        .progress-bar {
-            flex: 1;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--light-green), var(--accent-green));
-            width: 0%;
-            transition: width 0.3s ease;
-        }
-
-        .player-controls {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-            align-items: center;
-        }
-
-        .control-buttons {
-            display: flex;
-            gap: 1rem;
-        }
-
-        .control-btn {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            transition: all 0.3s ease;
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--white);
-            border: 2px solid var(--accent-green);
-        }
-
-        .control-btn.primary {
-            background: linear-gradient(135deg, var(--accent-green), var(--light-green));
-            box-shadow: 0 4px 20px var(--glow-color);
-        }
-
-        .control-btn:hover {
-            transform: translateY(-3px) scale(1.05);
-            box-shadow: 0 8px 30px var(--glow-color);
-        }
-
-        .volume-control {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            width: 100%;
-            max-width: 400px;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .volume-control i {
-            color: var(--medium-gray);
-        }
-
-        .volume-slider {
-            flex: 1;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-            outline: none;
-            cursor: pointer;
-            -webkit-appearance: none;
-        }
-
-        .volume-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 20px;
-            height: 20px;
-            background: var(--light-green);
-            border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 2px 10px var(--glow-color);
-        }
-
-        #volumeDisplay {
-            color: var(--medium-gray);
-            font-weight: 600;
-            min-width: 45px;
-            text-align: right;
-        }
-
-        /* ===== ADMIN ACCESS BUTTON ===== */
-        .admin-access-btn {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            background: linear-gradient(135deg, var(--primary-green), var(--accent-green));
-            border: none;
-            border-radius: 50px;
-            padding: 15px 25px;
-            color: var(--white);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: 600;
-            box-shadow: 0 5px 20px var(--shadow-color);
-            transition: all 0.3s ease;
-            z-index: 50;
-        }
-
-        .admin-access-btn:hover {
-            transform: translateY(-3px) scale(1.05);
-            box-shadow: 0 10px 30px var(--glow-color);
-        }
-
-        /* ===== ADMIN PANEL ===== */
-        .admin-panel {
-            position: fixed;
-            top: 0;
-            right: -100%;
-            width: 500px;
-            height: 100vh;
-            background: linear-gradient(135deg, var(--dark-bg), var(--primary-green));
-            border-left: 2px solid var(--accent-green);
-            box-shadow: -10px 0 40px rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(20px);
-            transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 1000;
-            overflow-y: auto;
-        }
-
-        .admin-panel.open {
-            right: 0;
-        }
-
-        .admin-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 2rem;
-            border-bottom: 1px solid var(--accent-green);
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .admin-header h2 {
-            color: var(--light-green);
-            font-size: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .close-btn {
-            background: none;
-            border: none;
-            color: var(--medium-gray);
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 10px;
-            border-radius: 50%;
-            transition: all 0.3s ease;
-        }
-
-        .close-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--white);
-        }
-
-        .admin-tabs {
-            display: flex;
-            flex-direction: column;
-            padding: 1rem;
-            gap: 0.5rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .tab-btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: none;
-            color: var(--medium-gray);
-            padding: 15px 20px;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 1rem;
-            font-weight: 500;
-        }
-
-        .tab-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--white);
-        }
-
-        .tab-btn.active {
-            background: linear-gradient(135deg, var(--accent-green), var(--light-green));
-            color: var(--white);
-            font-weight: 600;
-        }
-
-        .tab-content {
-            display: none;
-            padding: 2rem;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .control-section {
-            margin-bottom: 2rem;
-            padding: 1.5rem;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-            border: 1px solid var(--accent-green);
-        }
-
-        .control-section h3 {
-            color: var(--light-green);
-            margin-bottom: 1rem;
-            font-size: 1.2rem;
-        }
-
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .status-indicator.live .status-dot {
-            width: 12px;
-            height: 12px;
-            background: #ff4757;
-            border-radius: 50%;
-            animation: pulse 1.5s infinite;
-        }
-
-        .manual-controls {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .program-select {
-            width: 100%;
-            padding: 12px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--accent-green);
-            border-radius: 8px;
-            color: var(--white);
-            margin-bottom: 1rem;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--accent-green), var(--light-green));
-            color: var(--white);
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            margin-bottom: 0.5rem;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px var(--glow-color);
-        }
-
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--white);
-            border: 1px solid var(--accent-green);
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.15);
-        }
-
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 2000;
-        }
-
-        .modal.show {
-            display: flex;
-        }
-
-        .modal-content {
-            background: linear-gradient(135deg, var(--dark-bg), var(--primary-green));
-            border-radius: 15px;
-            padding: 2rem;
-            border: 2px solid var(--accent-green);
-            max-width: 400px;
-            width: 90%;
-            text-align: center;
-        }
-
-        .modal-content h3 {
-            color: var(--light-green);
-            margin-bottom: 1.5rem;
-        }
-
-        .modal-content input {
-            width: 100%;
-            padding: 15px;
-            margin-bottom: 1.5rem;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--accent-green);
-            border-radius: 8px;
-            color: var(--white);
-            font-size: 1rem;
-        }
-
-        .modal-buttons {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-        }
-
-        /* ===== SCHEDULE E OUTROS ESTILOS ===== */
-        .schedule-section {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 2rem;
-            border: 1px solid var(--accent-green);
-            box-shadow: 0 8px 30px var(--shadow-color);
-        }
-
-        .schedule-section h2 {
-            color: var(--light-green);
-            font-size: 1.5rem;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .schedule-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1rem;
-        }
-
-        .schedule-item {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 1rem;
-            border-radius: 10px;
-            border-left: 4px solid var(--accent-green);
-            transition: transform 0.3s ease;
-        }
-
-        .schedule-item:hover {
-            transform: translateX(10px);
-            background: rgba(255, 255, 255, 0.08);
-        }
-
-        .schedule-item.active {
-            border-left-color: var(--light-green);
-            background: rgba(157, 204, 90, 0.1);
-            box-shadow: 0 0 20px var(--glow-color);
-        }
-
-        .schedule-time {
-            font-weight: 700;
-            color: var(--light-green);
-            font-size: 1.1rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .schedule-title {
-            color: var(--white);
-            margin-bottom: 0.3rem;
-        }
-
-        .schedule-description {
-            color: var(--medium-gray);
-            font-size: 0.9rem;
-        }
-
-        .info-section {
-            margin: 2rem 0;
-        }
-
-        .info-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .info-card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 1.5rem;
-            text-align: center;
-            border: 1px solid var(--accent-green);
-            box-shadow: 0 5px 20px var(--shadow-color);
-            transition: all 0.3s ease;
-        }
-
-        .info-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 15px 40px var(--shadow-color);
-        }
-
-        .info-card i {
-            font-size: 2.5rem;
-            color: var(--light-green);
-            margin-bottom: 1rem;
-        }
-
-        .info-card h3 {
-            color: var(--white);
-            margin-bottom: 0.5rem;
-            font-size: 1.2rem;
-        }
-
-        .info-card p {
-            color: var(--medium-gray);
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
-
-        .recent-section {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 2rem;
-            border: 1px solid var(--accent-green);
-            box-shadow: 0 8px 30px var(--shadow-color);
-        }
-
-        .recent-section h2 {
-            color: var(--light-green);
-            font-size: 1.5rem;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .recent-tracks {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .recent-track {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 10px;
-            transition: all 0.3s ease;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .recent-track:hover {
-            background: rgba(255, 255, 255, 0.08);
-            transform: translateX(10px);
-        }
-
-        .recent-track-cover {
-            width: 50px;
-            height: 50px;
-            border-radius: 8px;
-            object-fit: cover;
-            border: 1px solid var(--accent-green);
-        }
-
-        .recent-track-info {
-            flex: 1;
-        }
-
-        .recent-track-title {
-            color: var(--white);
-            font-weight: 600;
-            margin-bottom: 0.2rem;
-        }
-
-        .recent-track-artist {
-            color: var(--medium-gray);
-            font-size: 0.9rem;
-        }
-
-        .recent-track-time {
-            color: var(--medium-gray);
-            font-size: 0.8rem;
-        }
-
-        /* ===== ANIMATIONS ===== */
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        /* ===== RESPONSIVO ===== */
-        @media (max-width: 768px) {
-            .header-content {
-                padding: 0 1rem;
-                flex-direction: column;
-                gap: 1rem;
-            }
-
-            .logo-section h1 {
-                font-size: 1.5rem;
-            }
-
-            .main-content {
-                padding: 1rem;
-            }
-
-            .track-display {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .cover-container {
-                width: 150px;
-                height: 150px;
-                margin: 0 auto;
-            }
-
-            .admin-panel {
-                width: 100%;
-            }
-
-            .info-cards {
-                grid-template-columns: 1fr;
-            }
-
-            .schedule-container {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+    <title>Rádio Supermercado do Louro - 24h AO VIVO</title>
+    <link rel="stylesheet" href="styles.css">
+    <meta name="description" content="Rádio Supermercado do Louro - Transmissão ao vivo 24 horas com programação especial, avisos e suas músicas favoritas">
 </head>
 <body>
-    <!-- Background Elements -->
-    <div class="background-effects">
-        <div class="floating-element floating-1"></div>
-        <div class="floating-element floating-2"></div>
-        <div class="floating-element floating-3"></div>
-    </div>
-
-    <!-- Header with Live Status -->
+    <!-- Header com informações da rádio -->
     <header class="radio-header">
         <div class="header-content">
             <div class="logo-section">
-                <i class="fas fa-radio"></i>
-                <h1>Rádio Supermercado do Louro</h1>
+                <h1 class="radio-title">📻 Rádio Supermercado do Louro</h1>
+                <p class="radio-tagline">Transmissão AO VIVO 24 Horas</p>
             </div>
             <div class="live-status">
-                <div id="liveIndicator" class="live-dot"></div>
-                <span>AO VIVO 24H</span>
+                <div class="live-indicator" id="liveIndicator">🔴 AO VIVO</div>
+                <div class="listener-count">👥 <span id="listenerCount">127</span> ouvintes</div>
             </div>
         </div>
     </header>
 
-    <!-- Main Player Section -->
+    <!-- Player Principal -->
     <main class="main-content">
         <div class="player-section">
-            <div class="now-playing-card">
+            <!-- Informações do Programa Atual -->
+            <div class="current-program">
                 <div class="program-info">
-                    <h2 id="currentProgram">Programação Automática</h2>
-                    <p id="programDescription">Música selecionada para você</p>
+                    <h2 id="currentProgram">Programação Musical</h2>
+                    <p id="programDescription">A melhor seleção musical 24 horas por dia</p>
+                    <div class="program-time">
+                        <span id="currentTime">--:--</span>
+                        <span class="separator">•</span>
+                        <span id="programDuration">24h não-stop</span>
+                    </div>
                 </div>
+                <div class="program-image">
+                    <img id="programCover" src="https://res.cloudinary.com/dygbrcrr6/image/upload/v1/radio-louro/covers/default-program.jpg" alt="Programa Atual" onerror="this.src='https://via.placeholder.com/200x200/1a5f1a/white?text=📻'">
+                </div>
+            </div>
+
+            <!-- Player de Áudio -->
+            <div class="audio-player">
+                <audio id="audioPlayer" preload="auto" crossorigin="anonymous"></audio>
                 
-                <div class="track-display">
-                    <div class="cover-container">
-                        <img id="trackCover" src="https://via.placeholder.com/200x200/1a4332/ffffff?text=RADIO" alt="Capa Atual" class="track-cover">
-                        <div class="equalizer-overlay">
-                            <div class="bar"></div>
-                            <div class="bar"></div>
-                            <div class="bar"></div>
-                            <div class="bar"></div>
-                            <div class="bar"></div>
+                <!-- Informações da Música Atual -->
+                <div class="track-info">
+                    <div class="track-details">
+                        <h3 id="currentTrack">Conectando à transmissão...</h3>
+                        <p id="trackArtist">Rádio Supermercado do Louro</p>
+                        <div class="track-meta">
+                            <span id="trackTime">00:00 / 00:00</span>
+                            <span class="track-type" id="trackType">Música</span>
                         </div>
                     </div>
-                    
-                    <div class="track-info">
-                        <h3 id="currentTrack">Bem-vindos à Rádio</h3>
-                        <p id="artistName">Supermercado do Louro</p>
-                        <div class="time-display">
-                            <span id="currentTime">00:00</span>
-                            <div class="progress-bar">
-                                <div id="progressFill" class="progress-fill"></div>
-                            </div>
-                            <span id="duration">03:00</span>
-                        </div>
+                    <div class="album-art">
+                        <img id="albumCover" src="https://res.cloudinary.com/dygbrcrr6/image/upload/v1/radio-louro/covers/default-cover.jpg" alt="Capa do Álbum" onerror="this.src='https://via.placeholder.com/120x120/1a5f1a/white?text=🎵'">
                     </div>
                 </div>
 
+                <!-- Controles de Áudio -->
                 <div class="player-controls">
-                    <audio id="audioPlayer" preload="auto"></audio>
-                    <div class="control-buttons">
+                    <div class="main-controls">
                         <button id="playPauseBtn" class="control-btn primary">
-                            <i class="fas fa-play"></i>
+                            <span class="play-icon">▶️</span>
                         </button>
-                        <button id="volumeBtn" class="control-btn">
-                            <i class="fas fa-volume-up"></i>
-                        </button>
+                        <button id="skipBtn" class="control-btn" title="Solicitar próxima música">⏭️</button>
+                        <button id="requestBtn" class="control-btn" title="Fazer pedido musical">🎤</button>
                     </div>
                     
                     <div class="volume-control">
-                        <i class="fas fa-volume-down"></i>
+                        <span class="volume-icon">🔊</span>
                         <input type="range" id="volumeSlider" min="0" max="100" value="70" class="volume-slider">
-                        <i class="fas fa-volume-up"></i>
-                        <span id="volumeDisplay">70%</span>
+                        <span id="volumeValue">70%</span>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Programming Schedule -->
-        <div class="schedule-section">
-            <h2><i class="fas fa-calendar-alt"></i> Programação de Hoje</h2>
-            <div id="scheduleContainer" class="schedule-container">
-                <div class="schedule-item active">
-                    <div class="schedule-time">06:00</div>
-                    <div class="schedule-title">Manhã no Supermercado</div>
-                    <div class="schedule-description">Música para começar bem o dia</div>
-                </div>
-                <div class="schedule-item">
-                    <div class="schedule-time">09:00</div>
-                    <div class="schedule-title">Hora Certa</div>
-                    <div class="schedule-description">Informações e música</div>
-                </div>
-                <div class="schedule-item">
-                    <div class="schedule-time">12:00</div>
-                    <div class="schedule-title">Almoço Musical</div>
-                    <div class="schedule-description">As melhores para o almoço</div>
-                </div>
-                <div class="schedule-item">
-                    <div class="schedule-time">15:00</div>
-                    <div class="schedule-title">Tarde Animada</div>
-                    <div class="schedule-description">Música e entretenimento</div>
-                </div>
-                <div class="schedule-item">
-                    <div class="schedule-time">18:00</div>
-                    <div class="schedule-title">Final de Tarde</div>
-                    <div class="schedule-description">Música para relaxar</div>
-                </div>
-                <div class="schedule-item">
-                    <div class="schedule-time">21:00</div>
-                    <div class="schedule-title">Noite no Supermercado</div>
-                    <div class="schedule-description">Música para a noite</div>
+                <!-- Equalizer Visual -->
+                <div class="equalizer" id="equalizer">
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Station Info -->
-        <div class="info-section">
-            <div class="info-cards">
-                <div class="info-card">
-                    <i class="fas fa-microphone"></i>
-                    <h3>No Ar Agora</h3>
-                    <p id="currentDjInfo">Programação Automática</p>
-                </div>
-                <div class="info-card">
-                    <i class="fas fa-music"></i>
-                    <h3>Próxima Música</h3>
-                    <p id="nextTrackInfo">Preparando...</p>
-                </div>
-                <div class="info-card">
-                    <i class="fas fa-clock"></i>
-                    <h3>Hora Certa</h3>
-                    <p id="currentHour">--:--</p>
-                </div>
-                <div class="info-card">
-                    <i class="fas fa-chart-line"></i>
-                    <h3>Ouvintes</h3>
-                    <p id="listenersCount">127</p>
-                </div>
+        <!-- Grade de Programação -->
+        <div class="programming-section">
+            <h3>📅 Programação de Hoje</h3>
+            <div class="schedule-grid" id="scheduleGrid">
+                <!-- Programação será carregada via JavaScript -->
             </div>
         </div>
 
-        <!-- Recent Tracks -->
-        <div class="recent-section">
-            <h2><i class="fas fa-history"></i> Tocadas Recentemente</h2>
-            <div id="recentTracks" class="recent-tracks">
-                <div class="recent-track">
-                    <img src="https://via.placeholder.com/50x50/40a578/ffffff?text=♪" alt="Capa" class="recent-track-cover">
-                    <div class="recent-track-info">
-                        <div class="recent-track-title">Bem-vindos à Rádio</div>
-                        <div class="recent-track-artist">Sistema de Rádio</div>
-                    </div>
-                    <div class="recent-track-time">Agora</div>
-                </div>
+        <!-- Últimas Tocadas -->
+        <div class="recently-played">
+            <h3>🎵 Últimas Tocadas</h3>
+            <div class="tracks-list" id="recentTracks">
+                <!-- Lista será preenchida dinamicamente -->
+            </div>
+        </div>
+
+        <!-- Avisos e Notícias -->
+        <div class="announcements">
+            <h3>📢 Avisos e Notícias</h3>
+            <div class="announcements-list" id="announcementsList">
+                <!-- Avisos serão carregados via JavaScript -->
             </div>
         </div>
     </main>
 
-    <!-- Admin Access -->
-    <button id="adminAccessBtn" class="admin-access-btn">
-        <i class="fas fa-cog"></i>
-        <span>Admin</span>
-    </button>
+    <!-- Rodapé com Informações -->
+    <footer class="radio-footer">
+        <div class="footer-content">
+            <div class="station-info">
+                <h4>Rádio Supermercado do Louro</h4>
+                <p>Sua rádio favorita, 24 horas no ar!</p>
+                <div class="contact-info">
+                    <span>📧 contato@radiosupermercadodolouro.com.br</span>
+                    <span>📱 WhatsApp: (11) 99999-9999</span>
+                </div>
+            </div>
+            <div class="social-links">
+                <h4>Redes Sociais</h4>
+                <div class="social-icons">
+                    <a href="#" class="social-link">📘 Facebook</a>
+                    <a href="#" class="social-link">📷 Instagram</a>
+                    <a href="#" class="social-link">🐦 Twitter</a>
+                </div>
+            </div>
+            <div class="stats">
+                <h4>Estatísticas</h4>
+                <div class="stats-info">
+                    <div class="stat-item">
+                        <span class="stat-number" id="totalPlayed">0</span>
+                        <span class="stat-label">Músicas tocadas hoje</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="hoursLive">24</span>
+                        <span class="stat-label">Horas ao vivo</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="copyright">
+            <p>&copy; 2024 Rádio Supermercado do Louro. Todos os direitos reservados.</p>
+        </div>
+    </footer>
 
-    <!-- Admin Panel -->
-    <div id="adminPanel" class="admin-panel">
+    <!-- Modal de Pedido Musical -->
+    <div id="requestModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🎤 Fazer Pedido Musical</h3>
+                <button class="close-btn" onclick="closeModal('requestModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="requestForm">
+                    <div class="form-group">
+                        <label for="requesterName">Seu Nome:</label>
+                        <input type="text" id="requesterName" placeholder="Digite seu nome" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="songRequest">Música/Artista:</label>
+                        <input type="text" id="songRequest" placeholder="Ex: Roberto Carlos - Como é Grande o Meu Amor Por Você" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="dedicateTo">Dedicar para (opcional):</label>
+                        <input type="text" id="dedicateTo" placeholder="Para quem você quer dedicar?">
+                    </div>
+                    <div class="form-group">
+                        <label for="message">Mensagem (opcional):</label>
+                        <textarea id="message" placeholder="Deixe uma mensagem especial..." rows="3"></textarea>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="submit" class="btn primary">Enviar Pedido</button>
+                        <button type="button" class="btn secondary" onclick="closeModal('requestModal')">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Painel Administrativo (Oculto) -->
+    <div id="adminPanel" class="admin-panel hidden">
         <div class="admin-header">
-            <h2><i class="fas fa-broadcast-tower"></i> Painel de Controle</h2>
-            <button id="closeAdminBtn" class="close-btn">
-                <i class="fas fa-times"></i>
-            </button>
+            <h2>⚙️ Painel Administrativo</h2>
+            <button id="closeAdminBtn" class="btn secondary">← Voltar</button>
         </div>
-
+        
         <div class="admin-tabs">
-            <button class="tab-btn active" data-tab="broadcast">
-                <i class="fas fa-play-circle"></i> Transmissão
-            </button>
-            <button class="tab-btn" data-tab="content">
-                <i class="fas fa-upload"></i> Conteúdo
-            </button>
-            <button class="tab-btn" data-tab="schedule">
-                <i class="fas fa-calendar"></i> Programação
-            </button>
-            <button class="tab-btn" data-tab="reports">
-                <i class="fas fa-chart-bar"></i> Relatórios
-            </button>
+            <button class="tab-btn active" data-tab="broadcast">📡 Transmissão</button>
+            <button class="tab-btn" data-tab="schedule">📅 Programação</button>
+            <button class="tab-btn" data-tab="content">📁 Conteúdo</button>
+            <button class="tab-btn" data-tab="requests">🎤 Pedidos</button>
+            <button class="tab-btn" data-tab="stats">📊 Estatísticas</button>
         </div>
 
+        <!-- Conteúdo das Abas -->
         <div class="tab-content active" id="broadcast-tab">
-            <div class="control-section">
-                <h3>Status da Transmissão</h3>
-                <div class="status-indicator live">
-                    <div class="status-dot"></div>
-                    <span>AO VIVO</span>
+            <div class="broadcast-controls">
+                <div class="status-card">
+                    <h4>Status da Transmissão</h4>
+                    <div class="status-info">
+                        <span class="status-indicator" id="adminLiveStatus">🔴 AO VIVO</span>
+                        <span id="uptime">Tempo no ar: 24h</span>
+                    </div>
+                    <div class="broadcast-actions">
+                        <button id="toggleBroadcast" class="btn primary">⏸️ Pausar Transmissão</button>
+                        <button id="skipTrack" class="btn secondary">⏭️ Pular Música</button>
+                        <button id="emergencyStop" class="btn danger">🛑 Parada de Emergência</button>
+                    </div>
                 </div>
-                <button id="toggleBroadcast" class="btn-secondary">
-                    <i class="fas fa-pause"></i> Pausar Transmissão
-                </button>
-            </div>
-
-            <div class="control-section">
-                <h3>Controles Manuais</h3>
-                <div class="manual-controls">
-                    <button id="playNextBtn" class="btn-primary">
-                        <i class="fas fa-forward"></i> Próxima Música
-                    </button>
-                    <button id="playTimeBtn" class="btn-primary">
-                        <i class="fas fa-clock"></i> Tocar Hora Certa
-                    </button>
-                    <button id="playAdBtn" class="btn-primary">
-                        <i class="fas fa-bullhorn"></i> Tocar Aviso
-                    </button>
+                
+                <div class="queue-management">
+                    <h4>Fila de Reprodução</h4>
+                    <div id="playQueue" class="queue-list">
+                        <!-- Fila será carregada dinamicamente -->
+                    </div>
                 </div>
-            </div>
-
-            <div class="control-section">
-                <h3>Programação Ativa</h3>
-                <select id="activeProgramSelect" class="program-select">
-                    <option value="">Programação Automática</option>
-                    <option value="morning">Programa Matinal</option>
-                    <option value="afternoon">Programa Vespertino</option>
-                    <option value="night">Programa Noturno</option>
-                    <option value="weekend">Programa Fim de Semana</option>
-                </select>
-                <button id="setProgramBtn" class="btn-primary">Ativar</button>
-            </div>
-        </div>
-
-        <div class="tab-content" id="content-tab">
-            <div class="control-section">
-                <h3><i class="fas fa-music"></i> Músicas</h3>
-                <input type="file" id="musicUpload" accept=".mp3,.wav,.ogg" multiple style="margin-bottom: 1rem;">
-                <button onclick="uploadContent('music')" class="btn-primary">
-                    <i class="fas fa-upload"></i> Enviar Músicas
-                </button>
-                <div id="musicList">Nenhuma música cadastrada</div>
-            </div>
-
-            <div class="control-section">
-                <h3><i class="fas fa-clock"></i> Hora Certa</h3>
-                <input type="file" id="timeUpload" accept=".mp3,.wav,.ogg" multiple style="margin-bottom: 1rem;">
-                <button onclick="uploadContent('time')" class="btn-primary">
-                    <i class="fas fa-upload"></i> Enviar Hora Certa
-                </button>
-                <div id="timeList">Nenhum arquivo de hora certa</div>
-            </div>
-
-            <div class="control-section">
-                <h3><i class="fas fa-bullhorn"></i> Avisos</h3>
-                <input type="file" id="adsUpload" accept=".mp3,.wav,.ogg" multiple style="margin-bottom: 1rem;">
-                <button onclick="uploadContent('ads')" class="btn-primary">
-                    <i class="fas fa-upload"></i> Enviar Avisos
-                </button>
-                <div id="adsList">Nenhum aviso cadastrado</div>
-            </div>
-
-            <div class="control-section">
-                <h3><i class="fas fa-microphone"></i> Vinhetas</h3>
-                <input type="file" id="jinglesUpload" accept=".mp3,.wav,.ogg" multiple style="margin-bottom: 1rem;">
-                <button onclick="uploadContent('jingles')" class="btn-primary">
-                    <i class="fas fa-upload"></i> Enviar Vinhetas
-                </button>
-                <div id="jinglesList">Nenhuma vinheta cadastrada</div>
             </div>
         </div>
 
         <div class="tab-content" id="schedule-tab">
-            <div class="control-section">
-                <h3>Configurar Programação</h3>
-                <input type="time" id="scheduleTime" style="width: 100%; padding: 12px; margin-bottom: 1rem; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--accent-green); border-radius: 8px; color: var(--white);">
-                <select id="scheduleType" class="program-select">
-                    <option value="music">Música</option>
-                    <option value="ads">Avisos</option>
-                    <option value="time">Hora Certa</option>
-                    <option value="program">Programa Especial</option>
-                </select>
-                <input type="text" id="scheduleTitle" placeholder="Título do programa/conteúdo" style="width: 100%; padding: 12px; margin-bottom: 1rem; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--accent-green); border-radius: 8px; color: var(--white);">
-                <button id="addScheduleBtn" class="btn-primary">
-                    <i class="fas fa-plus"></i> Adicionar
-                </button>
-                <div id="scheduleList" style="margin-top: 1rem; color: var(--medium-gray);">
-                    Lista de programação aparecerá aqui
+            <div class="schedule-management">
+                <h4>Gerenciar Programação</h4>
+                <div class="schedule-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="programTime">Horário:</label>
+                            <input type="time" id="programTime">
+                        </div>
+                        <div class="form-group">
+                            <label for="programName">Nome do Programa:</label>
+                            <input type="text" id="programName" placeholder="Ex: Manhã Musical">
+                        </div>
+                        <div class="form-group">
+                            <label for="programDuration">Duração:</label>
+                            <select id="programDuration">
+                                <option value="1">1 hora</option>
+                                <option value="2">2 horas</option>
+                                <option value="4">4 horas</option>
+                                <option value="8">8 horas</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn primary" onclick="addProgram()">Adicionar à Programação</button>
+                </div>
+                <div id="currentSchedule" class="current-schedule">
+                    <!-- Programação atual será exibida aqui -->
                 </div>
             </div>
         </div>
 
-        <div class="tab-content" id="reports-tab">
-            <div class="control-section">
-                <h3>Estatísticas de Reprodução</h3>
-                <button id="refreshReportsBtn" class="btn-secondary" style="margin-bottom: 1rem;">
-                    <i class="fas fa-sync"></i> Atualizar
-                </button>
-                <div id="reportsList" style="color: var(--medium-gray);">
-                    <p>• Total de músicas reproduzidas hoje: 0</p>
-                    <p>• Programa mais ouvido: Programação Automática</p>
-                    <p>• Horário de pico: 18:00-21:00</p>
-                    <p>• Média de ouvintes: 127</p>
+        <div class="tab-content" id="content-tab">
+            <div class="content-management">
+                <div class="upload-sections">
+                    <div class="upload-card">
+                        <h4>🎵 Upload de Músicas</h4>
+                        <input type="file" id="musicUpload" accept=".mp3,.wav,.ogg" multiple>
+                        <div class="upload-options">
+                            <select id="musicCategory">
+                                <option value="general">Geral</option>
+                                <option value="nacional">Nacional</option>
+                                <option value="internacional">Internacional</option>
+                                <option value="sertanejo">Sertanejo</option>
+                                <option value="pop">Pop</option>
+                                <option value="rock">Rock</option>
+                            </select>
+                        </div>
+                        <button onclick="uploadContent('music')" class="btn primary">Enviar Músicas</button>
+                    </div>
+
+                    <div class="upload-card">
+                        <h4>📢 Upload de Avisos</h4>
+                        <input type="file" id="announcementUpload" accept=".mp3,.wav,.ogg" multiple>
+                        <div class="upload-options">
+                            <label>
+                                <input type="checkbox" id="priorityAnnouncement">
+                                Aviso prioritário
+                            </label>
+                        </div>
+                        <button onclick="uploadContent('announcements')" class="btn primary">Enviar Avisos</button>
+                    </div>
+
+                    <div class="upload-card">
+                        <h4>🕐 Hora Certa</h4>
+                        <input type="file" id="timeUpload" accept=".mp3,.wav,.ogg" multiple>
+                        <button onclick="uploadContent('time')" class="btn primary">Enviar Hora Certa</button>
+                    </div>
+
+                    <div class="upload-card">
+                        <h4>🎙️ Vinhetas/Jingles</h4>
+                        <input type="file" id="jingleUpload" accept=".mp3,.wav,.ogg" multiple>
+                        <button onclick="uploadContent('jingles')" class="btn primary">Enviar Vinhetas</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="requests-tab">
+            <div class="requests-management">
+                <h4>Pedidos Musicais</h4>
+                <div id="requestsList" class="requests-list">
+                    <!-- Lista de pedidos será carregada aqui -->
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="stats-tab">
+            <div class="statistics">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h4>Músicas Tocadas</h4>
+                        <div class="stat-number" id="statsTracksToday">0</div>
+                        <span class="stat-period">Hoje</span>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Pedidos Recebidos</h4>
+                        <div class="stat-number" id="statsRequestsToday">0</div>
+                        <span class="stat-period">Hoje</span>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Tempo no Ar</h4>
+                        <div class="stat-number" id="statsUptime">24h</div>
+                        <span class="stat-period">Contínuo</span>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Biblioteca</h4>
+                        <div class="stat-number" id="statsTotalTracks">0</div>
+                        <span class="stat-period">Total de músicas</span>
+                    </div>
+                </div>
+                
+                <div class="detailed-stats">
+                    <h4>Top 10 Mais Tocadas</h4>
+                    <div id="topTracks" class="top-tracks-list">
+                        <!-- Lista será preenchida dinamicamente -->
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Password Modal -->
+    <!-- Botão Admin (Oculto) -->
+    <div class="admin-access" title="Ctrl+Alt+A para acesso rápido">
+        <button id="adminAccessBtn" class="admin-btn">⚙️</button>
+    </div>
+
+    <!-- Modal de Senha Admin -->
     <div id="passwordModal" class="modal">
         <div class="modal-content">
-            <h3><i class="fas fa-lock"></i> Acesso Administrativo</h3>
-            <input type="password" id="adminPassword" placeholder="Digite a senha de administrador">
-            <div class="modal-buttons">
-                <button id="confirmPasswordBtn" class="btn-primary">
-                    <i class="fas fa-sign-in-alt"></i> Entrar
-                </button>
-                <button id="cancelPasswordBtn" class="btn-secondary">
-                    <i class="fas fa-times"></i> Cancelar
-                </button>
+            <div class="modal-header">
+                <h3>🔒 Acesso Administrativo</h3>
+            </div>
+            <div class="modal-body">
+                <input type="password" id="adminPassword" placeholder="Digite a senha de administrador">
+                <div class="modal-actions">
+                    <button onclick="checkAdminPassword()" class="btn primary">Entrar</button>
+                    <button onclick="closeModal('passwordModal')" class="btn secondary">Cancelar</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <script>
-        // Estado global da rádio
-        let radioState = {
-            isLive: true,
-            isPlaying: false,
-            volume: 70,
-            listeners: 127,
-            currentTrack: {
-                name: 'Bem-vindos à Rádio',
-                artist: 'Supermercado do Louro'
-            },
-            recentTracks: []
-        };
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <p>Carregando...</p>
+    </div>
 
-        // Elementos DOM
-        let elements = {};
-
-        // Inicialização
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🎵 Inicializando Rádio Supermercado do Louro...');
-            initializeElements();
-            setupEventListeners();
-            startSimulation();
-            updateUI();
-            console.log('✅ Rádio inicializada com sucesso!');
-        });
-
-        function initializeElements() {
-            const elementIds = [
-                'adminAccessBtn', 'adminPanel', 'closeAdminBtn', 'passwordModal',
-                'adminPassword', 'confirmPasswordBtn', 'cancelPasswordBtn',
-                'playPauseBtn', 'volumeBtn', 'volumeSlider', 'volumeDisplay',
-                'currentHour', 'playNextBtn', 'playTimeBtn', 'playAdBtn',
-                'toggleBroadcast', 'setProgramBtn', 'addScheduleBtn', 'refreshReportsBtn'
-            ];
-            
-            elements = {};
-            elementIds.forEach(id => {
-                const element = document.getElementById(id);
-                if (element) {
-                    elements[id] = element;
-                }
-            });
-
-            // Configurar tabs
-            setupTabs();
-        }
-
-        function setupTabs() {
-            const tabButtons = document.querySelectorAll('.tab-btn');
-            const tabContents = document.querySelectorAll('.tab-content');
-
-            tabButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    const targetTab = button.getAttribute('data-tab');
-                    
-                    // Remove active class from all buttons and contents
-                    tabButtons.forEach(btn => btn.classList.remove('active'));
-                    tabContents.forEach(content => content.classList.remove('active'));
-                    
-                    // Add active class to clicked button and corresponding content
-                    button.classList.add('active');
-                    const targetContent = document.getElementById(targetTab + '-tab');
-                    if (targetContent) {
-                        targetContent.classList.add('active');
-                    }
-                });
-            });
-        }
-
-        function setupEventListeners() {
-            // Player controls
-            if (elements.playPauseBtn) {
-                elements.playPauseBtn.addEventListener('click', togglePlayPause);
-            }
-            
-            if (elements.volumeSlider) {
-                elements.volumeSlider.addEventListener('input', updateVolume);
-            }
-            
-            if (elements.volumeBtn) {
-                elements.volumeBtn.addEventListener('click', toggleMute);
-            }
-            
-            // Admin access
-            if (elements.adminAccessBtn) {
-                elements.adminAccessBtn.addEventListener('click', showPasswordModal);
-            }
-            
-            if (elements.closeAdminBtn) {
-                elements.closeAdminBtn.addEventListener('click', hideAdminPanel);
-            }
-            
-            // Password modal
-            if (elements.confirmPasswordBtn) {
-                elements.confirmPasswordBtn.addEventListener('click', checkPassword);
-            }
-            
-            if (elements.cancelPasswordBtn) {
-                elements.cancelPasswordBtn.addEventListener('click', hidePasswordModal);
-            }
-            
-            if (elements.adminPassword) {
-                elements.adminPassword.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') checkPassword();
-                });
-            }
-
-            // Admin controls
-            if (elements.playNextBtn) {
-                elements.playNextBtn.addEventListener('click', () => {
-                    showToast('Próxima música acionada!');
-                });
-            }
-
-            if (elements.playTimeBtn) {
-                elements.playTimeBtn.addEventListener('click', () => {
-                    showToast('Hora certa acionada!');
-                });
-            }
-
-            if (elements.playAdBtn) {
-                elements.playAdBtn.addEventListener('click', () => {
-                    showToast('Aviso acionado!');
-                });
-            }
-
-            if (elements.toggleBroadcast) {
-                elements.toggleBroadcast.addEventListener('click', toggleBroadcast);
-            }
-
-            if (elements.setProgramBtn) {
-                elements.setProgramBtn.addEventListener('click', () => {
-                    showToast('Programa ativado!');
-                });
-            }
-
-            if (elements.addScheduleBtn) {
-                elements.addScheduleBtn.addEventListener('click', addScheduleItem);
-            }
-
-            if (elements.refreshReportsBtn) {
-                elements.refreshReportsBtn.addEventListener('click', () => {
-                    showToast('Relatórios atualizados!');
-                });
-            }
-
-            console.log('🔗 Event listeners configurados');
-        }
-
-        function startSimulation() {
-            // Atualizar hora a cada segundo
-            setInterval(updateCurrentTime, 1000);
-            updateCurrentTime();
-
-            // Simular mudanças no número de ouvintes
-            setInterval(() => {
-                const variation = Math.floor(Math.random() * 20) - 10;
-                radioState.listeners = Math.max(50, radioState.listeners + variation);
-                document.getElementById('listenersCount').textContent = radioState.listeners;
-            }, 30000);
-
-            // Simular progresso da música
-            startProgressSimulation();
-        }
-
-        function startProgressSimulation() {
-            let progress = 0;
-            const progressBar = document.getElementById('progressFill');
-            const currentTimeEl = document.getElementById('currentTime');
-            
-            setInterval(() => {
-                progress += 0.5; // Avança 0.5% por segundo (3 minutos = 180 segundos)
-                if (progress > 100) {
-                    progress = 0;
-                    // Simular nova música
-                    changeTrack();
-                }
-                
-                if (progressBar) {
-                    progressBar.style.width = progress + '%';
-                }
-                
-                if (currentTimeEl) {
-                    const seconds = Math.floor(progress * 1.8); // 180 segundos = 100%
-                    const minutes = Math.floor(seconds / 60);
-                    const secs = seconds % 60;
-                    currentTimeEl.textContent = `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-                }
-            }, 1000);
-        }
-
-        function changeTrack() {
-            const tracks = [
-                { name: 'Música no Supermercado', artist: 'Artista Local' },
-                { name: 'Som da Cidade', artist: 'Banda Regional' },
-                { name: 'Alegria do Povo', artist: 'Cantor Popular' },
-                { name: 'Rádio Hits', artist: 'Vários Artistas' }
-            ];
-            
-            const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
-            radioState.currentTrack = randomTrack;
-            
-            document.getElementById('currentTrack').textContent = randomTrack.name;
-            document.getElementById('artistName').textContent = randomTrack.artist;
-            
-            // Adicionar à lista de recentes
-            const recentTracksEl = document.getElementById('recentTracks');
-            if (recentTracksEl) {
-                const trackEl = document.createElement('div');
-                trackEl.className = 'recent-track';
-                trackEl.innerHTML = `
-                    <img src="https://via.placeholder.com/50x50/40a578/ffffff?text=♪" alt="Capa" class="recent-track-cover">
-                    <div class="recent-track-info">
-                        <div class="recent-track-title">${randomTrack.name}</div>
-                        <div class="recent-track-artist">${randomTrack.artist}</div>
-                    </div>
-                    <div class="recent-track-time">${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
-                `;
-                recentTracksEl.insertBefore(trackEl, recentTracksEl.firstChild);
-                
-                // Manter apenas 5 músicas recentes
-                while (recentTracksEl.children.length > 5) {
-                    recentTracksEl.removeChild(recentTracksEl.lastChild);
-                }
-            }
-        }
-
-        function updateCurrentTime() {
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString('pt-BR', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            });
-            
-            if (elements.currentHour) {
-                elements.currentHour.textContent = timeStr;
-            }
-        }
-
-        function updateUI() {
-            if (elements.volumeSlider && elements.volumeDisplay) {
-                elements.volumeSlider.value = radioState.volume;
-                elements.volumeDisplay.textContent = `${radioState.volume}%`;
-                updateVolumeIcon(radioState.volume);
-            }
-        }
-
-        // Controles do player
-        function togglePlayPause() {
-            radioState.isPlaying = !radioState.isPlaying;
-            updatePlayButton();
-            showToast(radioState.isPlaying ? 'Reprodução iniciada' : 'Reprodução pausada');
-        }
-
-        function updatePlayButton() {
-            if (!elements.playPauseBtn) return;
-            
-            const icon = elements.playPauseBtn.querySelector('i');
-            if (radioState.isPlaying) {
-                icon.className = 'fas fa-pause';
-            } else {
-                icon.className = 'fas fa-play';
-            }
-        }
-
-        function updateVolume() {
-            if (!elements.volumeSlider) return;
-            
-            const volume = parseInt(elements.volumeSlider.value);
-            radioState.volume = volume;
-            
-            if (elements.volumeDisplay) {
-                elements.volumeDisplay.textContent = `${volume}%`;
-            }
-            
-            updateVolumeIcon(volume);
-        }
-
-        function updateVolumeIcon(volume) {
-            if (!elements.volumeBtn) return;
-            
-            const icon = elements.volumeBtn.querySelector('i');
-            if (volume === 0) {
-                icon.className = 'fas fa-volume-mute';
-            } else if (volume < 50) {
-                icon.className = 'fas fa-volume-down';
-            } else {
-                icon.className = 'fas fa-volume-up';
-            }
-        }
-
-        function toggleMute() {
-            if (!elements.volumeSlider) return;
-            
-            if (radioState.volume === 0) {
-                radioState.volume = radioState.previousVolume || 70;
-                elements.volumeSlider.value = radioState.volume;
-            } else {
-                radioState.previousVolume = radioState.volume;
-                radioState.volume = 0;
-                elements.volumeSlider.value = 0;
-            }
-            
-            updateVolumeIcon(radioState.volume);
-            if (elements.volumeDisplay) {
-                elements.volumeDisplay.textContent = `${radioState.volume}%`;
-            }
-        }
-
-        // Funções admin
-        function showPasswordModal() {
-            if (elements.passwordModal) {
-                elements.passwordModal.classList.add('show');
-                if (elements.adminPassword) {
-                    elements.adminPassword.focus();
-                }
-            }
-        }
-
-        function hidePasswordModal() {
-            if (elements.passwordModal) {
-                elements.passwordModal.classList.remove('show');
-                if (elements.adminPassword) {
-                    elements.adminPassword.value = '';
-                }
-            }
-        }
-
-        function checkPassword() {
-            if (!elements.adminPassword) return;
-            
-            const password = elements.adminPassword.value;
-            if (password === 'admin123') {
-                hidePasswordModal();
-                showAdminPanel();
-                showToast('Acesso autorizado!');
-            } else {
-                showToast('Senha incorreta!', 'error');
-                elements.adminPassword.value = '';
-                elements.adminPassword.focus();
-            }
-        }
-
-        function showAdminPanel() {
-            if (elements.adminPanel) {
-                elements.adminPanel.classList.add('open');
-            }
-        }
-
-        function hideAdminPanel() {
-            if (elements.adminPanel) {
-                elements.adminPanel.classList.remove('open');
-            }
-        }
-
-        function toggleBroadcast() {
-            radioState.isLive = !radioState.isLive;
-            const btn = elements.toggleBroadcast;
-            if (btn) {
-                if (radioState.isLive) {
-                    btn.innerHTML = '<i class="fas fa-pause"></i> Pausar Transmissão';
-                    btn.className = 'btn-secondary';
-                } else {
-                    btn.innerHTML = '<i class="fas fa-play"></i> Iniciar Transmissão';
-                    btn.className = 'btn-primary';
-                }
-            }
-            showToast(radioState.isLive ? 'Transmissão iniciada' : 'Transmissão pausada');
-        }
-
-        function addScheduleItem() {
-            const time = document.getElementById('scheduleTime').value;
-            const type = document.getElementById('scheduleType').value;
-            const title = document.getElementById('scheduleTitle').value;
-            
-            if (!time || !title) {
-                showToast('Preencha todos os campos!', 'error');
-                return;
-            }
-            
-            showToast('Item adicionado à programação!');
-            
-            // Limpar campos
-            document.getElementById('scheduleTime').value = '';
-            document.getElementById('scheduleTitle').value = '';
-        }
-
-        // Upload de conteúdo (placeholder)
-        function uploadContent(type) {
-            showToast(`Upload de ${type} iniciado!`);
-        }
-
-        // Utilitários
-        function showToast(message, type = 'success') {
-            const toast = document.createElement('div');
-            const bgColor = type === 'error' ? '#ff4757' : 'linear-gradient(135deg, #40a578, #9dcc5a)';
-            
-            toast.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: ${bgColor};
-                color: white;
-                padding: 15px 25px;
-                border-radius: 10px;
-                font-weight: 600;
-                z-index: 10000;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-                max-width: 300px;
-                word-wrap: break-word;
-                animation: slideIn 0.3s ease;
-            `;
-            
-            toast.textContent = message;
-            document.body.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.remove();
-            }, 3000);
-        }
-
-        // Adicionar animação CSS para o toast
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideIn {
-                from { transform: translateX(100%); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
-            }
-        `;
-        document.head.appendChild(style);
-
-        console.log('🚀 Sistema de Rádio carregado!');
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
