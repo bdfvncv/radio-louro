@@ -1,4 +1,3 @@
-// Configuração da Cloudinary
 const CLOUDINARY_CONFIG = {
     cloudName: 'dygbrcrr6',
     apiKey: '853591251513134',
@@ -127,6 +126,32 @@ class RadioManager {
             adminBtn.addEventListener('click', () => this.showAdminModal());
         }
 
+        // Admin controls
+        const closeAdminBtn = document.getElementById('closeAdminBtn');
+        if (closeAdminBtn) {
+            closeAdminBtn.addEventListener('click', () => this.closeAdminPanel());
+        }
+
+        const toggleBroadcast = document.getElementById('adminToggleBroadcast');
+        if (toggleBroadcast) {
+            toggleBroadcast.addEventListener('click', () => this.adminToggleBroadcast());
+        }
+
+        const skipTrack = document.getElementById('adminSkipTrack');
+        if (skipTrack) {
+            skipTrack.addEventListener('click', () => this.skipTrack());
+        }
+
+        const emergencyStop = document.getElementById('adminEmergencyStop');
+        if (emergencyStop) {
+            emergencyStop.addEventListener('click', () => this.emergencyStop());
+        }
+
+        // Admin tabs
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => this.switchAdminTab(btn.dataset.tab));
+        });
+
         // Request form
         if (elements.requestForm) {
             elements.requestForm.addEventListener('submit', (e) => {
@@ -134,6 +159,13 @@ class RadioManager {
                 this.submitRequest();
             });
         }
+
+        // Modal close on outside click
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                e.target.classList.remove('show');
+            }
+        });
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
@@ -144,6 +176,154 @@ class RadioManager {
         });
 
         console.log('Event listeners configurados');
+    }
+
+    showAdminModal() {
+        if (elements.passwordModal) {
+            elements.passwordModal.classList.add('show');
+        }
+    }
+
+    closeAdminPanel() {
+        if (elements.adminPanel) {
+            elements.adminPanel.classList.add('hidden');
+        }
+    }
+
+    switchAdminTab(tabName) {
+        // Remove active de todos os botões e conteúdos
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+
+        // Adiciona active aos selecionados
+        const tabBtn = document.querySelector(`[data-tab="${tabName}"]`);
+        const tabContent = document.getElementById(`${tabName}-tab`);
+
+        if (tabBtn) tabBtn.classList.add('active');
+        if (tabContent) tabContent.classList.add('active');
+
+        // Atualizar conteúdo específico
+        if (tabName === 'requests') {
+            this.updateAdminRequestsList();
+        } else if (tabName === 'stats') {
+            this.updateAdminStats();
+        } else if (tabName === 'content') {
+            this.updateContentLists();
+        }
+    }
+
+    adminToggleBroadcast() {
+        this.togglePlayback();
+        
+        const btn = document.getElementById('adminToggleBroadcast');
+        if (btn) {
+            btn.textContent = radioState.isLive ? '⏸️ Pausar Transmissão' : '▶️ Iniciar Transmissão';
+        }
+        
+        this.updateAdminStatus();
+    }
+
+    emergencyStop() {
+        if (confirm('Tem certeza que deseja fazer uma parada de emergência?')) {
+            radioState.isPlaying = false;
+            radioState.isLive = false;
+            
+            if (this.audioPlayer) {
+                this.audioPlayer.pause();
+            }
+            
+            this.updateLiveStatus();
+            this.updateAdminStatus();
+            alert('Transmissão interrompida em emergência!');
+        }
+    }
+
+    updateAdminStatus() {
+        const statusElement = document.getElementById('adminLiveStatus');
+        if (statusElement) {
+            statusElement.textContent = radioState.isLive ? '🔴 AO VIVO' : '⚫ OFFLINE';
+            statusElement.style.color = radioState.isLive ? '#dc2626' : '#666';
+        }
+    }
+
+    updateAdminRequestsList() {
+        const container = document.getElementById('adminRequestsList');
+        if (!container) return;
+
+        if (radioState.requests.length === 0) {
+            container.innerHTML = '<p style="color: #a0a0a0; text-align: center; padding: 2rem;">Nenhum pedido recebido ainda.</p>';
+            return;
+        }
+
+        const html = radioState.requests.map((request, index) => `
+            <div class="request-item" style="background: rgba(255,255,255,0.05); padding: 1rem; margin-bottom: 1rem; border-radius: 8px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <strong style="color: #fff;">${request.requesterName}</strong>
+                    <span style="color: #a0a0a0; font-size: 0.8rem;">${new Date(request.timestamp).toLocaleString('pt-BR')}</span>
+                </div>
+                <div style="color: #4caf50; margin-bottom: 0.5rem;">${request.songRequest}</div>
+                ${request.dedicateTo ? `<div style="color: #a0a0a0; font-size: 0.9rem;">Para: ${request.dedicateTo}</div>` : ''}
+                ${request.message ? `<div style="color: #a0a0a0; font-style: italic; margin-top: 0.5rem;">"${request.message}"</div>` : ''}
+                <div style="margin-top: 1rem;">
+                    <button onclick="removeRequest(${index})" class="btn danger" style="padding: 0.3rem 0.8rem; font-size: 0.8rem;">🗑️ Remover</button>
+                </div>
+            </div>
+        `).join('');
+
+        container.innerHTML = html;
+    }
+
+    updateAdminStats() {
+        // Atualizar estatísticas no painel admin
+        const elements = {
+            tracksToday: document.getElementById('adminStatsTracksToday'),
+            requestsToday: document.getElementById('adminStatsRequestsToday'),
+            totalTracks: document.getElementById('adminStatsTotalTracks')
+        };
+
+        if (elements.tracksToday) {
+            elements.tracksToday.textContent = radioState.stats.tracksPlayed;
+        }
+
+        if (elements.requestsToday) {
+            elements.requestsToday.textContent = radioState.stats.requestsReceived;
+        }
+
+        if (elements.totalTracks) {
+            const totalFiles = Object.values(radioState.playlists)
+                .reduce((sum, playlist) => sum + playlist.length, 0);
+            elements.totalTracks.textContent = totalFiles;
+        }
+    }
+
+    updateContentLists() {
+        // Atualizar listas de arquivos
+        const categories = ['music', 'announcements', 'time'];
+        
+        categories.forEach(category => {
+            const container = document.getElementById(`${category}List`);
+            if (!container) return;
+
+            const files = radioState.playlists[category] || [];
+            
+            if (files.length === 0) {
+                container.innerHTML = '<p style="color: #a0a0a0; font-size: 0.8rem; margin-top: 0.5rem;">Nenhum arquivo enviado ainda.</p>';
+                return;
+            }
+
+            const html = files.map((file, index) => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <span style="color: #a0a0a0; font-size: 0.8rem; flex: 1;">${file.name}</span>
+                    <button onclick="removeFile('${category}', ${index})" style="background: #dc2626; border: none; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">×</button>
+                </div>
+            `).join('');
+
+            container.innerHTML = html;
+        });
     }
 
     setupDefaultSchedule() {
@@ -583,8 +763,11 @@ window.checkAdminPassword = function() {
     if (password === 'admin123') {
         closeModal('passwordModal');
         showAdminPanel();
+        // Limpar senha
+        document.getElementById('adminPassword').value = '';
     } else {
         alert('Senha incorreta!');
+        document.getElementById('adminPassword').value = '';
     }
 };
 
@@ -592,6 +775,13 @@ window.showAdminPanel = function() {
     const panel = elements.adminPanel || document.getElementById('adminPanel');
     if (panel) {
         panel.classList.remove('hidden');
+        // Atualizar dados do painel
+        if (radioManager) {
+            radioManager.updateAdminStatus();
+            radioManager.updateAdminStats();
+            radioManager.updateContentLists();
+            radioManager.updateAdminRequestsList();
+        }
     }
 };
 
@@ -599,6 +789,86 @@ window.closeAdminPanel = function() {
     const panel = elements.adminPanel || document.getElementById('adminPanel');
     if (panel) {
         panel.classList.add('hidden');
+    }
+};
+
+window.handleUpload = async function(category) {
+    const fileInputs = {
+        music: 'musicUpload',
+        announcements: 'announcementUpload', 
+        time: 'timeUpload'
+    };
+
+    const inputId = fileInputs[category];
+    const input = document.getElementById(inputId);
+    
+    if (!input || input.files.length === 0) {
+        alert('Selecione pelo menos um arquivo!');
+        return;
+    }
+
+    try {
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        if (loadingOverlay) {
+            loadingOverlay.classList.add('show');
+        }
+
+        // Simular upload (já que é só demonstração)
+        const files = Array.from(input.files);
+        
+        for (const file of files) {
+            const fakeUrl = URL.createObjectURL(file);
+            const trackData = {
+                name: file.name.replace(/\.[^/.]+$/, ""), // Remove extensão
+                artist: 'Upload Local',
+                url: fakeUrl,
+                uploadedAt: new Date().toISOString(),
+                size: file.size
+            };
+
+            radioState.playlists[category].push(trackData);
+        }
+
+        radioManager.saveData();
+        radioManager.updateContentLists();
+        
+        // Limpar input
+        input.value = '';
+        
+        alert(`${files.length} arquivo(s) adicionado(s) com sucesso à categoria ${category}!`);
+
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('show');
+        }
+
+    } catch (error) {
+        console.error('Erro no upload:', error);
+        alert('Erro no upload. Tente novamente.');
+        
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('show');
+        }
+    }
+};
+
+window.removeFile = function(category, index) {
+    if (confirm('Tem certeza que deseja remover este arquivo?')) {
+        radioState.playlists[category].splice(index, 1);
+        radioManager.saveData();
+        radioManager.updateContentLists();
+        radioManager.updateAdminStats();
+        alert('Arquivo removido com sucesso!');
+    }
+};
+
+window.removeRequest = function(index) {
+    if (confirm('Tem certeza que deseja remover este pedido?')) {
+        radioState.requests.splice(index, 1);
+        radioManager.saveData();
+        radioManager.updateAdminRequestsList();
+        radioManager.updateAdminStats();
+        alert('Pedido removido com sucesso!');
     }
 };
 
