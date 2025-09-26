@@ -57,17 +57,52 @@ document.addEventListener('DOMContentLoaded', function() {
     
     try {
         initializeElements();
+        console.log('✅ Elementos DOM carregados');
+        
         loadStoredData();
+        console.log('✅ Dados carregados');
+        
         initializeRadioManager();
+        console.log('✅ Radio Manager inicializado');
+        
         setupEventListeners();
+        console.log('✅ Event listeners configurados');
+        
         startLiveBroadcast();
+        console.log('✅ Sistema de transmissão pronto');
+        
         updateUI();
+        console.log('✅ Interface atualizada');
         
         console.log('✅ Rádio inicializada com sucesso!');
         isInitialized = true;
+        
+        // Teste de funcionalidade básica
+        setTimeout(() => {
+            console.log('🔍 Teste de elementos críticos:');
+            console.log('- Audio Player:', elements.audioPlayer ? 'OK' : 'ERRO');
+            console.log('- Play Button:', elements.playPauseBtn ? 'OK' : 'ERRO');
+            console.log('- Volume Slider:', elements.volumeSlider ? 'OK' : 'ERRO');
+            console.log('- Current Track:', elements.currentTrack ? 'OK' : 'ERRO');
+        }, 1000);
+        
     } catch (error) {
         console.error('❌ Erro na inicialização:', error);
+        console.error('Stack trace:', error.stack);
         showError('Erro ao inicializar a rádio. Recarregue a página.');
+        
+        // Tentar recuperação básica
+        setTimeout(() => {
+            console.log('🔄 Tentando recuperação...');
+            try {
+                initializeElements();
+                setupEventListeners();
+                updateUI();
+                console.log('✅ Recuperação bem-sucedida');
+            } catch (recoveryError) {
+                console.error('❌ Falha na recuperação:', recoveryError);
+            }
+        }, 2000);
     }
 });
 
@@ -257,16 +292,22 @@ class RadioManager {
     }
     
     playDemoTrack() {
-        // Música de demonstração quando não há uploads
+        // Música de demonstração quando não há uploads - usando silêncio
         const demoTrack = {
-            name: 'Música de Demonstração',
-            artist: 'Rádio Supermercado do Louro',
-            url: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmMeBjqO0vPPfzAGG2q+8+N8NwsVXrjo4KxbFgpKn+PufmM=',
-            coverUrl: 'https://via.placeholder.com/200x200/1a4332/ffffff?text=DEMO',
+            name: 'Rádio Supermercado do Louro',
+            artist: 'Transmissão ao vivo',
+            url: 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=',
+            coverUrl: 'https://via.placeholder.com/200x200/1a4332/ffffff?text=RADIO',
             category: 'demo'
         };
         
-        this.loadTrack(demoTrack);
+        // Atualizar interface sem tentar reproduzir automaticamente
+        this.updateTrackDisplay(demoTrack);
+        this.updateRecentTracks(demoTrack);
+        radioState.currentTrack = demoTrack;
+        
+        // Não tentar reproduzir automaticamente no mobile
+        console.log('📻 Música demo carregada - clique play para iniciar');
     }
     
     getNextTrack() {
@@ -686,25 +727,73 @@ function setupEventListeners() {
 }
 
 function startLiveBroadcast() {
-    // Iniciar transmissão automaticamente após 2 segundos
-    setTimeout(() => {
-        if (radioManager) {
-            radioManager.startBroadcast();
-        }
-    }, 2000);
+    // Aguardar interação do usuário antes de iniciar transmissão no mobile
+    console.log('🎵 Sistema pronto. Aguardando interação do usuário...');
+    
+    // Atualizar interface para mostrar que está pronto
+    if (elements.currentProgram) {
+        elements.currentProgram.textContent = 'Rádio Supermercado do Louro';
+    }
+    
+    if (elements.programDescription) {
+        elements.programDescription.textContent = 'Clique no botão Play para iniciar a transmissão';
+    }
+    
+    // Iniciar outros sistemas que não precisam de áudio
+    if (radioManager) {
+        radioManager.updateCurrentTime();
+        radioManager.startScheduleCheck();
+        radioManager.startListenersSimulation();
+        updateScheduleDisplay();
+        
+        // Marcar como "ao vivo" mas sem reproduzir ainda
+        radioState.isLive = true;
+        radioManager.updateBroadcastStatus();
+        radioManager.updateLiveIndicator();
+    }
 }
 
 // ===== FUNÇÕES DE CONTROLE =====
 function togglePlayPause() {
-    if (!elements.audioPlayer || !radioState.isLive) return;
+    if (!elements.audioPlayer) {
+        console.error('Player de áudio não encontrado');
+        return;
+    }
+    
+    // Iniciar transmissão se ainda não foi iniciada
+    if (!radioState.isLive) {
+        radioManager.startBroadcast();
+        return;
+    }
     
     if (radioState.isPlaying) {
         elements.audioPlayer.pause();
+        console.log('Pausando reprodução');
     } else {
-        elements.audioPlayer.play().catch(e => {
-            console.log('Erro ao reproduzir:', e.message);
-            showError('Erro ao iniciar reprodução. Clique novamente.');
-        });
+        // Tentar carregar uma música se não houver nenhuma
+        if (!radioState.currentTrack) {
+            console.log('Carregando primeira música...');
+            radioManager.playNext();
+            return;
+        }
+        
+        // Tentar reproduzir
+        const playPromise = elements.audioPlayer.play();
+        
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                console.log('Reprodução iniciada com sucesso');
+            }).catch(error => {
+                console.log('Erro no autoplay:', error.message);
+                showError('Toque novamente para iniciar a reprodução');
+                
+                // Tentar configurar o áudio novamente
+                if (radioState.currentTrack) {
+                    elements.audioPlayer.src = radioState.currentTrack.url;
+                    elements.audioPlayer.load();
+                }
+            });
+        }
     }
 }
 
