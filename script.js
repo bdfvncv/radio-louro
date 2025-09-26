@@ -1,5 +1,6 @@
 // ===== RÁDIO SUPERMERCADO DO LOURO - SISTEMA PROFISSIONAL 24H =====
-// Configurações da Cloudinary (atualizadas)
+
+// Configurações da Cloudinary
 const CLOUDINARY_CONFIG = {
     cloudName: 'dygbrcrr6',
     apiKey: '853591251513134',
@@ -49,6 +50,7 @@ let radioState = {
 // Elementos DOM
 let elements = {};
 let radioManager = null;
+let uploadManager = null;
 let isInitialized = false;
 
 // ===== INICIALIZAÇÃO =====
@@ -57,52 +59,20 @@ document.addEventListener('DOMContentLoaded', function() {
     
     try {
         initializeElements();
-        console.log('✅ Elementos DOM carregados');
-        
         loadStoredData();
-        console.log('✅ Dados carregados');
-        
         initializeRadioManager();
-        console.log('✅ Radio Manager inicializado');
-        
+        initializeUploadManager();
         setupEventListeners();
-        console.log('✅ Event listeners configurados');
-        
         startLiveBroadcast();
-        console.log('✅ Sistema de transmissão pronto');
-        
         updateUI();
-        console.log('✅ Interface atualizada');
         
         console.log('✅ Rádio inicializada com sucesso!');
         isInitialized = true;
         
-        // Teste de funcionalidade básica
-        setTimeout(() => {
-            console.log('🔍 Teste de elementos críticos:');
-            console.log('- Audio Player:', elements.audioPlayer ? 'OK' : 'ERRO');
-            console.log('- Play Button:', elements.playPauseBtn ? 'OK' : 'ERRO');
-            console.log('- Volume Slider:', elements.volumeSlider ? 'OK' : 'ERRO');
-            console.log('- Current Track:', elements.currentTrack ? 'OK' : 'ERRO');
-        }, 1000);
-        
+        showSuccess('Rádio inicializada com sucesso!');
     } catch (error) {
         console.error('❌ Erro na inicialização:', error);
-        console.error('Stack trace:', error.stack);
         showError('Erro ao inicializar a rádio. Recarregue a página.');
-        
-        // Tentar recuperação básica
-        setTimeout(() => {
-            console.log('🔄 Tentando recuperação...');
-            try {
-                initializeElements();
-                setupEventListeners();
-                updateUI();
-                console.log('✅ Recuperação bem-sucedida');
-            } catch (recoveryError) {
-                console.error('❌ Falha na recuperação:', recoveryError);
-            }
-        }, 2000);
     }
 });
 
@@ -173,6 +143,7 @@ function saveData() {
             schedule: radioState.schedule,
             volume: radioState.volume
         }));
+        console.log('💾 Dados salvos');
     } catch (error) {
         console.error('❌ Erro ao salvar dados:', error);
     }
@@ -218,8 +189,8 @@ class RadioManager {
         });
         
         audio.addEventListener('ended', () => {
-            console.log('⏭️ Música finalizada, próxima...');
-            this.playNext();
+            console.log('⭐ Música finalizada, próxima...');
+            setTimeout(() => this.playNext(), 1000);
         });
         
         audio.addEventListener('timeupdate', () => {
@@ -228,6 +199,7 @@ class RadioManager {
         
         audio.addEventListener('error', (e) => {
             console.error('❌ Erro no áudio:', e);
+            showError('Erro na reprodução de áudio');
             setTimeout(() => this.playNext(), 3000);
         });
         
@@ -250,13 +222,54 @@ class RadioManager {
         this.startScheduleCheck();
         this.startTimeUpdate();
         
-        // Primeira música (música simulada se não houver uploads)
-        setTimeout(() => {
-            this.playNext();
-        }, 1000);
+        // Simular música se não há conteúdo real
+        this.startMockBroadcast();
         
         // Simular ouvintes
         this.startListenersSimulation();
+    }
+    
+    startMockBroadcast() {
+        // Simular uma transmissão com dados fictícios até que músicas sejam adicionadas
+        const mockTracks = [
+            {
+                name: 'Bem-vindos à Rádio Supermercado do Louro',
+                artist: 'Sistema de Rádio',
+                url: '',
+                coverUrl: 'https://via.placeholder.com/200x200/1a4332/ffffff?text=RADIO',
+                duration: 30
+            },
+            {
+                name: 'Aguardando conteúdo...',
+                artist: 'Adicione músicas no painel admin',
+                url: '',
+                coverUrl: 'https://via.placeholder.com/200x200/40a578/ffffff?text=MUSIC',
+                duration: 45
+            }
+        ];
+        
+        let currentMockIndex = 0;
+        
+        const playMockTrack = () => {
+            if (radioState.content.music.length > 0) {
+                // Se há música real, usar ela
+                this.playNext();
+                return;
+            }
+            
+            const track = mockTracks[currentMockIndex];
+            this.updateTrackDisplay(track);
+            this.updateRecentTracks(track);
+            radioState.currentTrack = track;
+            
+            currentMockIndex = (currentMockIndex + 1) % mockTracks.length;
+            
+            // Simular próxima música em 30-45 segundos
+            setTimeout(playMockTrack, (30 + Math.random() * 15) * 1000);
+        };
+        
+        // Iniciar simulação
+        setTimeout(playMockTrack, 2000);
     }
     
     stopBroadcast() {
@@ -283,31 +296,12 @@ class RadioManager {
     playNext() {
         const nextTrack = this.getNextTrack();
         if (!nextTrack) {
-            console.log('⚠️ Nenhuma música disponível - usando música de demonstração');
-            this.playDemoTrack();
+            console.log('⚠️ Nenhuma música disponível');
+            showError('Nenhuma música disponível. Adicione conteúdo no painel admin.');
             return;
         }
         
         this.loadTrack(nextTrack);
-    }
-    
-    playDemoTrack() {
-        // Música de demonstração quando não há uploads - usando silêncio
-        const demoTrack = {
-            name: 'Rádio Supermercado do Louro',
-            artist: 'Transmissão ao vivo',
-            url: 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=',
-            coverUrl: 'https://via.placeholder.com/200x200/1a4332/ffffff?text=RADIO',
-            category: 'demo'
-        };
-        
-        // Atualizar interface sem tentar reproduzir automaticamente
-        this.updateTrackDisplay(demoTrack);
-        this.updateRecentTracks(demoTrack);
-        radioState.currentTrack = demoTrack;
-        
-        // Não tentar reproduzir automaticamente no mobile
-        console.log('📻 Música demo carregada - clique play para iniciar');
     }
     
     getNextTrack() {
@@ -354,12 +348,21 @@ class RadioManager {
     }
     
     loadTrack(track) {
-        if (!track || !elements.audioPlayer) return;
+        if (!track) return;
         
         console.log(`🎵 Carregando: ${track.name}`);
         
         radioState.currentTrack = track;
-        elements.audioPlayer.src = track.url;
+        
+        // Se há URL de áudio válida, carregar
+        if (track.url && elements.audioPlayer) {
+            elements.audioPlayer.src = track.url;
+            if (radioState.isLive) {
+                elements.audioPlayer.play().catch(e => {
+                    console.log('Erro no autoplay:', e.message);
+                });
+            }
+        }
         
         // Atualizar interface
         this.updateTrackDisplay(track);
@@ -368,13 +371,6 @@ class RadioManager {
         // Estatísticas
         this.updatePlayHistory(track);
         radioState.tracksPlayed++;
-        
-        // Reproduzir se estiver ao vivo
-        if (radioState.isLive) {
-            elements.audioPlayer.play().catch(e => {
-                console.log('Erro no autoplay:', e.message);
-            });
-        }
     }
     
     updateTrackDisplay(track) {
@@ -386,18 +382,20 @@ class RadioManager {
             elements.artistName.textContent = track.artist || 'Rádio Supermercado do Louro';
         }
         
-        if (elements.trackCover && track.coverUrl) {
-            elements.trackCover.src = track.coverUrl;
+        if (elements.trackCover) {
+            elements.trackCover.src = track.coverUrl || 'https://via.placeholder.com/200x200/1a4332/ffffff?text=RADIO';
         }
     }
     
     updateRecentTracks(track) {
-        radioState.recentTracks.unshift({
+        const trackInfo = {
             name: track.name || 'Música sem título',
             artist: track.artist || 'Artista desconhecido',
             time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
             cover: track.coverUrl || 'https://via.placeholder.com/50x50/1a4332/ffffff?text=♪'
-        });
+        };
+        
+        radioState.recentTracks.unshift(trackInfo);
         
         // Manter apenas as últimas 10
         if (radioState.recentTracks.length > 10) {
@@ -511,6 +509,11 @@ class RadioManager {
     displayRecentTracks() {
         if (!elements.recentTracks) return;
         
+        if (radioState.recentTracks.length === 0) {
+            elements.recentTracks.innerHTML = '<p style="color: var(--medium-gray); text-align: center;">Nenhuma música tocada ainda</p>';
+            return;
+        }
+        
         const html = radioState.recentTracks.map(track => `
             <div class="recent-track">
                 <img src="${track.cover}" alt="Capa" class="recent-track-cover">
@@ -522,7 +525,7 @@ class RadioManager {
             </div>
         `).join('');
         
-        elements.recentTracks.innerHTML = html || '<p style="color: var(--medium-gray); text-align: center;">Nenhuma música tocada ainda</p>';
+        elements.recentTracks.innerHTML = html;
     }
     
     updatePlayButton() {
@@ -555,7 +558,13 @@ class RadioManager {
     
     updateLiveIndicator() {
         if (elements.liveIndicator) {
-            elements.liveIndicator.style.animation = radioState.isLive ? 'pulse 2s infinite' : 'none';
+            if (radioState.isLive) {
+                elements.liveIndicator.style.animation = 'pulse 2s infinite';
+                elements.liveIndicator.style.backgroundColor = '#ff4757';
+            } else {
+                elements.liveIndicator.style.animation = 'none';
+                elements.liveIndicator.style.backgroundColor = '#808080';
+            }
         }
     }
 }
@@ -648,11 +657,16 @@ class UploadManager {
     }
 }
 
-// ===== SETUP E EVENT LISTENERS =====
+// ===== INICIALIZAÇÃO DOS GERENCIADORES =====
 function initializeRadioManager() {
     radioManager = new RadioManager();
 }
 
+function initializeUploadManager() {
+    uploadManager = new UploadManager();
+}
+
+// ===== SETUP E EVENT LISTENERS =====
 function setupEventListeners() {
     // Player controls
     if (elements.playPauseBtn) {
@@ -727,73 +741,25 @@ function setupEventListeners() {
 }
 
 function startLiveBroadcast() {
-    // Aguardar interação do usuário antes de iniciar transmissão no mobile
-    console.log('🎵 Sistema pronto. Aguardando interação do usuário...');
-    
-    // Atualizar interface para mostrar que está pronto
-    if (elements.currentProgram) {
-        elements.currentProgram.textContent = 'Rádio Supermercado do Louro';
-    }
-    
-    if (elements.programDescription) {
-        elements.programDescription.textContent = 'Clique no botão Play para iniciar a transmissão';
-    }
-    
-    // Iniciar outros sistemas que não precisam de áudio
-    if (radioManager) {
-        radioManager.updateCurrentTime();
-        radioManager.startScheduleCheck();
-        radioManager.startListenersSimulation();
-        updateScheduleDisplay();
-        
-        // Marcar como "ao vivo" mas sem reproduzir ainda
-        radioState.isLive = true;
-        radioManager.updateBroadcastStatus();
-        radioManager.updateLiveIndicator();
-    }
+    // Iniciar transmissão automaticamente após 2 segundos
+    setTimeout(() => {
+        if (radioManager) {
+            radioManager.startBroadcast();
+        }
+    }, 2000);
 }
 
 // ===== FUNÇÕES DE CONTROLE =====
 function togglePlayPause() {
-    if (!elements.audioPlayer) {
-        console.error('Player de áudio não encontrado');
-        return;
-    }
-    
-    // Iniciar transmissão se ainda não foi iniciada
-    if (!radioState.isLive) {
-        radioManager.startBroadcast();
-        return;
-    }
+    if (!elements.audioPlayer || !radioState.isLive) return;
     
     if (radioState.isPlaying) {
         elements.audioPlayer.pause();
-        console.log('Pausando reprodução');
     } else {
-        // Tentar carregar uma música se não houver nenhuma
-        if (!radioState.currentTrack) {
-            console.log('Carregando primeira música...');
-            radioManager.playNext();
-            return;
-        }
-        
-        // Tentar reproduzir
-        const playPromise = elements.audioPlayer.play();
-        
-        if (playPromise !== undefined) {
-            playPromise.then(() => {
-                console.log('Reprodução iniciada com sucesso');
-            }).catch(error => {
-                console.log('Erro no autoplay:', error.message);
-                showError('Toque novamente para iniciar a reprodução');
-                
-                // Tentar configurar o áudio novamente
-                if (radioState.currentTrack) {
-                    elements.audioPlayer.src = radioState.currentTrack.url;
-                    elements.audioPlayer.load();
-                }
-            });
-        }
+        elements.audioPlayer.play().catch(e => {
+            console.log('Erro ao reproduzir:', e.message);
+            showError('Erro ao iniciar reprodução. Clique novamente.');
+        });
     }
 }
 
@@ -957,8 +923,6 @@ function playAdvertisement() {
 }
 
 // ===== UPLOAD DE CONTEÚDO =====
-const uploadManager = new UploadManager();
-
 function uploadContent(category) {
     const inputMap = {
         music: elements.musicUpload,
@@ -1165,6 +1129,8 @@ function showError(message) {
         z-index: 10000;
         box-shadow: 0 4px 20px rgba(255, 107, 107, 0.4);
         animation: slideInRight 0.3s ease;
+        max-width: 300px;
+        word-wrap: break-word;
     `;
     toast.textContent = message;
     
@@ -1193,6 +1159,8 @@ function showSuccess(message) {
         z-index: 10000;
         box-shadow: 0 4px 20px var(--glow-color);
         animation: slideInRight 0.3s ease;
+        max-width: 300px;
+        word-wrap: break-word;
     `;
     toast.textContent = message;
     
