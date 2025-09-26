@@ -378,6 +378,7 @@ body {
     gap: 1rem;
 }
 
+/* ===== MELHORIAS PARA MOBILE ===== */
 .control-btn {
     width: 60px;
     height: 60px;
@@ -392,6 +393,8 @@ body {
     background: rgba(255, 255, 255, 0.1);
     color: var(--white);
     border: 2px solid var(--accent-green);
+    touch-action: manipulation; /* Melhora resposta no mobile */
+    -webkit-tap-highlight-color: transparent; /* Remove destaque no iOS */
 }
 
 .control-btn.primary {
@@ -399,9 +402,144 @@ body {
     box-shadow: 0 4px 20px var(--glow-color);
 }
 
-.control-btn:hover {
+.control-btn:hover,
+.control-btn:active {
     transform: translateY(-3px) scale(1.05);
     box-shadow: 0 8px 30px var(--glow-color);
+}
+
+/* Melhor área de toque para botões */
+.btn-primary,
+.btn-secondary {
+    min-height: 44px; /* Tamanho mínimo recomendado para toque */
+    padding: 12px 24px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Melhorar sliders no mobile */
+.volume-slider {
+    flex: 1;
+    height: 8px; /* Mais alto para melhor toque */
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    touch-action: manipulation;
+}
+
+.volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 24px; /* Maior para melhor toque */
+    height: 24px;
+    background: var(--light-green);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 10px var(--glow-color);
+}
+
+/* Melhor responsividade */
+@media (max-width: 768px) {
+    .header-content {
+        padding: 0 1rem;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .logo-section h1 {
+        font-size: 1.5rem;
+    }
+
+    .main-content {
+        padding: 1rem;
+    }
+
+    .track-display {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .cover-container {
+        width: 150px;
+        height: 150px;
+    }
+
+    .admin-panel {
+        width: 100%;
+        right: -100%;
+    }
+
+    .info-cards {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .schedule-container {
+        grid-template-columns: 1fr;
+    }
+
+    .footer-content {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .footer-links {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    /* Melhor espaçamento no mobile */
+    .player-controls {
+        gap: 2rem;
+    }
+    
+    .control-buttons {
+        gap: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .logo-section i {
+        font-size: 2rem;
+    }
+
+    .logo-section h1 {
+        font-size: 1.2rem;
+    }
+
+    .now-playing-card {
+        padding: 1.5rem;
+    }
+
+    .control-btn {
+        width: 56px; /* Tamanho otimizado para mobile pequeno */
+        height: 56px;
+        font-size: 1.3rem;
+    }
+
+    .admin-access-btn {
+        bottom: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        font-size: 0.9rem;
+    }
+
+    /* Botões maiores para melhor usabilidade mobile */
+    .info-card {
+        padding: 1.2rem;
+        min-height: 120px;
+    }
+}
+
+/* Prevenir zoom no iOS em inputs */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+    input[type="password"],
+    input[type="text"],
+    input[type="time"],
+    select {
+        font-size: 16px; /* Previne zoom automático no iOS */
+    }
 }
 
 .volume-control {
