@@ -1,4 +1,3 @@
-// Configuração da Cloudinary
 const CLOUDINARY_CONFIG = {
     cloudName: 'dygbrcrr6',
     apiKey: '853591251513134',
@@ -147,6 +146,11 @@ class RadioManager {
             emergencyStop.addEventListener('click', () => this.emergencyStop());
         }
 
+        const testTime = document.getElementById('adminTestTime');
+        if (testTime) {
+            testTime.addEventListener('click', () => this.forceTimeAnnouncement());
+        }
+
         // Admin tabs
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => this.switchAdminTab(btn.dataset.tab));
@@ -239,6 +243,33 @@ class RadioManager {
             this.updateLiveStatus();
             this.updateAdminStatus();
             alert('Transmissão interrompida em emergência!');
+        }
+    }
+
+    // Função para testar hora certa manualmente
+    forceTimeAnnouncement() {
+        if (radioState.playlists.time.length > 0) {
+            console.log('🕐 Forçando hora certa manualmente');
+            radioState.tracksSinceTime = 0;
+            const timeTrack = this.getRandomFromPlaylist(radioState.playlists.time, 'time');
+            if (timeTrack) {
+                radioState.currentTrack = timeTrack;
+                this.updateTrackInfo(timeTrack);
+                
+                try {
+                    this.audioPlayer.src = timeTrack.url;
+                    if (radioState.isLive && radioState.isPlaying) {
+                        this.audioPlayer.play().catch(console.warn);
+                    }
+                } catch (error) {
+                    console.error('Erro ao tocar hora certa:', error);
+                }
+                
+                this.updateStats();
+                this.addToRecentTracks(timeTrack);
+            }
+        } else {
+            alert('Nenhum arquivo de hora certa disponível!');
         }
     }
 
@@ -396,15 +427,23 @@ class RadioManager {
     }
 
     getNextTrack() {
-        // Verificar se deve tocar hora certa
+        // Verificar se deve tocar hora certa (apenas nos minutos exatos da hora)
         const now = new Date();
-        if (now.getMinutes() === 0 && radioState.tracksSinceTime > 0 && radioState.playlists.time.length > 0) {
+        const minutes = now.getMinutes();
+        const seconds = now.getSeconds();
+        
+        // Tocar hora certa apenas no minuto 0 da hora (ex: 15:00, 16:00, etc)
+        // e apenas se já passaram algumas músicas desde a última hora certa
+        if (minutes === 0 && seconds < 30 && radioState.tracksSinceTime >= 3 && radioState.playlists.time.length > 0) {
+            console.log('🕐 Tocando hora certa');
             radioState.tracksSinceTime = 0;
             return this.getRandomFromPlaylist(radioState.playlists.time, 'time');
         }
 
-        // Verificar se deve tocar aviso
-        if (radioState.tracksSinceAnnouncement >= 5 && radioState.playlists.announcements.length > 0) {
+        // Verificar se deve tocar aviso (a cada 5-7 músicas)
+        const announcementInterval = 5 + Math.floor(Math.random() * 3); // Entre 5 e 7
+        if (radioState.tracksSinceAnnouncement >= announcementInterval && radioState.playlists.announcements.length > 0) {
+            console.log('📢 Tocando aviso/propaganda');
             radioState.tracksSinceAnnouncement = 0;
             radioState.tracksSinceTime++;
             return this.getRandomFromPlaylist(radioState.playlists.announcements, 'announcement');
