@@ -5,18 +5,29 @@ const CLOUDINARY_CONFIG = {
     uploadPreset: 'radio_preset'
 };
 
-// Estado global da rádio
+// Estado global da rádio - SINCRONIZADO
 let radioState = {
+    // Configuração de sincronização
+    startTime: null, // Timestamp de quando a rádio começou
+    currentTrackIndex: 0,
+    lastSync: null,
+    
+    // Estado local
     isLive: false,
     isPlaying: false,
     currentTrack: null,
     volume: 70,
+    
+    // Playlists sincronizadas
+    masterPlaylist: [], // Playlist principal sincronizada
     playlists: {
         music: [],
         announcements: [],
         time: [],
         jingles: []
     },
+    
+    // Dados locais
     stats: {
         tracksPlayed: 0,
         requestsReceived: 0
@@ -24,14 +35,264 @@ let radioState = {
     recentTracks: [],
     requests: [],
     schedule: [],
-    tracksSinceAnnouncement: 0,
-    tracksSinceTime: 0
+    
+    // Configuração de programação
+    programConfig: {
+        trackDuration: 180000, // 3 minutos por música (padrão)
+        announcementInterval: 5, // A cada 5 músicas
+        timeInterval: 12 // A cada 12 músicas (hora certa)
+    }
 };
+
+// Sistema de sincronização
+class RadioSynchronizer {
+    constructor() {
+        this.syncInterval = null;
+        this.masterStartTime = new Date('2025-09-27T00:00:00-03:00').getTime(); // 27/09/2025 00:00 horário de Brasília
+    }
+
+    // Gerar playlist sincronizada baseada no tempo
+    generateMasterPlaylist() {
+        console.log('🔄 Gerando playlist sincronizada...');
+        
+        const playlist = [];
+        const totalTracks = radioState.playlists.music.length;
+        const totalAnnouncements = radioState.playlists.announcements.length;
+        const totalTimeAnnouncements = radioState.playlists.time.length;
+        
+        if (totalTracks === 0) {
+            // Adicionar tracks de exemplo se não houver conteúdo
+            this.addSampleTracks();
+            return this.generateMasterPlaylist();
+        }
+        
+        // Criar sequência de 100 tracks para loop
+        for (let i = 0; i < 100; i++) {
+            // A cada 12 tracks, adicionar hora certa
+            if (i > 0 && i % 12 === 0 && totalTimeAnnouncements > 0) {
+                const timeTrack = radioState.playlists.time[i % totalTimeAnnouncements];
+                playlist.push({
+                    ...timeTrack,
+                    type: 'time',
+                    duration: 30000, // 30 segundos
+                    index: i
+                });
+            }
+            
+            // A cada 5 músicas (exceto quando há hora certa), adicionar aviso
+            if (i > 0 && i % 5 === 0 && i % 12 !== 0 && totalAnnouncements > 0) {
+                const announcement = radioState.playlists.announcements[i % totalAnnouncements];
+                playlist.push({
+                    ...announcement,
+                    type: 'announcement',
+                    duration: 60000, // 1 minuto
+                    index: i
+                });
+            }
+            
+            // Adicionar música
+            const musicTrack = radioState.playlists.music[i % totalTracks];
+            playlist.push({
+                ...musicTrack,
+                type: 'music',
+                duration: 180000, // 3 minutos
+                index: i
+            });
+        }
+        
+        radioState.masterPlaylist = playlist;
+        console.log(`✅ Playlist sincronizada gerada: ${playlist.length} tracks`);
+        return playlist;
+    }
+
+    // Calcular qual música deve estar tocando agora
+    getCurrentTrackFromTime() {
+        const now = Date.now();
+        const elapsedTime = now - this.masterStartTime;
+        
+        let totalDuration = 0;
+        let currentIndex = 0;
+        
+        // Percorrer playlist até encontrar a música atual
+        for (let i = 0; i < radioState.masterPlaylist.length; i++) {
+            const track = radioState.masterPlaylist[i];
+            const trackDuration = track.duration || 180000;
+            
+            if (elapsedTime >= totalDuration && elapsedTime < totalDuration + trackDuration) {
+                return {
+                    track: track,
+                    index: i,
+                    startTime: totalDuration,
+                    elapsed: elapsedTime - totalDuration,
+                    remaining: trackDuration - (elapsedTime - totalDuration)
+                };
+            }
+            
+            totalDuration += trackDuration;
+        }
+        
+        // Se chegou ao fim, recomeçar do início
+        const loopTime = elapsedTime % totalDuration;
+        let loopDuration = 0;
+        
+        for (let i = 0; i < radioState.masterPlaylist.length; i++) {
+            const track = radioState.masterPlaylist[i];
+            const trackDuration = track.duration || 180000;
+            
+            if (loopTime >= loopDuration && loopTime < loopDuration + trackDuration) {
+                return {
+                    track: track,
+                    index: i,
+                    startTime: loopDuration,
+                    elapsed: loopTime - loopDuration,
+                    remaining: trackDuration - (loopTime - loopDuration)
+                };
+            }
+            
+            loopDuration += trackDuration;
+        }
+        
+        return null;
+    }
+
+    // Sincronizar com a programação global
+    sync() {
+        if (radioState.masterPlaylist.length === 0) {
+            this.generateMasterPlaylist();
+        }
+        
+        const currentInfo = this.getCurrentTrackFromTime();
+        if (!currentInfo) return;
+        
+        const { track, elapsed, remaining } = currentInfo;
+        
+        // Verificar se mudou de música
+        if (!radioState.currentTrack || radioState.currentTrack.index !== track.index) {
+            console.log(`🎵 Sincronizando: ${track.name} (${track.type})`);
+            
+            radioState.currentTrack = track;
+            radioState.currentTrackIndex = track.index;
+            
+            // Atualizar interface
+            if (radioManager) {
+                radioManager.updateTrackInfo(track);
+                radioManager.addToRecentTracks(track);
+                radioManager.updateStats();
+            }
+            
+            // Tocar música sincronizada
+            this.playTrackAtPosition(track, elapsed);
+        }
+        
+        radioState.lastSync = Date.now();
+    }
+
+    // Reproduzir música na posição correta
+    playTrackAtPosition(track, elapsed) {
+        if (!radioManager || !radioManager.audioPlayer) return;
+        
+        try {
+            radioManager.audioPlayer.src = track.url;
+            
+            radioManager.audioPlayer.addEventListener('loadeddata', () => {
+                // Posicionar no tempo correto
+                const seekTime = Math.min(elapsed / 1000, radioManager.audioPlayer.duration || 0);
+                radioManager.audioPlayer.currentTime = seekTime;
+                
+                if (radioState.isLive && radioState.isPlaying) {
+                    radioManager.audioPlayer.play().catch(console.warn);
+                }
+            }, { once: true });
+            
+        } catch (error) {
+            console.error('Erro ao sincronizar áudio:', error);
+        }
+    }
+
+    // Iniciar sincronização automática
+    startSync() {
+        // Sincronizar imediatamente
+        this.sync();
+        
+        // Sincronizar a cada 5 segundos
+        this.syncInterval = setInterval(() => {
+            this.sync();
+        }, 5000);
+        
+        console.log('🔄 Sincronização automática iniciada');
+    }
+
+    // Parar sincronização
+    stopSync() {
+        if (this.syncInterval) {
+            clearInterval(this.syncInterval);
+            this.syncInterval = null;
+        }
+    }
+
+    // Adicionar tracks de exemplo
+    addSampleTracks() {
+        const sampleTracks = [
+            {
+                name: 'Música Exemplo 1',
+                artist: 'Artista Demo',
+                url: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEZ'
+            },
+            {
+                name: 'Música Exemplo 2',
+                artist: 'Demo Artist',
+                url: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEZ'
+            },
+            {
+                name: 'Música Exemplo 3',
+                artist: 'Artista Exemplo',
+                url: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEZ'
+            },
+            {
+                name: 'Música Exemplo 4',
+                artist: 'Demo Music',
+                url: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEZ'
+            },
+            {
+                name: 'Música Exemplo 5',
+                artist: 'Exemplo Band',
+                url: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEZ'
+            }
+        ];
+        
+        const sampleAnnouncements = [
+            {
+                name: 'Aviso - Promoção do Dia',
+                url: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEZ'
+            },
+            {
+                name: 'Propaganda Institucional',
+                url: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEZ'
+            }
+        ];
+
+        const sampleTime = [
+            {
+                name: 'Hora Certa',
+                url: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEZ'
+            }
+        ];
+        
+        radioState.playlists.music = sampleTracks;
+        radioState.playlists.announcements = sampleAnnouncements;
+        radioState.playlists.time = sampleTime;
+        
+        console.log('✅ Tracks de exemplo adicionados para sincronização');
+    }
+}
+
+// Instância do sincronizador
+let radioSync;
 
 // Elementos DOM
 let elements = {};
 
-// Classe principal da rádio
+// Classe principal da rádio - ATUALIZADA PARA SINCRONIZAÇÃO
 class RadioManager {
     constructor() {
         this.audioPlayer = null;
@@ -40,7 +301,7 @@ class RadioManager {
     }
 
     init() {
-        console.log('Iniciando Rádio Supermercado do Louro...');
+        console.log('Iniciando Rádio Supermercado do Louro - MODO SINCRONIZADO...');
         
         // Aguardar DOM estar pronto
         if (document.readyState === 'loading') {
@@ -57,10 +318,14 @@ class RadioManager {
             this.setupAudio();
             this.setupEventListeners();
             this.setupDefaultSchedule();
+            
+            // Inicializar sincronização
+            radioSync = new RadioSynchronizer();
+            
             this.startRadio();
             this.startTimers();
             
-            console.log('Rádio inicializada com sucesso!');
+            console.log('Rádio inicializada em modo sincronizado!');
         } catch (error) {
             console.error('Erro na inicialização:', error);
             this.showError('Erro ao inicializar a rádio');
@@ -94,11 +359,192 @@ class RadioManager {
         }
 
         this.audioPlayer.volume = radioState.volume / 100;
-        this.audioPlayer.addEventListener('ended', () => this.playNext());
+        
+        // Event listeners para sincronização
+        this.audioPlayer.addEventListener('ended', () => {
+            // Não pular automaticamente - deixar sincronização cuidar
+            console.log('🎵 Música terminou - aguardando sincronização...');
+        });
+        
         this.audioPlayer.addEventListener('timeupdate', () => this.updateTimeDisplay());
         this.audioPlayer.addEventListener('error', () => this.handleAudioError());
         
-        console.log('Áudio configurado');
+        console.log('Áudio configurado para modo sincronizado');
+    }
+
+    startRadio() {
+        radioState.isLive = true;
+        radioState.isPlaying = true;
+        
+        this.updateLiveStatus();
+        
+        // Inicializar sincronização
+        if (radioSync) {
+            radioSync.startSync();
+        }
+        
+        console.log('🔴 Transmissão sincronizada iniciada!');
+    }
+
+    // Métodos adaptados para sincronização
+    togglePlayback() {
+        if (!this.audioPlayer) return;
+
+        try {
+            if (radioState.isPlaying) {
+                this.audioPlayer.pause();
+                radioState.isPlaying = false;
+                radioState.isLive = false;
+                elements.playPauseBtn.innerHTML = '<span class="play-icon">▶️</span>';
+                
+                // Parar sincronização
+                if (radioSync) {
+                    radioSync.stopSync();
+                }
+            } else {
+                radioState.isPlaying = true;
+                radioState.isLive = true;
+                elements.playPauseBtn.innerHTML = '<span class="pause-icon">⏸️</span>';
+                
+                // Retomar sincronização
+                if (radioSync) {
+                    radioSync.startSync();
+                } else {
+                    this.audioPlayer.play().catch(console.warn);
+                }
+            }
+
+            this.updateLiveStatus();
+        } catch (error) {
+            console.error('Erro no toggle playback:', error);
+        }
+    }
+
+    skipTrack() {
+        // Em modo sincronizado, força uma nova sincronização
+        if (radioState.isLive && radioSync) {
+            console.log('⏭️ Forçando nova sincronização...');
+            radioSync.sync();
+        }
+    }
+
+    // Métodos que permanecem iguais
+    setVolume(value) {
+        radioState.volume = parseInt(value);
+        
+        if (this.audioPlayer) {
+            this.audioPlayer.volume = radioState.volume / 100;
+        }
+        
+        if (elements.volumeValue) {
+            elements.volumeValue.textContent = radioState.volume + '%';
+        }
+        
+        this.saveData();
+    }
+
+    updateLiveStatus() {
+        const status = radioState.isLive ? '🔴 AO VIVO' : '⚫ OFFLINE';
+        
+        if (elements.liveIndicator) {
+            elements.liveIndicator.textContent = status;
+            elements.liveIndicator.style.color = radioState.isLive ? '#dc2626' : '#666';
+        }
+
+        // Mostrar/ocultar equalizer
+        if (elements.equalizer) {
+            elements.equalizer.style.display = radioState.isPlaying ? 'flex' : 'none';
+        }
+    }
+
+    updateTimeDisplay() {
+        if (!this.audioPlayer || !elements.trackTime) return;
+
+        const current = this.audioPlayer.currentTime || 0;
+        const duration = this.audioPlayer.duration || 0;
+
+        const currentStr = this.formatTime(current);
+        const durationStr = this.formatTime(duration);
+
+        elements.trackTime.textContent = `${currentStr} / ${durationStr}`;
+    }
+
+    formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    updateTrackInfo(track) {
+        if (elements.currentTrack) {
+            elements.currentTrack.textContent = track.name || 'Rádio Sincronizada...';
+        }
+        
+        if (elements.trackArtist) {
+            elements.trackArtist.textContent = track.artist || 'Programação Sincronizada';
+        }
+        
+        if (elements.trackType) {
+            const typeLabels = {
+                music: 'Música',
+                announcement: 'Aviso',
+                time: 'Hora Certa',
+                jingle: 'Vinheta'
+            };
+            elements.trackType.textContent = typeLabels[track.type] || 'Música';
+        }
+
+        if (elements.albumCover && track.coverUrl) {
+            elements.albumCover.src = track.coverUrl;
+        }
+    }
+
+    updateStats() {
+        radioState.stats.tracksPlayed++;
+        
+        if (elements.totalPlayed) {
+            elements.totalPlayed.textContent = radioState.stats.tracksPlayed;
+        }
+        
+        this.saveData();
+    }
+
+    addToRecentTracks(track) {
+        radioState.recentTracks.unshift({
+            ...track,
+            timestamp: new Date()
+        });
+
+        if (radioState.recentTracks.length > 10) {
+            radioState.recentTracks = radioState.recentTracks.slice(0, 10);
+        }
+
+        this.updateRecentTracksDisplay();
+    }
+
+    updateRecentTracksDisplay() {
+        if (!elements.recentTracks) return;
+
+        if (radioState.recentTracks.length === 0) {
+            elements.recentTracks.innerHTML = '<p>Aguardando programação sincronizada...</p>';
+            return;
+        }
+
+        const html = radioState.recentTracks.map(track => {
+            const time = new Date(track.timestamp).toLocaleTimeString('pt-BR', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            return `
+                <div class="track-item">
+                    <div class="track-time">${time}</div>
+                    <div class="track-name">${track.name}</div>
+                </div>
+            `;
+        }).join('');
+
+        elements.recentTracks.innerHTML = html;
     }
 
     setupEventListeners() {
