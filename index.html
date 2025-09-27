@@ -114,27 +114,10 @@
         </div>
     </main>
 
-    <!-- Rodapé com Informações -->
+    <!-- Rodapé Simplificado -->
     <footer class="radio-footer">
         <div class="footer-content">
-            <div class="station-info">
-                <h4>Rádio Supermercado do Louro</h4>
-                <p>Sua rádio favorita, 24 horas no ar!</p>
-                <div class="contact-info">
-                    <span>📧 contato@radiosupermercadodolouro.com.br</span>
-                    <span>📱 WhatsApp: (11) 99999-9999</span>
-                </div>
-            </div>
-            <div class="social-links">
-                <h4>Redes Sociais</h4>
-                <div class="social-icons">
-                    <a href="#" class="social-link">📘 Facebook</a>
-                    <a href="#" class="social-link">📷 Instagram</a>
-                    <a href="#" class="social-link">🐦 Twitter</a>
-                </div>
-            </div>
             <div class="stats">
-                <h4>Estatísticas</h4>
                 <div class="stats-info">
                     <div class="stat-item">
                         <span class="stat-number" id="totalPlayed">0</span>
@@ -195,13 +178,12 @@
         
         <div class="admin-tabs">
             <button class="tab-btn active" data-tab="broadcast">📡 Transmissão</button>
-            <button class="tab-btn" data-tab="schedule">📅 Programação</button>
             <button class="tab-btn" data-tab="content">📁 Conteúdo</button>
             <button class="tab-btn" data-tab="requests">🎤 Pedidos</button>
             <button class="tab-btn" data-tab="stats">📊 Estatísticas</button>
         </div>
 
-        <!-- Conteúdo das Abas -->
+        <!-- Aba Transmissão -->
         <div class="tab-content active" id="broadcast-tab">
             <div class="broadcast-controls">
                 <div class="status-card">
@@ -211,136 +193,70 @@
                         <span id="uptime">Tempo no ar: 24h</span>
                     </div>
                     <div class="broadcast-actions">
-                        <button id="toggleBroadcast" class="btn primary">⏸️ Pausar Transmissão</button>
-                        <button id="skipTrack" class="btn secondary">⏭️ Pular Música</button>
-                        <button id="emergencyStop" class="btn danger">🛑 Parada de Emergência</button>
-                    </div>
-                </div>
-                
-                <div class="queue-management">
-                    <h4>Fila de Reprodução</h4>
-                    <div id="playQueue" class="queue-list">
-                        <!-- Fila será carregada dinamicamente -->
+                        <button id="adminToggleBroadcast" class="btn primary">⏸️ Pausar Transmissão</button>
+                        <button id="adminSkipTrack" class="btn secondary">⏭️ Pular Música</button>
+                        <button id="adminEmergencyStop" class="btn danger">🛑 Parada de Emergência</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="tab-content" id="schedule-tab">
-            <div class="schedule-management">
-                <h4>Gerenciar Programação</h4>
-                <div class="schedule-form">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="programTime">Horário:</label>
-                            <input type="time" id="programTime">
-                        </div>
-                        <div class="form-group">
-                            <label for="programName">Nome do Programa:</label>
-                            <input type="text" id="programName" placeholder="Ex: Manhã Musical">
-                        </div>
-                        <div class="form-group">
-                            <label for="programDuration">Duração:</label>
-                            <select id="programDuration">
-                                <option value="1">1 hora</option>
-                                <option value="2">2 horas</option>
-                                <option value="4">4 horas</option>
-                                <option value="8">8 horas</option>
-                            </select>
-                        </div>
-                    </div>
-                    <button class="btn primary" onclick="addProgram()">Adicionar à Programação</button>
-                </div>
-                <div id="currentSchedule" class="current-schedule">
-                    <!-- Programação atual será exibida aqui -->
-                </div>
-            </div>
-        </div>
-
+        <!-- Aba Conteúdo -->
         <div class="tab-content" id="content-tab">
             <div class="content-management">
                 <div class="upload-sections">
                     <div class="upload-card">
                         <h4>🎵 Upload de Músicas</h4>
-                        <input type="file" id="musicUpload" accept=".mp3,.wav,.ogg" multiple>
-                        <div class="upload-options">
-                            <select id="musicCategory">
-                                <option value="general">Geral</option>
-                                <option value="nacional">Nacional</option>
-                                <option value="internacional">Internacional</option>
-                                <option value="sertanejo">Sertanejo</option>
-                                <option value="pop">Pop</option>
-                                <option value="rock">Rock</option>
-                            </select>
-                        </div>
-                        <button onclick="uploadContent('music')" class="btn primary">Enviar Músicas</button>
+                        <input type="file" id="musicUpload" accept=".mp3,.wav,.ogg,.m4a" multiple>
+                        <button onclick="handleUpload('music')" class="btn primary">Enviar Músicas</button>
+                        <div class="file-list" id="musicList"></div>
                     </div>
 
                     <div class="upload-card">
                         <h4>📢 Upload de Avisos</h4>
-                        <input type="file" id="announcementUpload" accept=".mp3,.wav,.ogg" multiple>
-                        <div class="upload-options">
-                            <label>
-                                <input type="checkbox" id="priorityAnnouncement">
-                                Aviso prioritário
-                            </label>
-                        </div>
-                        <button onclick="uploadContent('announcements')" class="btn primary">Enviar Avisos</button>
+                        <input type="file" id="announcementUpload" accept=".mp3,.wav,.ogg,.m4a" multiple>
+                        <button onclick="handleUpload('announcements')" class="btn primary">Enviar Avisos</button>
+                        <div class="file-list" id="announcementList"></div>
                     </div>
 
                     <div class="upload-card">
                         <h4>🕐 Hora Certa</h4>
-                        <input type="file" id="timeUpload" accept=".mp3,.wav,.ogg" multiple>
-                        <button onclick="uploadContent('time')" class="btn primary">Enviar Hora Certa</button>
-                    </div>
-
-                    <div class="upload-card">
-                        <h4>🎙️ Vinhetas/Jingles</h4>
-                        <input type="file" id="jingleUpload" accept=".mp3,.wav,.ogg" multiple>
-                        <button onclick="uploadContent('jingles')" class="btn primary">Enviar Vinhetas</button>
+                        <input type="file" id="timeUpload" accept=".mp3,.wav,.ogg,.m4a" multiple>
+                        <button onclick="handleUpload('time')" class="btn primary">Enviar Hora Certa</button>
+                        <div class="file-list" id="timeList"></div>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- Aba Pedidos -->
         <div class="tab-content" id="requests-tab">
             <div class="requests-management">
-                <h4>Pedidos Musicais</h4>
-                <div id="requestsList" class="requests-list">
+                <h4>Pedidos Musicais Recebidos</h4>
+                <div id="adminRequestsList" class="requests-list">
                     <!-- Lista de pedidos será carregada aqui -->
                 </div>
             </div>
         </div>
 
+        <!-- Aba Estatísticas -->
         <div class="tab-content" id="stats-tab">
             <div class="statistics">
                 <div class="stats-grid">
                     <div class="stat-card">
                         <h4>Músicas Tocadas</h4>
-                        <div class="stat-number" id="statsTracksToday">0</div>
+                        <div class="stat-number" id="adminStatsTracksToday">0</div>
                         <span class="stat-period">Hoje</span>
                     </div>
                     <div class="stat-card">
                         <h4>Pedidos Recebidos</h4>
-                        <div class="stat-number" id="statsRequestsToday">0</div>
+                        <div class="stat-number" id="adminStatsRequestsToday">0</div>
                         <span class="stat-period">Hoje</span>
                     </div>
                     <div class="stat-card">
-                        <h4>Tempo no Ar</h4>
-                        <div class="stat-number" id="statsUptime">24h</div>
-                        <span class="stat-period">Contínuo</span>
-                    </div>
-                    <div class="stat-card">
                         <h4>Biblioteca</h4>
-                        <div class="stat-number" id="statsTotalTracks">0</div>
-                        <span class="stat-period">Total de músicas</span>
-                    </div>
-                </div>
-                
-                <div class="detailed-stats">
-                    <h4>Top 10 Mais Tocadas</h4>
-                    <div id="topTracks" class="top-tracks-list">
-                        <!-- Lista será preenchida dinamicamente -->
+                        <div class="stat-number" id="adminStatsTotalTracks">0</div>
+                        <span class="stat-period">Total de arquivos</span>
                     </div>
                 </div>
             </div>
