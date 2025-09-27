@@ -1,3 +1,4 @@
+// Configuração da Cloudinary
 const CLOUDINARY_CONFIG = {
     cloudName: 'dygbrcrr6',
     apiKey: '853591251513134',
@@ -19,8 +20,7 @@ let radioState = {
     },
     stats: {
         tracksPlayed: 0,
-        requestsReceived: 0,
-        listenersCount: 127
+        requestsReceived: 0
     },
     recentTracks: [],
     requests: [],
@@ -73,7 +73,7 @@ class RadioManager {
             'audioPlayer', 'playPauseBtn', 'skipBtn', 'requestBtn',
             'volumeSlider', 'volumeValue', 'currentTrack', 'trackArtist',
             'trackTime', 'trackType', 'albumCover', 'currentProgram',
-            'programDescription', 'currentTime', 'listenerCount',
+            'programDescription', 'currentTime',
             'liveIndicator', 'equalizer', 'scheduleGrid', 'recentTracks',
             'announcementsList', 'loadingOverlay', 'totalPlayed',
             'requestModal', 'requestForm', 'adminPanel', 'passwordModal'
@@ -262,12 +262,9 @@ class RadioManager {
         const html = radioState.requests.map((request, index) => `
             <div class="request-item" style="background: rgba(255,255,255,0.05); padding: 1rem; margin-bottom: 1rem; border-radius: 8px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                    <strong style="color: #fff;">${request.requesterName}</strong>
                     <span style="color: #a0a0a0; font-size: 0.8rem;">${new Date(request.timestamp).toLocaleString('pt-BR')}</span>
                 </div>
-                <div style="color: #4caf50; margin-bottom: 0.5rem;">${request.songRequest}</div>
-                ${request.dedicateTo ? `<div style="color: #a0a0a0; font-size: 0.9rem;">Para: ${request.dedicateTo}</div>` : ''}
-                ${request.message ? `<div style="color: #a0a0a0; font-style: italic; margin-top: 0.5rem;">"${request.message}"</div>` : ''}
+                <div style="color: #4caf50; margin-bottom: 0.5rem; font-size: 1.1rem;">${request.songRequest}</div>
                 <div style="margin-top: 1rem;">
                     <button onclick="removeRequest(${index})" class="btn danger" style="padding: 0.3rem 0.8rem; font-size: 0.8rem;">🗑️ Remover</button>
                 </div>
@@ -623,11 +620,9 @@ class RadioManager {
             this.updateCurrentTime();
             this.updateCurrentProgram();
             this.updateScheduleDisplay();
-            this.simulateListeners();
         }, 60000);
 
         this.updateCurrentTime();
-        this.simulateListeners();
     }
 
     updateCurrentTime() {
@@ -640,16 +635,6 @@ class RadioManager {
         }
     }
 
-    simulateListeners() {
-        const baseCount = 120;
-        const variation = Math.floor(Math.random() * 20) - 10;
-        radioState.stats.listenersCount = Math.max(baseCount + variation, 50);
-
-        if (elements.listenerCount) {
-            elements.listenerCount.textContent = radioState.stats.listenersCount;
-        }
-    }
-
     showRequestModal() {
         if (elements.requestModal) {
             elements.requestModal.classList.add('show');
@@ -657,21 +642,15 @@ class RadioManager {
     }
 
     submitRequest() {
-        const requesterName = document.getElementById('requesterName')?.value;
         const songRequest = document.getElementById('songRequest')?.value;
-        const dedicateTo = document.getElementById('dedicateTo')?.value;
-        const message = document.getElementById('message')?.value;
 
-        if (!requesterName || !songRequest) {
-            alert('Por favor, preencha seu nome e o pedido musical.');
+        if (!songRequest) {
+            alert('Por favor, informe a música/artista desejado.');
             return;
         }
 
         const request = {
-            requesterName,
             songRequest,
-            dedicateTo,
-            message,
             timestamp: new Date().toISOString()
         };
 
