@@ -429,7 +429,7 @@ body {
 
 .main-controls {
     display: flex;
-    gap: 25px;
+    justify-content: center;
     align-items: center;
 }
 
@@ -452,16 +452,6 @@ body {
 .btn-play {
     background: linear-gradient(135deg, #4FACFE 0%, #00F2FE 100%);
     box-shadow: 0 0 40px rgba(79, 172, 254, 0.4);
-}
-
-.btn-skip {
-    background: linear-gradient(135deg, #7877C6 0%, #FF77C6 100%);
-    box-shadow: 0 0 40px rgba(120, 119, 198, 0.4);
-}
-
-.btn-favorite {
-    background: linear-gradient(135deg, #ff4757 0%, #ff3742 100%);
-    box-shadow: 0 0 40px rgba(255, 71, 87, 0.4);
 }
 
 .btn-control:hover {
@@ -537,7 +527,7 @@ body {
 /* Status da Rádio */
 .radio-status {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     margin-top: 30px;
     padding: 25px;
@@ -550,7 +540,7 @@ body {
 .status-left {
     display: flex;
     align-items: center;
-    gap: 25px;
+    justify-content: center;
 }
 
 .equalizer {
@@ -577,18 +567,6 @@ body {
 @keyframes equalizer {
     0%, 100% { transform: scaleY(1); opacity: 0.8; }
     50% { transform: scaleY(1.8); opacity: 1; }
-}
-
-.listener-count {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: #b0b0b0;
-    font-weight: 500;
-}
-
-.listener-icon {
-    font-size: 1.2rem;
 }
 
 .status-right {
@@ -1676,7 +1654,7 @@ input:checked + .slider:before {
     }
     
     .main-controls {
-        gap: 20px;
+        justify-content: center;
     }
     
     .btn-control {
@@ -1828,7 +1806,7 @@ input:checked + .slider:before {
     }
     
     .main-controls {
-        gap: 15px;
+        justify-content: center;
     }
     
     .volume-control {
