@@ -1,271 +1,8 @@
-class ContentUploader {
-    constructor(radioSystem) {
-        this.radio = radioSystem;
-    }
-    
-    async uploadContent(type) {
-        const fileInputs = {
-            music: 'musicUpload',
-            jingles: 'jingleUpload',
-            time: 'timeUpload',
-            programs: 'programUpload'
-        };
-        
-        const fileInput = document.getElementById(fileInputs[type]);
-        if (!fileInput || fileInput.files.length === 0) {
-            alert('Selecione pelo menos um arquivo!');
-            return;
-        }
-        
-        const files = Array.from(fileInput.files);
-        this.showUploadModal();
-        
-        try {
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                this.updateUploadProgress(i, files.length, `Enviando: ${file.name}`);
-                
-                const uploadedFile = await this.uploadToCloudinary(file, type);
-                this.addToLibrary(uploadedFile, type);
-            }
-            
-            this.hideUploadModal();
-            fileInput.value = '';
-            
-            // Salvar e sincronizar dados
-            this.radio.saveData();
-            this.radio.updateContentLibrary();
-            
-            // Forçar sincronização imediata
-            if (this.radio.syncManager) {
-                await this.radio.syncManager.publishUpdate();
-                this.showSyncSuccess();
-            }
-            
-            alert(`${files.length} arquivo(s) enviado(s) e sincronizado(s) com sucesso!`);
-            
-        } catch (error) {
-            console.error('Erro no upload:', error);
-            alert('Erro no upload: ' + error.message);
-            this.hideUploadModal();
-        }
-    }
-    
-    showSyncSuccess() {
-        const notification = document.createElement('div');
-        notification.className = 'sync-success-notification';
-        notification.innerHTML = `
-            <div class="sync-success-content">
-                <span class="sync-icon">✅</span>
-                <span>Conteúdo sincronizado em todos os dispositivos!</span>
-            </div>
-        `;
-        
-        document.body.appendChild(notification);
-        
-        setTimeout(() => notification.remove(), 4000);
-    }
-    
-    async uploadToCloudinary(file, type) {
-        const formData = new FormData();
-        
-        // Determinar pasta baseado no tipo
-        let folder = 'general';
-        if (type === 'programs') {
-            const programSelect = document.getElementById('programSelect');
-            folder = `programs/${programSelect ? programSelect.value : 'general'}`;
-        } else {
-            folder = type;
-        }
-        
-        formData.append('file', file);
-        formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
-        formData.append('folder', `radio-louro/${folder}`);
-        formData.append('resource_type', 'auto');
-        
-        const response = await fetch(
-            `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/upload`,
-            {
-                method: 'POST',
-                body: formData
-            }
-        );
-        
-        if (!response.ok) {
-            throw new Error(`Erro HTTP: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        return {
-            name: file.name,
-            url: data.secure_url,
-            publicId: data.public_id,
-            duration: data.duration || 0,
-            format: data.format,
-            uploadedAt: new Date().toISOString(),
-            syncId: Date.now() + Math.random() // ID único para sincronização
-        };
-    }
-    
-    addToLibrary(file, type) {
-        if (type === 'programs') {
-            const programSelect = document.getElementById('programSelect');
-            const period = programSelect ? programSelect.value : 'morning';
-            radioState.content.programs[period].push(file);
-        } else {
-            radioState.content[type].push(file);
-        }
-        
-        // Marcar timestamp de atualização
-        radioState.lastContentUpdate = new Date().toISOString();
-    }
-    
-    showUploadModal() {
-        this.radio.showModal('uploadModal');
-    }
-    
-    hideUploadModal() {
-        this.radio.closeModal('uploadModal');
-    }
-    
-    updateUploadProgress(current, total, status) {
-        const progress = Math.round((current / total) * 100);
-        
-        const progressElement = document.getElementById('uploadProgress');
-        if (progressElement) {
-            progressElement.style.width = progress + '%';
-        }
-        
-        const statusElement = document.getElementById('uploadStatus');
-        if (statusElement) {
-            statusElement.textContent = status;
-        }
-    }
-}
-
-// Funções globais modificadas para sincronização
-let radioSystem;
-let uploader;
-
-// Função principal de upload com sincronização
-async function uploadContent(type) {
-    if (uploader) {
-        await uploader.uploadContent(type);
-        
-        // Verificar se outros dispositivos precisam atualizar
-        setTimeout(() => {
-            if (radioSystem && radioSystem.syncManager) {
-                radioSystem.syncManager.forceSync();
-            }
-        }, 2000);
-    }
-}
-
-// Função para verificar senha admin
-function checkAdminPassword() {
-    if (radioSystem) {
-        radioSystem.checkAdminPassword();
-    }
-}
-
-// Função para fechar modais
-function closeModal(modalId) {
-    if (radioSystem) {
-        radioSystem.closeModal(modalId);
-    }
-}
-
-// Funções de configuração de programação (modificadas)
-async function saveScheduleConfig() {
-    const periods = ['morning', 'afternoon', 'evening', 'late'];
-    
-    periods.forEach(period => {
-        const contentSelect = document.querySelector(`[data-period="${period}"]`);
-        const freqInput = document.querySelector(`.jingle-frequency[data-period="${period}"]`);
-        
-        if (contentSelect && freqInput) {
-            radioState.schedule[period] = {
-                type: contentSelect.value,
-                jingleFreq: parseInt(freqInput.value)
-            };
-        }
-    });
-    
-    if (radioSystem) {
-        radioSystem.saveData();
-        
-        // Sincronizar configurações
-        if (radioSystem.syncManager && radioSystem.syncManager.isAdmin) {
-            await radioSystem.syncManager.publishUpdate();
-            showConfigSyncNotification();
-        }
-    }
-    
-    alert('Configurações de programação salvas e sincronizadas!');
-}
-
-function showConfigSyncNotification() {
-    const notification = document.createElement('div');
-    notification.className = 'config-sync-notification';
-    notification.innerHTML = `
-        <div class="config-sync-content">
-            <span class="sync-icon">⚙️</span>
-            <span>Programação sincronizada em todos os dispositivos!</span>
-        </div>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => notification.remove(), 4000);
-}
-
-async function resetSchedule() {
-    if (!confirm('Tem certeza que deseja resetar a programação?')) return;
-    
-    radioState.schedule = {
-        morning: { type: 'mixed', jingleFreq: 15 },
-        afternoon: { type: 'mixed', jingleFreq: 10 },
-        evening: { type: 'mixed', jingleFreq: 20 },
-        late: { type: 'music', jingleFreq: 30 }
-    };
-    
-    if (radioSystem) {
-        radioSystem.saveData();
-        
-        // Sincronizar reset
-        if (radioSystem.syncManager && radioSystem.syncManager.isAdmin) {
-            await radioSystem.syncManager.publishUpdate();
-        }
-    }
-    
-    // Atualizar interface
-    document.querySelectorAll('.content-type-select').forEach(select => {
-        const period = select.dataset.period;
-        select.value = radioState.schedule[period].type;
-    });
-    
-    document.querySelectorAll('.jingle-frequency').forEach(input => {
-        /**
- * SISTEMA DE RÁDIO AO VIVO 24 HORAS COM SINCRONIZAÇÃO
- * Rádio Supermercado do Louro
- * ================================
- */
-
-// Configuração da Cloudinary
 const CLOUDINARY_CONFIG = {
     cloudName: 'dygbrcrr6',
     apiKey: '853591251513134',
     apiSecret: 'yVz8MbGa_undTqNHbOqzo-hKc-U',
     uploadPreset: 'radio_preset'
-};
-
-// Configuração de sincronização
-const SYNC_CONFIG = {
-    enabled: true,
-    interval: 10000, // 10 segundos
-    storageKey: 'radioSyncData',
-    lastUpdateKey: 'radioLastUpdate'
 };
 
 // Estado global da rádio
@@ -274,1039 +11,584 @@ let radioState = {
     isPlaying: false,
     currentTrack: null,
     volume: 70,
-    crossfade: false,
-    playHistory: [],
-    recentTracks: [],
-    listeners: 0,
-    uptime: 0,
-    playCount: 0,
-    lastSync: null,
-    
-    // Bibliotecas de conteúdo
-    content: {
+    playlists: {
         music: [],
-        jingles: [],
+        announcements: [],
         time: [],
-        programs: {
-            morning: [],
-            afternoon: [],
-            evening: [],
-            late: []
-        }
+        jingles: []
     },
-    
-    // Configurações de programação
-    schedule: {
-        morning: { type: 'mixed', jingleFreq: 15 },
-        afternoon: { type: 'mixed', jingleFreq: 10 },
-        evening: { type: 'mixed', jingleFreq: 20 },
-        late: { type: 'music', jingleFreq: 30 }
-    },
-    
-    // Automação
-    automation: {
-        hourlyTime: true,
-        autoJingles: true,
-        avoidRepeat: true,
-        repeatInterval: 50,
-        crossfade: false,
-        crossfadeDuration: 3
-    },
-    
-    // Estatísticas
     stats: {
-        totalPlayed: 0,
-        dailyStats: {},
-        popularTracks: {},
-        requests: []
-    }
+        tracksPlayed: 0,
+        requestsReceived: 0
+    },
+    recentTracks: [],
+    requests: [],
+    schedule: [],
+    // Configuração de sincronização com duração real
+    startDate: new Date('2025-09-27T00:00:00-03:00').getTime(),
+    playlistSequence: [], // Sequência de músicas com durações reais
+    totalDuration: 0, // Duração total da sequência
+    currentSequenceIndex: -1
 };
 
-// Cache de elementos DOM
+// Elementos DOM
 let elements = {};
 
-// Sistema de Sincronização
-class RadioSyncManager {
-    constructor() {
-        this.syncInterval = null;
-        this.isAdmin = false;
-        this.lastKnownUpdate = null;
-        this.init();
+// Função para gerar sequência com durações reais
+function generatePlaylistSequence() {
+    if (radioState.playlists.music.length === 0) return [];
+    
+    const sequence = [];
+    let totalTime = 0;
+    
+    // Criar sequência de 50 músicas para loop
+    for (let i = 0; i < 50; i++) {
+        const musicIndex = i % radioState.playlists.music.length;
+        const track = radioState.playlists.music[musicIndex];
+        
+        // Estimar duração (3-5 minutos aleatoriamente se não conhecida)
+        const estimatedDuration = track.duration || (180 + Math.random() * 120) * 1000; // 3-5 minutos
+        
+        sequence.push({
+            ...track,
+            sequenceIndex: i,
+            startTime: totalTime,
+            duration: estimatedDuration,
+            endTime: totalTime + estimatedDuration
+        });
+        
+        totalTime += estimatedDuration;
     }
     
-    init() {
-        if (SYNC_CONFIG.enabled) {
-            this.startSyncLoop();
-            window.addEventListener('focus', () => this.forceSync());
-            window.addEventListener('storage', (e) => this.handleStorageChange(e));
-        }
-    }
+    radioState.playlistSequence = sequence;
+    radioState.totalDuration = totalTime;
     
-    startSyncLoop() {
-        this.syncInterval = setInterval(() => {
-            this.checkForUpdates();
-        }, SYNC_CONFIG.interval);
-    }
-    
-    async checkForUpdates() {
-        try {
-            // Verificar se houve atualizações usando Cloudinary como fonte central
-            const centralData = await this.fetchCentralData();
-            
-            if (centralData && this.hasUpdates(centralData)) {
-                console.log('🔄 Atualizações detectadas, sincronizando...');
-                await this.syncData(centralData);
-                this.notifyUpdate();
-            }
-        } catch (error) {
-            console.warn('Erro na sincronização:', error);
-            // Fallback para localStorage
-            this.syncWithLocalStorage();
-        }
-    }
-    
-    async fetchCentralData() {
-        // Buscar dados centralizados na Cloudinary usando um arquivo JSON
-        try {
-            const response = await fetch(
-                `https://res.cloudinary.com/${CLOUDINARY_CONFIG.cloudName}/raw/upload/radio-louro/sync/radio-state.json`
-            );
-            
-            if (response.ok) {
-                return await response.json();
-            }
-        } catch (error) {
-            console.warn('Sync via Cloudinary indisponível:', error);
-        }
-        
-        return null;
-    }
-    
-    hasUpdates(centralData) {
-        if (!centralData || !centralData.lastSync) return false;
-        
-        const centralUpdate = new Date(centralData.lastSync);
-        const localUpdate = radioState.lastSync ? new Date(radioState.lastSync) : new Date(0);
-        
-        return centralUpdate > localUpdate;
-    }
-    
-    async syncData(centralData) {
-        // Sincronizar apenas bibliotecas de conteúdo e configurações
-        if (centralData.content) {
-            radioState.content = { ...radioState.content, ...centralData.content };
-        }
-        
-        if (centralData.schedule) {
-            radioState.schedule = { ...radioState.schedule, ...centralData.schedule };
-        }
-        
-        if (centralData.automation) {
-            radioState.automation = { ...radioState.automation, ...centralData.automation };
-        }
-        
-        radioState.lastSync = centralData.lastSync;
-        
-        // Salvar localmente
-        this.saveLocalData();
-        
-        // Atualizar interface se necessário
-        if (typeof radioSystem !== 'undefined' && radioSystem) {
-            radioSystem.updateContentLibrary();
-            radioSystem.updateReports();
-        }
-    }
-    
-    syncWithLocalStorage() {
-        // Fallback: sincronizar via localStorage para dispositivos na mesma rede local
-        try {
-            const storedSync = localStorage.getItem(SYNC_CONFIG.lastUpdateKey);
-            const storedData = localStorage.getItem(SYNC_CONFIG.storageKey);
-            
-            if (storedSync && storedData) {
-                const syncTime = new Date(storedSync);
-                const localSyncTime = radioState.lastSync ? new Date(radioState.lastSync) : new Date(0);
-                
-                if (syncTime > localSyncTime) {
-                    const data = JSON.parse(storedData);
-                    this.syncData(data);
-                }
-            }
-        } catch (error) {
-            console.warn('Erro no sync localStorage:', error);
-        }
-    }
-    
-    handleStorageChange(event) {
-        if (event.key === SYNC_CONFIG.storageKey && event.newValue) {
-            try {
-                const data = JSON.parse(event.newValue);
-                this.syncData(data);
-            } catch (error) {
-                console.warn('Erro ao processar mudança de storage:', error);
-            }
-        }
-    }
-    
-    async publishUpdate() {
-        if (!this.isAdmin) return;
-        
-        const updateData = {
-            content: radioState.content,
-            schedule: radioState.schedule,
-            automation: radioState.automation,
-            lastSync: new Date().toISOString()
-        };
-        
-        try {
-            // Tentar publicar na Cloudinary
-            await this.publishToCentral(updateData);
-            console.log('✅ Dados publicados centralmente');
-        } catch (error) {
-            console.warn('Erro ao publicar centralmente:', error);
-        }
-        
-        // Sempre salvar localmente
-        localStorage.setItem(SYNC_CONFIG.storageKey, JSON.stringify(updateData));
-        localStorage.setItem(SYNC_CONFIG.lastUpdateKey, updateData.lastSync);
-        
-        radioState.lastSync = updateData.lastSync;
-    }
-    
-    async publishToCentral(data) {
-        // Criar arquivo JSON e fazer upload para Cloudinary
-        const jsonBlob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const formData = new FormData();
-        
-        formData.append('file', jsonBlob, 'radio-state.json');
-        formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
-        formData.append('folder', 'radio-louro/sync');
-        formData.append('resource_type', 'raw');
-        formData.append('public_id', 'radio-state');
-        formData.append('overwrite', 'true');
-        
-        const response = await fetch(
-            `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/raw/upload`,
-            {
-                method: 'POST',
-                body: formData
-            }
-        );
-        
-        if (!response.ok) {
-            throw new Error(`Erro HTTP: ${response.status}`);
-        }
-        
-        return await response.json();
-    }
-    
-    saveLocalData() {
-        try {
-            localStorage.setItem('radioLive24State', JSON.stringify(radioState));
-        } catch (error) {
-            console.warn('Erro ao salvar dados locais:', error);
-        }
-    }
-    
-    notifyUpdate() {
-        // Mostrar notificação visual para o usuário
-        this.showSyncNotification();
-        
-        // Disparar evento customizado
-        window.dispatchEvent(new CustomEvent('radioContentUpdated', {
-            detail: { timestamp: radioState.lastSync }
-        }));
-    }
-    
-    showSyncNotification() {
-        const notification = document.createElement('div');
-        notification.className = 'sync-notification';
-        notification.innerHTML = `
-            <div class="sync-content">
-                <span class="sync-icon">🔄</span>
-                <span>Conteúdo atualizado!</span>
-            </div>
-        `;
-        
-        document.body.appendChild(notification);
-        
-        setTimeout(() => notification.remove(), 3000);
-    }
-    
-    setAdminMode(isAdmin) {
-        this.isAdmin = isAdmin;
-        if (isAdmin) {
-            console.log('📡 Modo administrador ativado - publicações habilitadas');
-        }
-    }
-    
-    forceSync() {
-        console.log('🔍 Verificação forçada de sincronização...');
-        this.checkForUpdates();
-    }
-    
-    destroy() {
-        if (this.syncInterval) {
-            clearInterval(this.syncInterval);
-        }
-    }
+    console.log(`Sequência gerada: ${sequence.length} músicas, duração total: ${Math.round(totalTime/1000/60)} minutos`);
+    return sequence;
 }
 
-// Classe principal da rádio (modificada para incluir sincronização)
-class RadioLive24 {
-    constructor() {
-        this.currentPeriod = 'morning';
-        this.lastJingleTime = 0;
-        this.lastTimeAnnouncement = 0;
-        this.programTimer = null;
-        this.uptimeTimer = null;
-        this.playbackQueue = [];
-        this.fadeInterval = null;
-        this.syncManager = null;
-        
-        this.init();
+// Função para encontrar música atual baseada no tempo real
+function getCurrentSyncTrack() {
+    if (radioState.playlistSequence.length === 0) {
+        generatePlaylistSequence();
     }
     
-    async init() {
+    const now = Date.now();
+    const elapsed = now - radioState.startDate;
+    
+    // Calcular posição no loop
+    const loopPosition = elapsed % radioState.totalDuration;
+    
+    // Encontrar música atual na sequência
+    for (let i = 0; i < radioState.playlistSequence.length; i++) {
+        const track = radioState.playlistSequence[i];
+        
+        if (loopPosition >= track.startTime && loopPosition < track.endTime) {
+            const trackElapsed = loopPosition - track.startTime;
+            
+            return {
+                track: track,
+                position: trackElapsed / 1000, // em segundos
+                remaining: (track.duration - trackElapsed) / 1000,
+                sequenceIndex: i,
+                isNearEnd: (track.duration - trackElapsed) < 5000 // últimos 5 segundos
+            };
+        }
+    }
+    
+    // Se não encontrou, pegar a primeira
+    if (radioState.playlistSequence.length > 0) {
+        return {
+            track: radioState.playlistSequence[0],
+            position: 0,
+            remaining: radioState.playlistSequence[0].duration / 1000,
+            sequenceIndex: 0,
+            isNearEnd: false
+        };
+    }
+    
+    return null;
+}
+
+// Classe principal da rádio
+class RadioManager {
+    constructor() {
+        this.audioPlayer = null;
+        this.syncInterval = null;
+        this.timeInterval = null;
+        this.currentSyncIndex = -1;
+    }
+
+    init() {
+        console.log('Iniciando Rádio Supermercado do Louro...');
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.setup());
+        } else {
+            this.setup();
+        }
+    }
+
+    setup() {
         try {
-            this.initElements();
+            this.initializeElements();
             this.loadStoredData();
+            this.setupAudio();
             this.setupEventListeners();
+            this.setupDefaultSchedule();
+            this.addSampleTracks();
+            this.startRadio();
+            this.startTimers();
             
-            // Inicializar sincronização
-            this.syncManager = new RadioSyncManager();
-            
-            // Aguardar primeira sincronização antes de iniciar broadcast
-            await this.waitForInitialSync();
-            
-            this.startBroadcast();
-            this.startUptime();
-            
-            console.log('🎙️ Rádio 24h inicializada com sincronização!');
+            console.log('Rádio inicializada com sucesso!');
         } catch (error) {
             console.error('Erro na inicialização:', error);
-            this.showError('Erro na inicialização da rádio');
+            this.showError('Erro ao inicializar a rádio');
         }
     }
-    
-    async waitForInitialSync() {
-        try {
-            // Aguardar até 5 segundos pela sincronização inicial
-            await new Promise((resolve) => {
-                const timeout = setTimeout(resolve, 5000);
-                
-                const checkSync = () => {
-                    if (radioState.lastSync) {
-                        clearTimeout(timeout);
-                        resolve();
-                    } else {
-                        setTimeout(checkSync, 500);
-                    }
-                };
-                
-                checkSync();
-            });
-        } catch (error) {
-            console.warn('Timeout na sincronização inicial, continuando...');
-        }
-    }
-    
-    initElements() {
+
+    initializeElements() {
         const elementIds = [
-            'audioPlayer', 'playPauseBtn', 'skipBtn', 'favoriteBtn',
-            'volumeSlider', 'volumeValue', 'albumCover', 'trackCover',
-            'albumTitle', 'currentTrack', 'trackTime', 'trackGenre',
-            'currentProgram', 'nextProgram', 'listenerCount',
-            'broadcastStatus', 'playCount', 'scheduleList',
-            'recentTracks', 'requestsList', 'adminBtn',
-            'playerMode', 'adminMode', 'passwordModal',
-            'adminPassword', 'uploadModal', 'requestModal',
-            'loadingOverlay'
+            'audioPlayer', 'playPauseBtn', 'skipBtn', 'requestBtn',
+            'volumeSlider', 'volumeValue', 'currentTrack', 'trackArtist',
+            'trackTime', 'trackType', 'albumCover', 'currentProgram',
+            'programDescription', 'currentTime',
+            'liveIndicator', 'equalizer', 'scheduleGrid', 'recentTracks',
+            'announcementsList', 'loadingOverlay', 'totalPlayed',
+            'requestModal', 'requestForm', 'adminPanel', 'passwordModal'
         ];
-        
+
         elements = {};
         elementIds.forEach(id => {
             elements[id] = document.getElementById(id);
         });
+
+        console.log('Elementos DOM inicializados');
+    }
+
+    setupAudio() {
+        this.audioPlayer = elements.audioPlayer;
+        if (!this.audioPlayer) {
+            console.error('Player de áudio não encontrado');
+            return;
+        }
+
+        this.audioPlayer.volume = radioState.volume / 100;
+        this.audioPlayer.addEventListener('timeupdate', () => this.updateTimeDisplay());
+        this.audioPlayer.addEventListener('error', () => this.handleAudioError());
         
-        // Verificar elementos críticos
-        if (!elements.audioPlayer) {
-            throw new Error('Player de áudio não encontrado');
-        }
+        console.log('Áudio configurado');
     }
-    
-    loadStoredData() {
-        try {
-            const stored = localStorage.getItem('radioLive24State');
-            if (stored) {
-                const data = JSON.parse(stored);
-                radioState = { ...radioState, ...data };
-            }
-        } catch (error) {
-            console.warn('Erro ao carregar dados:', error);
-        }
-    }
-    
-    saveData() {
-        try {
-            // Não salvar elementos que podem ser grandes
-            const dataToSave = {
-                ...radioState,
-                playHistory: radioState.playHistory.slice(-100) // Manter apenas últimas 100
-            };
-            localStorage.setItem('radioLive24State', JSON.stringify(dataToSave));
-            
-            // Se for admin, publicar atualizações
-            if (this.syncManager && this.syncManager.isAdmin) {
-                this.syncManager.publishUpdate();
-            }
-            
-        } catch (error) {
-            console.warn('Erro ao salvar dados:', error);
-        }
-    }
-    
+
     setupEventListeners() {
         // Player controls
         if (elements.playPauseBtn) {
-            elements.playPauseBtn.onclick = () => this.togglePlayback();
+            elements.playPauseBtn.addEventListener('click', () => this.togglePlayback());
         }
+        
         if (elements.skipBtn) {
-            elements.skipBtn.onclick = () => this.skipTrack();
+            elements.skipBtn.addEventListener('click', () => this.sync());
         }
-        if (elements.favoriteBtn) {
-            elements.favoriteBtn.onclick = () => this.favoriteTrack();
+        
+        if (elements.requestBtn) {
+            elements.requestBtn.addEventListener('click', () => this.showRequestModal());
         }
+        
         if (elements.volumeSlider) {
-            elements.volumeSlider.oninput = (e) => this.setVolume(e.target.value);
+            elements.volumeSlider.addEventListener('input', (e) => this.setVolume(e.target.value));
         }
-        
-        // Audio events
-        if (elements.audioPlayer) {
-            elements.audioPlayer.onended = () => this.playNext();
-            elements.audioPlayer.ontimeupdate = () => this.updateTime();
-            elements.audioPlayer.onerror = (e) => this.handleAudioError(e);
-            elements.audioPlayer.oncanplay = () => this.onTrackReady();
+
+        // Admin access
+        const adminBtn = document.getElementById('adminAccessBtn');
+        if (adminBtn) {
+            adminBtn.addEventListener('click', () => this.showAdminModal());
         }
-        
-        // Admin button
-        if (elements.adminBtn) {
-            elements.adminBtn.onclick = () => this.openAdminModal();
+
+        // Admin controls
+        const closeAdminBtn = document.getElementById('closeAdminBtn');
+        if (closeAdminBtn) {
+            closeAdminBtn.addEventListener('click', () => this.closeAdminPanel());
         }
-        
-        // Info tabs
-        document.querySelectorAll('.info-tab').forEach(tab => {
-            tab.onclick = (e) => this.switchInfoTab(e.target.dataset.tab);
-        });
-        
+
+        const toggleBroadcast = document.getElementById('adminToggleBroadcast');
+        if (toggleBroadcast) {
+            toggleBroadcast.addEventListener('click', () => this.adminToggleBroadcast());
+        }
+
+        const skipTrack = document.getElementById('adminSkipTrack');
+        if (skipTrack) {
+            skipTrack.addEventListener('click', () => this.sync());
+        }
+
+        const testTime = document.getElementById('adminTestTime');
+        if (testTime) {
+            testTime.addEventListener('click', () => this.forceTimeAnnouncement());
+        }
+
+        const emergencyStop = document.getElementById('adminEmergencyStop');
+        if (emergencyStop) {
+            emergencyStop.addEventListener('click', () => this.emergencyStop());
+        }
+
         // Admin tabs
         document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.onclick = (e) => this.switchAdminTab(e.target.dataset.tab);
+            btn.addEventListener('click', () => this.switchAdminTab(btn.dataset.tab));
         });
-        
+
         // Request form
-        const sendRequestBtn = document.getElementById('sendRequest');
-        if (sendRequestBtn) {
-            sendRequestBtn.onclick = () => this.sendRequest();
-        }
-        
-        // Admin controls
-        const toggleBroadcast = document.getElementById('toggleBroadcast');
-        if (toggleBroadcast) {
-            toggleBroadcast.onclick = () => this.toggleBroadcast();
-        }
-        
-        const emergencyStop = document.getElementById('emergencyStop');
-        if (emergencyStop) {
-            emergencyStop.onclick = () => this.emergencyStop();
-        }
-        
-        const backToPlayer = document.getElementById('backToPlayerBtn');
-        if (backToPlayer) {
-            backToPlayer.onclick = () => this.showPlayer();
-        }
-    }
-    
-    startBroadcast() {
-        if (radioState.isLive) return;
-        
-        radioState.isLive = true;
-        this.updateBroadcastStatus('🔴 AO VIVO');
-        
-        // Determinar período atual
-        this.updateCurrentPeriod();
-        
-        // Iniciar programação
-        this.scheduleNextTrack();
-        
-        // Timer para verificações periódicas
-        this.programTimer = setInterval(() => {
-            this.updateCurrentPeriod();
-            this.checkTimeAnnouncement();
-            this.checkJingleTime();
-            this.updateListenerCount();
-        }, 30000); // A cada 30 segundos
-        
-        console.log('📡 Transmissão ao vivo iniciada');
-    }
-    
-    stopBroadcast() {
-        radioState.isLive = false;
-        if (this.programTimer) {
-            clearInterval(this.programTimer);
-        }
-        if (elements.audioPlayer) {
-            elements.audioPlayer.pause();
-        }
-        radioState.isPlaying = false;
-        this.updateBroadcastStatus('⚫ OFFLINE');
-        this.updatePlayPauseButton();
-    }
-    
-    updateCurrentPeriod() {
-        const hour = new Date().getHours();
-        let newPeriod;
-        
-        if (hour >= 6 && hour < 12) newPeriod = 'morning';
-        else if (hour >= 12 && hour < 18) newPeriod = 'afternoon';
-        else if (hour >= 18 && hour < 24) newPeriod = 'evening';
-        else newPeriod = 'late';
-        
-        if (newPeriod !== this.currentPeriod) {
-            this.currentPeriod = newPeriod;
-            this.updateProgramInfo();
-            console.log(`🕐 Período alterado para: ${newPeriod}`);
-        }
-    }
-    
-    updateProgramInfo() {
-        const programs = {
-            morning: '🌅 Manhã Musical',
-            afternoon: '☀️ Tarde Animada',
-            evening: '🌆 Noite Especial',
-            late: '🌙 Madrugada Suave'
-        };
-        
-        const nextPeriods = {
-            morning: 'afternoon',
-            afternoon: 'evening',
-            evening: 'late',
-            late: 'morning'
-        };
-        
-        if (elements.currentProgram) {
-            elements.currentProgram.textContent = programs[this.currentPeriod];
-        }
-        if (elements.nextProgram) {
-            elements.nextProgram.textContent = programs[nextPeriods[this.currentPeriod]];
-        }
-    }
-    
-    checkTimeAnnouncement() {
-        if (!radioState.automation.hourlyTime) return;
-        
-        const now = new Date();
-        const currentHour = now.getHours();
-        const currentMinute = now.getMinutes();
-        
-        // Tocar hora certa no minuto 0 de cada hora
-        if (currentMinute === 0) {
-            const hourKey = `${now.getDate()}-${currentHour}`;
-            if (this.lastTimeAnnouncement !== hourKey) {
-                this.lastTimeAnnouncement = hourKey;
-                this.queueTimeAnnouncement();
-            }
-        }
-    }
-    
-    checkJingleTime() {
-        if (!radioState.automation.autoJingles) return;
-        
-        const schedule = radioState.schedule[this.currentPeriod];
-        if (schedule.type !== 'mixed') return;
-        
-        const now = Date.now();
-        const jingleInterval = schedule.jingleFreq * 60 * 1000; // Converter para ms
-        
-        if (now - this.lastJingleTime > jingleInterval) {
-            this.lastJingleTime = now;
-            this.queueJingle();
-        }
-    }
-    
-    scheduleNextTrack() {
-        if (!radioState.isLive) return;
-        
-        // Se há algo na fila, tocar próximo da fila
-        if (this.playbackQueue.length > 0) {
-            const nextTrack = this.playbackQueue.shift();
-            this.playTrack(nextTrack);
-            return;
-        }
-        
-        // Caso contrário, escolher baseado na programação
-        const schedule = radioState.schedule[this.currentPeriod];
-        let nextTrack = null;
-        
-        switch (schedule.type) {
-            case 'music':
-                nextTrack = this.getRandomMusic();
-                break;
-            case 'program':
-                nextTrack = this.getRandomProgram(this.currentPeriod);
-                break;
-            case 'mixed':
-                nextTrack = this.getRandomMusic();
-                break;
-        }
-        
-        if (nextTrack) {
-            this.playTrack(nextTrack);
-        } else {
-            // Se não há conteúdo, tentar novamente em 30 segundos
-            setTimeout(() => this.scheduleNextTrack(), 30000);
-        }
-    }
-    
-    getRandomMusic() {
-        const music = radioState.content.music;
-        if (music.length === 0) return null;
-        
-        let availableMusic = music;
-        
-        // Evitar repetições se configurado
-        if (radioState.automation.avoidRepeat && radioState.playHistory.length > 0) {
-            const recentLimit = Math.min(radioState.automation.repeatInterval, music.length - 1);
-            const recentTracks = radioState.playHistory.slice(-recentLimit);
-            
-            availableMusic = music.filter(track => 
-                !recentTracks.some(recent => recent.publicId === track.publicId)
-            );
-            
-            if (availableMusic.length === 0) {
-                availableMusic = music; // Se todos foram tocados recentemente, usar todos
-            }
-        }
-        
-        return availableMusic[Math.floor(Math.random() * availableMusic.length)];
-    }
-    
-    getRandomProgram(period) {
-        const programs = radioState.content.programs[period];
-        if (programs.length === 0) return null;
-        
-        return programs[Math.floor(Math.random() * programs.length)];
-    }
-    
-    getRandomJingle() {
-        const jingles = radioState.content.jingles;
-        if (jingles.length === 0) return null;
-        
-        return jingles[Math.floor(Math.random() * jingles.length)];
-    }
-    
-    getRandomTimeAnnouncement() {
-        const timeAnnouncements = radioState.content.time;
-        if (timeAnnouncements.length === 0) return null;
-        
-        return timeAnnouncements[Math.floor(Math.random() * timeAnnouncements.length)];
-    }
-    
-    queueTimeAnnouncement() {
-        const timeTrack = this.getRandomTimeAnnouncement();
-        if (timeTrack) {
-            this.playbackQueue.unshift(timeTrack); // Adicionar no início da fila
-            console.log('🕐 Hora certa agendada');
-        }
-    }
-    
-    queueJingle() {
-        const jingle = this.getRandomJingle();
-        if (jingle) {
-            this.playbackQueue.push(jingle);
-            console.log('📢 Vinheta agendada');
-        }
-    }
-    
-    async playTrack(track) {
-        if (!track || !elements.audioPlayer) return;
-        
-        try {
-            radioState.currentTrack = track;
-            
-            // Crossfade se configurado
-            if (radioState.automation.crossfade && radioState.isPlaying) {
-                await this.crossfadeToTrack(track);
-            } else {
-                this.loadAndPlayTrack(track);
-            }
-            
-            this.updateTrackInfo(track);
-            this.addToHistory(track);
-            this.updateRecentTracks();
-            
-        } catch (error) {
-            console.error('Erro ao reproduzir faixa:', error);
-            setTimeout(() => this.scheduleNextTrack(), 5000);
-        }
-    }
-    
-    async crossfadeToTrack(newTrack) {
-        const duration = radioState.automation.crossfadeDuration * 1000;
-        const steps = 20;
-        const stepDuration = duration / steps;
-        const volumeStep = elements.audioPlayer.volume / steps;
-        
-        // Fade out da faixa atual
-        for (let i = steps; i > 0; i--) {
-            elements.audioPlayer.volume = volumeStep * i;
-            await new Promise(resolve => setTimeout(resolve, stepDuration));
-        }
-        
-        // Carregar nova faixa
-        this.loadAndPlayTrack(newTrack);
-        
-        // Fade in da nova faixa
-        elements.audioPlayer.volume = 0;
-        for (let i = 0; i <= steps; i++) {
-            elements.audioPlayer.volume = (radioState.volume / 100) * (i / steps);
-            await new Promise(resolve => setTimeout(resolve, stepDuration));
-        }
-    }
-    
-    loadAndPlayTrack(track) {
-        elements.audioPlayer.src = track.url;
-        elements.audioPlayer.volume = radioState.volume / 100;
-        
-        if (radioState.isLive) {
-            elements.audioPlayer.play().catch(e => {
-                console.warn('Autoplay bloqueado:', e);
-                this.showAutoplayPrompt();
+        if (elements.requestForm) {
+            elements.requestForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.submitRequest();
             });
         }
-    }
-    
-    updateTrackInfo(track) {
-        if (elements.currentTrack) {
-            elements.currentTrack.textContent = this.formatTrackName(track.name);
-        }
-        if (elements.albumTitle) {
-            elements.albumTitle.textContent = this.getTrackCategory(track);
-        }
-        if (elements.trackGenre) {
-            elements.trackGenre.textContent = this.getTrackGenre(track);
-        }
-        
-        this.updateTrackCover(track);
-    }
-    
-    formatTrackName(filename) {
-        return filename.replace(/\.[^/.]+$/, "").replace(/[-_]/g, ' ');
-    }
-    
-    getTrackCategory(track) {
-        if (track.category) return track.category;
-        
-        // Determinar categoria baseado no tipo
-        if (radioState.content.jingles.includes(track)) return '📢 Vinheta';
-        if (radioState.content.time.includes(track)) return '🕐 Hora Certa';
-        
-        // Verificar programas
-        for (const [period, tracks] of Object.entries(radioState.content.programs)) {
-            if (tracks.includes(track)) {
-                const periods = {
-                    morning: '🌅 Programa Matinal',
-                    afternoon: '☀️ Programa Vespertino',
-                    evening: '🌆 Programa Noturno',
-                    late: '🌙 Programa Madrugada'
-                };
-                return periods[period];
+
+        // Modal close
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                e.target.classList.remove('show');
             }
-        }
-        
-        return '🎵 Música';
-    }
-    
-    getTrackGenre(track) {
-        // Análise básica do nome do arquivo para determinar gênero
-        const name = track.name.toLowerCase();
-        
-        if (name.includes('rock')) return 'Rock';
-        if (name.includes('pop')) return 'Pop';
-        if (name.includes('jazz')) return 'Jazz';
-        if (name.includes('classical')) return 'Clássica';
-        if (name.includes('electronic')) return 'Eletrônica';
-        if (name.includes('country')) return 'Country';
-        if (name.includes('blues')) return 'Blues';
-        if (name.includes('folk')) return 'Folk';
-        
-        return 'Variada';
-    }
-    
-    updateTrackCover(track) {
-        // Implementar sistema de capas se disponível
-        if (track.coverUrl && elements.trackCover) {
-            elements.trackCover.src = track.coverUrl;
-            elements.trackCover.style.display = 'block';
-            if (elements.albumCover) {
-                elements.albumCover.style.display = 'none';
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.altKey && e.key === 'a') {
+                e.preventDefault();
+                this.showAdminModal();
             }
-        } else {
-            if (elements.trackCover) {
-                elements.trackCover.style.display = 'none';
+        });
+
+        console.log('Event listeners configurados');
+    }
+
+    setupDefaultSchedule() {
+        radioState.schedule = [
+            { time: '06:00', name: 'Bom Dia Louro', description: 'Começando o dia com energia!', duration: 4 },
+            { time: '10:00', name: 'Manhã Musical', description: 'Os melhores sucessos para sua manhã', duration: 4 },
+            { time: '14:00', name: 'Tarde Animada', description: 'Música boa para animar sua tarde', duration: 4 },
+            { time: '18:00', name: 'Fim de Tarde', description: 'Sucessos para o final do dia', duration: 4 },
+            { time: '22:00', name: 'Noite Romântica', description: 'As mais belas canções para sua noite', duration: 8 }
+        ];
+        
+        this.updateScheduleDisplay();
+        this.updateCurrentProgram();
+    }
+
+    addSampleTracks() {
+        if (radioState.playlists.music.length === 0) {
+            const sampleTracks = [
+                { name: 'Música Exemplo 1', artist: 'Artista Demo', url: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEZ' },
+                { name: 'Música Exemplo 2', artist: 'Demo Artist', url: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEZ' },
+                { name: 'Música Exemplo 3', artist: 'Artista Exemplo', url: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEZ' },
+                { name: 'Música Exemplo 4', artist: 'Demo Music', url: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEZ' },
+                { name: 'Música Exemplo 5', artist: 'Exemplo Band', url: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEZ' }
+            ];
+            
+            radioState.playlists.music = sampleTracks;
+            console.log('Músicas de exemplo adicionadas');
+        }
+    }
+
+    startRadio() {
+        radioState.isLive = true;
+        radioState.isPlaying = true;
+        this.updateLiveStatus();
+        
+        // Iniciar sincronização
+        this.sync();
+        
+        console.log('Transmissão sincronizada iniciada!');
+    }
+
+    // Função principal de sincronização
+    sync() {
+        const syncData = getCurrentSyncTrack();
+        if (!syncData) return;
+
+        const { track, position, index } = syncData;
+
+        // Verificar se mudou de música
+        if (this.currentSyncIndex !== index) {
+            console.log(`Sincronizando: ${track.name}`);
+            
+            this.currentSyncIndex = index;
+            radioState.currentTrack = track;
+            
+            this.updateTrackInfo(track);
+            this.addToRecentTracks(track);
+            this.updateStats();
+            
+            // Carregar e posicionar áudio
+            this.loadTrackAtPosition(track, position);
+        }
+    }
+
+    loadTrackAtPosition(track, position) {
+        if (!this.audioPlayer) return;
+
+        try {
+            this.audioPlayer.src = track.url;
+            
+            this.audioPlayer.addEventListener('loadeddata', () => {
+                if (position > 0 && position < this.audioPlayer.duration) {
+                    this.audioPlayer.currentTime = position;
+                }
+                
+                if (radioState.isPlaying && radioState.isLive) {
+                    this.audioPlayer.play().catch(console.warn);
+                }
+            }, { once: true });
+            
+        } catch (error) {
+            console.error('Erro ao carregar áudio:', error);
+        }
+    }
+
+    startTimers() {
+        // Sincronizar a cada 10 segundos
+        this.syncInterval = setInterval(() => {
+            if (radioState.isLive) {
+                this.sync();
             }
-            if (elements.albumCover) {
-                elements.albumCover.style.display = 'block';
-            }
-        }
+        }, 10000);
+
+        // Atualizar interface a cada minuto
+        this.timeInterval = setInterval(() => {
+            this.updateCurrentTime();
+            this.updateCurrentProgram();
+            this.updateScheduleDisplay();
+        }, 60000);
+
+        this.updateCurrentTime();
     }
-    
-    addToHistory(track) {
-        const historyEntry = {
-            ...track,
-            playedAt: new Date().toISOString(),
-            period: this.currentPeriod
-        };
-        
-        radioState.playHistory.push(historyEntry);
-        radioState.stats.totalPlayed++;
-        
-        // Manter apenas últimas 100 entradas
-        if (radioState.playHistory.length > 100) {
-            radioState.playHistory = radioState.playHistory.slice(-100);
-        }
-        
-        // Atualizar estatísticas populares
-        const trackKey = track.name;
-        radioState.stats.popularTracks[trackKey] = 
-            (radioState.stats.popularTracks[trackKey] || 0) + 1;
-        
-        this.saveData();
-    }
-    
-    updateRecentTracks() {
-        if (!elements.recentTracks) return;
-        
-        const recent = radioState.playHistory.slice(-5).reverse();
-        
-        if (recent.length === 0) {
-            elements.recentTracks.innerHTML = '<p>Nenhuma música tocada ainda.</p>';
-            return;
-        }
-        
-        elements.recentTracks.innerHTML = recent.map(track => `
-            <div class="recent-track">
-                <span class="track-name">${this.formatTrackName(track.name)}</span>
-                <span class="track-time">${new Date(track.playedAt).toLocaleTimeString('pt-BR', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                })}</span>
-            </div>
-        `).join('');
-    }
-    
-    playNext() {
-        if (radioState.isLive) {
-            this.scheduleNextTrack();
-        }
-    }
-    
-    skipTrack() {
-        if (radioState.isLive && elements.audioPlayer) {
-            elements.audioPlayer.pause();
-            this.playNext();
-        }
-    }
-    
+
+    // Métodos da interface (inalterados)
     togglePlayback() {
-        if (!radioState.isLive) {
-            this.startBroadcast();
-            if (radioState.currentTrack) {
-                elements.audioPlayer.play().catch(e => {
-                    console.warn('Erro no play:', e);
-                    this.showAutoplayPrompt();
-                });
-            } else {
-                this.scheduleNextTrack();
-            }
+        if (!this.audioPlayer) return;
+
+        if (radioState.isPlaying) {
+            this.audioPlayer.pause();
+            radioState.isPlaying = false;
+            radioState.isLive = false;
+            elements.playPauseBtn.innerHTML = '<span class="play-icon">▶️</span>';
         } else {
-            if (radioState.isPlaying) {
-                elements.audioPlayer.pause();
-                radioState.isPlaying = false;
-            } else {
-                elements.audioPlayer.play().catch(e => {
-                    console.warn('Erro no play:', e);
-                    this.showAutoplayPrompt();
-                });
-                radioState.isPlaying = true;
-            }
+            radioState.isPlaying = true;
+            radioState.isLive = true;
+            elements.playPauseBtn.innerHTML = '<span class="pause-icon">⏸️</span>';
+            this.sync();
         }
-        
-        this.updatePlayPauseButton();
+
+        this.updateLiveStatus();
     }
-    
-    updatePlayPauseButton() {
-        if (!elements.playPauseBtn) return;
-        
-        const playIcon = elements.playPauseBtn.querySelector('.play-icon');
-        const pauseIcon = elements.playPauseBtn.querySelector('.pause-icon');
-        
-        if (radioState.isPlaying && radioState.isLive) {
-            if (playIcon) playIcon.style.display = 'none';
-            if (pauseIcon) pauseIcon.style.display = 'block';
-        } else {
-            if (playIcon) playIcon.style.display = 'block';
-            if (pauseIcon) pauseIcon.style.display = 'none';
-        }
-    }
-    
-    favoriteTrack() {
-        if (!radioState.currentTrack) return;
-        
-        // Implementar sistema de favoritos
-        console.log('❤️ Música favoritada:', radioState.currentTrack.name);
-        
-        // Mostrar feedback visual
-        if (elements.favoriteBtn) {
-            elements.favoriteBtn.style.color = '#ff4757';
-            setTimeout(() => {
-                elements.favoriteBtn.style.color = '';
-            }, 2000);
-        }
-    }
-    
+
     setVolume(value) {
         radioState.volume = parseInt(value);
         
-        if (elements.audioPlayer) {
-            elements.audioPlayer.volume = radioState.volume / 100;
+        if (this.audioPlayer) {
+            this.audioPlayer.volume = radioState.volume / 100;
         }
+        
         if (elements.volumeValue) {
             elements.volumeValue.textContent = radioState.volume + '%';
         }
         
         this.saveData();
     }
-    
-    updateTime() {
-        if (!elements.trackTime || !elements.audioPlayer) return;
+
+    updateLiveStatus() {
+        const status = radioState.isLive ? '🔴 AO VIVO' : '⚫ OFFLINE';
         
-        const current = elements.audioPlayer.currentTime || 0;
-        const duration = elements.audioPlayer.duration || 0;
-        
-        elements.trackTime.textContent = 
-            `${this.formatTime(current)} / ${this.formatTime(duration)}`;
+        if (elements.liveIndicator) {
+            elements.liveIndicator.textContent = status;
+            elements.liveIndicator.style.color = radioState.isLive ? '#dc2626' : '#666';
+        }
+
+        if (elements.equalizer) {
+            elements.equalizer.style.display = radioState.isPlaying ? 'flex' : 'none';
+        }
     }
-    
+
+    updateTimeDisplay() {
+        if (!this.audioPlayer || !elements.trackTime) return;
+
+        const current = this.audioPlayer.currentTime || 0;
+        const duration = this.audioPlayer.duration || 0;
+
+        elements.trackTime.textContent = `${this.formatTime(current)} / ${this.formatTime(duration)}`;
+    }
+
     formatTime(seconds) {
         const mins = Math.floor(seconds / 60);
         const secs = Math.floor(seconds % 60);
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
-    
-    onTrackReady() {
-        radioState.isPlaying = true;
-        this.updatePlayPauseButton();
-        this.updatePlayCount();
-    }
-    
-    updatePlayCount() {
-        if (elements.playCount) {
-            elements.playCount.textContent = `Faixas: ${radioState.stats.totalPlayed}`;
+
+    updateTrackInfo(track) {
+        if (elements.currentTrack) {
+            elements.currentTrack.textContent = track.name || 'Conectando à transmissão...';
+        }
+        
+        if (elements.trackArtist) {
+            elements.trackArtist.textContent = track.artist || 'Rádio Supermercado do Louro';
+        }
+        
+        if (elements.trackType) {
+            elements.trackType.textContent = 'Música';
+        }
+
+        if (elements.albumCover && track.coverUrl) {
+            elements.albumCover.src = track.coverUrl;
         }
     }
-    
-    handleAudioError(error) {
-        console.error('Erro no áudio:', error);
+
+    updateStats() {
+        radioState.stats.tracksPlayed++;
         
-        // Tentar próxima faixa após erro
-        setTimeout(() => {
-            if (radioState.isLive) {
-                this.playNext();
-            }
-        }, 3000);
+        if (elements.totalPlayed) {
+            elements.totalPlayed.textContent = radioState.stats.tracksPlayed;
+        }
+        
+        this.saveData();
     }
-    
-    showAutoplayPrompt() {
-        const prompt = document.createElement('div');
-        prompt.className = 'autoplay-prompt';
-        prompt.innerHTML = `
-            <div class="prompt-content">
-                <span>🔊 Clique para ativar o áudio</span>
-            </div>
-        `;
-        
-        document.body.appendChild(prompt);
-        
-        prompt.onclick = () => {
-            if (elements.audioPlayer && radioState.isLive) {
-                elements.audioPlayer.play().catch(() => {});
+
+    addToRecentTracks(track) {
+        radioState.recentTracks.unshift({
+            ...track,
+            timestamp: new Date()
+        });
+
+        if (radioState.recentTracks.length > 10) {
+            radioState.recentTracks = radioState.recentTracks.slice(0, 10);
+        }
+
+        this.updateRecentTracksDisplay();
+    }
+
+    updateRecentTracksDisplay() {
+        if (!elements.recentTracks) return;
+
+        if (radioState.recentTracks.length === 0) {
+            elements.recentTracks.innerHTML = '<p>Nenhuma faixa tocada ainda.</p>';
+            return;
+        }
+
+        const html = radioState.recentTracks.map(track => {
+            const time = new Date(track.timestamp).toLocaleTimeString('pt-BR', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            return `
+                <div class="track-item">
+                    <div class="track-time">${time}</div>
+                    <div class="track-name">${track.name}</div>
+                </div>
+            `;
+        }).join('');
+
+        elements.recentTracks.innerHTML = html;
+    }
+
+    updateScheduleDisplay() {
+        if (!elements.scheduleGrid) return;
+
+        const now = new Date();
+        const currentHour = now.getHours();
+
+        const html = radioState.schedule.map(program => {
+            const [hour] = program.time.split(':').map(Number);
+            const isActive = currentHour >= hour && currentHour < (hour + program.duration);
+
+            return `
+                <div class="schedule-item ${isActive ? 'current' : ''}">
+                    <div class="schedule-time">${program.time}</div>
+                    <div class="schedule-program">
+                        <h4>${program.name}</h4>
+                        <p>${program.description}</p>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        elements.scheduleGrid.innerHTML = html;
+    }
+
+    updateCurrentProgram() {
+        const now = new Date();
+        const currentHour = now.getHours();
+
+        const currentProgram = radioState.schedule.find(program => {
+            const [hour] = program.time.split(':').map(Number);
+            return currentHour >= hour && currentHour < (hour + program.duration);
+        });
+
+        if (currentProgram) {
+            if (elements.currentProgram) {
+                elements.currentProgram.textContent = currentProgram.name;
             }
-            prompt.remove();
+            if (elements.programDescription) {
+                elements.programDescription.textContent = currentProgram.description;
+            }
+        }
+    }
+
+    updateCurrentTime() {
+        if (elements.currentTime) {
+            const now = new Date();
+            elements.currentTime.textContent = now.toLocaleTimeString('pt-BR', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+    }
+
+    // Métodos administrativos
+    showRequestModal() {
+        if (elements.requestModal) {
+            elements.requestModal.classList.add('show');
+        }
+    }
+
+    submitRequest() {
+        const songRequest = document.getElementById('songRequest')?.value;
+
+        if (!songRequest) {
+            alert('Por favor, informe a música/artista desejado.');
+            return;
+        }
+
+        const request = {
+            songRequest,
+            timestamp: new Date().toISOString()
         };
+
+        radioState.requests.unshift(request);
+        radioState.stats.requestsReceived++;
+
+        if (radioState.requests.length > 50) {
+            radioState.requests = radioState.requests.slice(0, 50);
+        }
+
+        this.saveData();
+        this.closeModal('requestModal');
         
-        setTimeout(() => prompt.remove(), 10000);
+        elements.requestForm?.reset();
+        
+        alert('Pedido enviado com sucesso! Obrigado pela participação!');
     }
-    
-    updateBroadcastStatus(status) {
-        if (elements.broadcastStatus) {
-            elements.broadcastStatus.textContent = status;
+
+    showAdminModal() {
+        if (elements.passwordModal) {
+            elements.passwordModal.classList.add('show');
         }
     }
-    
-    updateListenerCount() {
-        // Simular contagem de ouvintes (em uma implementação real, viria do servidor)
-        radioState.listeners = Math.floor(Math.random() * 50) + 10;
-        
-        if (elements.listenerCount) {
-            elements.listenerCount.textContent = `${radioState.listeners} ouvintes`;
+
+    closeAdminPanel() {
+        if (elements.adminPanel) {
+            elements.adminPanel.classList.add('hidden');
         }
     }
-    
-    startUptime() {
-        const startTime = Date.now();
-        
-        this.uptimeTimer = setInterval(() => {
-            const now = Date.now();
-            const uptime = Math.floor((now - startTime) / 1000);
-            
-            const hours = Math.floor(uptime / 3600);
-            const minutes = Math.floor((uptime % 3600) / 60);
-            const seconds = uptime % 60;
-            
-            const uptimeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            
-            const uptimeElement = document.getElementById('uptime');
-            if (uptimeElement) {
-                uptimeElement.textContent = uptimeStr;
-            }
-        }, 1000);
-    }
-    
-    // Métodos para interface
-    switchInfoTab(tabName) {
-        // Remove active de todas as abas
-        document.querySelectorAll('.info-tab').forEach(tab => {
-            tab.classList.remove('active');
-        });
-        document.querySelectorAll('.info-section').forEach(section => {
-            section.classList.remove('active');
-        });
-        
-        // Ativa aba selecionada
-        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-        document.getElementById(`${tabName}-section`).classList.add('active');
-        
-        // Atualizar conteúdo se necessário
-        if (tabName === 'recent') {
-            this.updateRecentTracks();
-        } else if (tabName === 'schedule') {
-            this.updateScheduleDisplay();
-        } else if (tabName === 'requests') {
-            this.updateRequestsList();
-        }
-    }
-    
+
     switchAdminTab(tabName) {
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.remove('active');
@@ -1314,1096 +596,324 @@ class RadioLive24 {
         document.querySelectorAll('.tab-content').forEach(content => {
             content.classList.remove('active');
         });
-        
-        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-        document.getElementById(`${tabName}-tab`).classList.add('active');
-        
-        if (tabName === 'content') {
-            this.updateContentLibrary();
-        } else if (tabName === 'reports') {
-            this.updateReports();
+
+        const tabBtn = document.querySelector(`[data-tab="${tabName}"]`);
+        const tabContent = document.getElementById(`${tabName}-tab`);
+
+        if (tabBtn) tabBtn.classList.add('active');
+        if (tabContent) tabContent.classList.add('active');
+
+        if (tabName === 'requests') {
+            this.updateAdminRequestsList();
+        } else if (tabName === 'stats') {
+            this.updateAdminStats();
+        } else if (tabName === 'content') {
+            this.updateContentLists();
         }
     }
-    
-    sendRequest() {
-        const requestInput = document.getElementById('requestSong');
-        if (!requestInput || !requestInput.value.trim()) return;
+
+    adminToggleBroadcast() {
+        this.togglePlayback();
         
-        const request = {
-            song: requestInput.value.trim(),
-            timestamp: new Date().toISOString(),
-            id: Date.now()
-        };
-        
-        radioState.stats.requests.push(request);
-        this.saveData();
-        
-        requestInput.value = '';
-        this.updateRequestsList();
-        this.showModal('requestModal');
-    }
-    
-    updateRequestsList() {
-        const requestsList = document.getElementById('requestsList');
-        if (!requestsList) return;
-        
-        if (radioState.stats.requests.length === 0) {
-            requestsList.innerHTML = '<p>Nenhum pedido ainda hoje.</p>';
-            return;
+        const btn = document.getElementById('adminToggleBroadcast');
+        if (btn) {
+            btn.textContent = radioState.isLive ? '⏸️ Pausar Transmissão' : '▶️ Iniciar Transmissão';
         }
         
-        const recent = radioState.stats.requests.slice(-10).reverse();
-        requestsList.innerHTML = recent.map(request => `
-            <div class="request-item">
-                <span class="request-song">${request.song}</span>
-                <span class="request-time">${new Date(request.timestamp).toLocaleTimeString('pt-BR', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                })}</span>
-            </div>
-        `).join('');
+        this.updateAdminStatus();
     }
-    
-    updateScheduleDisplay() {
-        if (!elements.scheduleList) return;
-        
-        const now = new Date();
-        const scheduleItems = [
-            { time: '06:00 - 12:00', program: '🌅 Manhã Musical', current: this.currentPeriod === 'morning' },
-            { time: '12:00 - 18:00', program: '☀️ Tarde Animada', current: this.currentPeriod === 'afternoon' },
-            { time: '18:00 - 00:00', program: '🌆 Noite Especial', current: this.currentPeriod === 'evening' },
-            { time: '00:00 - 06:00', program: '🌙 Madrugada Suave', current: this.currentPeriod === 'late' }
-        ];
-        
-        elements.scheduleList.innerHTML = scheduleItems.map(item => `
-            <div class="schedule-item ${item.current ? 'current' : ''}">
-                <span class="schedule-time">${item.time}</span>
-                <span class="schedule-program">${item.program}</span>
-            </div>
-        `).join('');
-    }
-    
-    // Métodos administrativos (modificados para sincronização)
-    openAdminModal() {
-        this.showModal('passwordModal');
-    }
-    
-    checkAdminPassword() {
-        const password = elements.adminPassword?.value;
-        if (password === 'admin123') {
-            this.closeModal('passwordModal');
-            this.showAdmin();
-            
-            // Ativar modo admin na sincronização
-            if (this.syncManager) {
-                this.syncManager.setAdminMode(true);
-            }
-        } else {
-            alert('Senha incorreta!');
-            if (elements.adminPassword) {
-                elements.adminPassword.value = '';
-            }
-        }
-    }
-    
-    showAdmin() {
-        if (elements.playerMode) elements.playerMode.style.display = 'none';
-        if (elements.adminMode) elements.adminMode.style.display = 'block';
-        
-        this.updateContentLibrary();
-        this.updateReports();
-        
-        // Mostrar indicador de administrador
-        this.showAdminIndicator();
-    }
-    
-    showPlayer() {
-        if (elements.playerMode) elements.playerMode.style.display = 'flex';
-        if (elements.adminMode) elements.adminMode.style.display = 'none';
-        
-        // Desativar modo admin
-        if (this.syncManager) {
-            this.syncManager.setAdminMode(false);
-        }
-        
-        // Remover indicador de admin
-        this.hideAdminIndicator();
-    }
-    
-    showAdminIndicator() {
-        let indicator = document.getElementById('adminIndicator');
-        if (!indicator) {
-            indicator = document.createElement('div');
-            indicator.id = 'adminIndicator';
-            indicator.className = 'admin-indicator';
-            indicator.innerHTML = `
-                <div class="admin-indicator-content">
-                    <span class="admin-icon">🔧</span>
-                    <span>Modo Admin Ativo</span>
-                    <small>Suas alterações serão sincronizadas</small>
-                </div>
-            `;
-            document.body.appendChild(indicator);
-        }
-    }
-    
-    hideAdminIndicator() {
-        const indicator = document.getElementById('adminIndicator');
-        if (indicator) {
-            indicator.remove();
-        }
-    }
-    
-    toggleBroadcast() {
-        if (radioState.isLive) {
-            this.stopBroadcast();
-        } else {
-            this.startBroadcast();
-        }
-    }
-    
+
     emergencyStop() {
-        if (confirm('Tem certeza que deseja parar a transmissão?')) {
-            this.stopBroadcast();
+        if (confirm('Tem certeza que deseja fazer uma parada de emergência?')) {
             radioState.isPlaying = false;
-            if (elements.audioPlayer) {
-                elements.audioPlayer.pause();
-            }
-            this.updatePlayPauseButton();
-        }
-    }
-    
-    updateContentLibrary() {
-        this.updateLibraryCount('music', radioState.content.music);
-        this.updateLibraryCount('jingle', radioState.content.jingles);
-        this.updateLibraryCount('time', radioState.content.time);
-        
-        // Contar programas
-        const totalPrograms = Object.values(radioState.content.programs)
-            .reduce((total, programs) => total + programs.length, 0);
-        this.updateLibraryCount('program', { length: totalPrograms });
-        
-        this.updateLibraryList('musicList', radioState.content.music);
-        this.updateLibraryList('jingleList', radioState.content.jingles);
-        this.updateLibraryList('timeList', radioState.content.time);
-        this.updateProgramsList();
-    }
-    
-    updateLibraryCount(type, content) {
-        const countElement = document.getElementById(`${type}Count`);
-        if (countElement) {
-            countElement.textContent = content.length || 0;
-        }
-    }
-    
-    updateLibraryList(listId, content) {
-        const listElement = document.getElementById(listId);
-        if (!listElement) return;
-        
-        if (content.length === 0) {
-            listElement.innerHTML = '<p>Nenhum arquivo encontrado.</p>';
-            return;
-        }
-        
-        listElement.innerHTML = content.map((item, index) => `
-            <div class="file-item">
-                <span class="file-name">${this.formatTrackName(item.name)}</span>
-                <button onclick="radioSystem.deleteContent('${listId.replace('List', '')}', ${index})" class="btn-danger btn-small">🗑️</button>
-            </div>
-        `).join('');
-    }
-    
-    updateProgramsList() {
-        const programList = document.getElementById('programList');
-        if (!programList) return;
-        
-        let html = '';
-        Object.entries(radioState.content.programs).forEach(([period, programs]) => {
-            const periodNames = {
-                morning: '🌅 Manhã',
-                afternoon: '☀️ Tarde',
-                evening: '🌆 Noite',
-                late: '🌙 Madrugada'
-            };
+            radioState.isLive = false;
             
-            html += `<h5>${periodNames[period]} (${programs.length})</h5>`;
-            programs.forEach((program, index) => {
-                html += `
-                    <div class="file-item">
-                        <span class="file-name">${this.formatTrackName(program.name)}</span>
-                        <button onclick="radioSystem.deleteProgramContent('${period}', ${index})" class="btn-danger btn-small">🗑️</button>
-                    </div>
-                `;
-            });
+            if (this.audioPlayer) {
+                this.audioPlayer.pause();
+            }
+            
+            this.updateLiveStatus();
+            this.updateAdminStatus();
+            alert('Transmissão interrompida em emergência!');
+        }
+    }
+
+    forceTimeAnnouncement() {
+        if (radioState.playlists.time.length > 0) {
+            console.log('Forçando hora certa manualmente');
+            const timeTrack = radioState.playlists.time[0];
+            this.currentSyncIndex = -1; // Forçar mudança
+            this.loadTrackAtPosition(timeTrack, 0);
+            this.updateTrackInfo(timeTrack);
+        } else {
+            alert('Nenhum arquivo de hora certa disponível!');
+        }
+    }
+
+    updateAdminStatus() {
+        const statusElement = document.getElementById('adminLiveStatus');
+        if (statusElement) {
+            statusElement.textContent = radioState.isLive ? '🔴 AO VIVO' : '⚫ OFFLINE';
+            statusElement.style.color = radioState.isLive ? '#dc2626' : '#666';
+        }
+    }
+
+    updateAdminRequestsList() {
+        const container = document.getElementById('adminRequestsList');
+        if (!container) return;
+
+        if (radioState.requests.length === 0) {
+            container.innerHTML = '<p style="color: #a0a0a0; text-align: center; padding: 2rem;">Nenhum pedido recebido ainda.</p>';
+            return;
+        }
+
+        const html = radioState.requests.map((request, index) => `
+            <div class="request-item" style="background: rgba(255,255,255,0.05); padding: 1rem; margin-bottom: 1rem; border-radius: 8px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span style="color: #a0a0a0; font-size: 0.8rem;">${new Date(request.timestamp).toLocaleString('pt-BR')}</span>
+                </div>
+                <div style="color: #4caf50; margin-bottom: 0.5rem; font-size: 1.1rem;">${request.songRequest}</div>
+                <div style="margin-top: 1rem;">
+                    <button onclick="removeRequest(${index})" class="btn danger" style="padding: 0.3rem 0.8rem; font-size: 0.8rem;">🗑️ Remover</button>
+                </div>
+            </div>
+        `).join('');
+
+        container.innerHTML = html;
+    }
+
+    updateAdminStats() {
+        const elements = {
+            tracksToday: document.getElementById('adminStatsTracksToday'),
+            requestsToday: document.getElementById('adminStatsRequestsToday'),
+            totalTracks: document.getElementById('adminStatsTotalTracks')
+        };
+
+        if (elements.tracksToday) {
+            elements.tracksToday.textContent = radioState.stats.tracksPlayed;
+        }
+
+        if (elements.requestsToday) {
+            elements.requestsToday.textContent = radioState.stats.requestsReceived;
+        }
+
+        if (elements.totalTracks) {
+            const totalFiles = Object.values(radioState.playlists)
+                .reduce((sum, playlist) => sum + playlist.length, 0);
+            elements.totalTracks.textContent = totalFiles;
+        }
+    }
+
+    updateContentLists() {
+        const categories = ['music', 'announcements', 'time'];
+        
+        categories.forEach(category => {
+            const container = document.getElementById(`${category}List`);
+            if (!container) return;
+
+            const files = radioState.playlists[category] || [];
+            
+            if (files.length === 0) {
+                container.innerHTML = '<p style="color: #a0a0a0; font-size: 0.8rem; margin-top: 0.5rem;">Nenhum arquivo enviado ainda.</p>';
+                return;
+            }
+
+            const html = files.map((file, index) => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <span style="color: #a0a0a0; font-size: 0.8rem; flex: 1;">${file.name}</span>
+                    <button onclick="removeFile('${category}', ${index})" style="background: #dc2626; border: none; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">×</button>
+                </div>
+            `).join('');
+
+            container.innerHTML = html;
         });
-        
-        programList.innerHTML = html || '<p>Nenhum programa encontrado.</p>';
     }
-    
-    updateReports() {
-        this.updateTopTracks();
-        this.updateRequestsReport();
-        this.updateSystemLogs();
-        this.updateStats();
-    }
-    
-    updateTopTracks() {
-        const topTracksElement = document.getElementById('topTracks');
-        if (!topTracksElement) return;
-        
-        const sorted = Object.entries(radioState.stats.popularTracks)
-            .sort(([,a], [,b]) => b - a)
-            .slice(0, 10);
-        
-        if (sorted.length === 0) {
-            topTracksElement.innerHTML = '<p>Nenhuma estatística ainda.</p>';
-            return;
-        }
-        
-        topTracksElement.innerHTML = sorted.map(([track, count]) => `
-            <div class="report-item">
-                <span class="track-name">${this.formatTrackName(track)}</span>
-                <span class="play-count">${count}x</span>
-            </div>
-        `).join('');
-    }
-    
-    updateRequestsReport() {
-        const requestsReport = document.getElementById('requestsReport');
-        if (!requestsReport) return;
-        
-        if (radioState.stats.requests.length === 0) {
-            requestsReport.innerHTML = '<p>Nenhum pedido recebido.</p>';
-            return;
-        }
-        
-        const recent = radioState.stats.requests.slice(-5).reverse();
-        requestsReport.innerHTML = recent.map(request => `
-            <div class="report-item">
-                <span class="track-name">${request.song}</span>
-                <span class="track-time">${new Date(request.timestamp).toLocaleString('pt-BR')}</span>
-            </div>
-        `).join('');
-    }
-    
-    updateSystemLogs() {
-        const systemLogs = document.getElementById('systemLogs');
-        if (!systemLogs) return;
-        
-        const logs = [
-            { time: new Date(), message: 'Sistema iniciado', type: 'info' },
-            { time: new Date(Date.now() - 30000), message: 'Transmissão ao vivo ativa', type: 'success' },
-            { time: new Date(Date.now() - 60000), message: 'Conteúdo carregado', type: 'info' }
-        ];
-        
-        systemLogs.innerHTML = logs.map(log => `
-            <div class="log-item ${log.type}">
-                <span class="log-time">${log.time.toLocaleTimeString('pt-BR')}</span>
-                <span class="log-message">${log.message}</span>
-            </div>
-        `).join('');
-    }
-    
-    updateStats() {
-        const totalPlayedElement = document.getElementById('totalPlayed');
-        if (totalPlayedElement) {
-            totalPlayedElement.textContent = radioState.stats.totalPlayed;
-        }
-        
-        const serverStatusElement = document.getElementById('serverStatus');
-        if (serverStatusElement) {
-            serverStatusElement.textContent = radioState.isLive ? '🟢 Online' : '🔴 Offline';
-        }
-    }
-    
-    // Métodos utilitários
-    showModal(modalId) {
-        const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.style.display = 'flex';
-        }
-    }
-    
+
     closeModal(modalId) {
         const modal = document.getElementById(modalId);
         if (modal) {
-            modal.style.display = 'none';
+            modal.classList.remove('show');
         }
     }
-    
+
+    handleAudioError() {
+        console.error('Erro no áudio');
+        setTimeout(() => {
+            if (radioState.isLive) {
+                this.sync();
+            }
+        }, 3000);
+    }
+
     showError(message) {
         console.error(message);
-        alert(message);
-    }
-    
-    // Métodos de upload
-    deleteContent(type, index) {
-        if (!confirm('Tem certeza que deseja excluir este item?')) return;
-        
-        radioState.content[type].splice(index, 1);
-        this.saveData();
-        this.updateContentLibrary();
-    }
-    
-    deleteProgramContent(period, index) {
-        if (!confirm('Tem certeza que deseja excluir este programa?')) return;
-        
-        radioState.content.programs[period].splice(index, 1);
-        this.saveData();
-        this.updateContentLibrary();
-    }
-}
-
-// Classe para gerenciar uploads
-class ContentUploader {
-    constructor(radioSystem) {
-        this.radio = radioSystem;
-    }
-    
-    async uploadContent(type) {
-        const fileInputs = {
-            music: 'musicUpload',
-            jingles: 'jingleUpload',
-            time: 'timeUpload',
-            programs: 'programUpload'
-        };
-        
-        const fileInput = document.getElementById(fileInputs[type]);
-        if (!fileInput || fileInput.files.length === 0) {
-            alert('Selecione pelo menos um arquivo!');
-            return;
+        if (elements.currentTrack) {
+            elements.currentTrack.textContent = message;
         }
-        
-        const files = Array.from(fileInput.files);
-        this.showUploadModal();
-        
+    }
+
+    loadStoredData() {
         try {
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                this.updateUploadProgress(i, files.length, `Enviando: ${file.name}`);
-                
-                const uploadedFile = await this.uploadToCloudinary(file, type);
-                this.addToLibrary(uploadedFile, type);
+            const saved = localStorage.getItem('radioLouroData');
+            if (saved) {
+                const data = JSON.parse(saved);
+                Object.assign(radioState, data);
+                console.log('Dados carregados do localStorage');
             }
-            
-            this.hideUploadModal();
-            fileInput.value = '';
-            this.radio.updateContentLibrary();
-            alert(`${files.length} arquivo(s) enviado(s) com sucesso!`);
-            
         } catch (error) {
-            console.error('Erro no upload:', error);
-            alert('Erro no upload: ' + error.message);
-            this.hideUploadModal();
+            console.warn('Erro ao carregar dados:', error);
         }
     }
-    
-    async uploadToCloudinary(file, type) {
-        const formData = new FormData();
-        
-        // Determinar pasta baseado no tipo
-        let folder = 'general';
-        if (type === 'programs') {
-            const programSelect = document.getElementById('programSelect');
-            folder = `programs/${programSelect ? programSelect.value : 'general'}`;
-        } else {
-            folder = type;
+
+    saveData() {
+        try {
+            localStorage.setItem('radioLouroData', JSON.stringify(radioState));
+        } catch (error) {
+            console.warn('Erro ao salvar dados:', error);
         }
-        
-        formData.append('file', file);
-        formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
-        formData.append('folder', `radio-louro/${folder}`);
-        formData.append('resource_type', 'auto');
-        
-        const response = await fetch(
-            `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/upload`,
-            {
-                method: 'POST',
-                body: formData
-            }
-        );
-        
-        if (!response.ok) {
-            throw new Error(`Erro HTTP: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        return {
-            name: file.name,
-            url: data.secure_url,
-            publicId: data.public_id,
-            duration: data.duration || 0,
-            format: data.format,
-            uploadedAt: new Date().toISOString()
-        };
     }
-    
-    addToLibrary(file, type) {
-        if (type === 'programs') {
-            const programSelect = document.getElementById('programSelect');
-            const period = programSelect ? programSelect.value : 'morning';
-            radioState.content.programs[period].push(file);
-        } else {
-            radioState.content[type].push(file);
-        }
-        
-        this.radio.saveData();
-    }
-    
-    showUploadModal() {
-        this.radio.showModal('uploadModal');
-    }
-    
-    hideUploadModal() {
-        this.radio.closeModal('uploadModal');
-    }
-    
-    updateUploadProgress(current, total, status) {
-        const progress = Math.round((current / total) * 100);
-        
-        const progressElement = document.getElementById('uploadProgress');
-        if (progressElement) {
-            progressElement.style.width = progress + '%';
-        }
-        
-        const statusElement = document.getElementById('uploadStatus');
-        if (statusElement) {
-            statusElement.textContent = status;
-        }
+
+    destroy() {
+        if (this.syncInterval) clearInterval(this.syncInterval);
+        if (this.preciseSyncInterval) clearInterval(this.preciseSyncInterval);
+        if (this.timeInterval) clearInterval(this.timeInterval);
     }
 }
 
-// Funções globais para os botões HTML
-let radioSystem;
-let uploader;
+// Instância global
+let radioManager;
 
-// Função principal de upload chamada pelos botões
-function uploadContent(type) {
-    if (uploader) {
-        uploader.uploadContent(type);
+// Funções globais para HTML
+window.closeModal = function(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('show');
     }
-}
+};
 
-// Função para verificar senha admin
-function checkAdminPassword() {
-    if (radioSystem) {
-        radioSystem.checkAdminPassword();
+window.checkAdminPassword = function() {
+    const password = document.getElementById('adminPassword')?.value;
+    if (password === 'admin123') {
+        closeModal('passwordModal');
+        showAdminPanel();
+        document.getElementById('adminPassword').value = '';
+    } else {
+        alert('Senha incorreta!');
+        document.getElementById('adminPassword').value = '';
     }
-}
+};
 
-// Função para fechar modais
-function closeModal(modalId) {
-    if (radioSystem) {
-        radioSystem.closeModal(modalId);
+window.showAdminPanel = function() {
+    const panel = elements.adminPanel || document.getElementById('adminPanel');
+    if (panel) {
+        panel.classList.remove('hidden');
+        if (radioManager) {
+            radioManager.updateAdminStatus();
+            radioManager.updateAdminStats();
+            radioManager.updateContentLists();
+            radioManager.updateAdminRequestsList();
+        }
     }
-}
+};
 
-// Funções de configuração de programação
-function saveScheduleConfig() {
-    const periods = ['morning', 'afternoon', 'evening', 'late'];
+window.handleUpload = async function(category) {
+    const fileInputs = {
+        music: 'musicUpload',
+        announcements: 'announcementUpload', 
+        time: 'timeUpload'
+    };
+
+    const inputId = fileInputs[category];
+    const input = document.getElementById(inputId);
     
-    periods.forEach(period => {
-        const contentSelect = document.querySelector(`[data-period="${period}"]`);
-        const freqInput = document.querySelector(`.jingle-frequency[data-period="${period}"]`);
+    if (!input || input.files.length === 0) {
+        alert('Selecione pelo menos um arquivo!');
+        return;
+    }
+
+    try {
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        if (loadingOverlay) {
+            loadingOverlay.classList.add('show');
+        }
+
+        const files = Array.from(input.files);
         
-        if (contentSelect && freqInput) {
-            radioState.schedule[period] = {
-                type: contentSelect.value,
-                jingleFreq: parseInt(freqInput.value)
+        for (const file of files) {
+            const fakeUrl = URL.createObjectURL(file);
+            const trackData = {
+                name: file.name.replace(/\.[^/.]+$/, ""),
+                artist: 'Upload Local',
+                url: fakeUrl,
+                uploadedAt: new Date().toISOString(),
+                size: file.size
             };
+
+            radioState.playlists[category].push(trackData);
         }
-    });
-    
-    if (radioSystem) {
-        radioSystem.saveData();
-    }
-    
-    alert('Configurações de programação salvas!');
-}
 
-function resetSchedule() {
-    if (!confirm('Tem certeza que deseja resetar a programação?')) return;
-    
-    radioState.schedule = {
-        morning: { type: 'mixed', jingleFreq: 15 },
-        afternoon: { type: 'mixed', jingleFreq: 10 },
-        evening: { type: 'mixed', jingleFreq: 20 },
-        late: { type: 'music', jingleFreq: 30 }
-    };
-    
-    if (radioSystem) {
-        radioSystem.saveData();
-    }
-    
-    // Atualizar interface
-    document.querySelectorAll('.content-type-select').forEach(select => {
-        const period = select.dataset.period;
-        select.value = radioState.schedule[period].type;
-    });
-    
-    document.querySelectorAll('.jingle-frequency').forEach(input => {
-    document.querySelectorAll('.jingle-frequency').forEach(input => {
-        const period = input.dataset.period;
-        input.value = radioState.schedule[period].jingleFreq;
-    });
-    
-    alert('Programação resetada e sincronizada!');
-}
-
-// Funções de relatórios
-function refreshReports() {
-    if (radioSystem) {
-        radioSystem.updateReports();
-    }
-}
-
-function exportReport() {
-    const reportData = {
-        stats: radioState.stats,
-        playHistory: radioState.playHistory,
-        generatedAt: new Date().toISOString()
-    };
-    
-    const dataStr = JSON.stringify(reportData, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(dataBlob);
-    link.download = `relatorio-radio-${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
-}
-
-async function clearReports() {
-    if (!confirm('Tem certeza que deseja limpar todos os relatórios?')) return;
-    
-    radioState.stats = {
-        totalPlayed: 0,
-        dailyStats: {},
-        popularTracks: {},
-        requests: []
-    };
-    radioState.playHistory = [];
-    
-    if (radioSystem) {
-        radioSystem.saveData();
-        radioSystem.updateReports();
+        radioManager.saveData();
+        radioManager.updateContentLists();
         
-        // Sincronizar limpeza de relatórios
-        if (radioSystem.syncManager && radioSystem.syncManager.isAdmin) {
-            await radioSystem.syncManager.publishUpdate();
+        input.value = '';
+        
+        alert(`${files.length} arquivo(s) adicionado(s) com sucesso à categoria ${category}!`);
+
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('show');
         }
-    }
-    
-    alert('Relatórios limpos e sincronizados!');
-}
 
-// Configurações de automação (modificadas para sincronização)
-function setupAutomationControls() {
-    const controls = [
-        'hourlyTime', 'autoJingles', 'avoidRepeat', 'crossfade'
-    ];
-    
-    controls.forEach(control => {
-        const checkbox = document.getElementById(control);
-        if (checkbox) {
-            checkbox.addEventListener('change', async (e) => {
-                radioState.automation[control] = e.target.checked;
-                if (radioSystem) {
-                    radioSystem.saveData();
-                    
-                    // Sincronizar configurações de automação
-                    if (radioSystem.syncManager && radioSystem.syncManager.isAdmin) {
-                        await radioSystem.syncManager.publishUpdate();
-                        showAutomationSyncNotification();
-                    }
-                }
-            });
-        }
-    });
-    
-    // Controles numéricos
-    const repeatInterval = document.getElementById('repeatInterval');
-    if (repeatInterval) {
-        repeatInterval.addEventListener('change', async (e) => {
-            radioState.automation.repeatInterval = parseInt(e.target.value);
-            if (radioSystem) {
-                radioSystem.saveData();
-                
-                if (radioSystem.syncManager && radioSystem.syncManager.isAdmin) {
-                    await radioSystem.syncManager.publishUpdate();
-                }
-            }
-        });
-    }
-    
-    const crossfadeDuration = document.getElementById('crossfadeDuration');
-    const crossfadeValue = document.getElementById('crossfadeValue');
-    if (crossfadeDuration && crossfadeValue) {
-        crossfadeDuration.addEventListener('input', async (e) => {
-            const value = parseInt(e.target.value);
-            radioState.automation.crossfadeDuration = value;
-            crossfadeValue.textContent = value + 's';
-            if (radioSystem) {
-                radioSystem.saveData();
-                
-                if (radioSystem.syncManager && radioSystem.syncManager.isAdmin) {
-                    await radioSystem.syncManager.publishUpdate();
-                }
-            }
-        });
-    }
-}
-
-function showAutomationSyncNotification() {
-    const notification = document.createElement('div');
-    notification.className = 'automation-sync-notification';
-    notification.innerHTML = `
-        <div class="automation-sync-content">
-            <span class="sync-icon">🤖</span>
-            <span>Configurações de automação sincronizadas!</span>
-        </div>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => notification.remove(), 3000);
-}
-
-// Função modificada para deletar conteúdo com sincronização
-async function deleteContent(type, index) {
-    if (!confirm('Tem certeza que deseja excluir este item?')) return;
-    
-    radioState.content[type].splice(index, 1);
-    
-    if (radioSystem) {
-        radioSystem.saveData();
-        radioSystem.updateContentLibrary();
-        
-        // Sincronizar exclusão
-        if (radioSystem.syncManager && radioSystem.syncManager.isAdmin) {
-            await radioSystem.syncManager.publishUpdate();
-            showDeleteSyncNotification();
-        }
-    }
-}
-
-async function deleteProgramContent(period, index) {
-    if (!confirm('Tem certeza que deseja excluir este programa?')) return;
-    
-    radioState.content.programs[period].splice(index, 1);
-    
-    if (radioSystem) {
-        radioSystem.saveData();
-        radioSystem.updateContentLibrary();
-        
-        // Sincronizar exclusão
-        if (radioSystem.syncManager && radioSystem.syncManager.isAdmin) {
-            await radioSystem.syncManager.publishUpdate();
-            showDeleteSyncNotification();
-        }
-    }
-}
-
-function showDeleteSyncNotification() {
-    const notification = document.createElement('div');
-    notification.className = 'delete-sync-notification';
-    notification.innerHTML = `
-        <div class="delete-sync-content">
-            <span class="sync-icon">🗑️</span>
-            <span>Exclusão sincronizada em todos os dispositivos!</span>
-        </div>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => notification.remove(), 3000);
-}
-
-// Inicialização do sistema com sincronização
-function initRadioSystem() {
-    try {
-        radioSystem = new RadioLive24();
-        uploader = new ContentUploader(radioSystem);
-        
-        // Configurar controles de automação
-        setTimeout(setupAutomationControls, 1000);
-        
-        // Configurar listener para atualizações de conteúdo
-        window.addEventListener('radioContentUpdated', (event) => {
-            console.log('📻 Conteúdo atualizado por sincronização:', event.detail.timestamp);
-            
-            // Atualizar interface se necessário
-            if (radioSystem) {
-                radioSystem.updateContentLibrary();
-                radioSystem.updateReports();
-                
-                // Se estava tocando, pode precisar atualizar a programação
-                if (radioState.isLive) {
-                    radioSystem.checkPlaylistStatus();
-                }
-            }
-        });
-        
-        // Adicionar estilo das notificações de sincronização
-        addSyncNotificationStyles();
-        
-        console.log('🎙️ Sistema de rádio 24h com sincronização inicializado!');
-        
     } catch (error) {
-        console.error('Erro na inicialização:', error);
+        console.error('Erro no upload:', error);
+        alert('Erro no upload. Tente novamente.');
         
-        // Tentar novamente em 2 segundos
-        setTimeout(initRadioSystem, 2000);
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('show');
+        }
     }
-}
+};
 
-// Função para adicionar estilos das notificações
-function addSyncNotificationStyles() {
-    if (document.getElementById('syncNotificationStyles')) return;
-    
-    const style = document.createElement('style');
-    style.id = 'syncNotificationStyles';
-    style.textContent = `
-        .sync-notification,
-        .sync-success-notification,
-        .config-sync-notification,
-        .automation-sync-notification,
-        .delete-sync-notification {
-            position: fixed;
-            top: 30px;
-            right: 30px;
-            background: linear-gradient(135deg, #4FACFE 0%, #00F2FE 100%);
-            color: white;
-            padding: 15px 25px;
-            border-radius: 12px;
-            z-index: 10000;
-            box-shadow: 0 8px 25px rgba(79, 172, 254, 0.4);
-            animation: slideInRight 0.5s ease-out;
-        }
-        
-        .sync-success-notification {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
-        }
-        
-        .config-sync-notification {
-            background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
-            box-shadow: 0 8px 25px rgba(255, 152, 0, 0.4);
-        }
-        
-        .automation-sync-notification {
-            background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
-            box-shadow: 0 8px 25px rgba(156, 39, 176, 0.4);
-        }
-        
-        .delete-sync-notification {
-            background: linear-gradient(135deg, #F44336 0%, #D32F2F 100%);
-            box-shadow: 0 8px 25px rgba(244, 67, 54, 0.4);
-        }
-        
-        .sync-content,
-        .sync-success-content,
-        .config-sync-content,
-        .automation-sync-content,
-        .delete-sync-content {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: 600;
-            font-size: 0.95rem;
-        }
-        
-        .sync-icon {
-            font-size: 1.2rem;
-        }
-        
-        .admin-indicator {
-            position: fixed;
-            top: 90px;
-            right: 30px;
-            background: linear-gradient(135deg, #7877C6 0%, #FF77C6 100%);
-            color: white;
-            padding: 15px 20px;
-            border-radius: 12px;
-            z-index: 9999;
-            box-shadow: 0 8px 25px rgba(120, 119, 198, 0.4);
-            animation: slideInRight 0.5s ease-out;
-            text-align: center;
-        }
-        
-        .admin-indicator-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 5px;
-        }
-        
-        .admin-icon {
-            font-size: 1.5rem;
-        }
-        
-        .admin-indicator-content small {
-            opacity: 0.8;
-            font-size: 0.75rem;
-        }
-        
-        @keyframes slideInRight {
-            from {
-                opacity: 0;
-                transform: translateX(100px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .sync-notification,
-            .sync-success-notification,
-            .config-sync-notification,
-            .automation-sync-notification,
-            .delete-sync-notification,
-            .admin-indicator {
-                top: 20px;
-                right: 20px;
-                left: 20px;
-                padding: 12px 15px;
-                font-size: 0.85rem;
-            }
-            
-            .admin-indicator {
-                top: 70px;
-            }
-        }
-    `;
-    
-    document.head.appendChild(style);
-}
-
-// Verificar status de conectividade
-function checkConnectivity() {
-    const isOnline = navigator.onLine;
-    
-    if (!isOnline) {
-        console.warn('🔴 Sem conexão - funcionalidade limitada');
-        showOfflineNotification();
+window.removeFile = function(category, index) {
+    if (confirm('Tem certeza que deseja remover este arquivo?')) {
+        radioState.playlists[category].splice(index, 1);
+        radioManager.saveData();
+        radioManager.updateContentLists();
+        radioManager.updateAdminStats();
+        alert('Arquivo removido com sucesso!');
     }
-    
-    return isOnline;
-}
+};
 
-function showOfflineNotification() {
-    const notification = document.createElement('div');
-    notification.className = 'offline-notification';
-    notification.innerHTML = `
-        <div class="offline-content">
-            <span class="offline-icon">📡</span>
-            <span>Modo Offline - Sincronização pausada</span>
-        </div>
-    `;
+window.removeRequest = function(index) {
+    if (confirm('Tem certeza que deseja remover este pedido?')) {
+        radioState.requests.splice(index, 1);
+        radioManager.saveData();
+        radioManager.updateAdminRequestsList();
+        radioManager.updateAdminStats();
+        alert('Pedido removido com sucesso!');
+    }
+};
+
+// Inicialização
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM carregado, iniciando rádio...');
     
-    document.body.appendChild(notification);
+    radioManager = new RadioManager();
+    radioManager.init();
     
-    // Remover quando voltar online
-    window.addEventListener('online', () => {
-        notification.remove();
-        
-        // Forçar sincronização quando voltar online
-        if (radioSystem && radioSystem.syncManager) {
-            radioSystem.syncManager.forceSync();
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('modal')) {
+            e.target.classList.remove('show');
         }
     });
-}
+});
 
-// Listeners de conectividade
-window.addEventListener('online', () => {
-    console.log('🟢 Conexão restaurada');
-    if (radioSystem && radioSystem.syncManager) {
-        radioSystem.syncManager.forceSync();
+// Cleanup ao sair
+window.addEventListener('beforeunload', function() {
+    if (radioManager) {
+        radioManager.saveData();
+        radioManager.destroy();
     }
 });
 
-window.addEventListener('offline', () => {
-    console.log('🔴 Conexão perdida');
-    showOfflineNotification();
-});
-
-// Inicialização quando DOM estiver pronto
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initRadioSystem);
-} else {
-    initRadioSystem();
-}
-
-// Tratamento de erros globais
-window.addEventListener('error', (e) => {
-    console.error('Erro global:', e.error);
-});
-
-// Salvar estado antes de fechar página
-window.addEventListener('beforeunload', () => {
-    if (radioSystem) {
-        radioSystem.saveData();
-    }
-});
-
-// Manter transmissão ativa quando página volta ao foco
-document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && radioState.isLive && radioSystem) {
-        setTimeout(() => {
-            if (elements.audioPlayer && elements.audioPlayer.paused && radioState.isPlaying) {
-                elements.audioPlayer.play().catch(() => {});
-            }
-            
-            // Verificar sincronização ao voltar ao foco
-            if (radioSystem.syncManager) {
-                radioSystem.syncManager.forceSync();
-            }
-        }, 1000);
-    }
-});
-
-console.log('📡 Script da rádio 24h com sincronização carregado!');
-        input.value = radioState.schedule[period].jingleFreq;
-    });
-    
-    alert('Programação resetada!');
-}
-
-// Funções de relatórios
-function refreshReports() {
-    if (radioSystem) {
-        radioSystem.updateReports();
-    }
-}
-
-function exportReport() {
-    const reportData = {
-        stats: radioState.stats,
-        playHistory: radioState.playHistory,
-        generatedAt: new Date().toISOString()
-    };
-    
-    const dataStr = JSON.stringify(reportData, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(dataBlob);
-    link.download = `relatorio-radio-${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
-}
-
-function clearReports() {
-    if (!confirm('Tem certeza que deseja limpar todos os relatórios?')) return;
-    
-    radioState.stats = {
-        totalPlayed: 0,
-        dailyStats: {},
-        popularTracks: {},
-        requests: []
-    };
-    radioState.playHistory = [];
-    
-    if (radioSystem) {
-        radioSystem.saveData();
-        radioSystem.updateReports();
-    }
-    
-    alert('Relatórios limpos!');
-}
-
-// Configurações de automação
-function setupAutomationControls() {
-    const controls = [
-        'hourlyTime', 'autoJingles', 'avoidRepeat', 'crossfade'
-    ];
-    
-    controls.forEach(control => {
-        const checkbox = document.getElementById(control);
-        if (checkbox) {
-            checkbox.addEventListener('change', (e) => {
-                radioState.automation[control] = e.target.checked;
-                if (radioSystem) {
-                    radioSystem.saveData();
-                }
-            });
-        }
-    });
-    
-    // Controles numéricos
-    const repeatInterval = document.getElementById('repeatInterval');
-    if (repeatInterval) {
-        repeatInterval.addEventListener('change', (e) => {
-            radioState.automation.repeatInterval = parseInt(e.target.value);
-            if (radioSystem) {
-                radioSystem.saveData();
-            }
-        });
-    }
-    
-    const crossfadeDuration = document.getElementById('crossfadeDuration');
-    const crossfadeValue = document.getElementById('crossfadeValue');
-    if (crossfadeDuration && crossfadeValue) {
-        crossfadeDuration.addEventListener('input', (e) => {
-            const value = parseInt(e.target.value);
-            radioState.automation.crossfadeDuration = value;
-            crossfadeValue.textContent = value + 's';
-            if (radioSystem) {
-                radioSystem.saveData();
-            }
-        });
-    }
-}
-
-// Inicialização do sistema
-function initRadioSystem() {
-    try {
-        radioSystem = new RadioLive24();
-        uploader = new ContentUploader(radioSystem);
-        
-        // Configurar controles de automação
-        setTimeout(setupAutomationControls, 1000);
-        
-        console.log('Sistema de rádio 24h inicializado!');
-        
-    } catch (error) {
-        console.error('Erro na inicialização:', error);
-        
-        // Tentar novamente em 2 segundos
-        setTimeout(initRadioSystem, 2000);
-    }
-}
-
-// Inicialização quando DOM estiver pronto
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initRadioSystem);
-} else {
-    initRadioSystem();
-}
-
-// Tratamento de erros globais
-window.addEventListener('error', (e) => {
-    console.error('Erro global:', e.error);
-});
-
-// Salvar estado antes de fechar página
-window.addEventListener('beforeunload', () => {
-    if (radioSystem) {
-        radioSystem.saveData();
-    }
-});
-
-// Manter transmissão ativa quando página volta ao foco
-document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && radioState.isLive && radioSystem) {
-        setTimeout(() => {
-            if (elements.audioPlayer && elements.audioPlayer.paused && radioState.isPlaying) {
-                elements.audioPlayer.play().catch(() => {});
-            }
-        }, 1000);
-    }
-});
-
-console.log('Script da rádio 24h carregado!');
+console.log('Script da Rádio carregado!');
