@@ -1,9 +1,4 @@
-/* =========================
-   SEU CSS ORIGINAL
-   (mantido como estava)
-   ========================= */
-
-/* Reset básico */
+/* Reset */
 body, html {
   margin: 0;
   padding: 0;
@@ -12,7 +7,7 @@ body, html {
   color: #111827;
 }
 
-/* Cabeçalho */
+/* Header */
 .header {
   background: #2563eb;
   color: white;
@@ -24,7 +19,7 @@ body, html {
   font-size: 1.5rem;
 }
 
-/* Player principal */
+/* Player */
 .player {
   display: flex;
   flex-direction: column;
@@ -34,7 +29,7 @@ body, html {
 .cover img {
   max-width: 200px;
   border-radius: 12px;
-  margin-bottom: 10px;
+  margin: 5px;
 }
 .track-info {
   text-align: center;
@@ -64,7 +59,7 @@ body, html {
   width: 100px;
 }
 
-/* Seções padrão */
+/* Seções */
 section {
   margin: 20px;
   padding: 15px;
@@ -76,7 +71,7 @@ section h3 {
   margin-top: 0;
 }
 
-/* Botão admin */
+/* Botão Admin */
 #adminBtn {
   display: block;
   margin: 20px auto;
@@ -91,16 +86,7 @@ section h3 {
   background: #7e22ce;
 }
 
-/* Admin mode container */
-#adminMode {
-  padding: 20px;
-}
-
-/* =========================
-   NOVOS ESTILOS ADICIONADOS
-   ========================= */
-
-/* Lista de programação */
+/* Programação */
 #scheduleList {
   display: flex;
   flex-direction: column;
@@ -120,7 +106,7 @@ section h3 {
   font-weight: 600;
 }
 
-/* Pedidos dos ouvintes */
+/* Pedidos */
 #requestsList {
   margin-top: 10px;
   display: flex;
@@ -153,7 +139,10 @@ section h3 {
   background: #1d4ed8;
 }
 
-/* Admin mode extra */
+/* Admin */
+#adminMode {
+  padding: 20px;
+}
 .upload-group {
   margin-bottom: 15px;
 }
@@ -176,7 +165,7 @@ section h3 {
   background: #16a34a;
 }
 
-/* Tocadas Recentemente */
+/* Recentes */
 .recent-track {
   display: flex;
   justify-content: space-between;
@@ -187,7 +176,7 @@ section h3 {
   border-bottom: none;
 }
 
-/* Notificações de sync */
+/* Notificações */
 .sync-notification, .sync-success, .autoplay-prompt {
   font-size: 14px;
   text-align: center;
