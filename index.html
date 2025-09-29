@@ -1,90 +1,126 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rádio Supermercado do Louro</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Rádio Supermercado do Louro - AO VIVO 24h</title>
+
+  <!-- CSS corrigido -->
   <link rel="stylesheet" href="radio_css.css">
+
+  <!-- Fonte -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div id="app">
-    <!-- Tela principal -->
-    <section id="mainScreen" class="screen active">
-      <h1>🎶 Rádio Supermercado do Louro 🎶</h1>
-      
-      <!-- Player -->
-      <div id="playerContainer">
-        <audio id="audioPlayer" preload="auto"></audio>
-        
-        <div class="controls">
-          <button id="playBtn">▶ Play</button>
-          <button id="pauseBtn">⏸ Pause</button>
-          <input type="range" id="volumeControl" min="0" max="1" step="0.01">
-        </div>
+  <header class="header">
+    <h1>📻 Rádio Supermercado do Louro</h1>
+    <div id="broadcastStatus">⚫ OFFLINE</div>
+    <div>⏱ Uptime: <span id="uptime">00:00:00</span></div>
+  </header>
 
-        <!-- Botão extra para corrigir autoplay bloqueado pelo navegador -->
-        <div class="autoplay-fix">
-          <button id="forcePlayBtn" class="btn-primary">▶ Clique para ouvir</button>
-        </div>
+  <!-- Modo Player (público) -->
+  <main id="playerMode" class="mode">
+    <section class="player">
+      <div class="cover">
+        <img id="albumCover" src="" alt="Álbum" />
+        <img id="trackCover" src="" alt="Capa da faixa" />
       </div>
-
-      <!-- Navegação -->
-      <div class="navigation">
-        <button id="programacaoBtn">📅 Programação</button>
-        <button id="pedidosBtn">📨 Pedidos</button>
-        <button id="tocadasBtn">🎵 Tocadas</button>
-        <button id="estatisticasBtn">📊 Estatísticas</button>
-        <button id="logsBtn">📑 Logs do Sistema</button>
-        <button id="adminBtn">⚙ Admin</button>
+      <div class="track-info">
+        <h2 id="albumTitle">---</h2>
+        <p id="currentTrack">---</p>
+        <p id="trackGenre">---</p>
+        <p id="trackTime">0:00 / 0:00</p>
+      </div>
+      <div class="controls">
+        <button id="playPauseBtn">▶</button>
+        <input type="range" id="volumeSlider" min="0" max="100" value="70" />
+        <span id="volumeValue">70%</span>
       </div>
     </section>
 
-    <!-- Tela programação -->
-    <section id="programacaoScreen" class="screen">
-      <h2>Programação</h2>
-      <div id="programacaoContent"></div>
-      <button id="backToMain1">⬅ Voltar</button>
+    <section class="programming">
+      <h3>📅 Programação</h3>
+      <p>Agora: <span id="currentProgram">---</span></p>
+      <p>Próximo: <span id="nextProgram">---</span></p>
+      <div id="scheduleList" class="schedule-list"></div>
     </section>
 
-    <!-- Tela pedidos -->
-    <section id="pedidosScreen" class="screen">
-      <h2>Pedidos dos Ouvintes</h2>
-      <div id="pedidosContent"></div>
-      <button id="backToMain2">⬅ Voltar</button>
+    <section class="stats">
+      <h3>📊 Estatísticas</h3>
+      <p id="playCount">Faixas: 0</p>
+      <p>Total Tocadas: <span id="totalPlayed">0</span></p>
+      <p>Status do servidor: <span id="serverStatus">---</span></p>
     </section>
 
-    <!-- Tela tocadas -->
-    <section id="tocadasScreen" class="screen">
-      <h2>Músicas Tocadas</h2>
-      <div id="tocadasContent"></div>
-      <button id="backToMain3">⬅ Voltar</button>
+    <section class="recent">
+      <h3>🎶 Tocadas Recentemente</h3>
+      <div id="recentTracks"></div>
     </section>
 
-    <!-- Tela estatísticas -->
-    <section id="estatisticasScreen" class="screen">
-      <h2>Estatísticas</h2>
-      <div id="estatisticasContent"></div>
-      <button id="backToMain4">⬅ Voltar</button>
+    <section class="requests">
+      <h3>📩 Pedidos dos Ouvintes</h3>
+      <div id="requestsList"></div>
+      <form onsubmit="event.preventDefault(); sendRequest();">
+        <input type="text" id="requestInput" placeholder="Peça sua música..." required />
+        <button type="submit">Enviar</button>
+      </form>
     </section>
 
-    <!-- Tela logs -->
-    <section id="logsScreen" class="screen">
-      <h2>Logs do Sistema</h2>
-      <div id="logsContent"></div>
-      <button id="backToMain5">⬅ Voltar</button>
-    </section>
+    <button id="adminBtn">🔑 Admin</button>
+  </main>
 
-    <!-- Tela admin -->
-    <section id="adminScreen" class="screen">
-      <h2>Painel Administrativo</h2>
-      <div id="adminContent">
-        <p>Aqui você pode gerenciar músicas, álbuns, hora certa e mensagens.</p>
-        <!-- O conteúdo do painel será carregado pelo JS -->
+  <!-- Modo Admin (oculto até login) -->
+  <main id="adminMode" class="mode" style="display:none;">
+    <h2>⚙️ Administração</h2>
+    <button onclick="radioSystem.closeAdminModal()">Sair do Admin</button>
+
+    <section class="uploads">
+      <h3>📤 Upload de Conteúdo</h3>
+      <div class="upload-group">
+        <label>Músicas:</label>
+        <input type="file" id="musicUpload" multiple />
+        <button onclick="uploadContent('music')">Enviar</button>
       </div>
-      <button id="backToPlayerBtn">⬅ Voltar ao Player</button>
+      <div class="upload-group">
+        <label>Jingles:</label>
+        <input type="file" id="jingleUpload" multiple />
+        <button onclick="uploadContent('jingles')">Enviar</button>
+      </div>
+      <div class="upload-group">
+        <label>Hora Certa:</label>
+        <input type="file" id="timeUpload" multiple />
+        <button onclick="uploadContent('time')">Enviar</button>
+      </div>
+      <div class="upload-group">
+        <label>Programas:</label>
+        <select id="programSelect">
+          <option value="morning">Manhã</option>
+          <option value="afternoon">Tarde</option>
+          <option value="evening">Noite</option>
+          <option value="late">Madrugada</option>
+        </select>
+        <input type="file" id="programUpload" multiple />
+        <button onclick="uploadContent('programs')">Enviar</button>
+      </div>
     </section>
-  </div>
 
+    <section class="library">
+      <h3>📚 Biblioteca</h3>
+      <div id="contentLibrary"></div>
+    </section>
+
+    <section class="reports">
+      <h3>📝 Logs do Sistema</h3>
+      <div id="logs"></div>
+    </section>
+  </main>
+
+  <!-- Player escondido -->
+  <audio id="audioPlayer" preload="auto"></audio>
+
+  <!-- Script -->
   <script src="radio_js.js"></script>
 </body>
 </html>
