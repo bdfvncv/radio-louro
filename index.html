@@ -1,449 +1,90 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rádio Supermercado do Louro - AO VIVO 24h</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rádio Supermercado do Louro</title>
+  <link rel="stylesheet" href="radio_css.css">
 </head>
 <body>
-    <!-- Efeitos de Fundo -->
-    <div class="background-effects">
-        <div class="floating-element floating-1"></div>
-        <div class="floating-element floating-2"></div>
-        <div class="floating-element floating-3"></div>
-        <div class="audio-waves">
-            <div class="wave wave-1"></div>
-            <div class="wave wave-2"></div>
-            <div class="wave wave-3"></div>
+  <div id="app">
+    <!-- Tela principal -->
+    <section id="mainScreen" class="screen active">
+      <h1>🎶 Rádio Supermercado do Louro 🎶</h1>
+      
+      <!-- Player -->
+      <div id="playerContainer">
+        <audio id="audioPlayer" preload="auto"></audio>
+        
+        <div class="controls">
+          <button id="playBtn">▶ Play</button>
+          <button id="pauseBtn">⏸ Pause</button>
+          <input type="range" id="volumeControl" min="0" max="1" step="0.01">
         </div>
-    </div>
 
-    <!-- Player Principal -->
-    <div id="playerMode" class="player-container">
-        <div class="player-header">
-            <h1>📻 Rádio Supermercado do Louro</h1>
-            <p class="tagline">Transmitindo AO VIVO 24 Horas • Sua música favorita</p>
-            <div class="live-badge">
-                <div class="pulse-dot"></div>
-                <span>AO VIVO</span>
-            </div>
+        <!-- Botão extra para corrigir autoplay bloqueado pelo navegador -->
+        <div class="autoplay-fix">
+          <button id="forcePlayBtn" class="btn-primary">▶ Clique para ouvir</button>
         </div>
-        
-        <div class="player-main glass">
-            <!-- Capa do Álbum/Track -->
-            <div class="album-section">
-                <div class="cover-container">
-                    <img id="albumCover" src="data:image/jpeg;base64,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" alt="Melhores Músicas 2025" class="main-cover">
-                    <img id="trackCover" src="" alt="Capa da Música" class="track-cover" style="display: none;">
-                    <div class="vinyl-effect"></div>
-                    <div class="cover-overlay">
-                        <div class="play-indicator">
-                            <div class="equalizer-mini">
-                                <span></span><span></span><span></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="track-info">
-                    <h3 id="albumTitle">Carregando Programação...</h3>
-                    <p id="currentTrack">Conectando à transmissão...</p>
-                    <div class="track-meta">
-                        <span id="trackTime">00:00 / 00:00</span>
-                        <span id="trackGenre"></span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Programação Atual -->
-            <div class="program-info">
-                <div class="program-current">
-                    <span class="program-label">AGORA:</span>
-                    <span id="currentProgram">Música Ambiente</span>
-                </div>
-                <div class="program-next">
-                    <span class="program-label">PRÓXIMO:</span>
-                    <span id="nextProgram">Carregando...</span>
-                </div>
-            </div>
-            
-            <!-- Controles do Player -->
-            <div class="player-controls">
-                <audio id="audioPlayer" preload="auto"></audio>
-                
-                <div class="main-controls">
-                    <button id="playPauseBtn" class="btn-control btn-play">
-                        <span class="play-icon">▶</span>
-                        <span class="pause-icon" style="display: none;">⏸</span>
-                    </button>
-                </div>
-                
-                <div class="volume-control">
-                    <span class="volume-icon">🔊</span>
-                    <input type="range" id="volumeSlider" min="0" max="100" value="70" class="volume-slider">
-                    <span id="volumeValue">70%</span>
-                </div>
-            </div>
-            
-            <!-- Status da Rádio -->
-            <div class="radio-status">
-                <div class="status-left">
-                    <div class="equalizer">
-                        <div class="bar"></div>
-                        <div class="bar"></div>
-                        <div class="bar"></div>
-                        <div class="bar"></div>
-                        <div class="bar"></div>
-                    </div>
-                </div>
-                
-                <div class="status-right">
-                    <div class="broadcast-info">
-                        <div id="broadcastStatus">🔴 CONECTANDO...</div>
-                        <div id="playCount">Faixas: 0</div>
-                        <div class="broadcast-quality">📡 HD</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Painel de Informações -->
-        <div class="info-panel">
-            <div class="info-tabs">
-                <button class="info-tab active" data-tab="schedule">📅 Programação</button>
-                <button class="info-tab" data-tab="recent">🎵 Tocadas</button>
-                <button class="info-tab" data-tab="requests">📞 Pedidos</button>
-            </div>
-            
-            <div class="info-content">
-                <div class="info-section active" id="schedule-section">
-                    <div class="schedule-list" id="scheduleList">
-                        <div class="schedule-item current">
-                            <span class="schedule-time">Agora</span>
-                            <span class="schedule-program">Música Ambiente</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="info-section" id="recent-section">
-                    <div class="recent-tracks" id="recentTracks">
-                        <p>Carregando músicas tocadas...</p>
-                    </div>
-                </div>
-                
-                <div class="info-section" id="requests-section">
-                    <div class="request-form">
-                        <input type="text" id="requestSong" placeholder="Nome da música ou artista">
-                        <button id="sendRequest" class="btn-primary">Enviar Pedido</button>
-                    </div>
-                    <div class="requests-list" id="requestsList">
-                        <p>Nenhum pedido ainda hoje.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Botão Admin -->
-        <button id="adminBtn" class="admin-access-btn">
-            <span class="btn-icon">🔧</span>
-            <span class="btn-text">Admin</span>
-        </button>
-    </div>
+      </div>
 
-    <!-- Painel Administrativo -->
-    <div id="adminMode" class="admin-container" style="display: none;">
-        <div class="admin-header">
-            <h1>🛠 Painel Administrativo</h1>
-            <div class="admin-controls">
-                <div class="broadcast-controls">
-                    <button id="emergencyStop" class="btn-danger">⏹ Parar</button>
-                    <button id="toggleBroadcast" class="btn-primary">🔄 Alternar</button>
-                </div>
-                <button id="backToPlayerBtn" class="btn-secondary">← Voltar</button>
-            </div>
-        </div>
-        
-        <div class="admin-stats">
-            <div class="stat-card">
-                <h3>📊 Estatísticas</h3>
-                <div class="stat-item">
-                    <span>Tempo no ar:</span>
-                    <span id="uptime">00:00:00</span>
-                </div>
-                <div class="stat-item">
-                    <span>Músicas tocadas:</span>
-                    <span id="totalPlayed">0</span>
-                </div>
-                <div class="stat-item">
-                    <span>Status:</span>
-                    <span id="serverStatus">🟢 Online</span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="admin-tabs">
-            <button class="tab-btn active" data-tab="content">📁 Conteúdo</button>
-            <button class="tab-btn" data-tab="schedule">📅 Programação</button>
-            <button class="tab-btn" data-tab="automation">🤖 Automação</button>
-            <button class="tab-btn" data-tab="reports">📈 Relatórios</button>
-        </div>
-        
-        <!-- Aba Conteúdo -->
-        <div class="tab-content active" id="content-tab">
-            <div class="content-management">
-                <div class="upload-section">
-                    <h3>📤 Upload de Conteúdo</h3>
-                    <div class="upload-grid">
-                        <div class="upload-card">
-                            <div class="card-icon">🎵</div>
-                            <h4>Músicas</h4>
-                            <input type="file" id="musicUpload" accept=".mp3,.wav,.ogg,.m4a" multiple class="file-input">
-                            <button onclick="uploadContent('music')" class="btn-primary">Enviar Músicas</button>
-                        </div>
-                        
-                        <div class="upload-card">
-                            <div class="card-icon">📢</div>
-                            <h4>Vinhetas/Avisos</h4>
-                            <input type="file" id="jingleUpload" accept=".mp3,.wav,.ogg" multiple class="file-input">
-                            <button onclick="uploadContent('jingles')" class="btn-primary">Enviar Vinhetas</button>
-                        </div>
-                        
-                        <div class="upload-card">
-                            <div class="card-icon">🕐</div>
-                            <h4>Hora Certa</h4>
-                            <input type="file" id="timeUpload" accept=".mp3,.wav,.ogg" multiple class="file-input">
-                            <button onclick="uploadContent('time')" class="btn-primary">Enviar Hora</button>
-                        </div>
-                        
-                        <div class="upload-card">
-                            <div class="card-icon">📻</div>
-                            <h4>Programas</h4>
-                            <select id="programSelect" class="program-select">
-                                <option value="morning">🌅 Manhã</option>
-                                <option value="afternoon">🌞 Tarde</option>
-                                <option value="evening">🌆 Noite</option>
-                                <option value="late">🌙 Madrugada</option>
-                            </select>
-                            <input type="file" id="programUpload" accept=".mp3,.wav,.ogg" multiple class="file-input">
-                            <button onclick="uploadContent('programs')" class="btn-primary">Enviar Programa</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="content-library">
-                    <h3>📚 Biblioteca de Conteúdo</h3>
-                    <div class="library-grid">
-                        <div class="library-section">
-                            <h4>🎵 Músicas (<span id="musicCount">0</span>)</h4>
-                            <div class="file-list" id="musicList"></div>
-                        </div>
-                        <div class="library-section">
-                            <h4>📢 Vinhetas (<span id="jingleCount">0</span>)</h4>
-                            <div class="file-list" id="jingleList"></div>
-                        </div>
-                        <div class="library-section">
-                            <h4>🕐 Hora Certa (<span id="timeCount">0</span>)</h4>
-                            <div class="file-list" id="timeList"></div>
-                        </div>
-                        <div class="library-section">
-                            <h4>📻 Programas (<span id="programCount">0</span>)</h4>
-                            <div class="file-list" id="programList"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Aba Programação -->
-        <div class="tab-content" id="schedule-tab">
-            <div class="schedule-management">
-                <h3>📅 Configurar Programação</h3>
-                <div class="schedule-config">
-                    <div class="time-slots">
-                        <div class="time-slot">
-                            <h4>🌅 Manhã (06:00 - 12:00)</h4>
-                            <label>Tipo de conteúdo:</label>
-                            <select class="content-type-select" data-period="morning">
-                                <option value="music">Apenas Músicas</option>
-                                <option value="program">Programa Específico</option>
-                                <option value="mixed">Misto (Música + Vinhetas)</option>
-                            </select>
-                            <label>Frequência de vinhetas (minutos):</label>
-                            <input type="number" class="jingle-frequency" data-period="morning" value="15" min="5" max="60">
-                        </div>
-                        
-                        <div class="time-slot">
-                            <h4>🌞 Tarde (12:00 - 18:00)</h4>
-                            <label>Tipo de conteúdo:</label>
-                            <select class="content-type-select" data-period="afternoon">
-                                <option value="music">Apenas Músicas</option>
-                                <option value="program">Programa Específico</option>
-                                <option value="mixed">Misto (Música + Vinhetas)</option>
-                            </select>
-                            <label>Frequência de vinhetas (minutos):</label>
-                            <input type="number" class="jingle-frequency" data-period="afternoon" value="10" min="5" max="60">
-                        </div>
-                        
-                        <div class="time-slot">
-                            <h4>🌆 Noite (18:00 - 00:00)</h4>
-                            <label>Tipo de conteúdo:</label>
-                            <select class="content-type-select" data-period="evening">
-                                <option value="music">Apenas Músicas</option>
-                                <option value="program">Programa Específico</option>
-                                <option value="mixed">Misto (Música + Vinhetas)</option>
-                            </select>
-                            <label>Frequência de vinhetas (minutos):</label>
-                            <input type="number" class="jingle-frequency" data-period="evening" value="20" min="5" max="60">
-                        </div>
-                        
-                        <div class="time-slot">
-                            <h4>🌙 Madrugada (00:00 - 06:00)</h4>
-                            <label>Tipo de conteúdo:</label>
-                            <select class="content-type-select" data-period="late">
-                                <option value="music">Apenas Músicas</option>
-                                <option value="program">Programa Específico</option>
-                                <option value="mixed">Misto (Música + Vinhetas)</option>
-                            </select>
-                            <label>Frequência de vinhetas (minutos):</label>
-                            <input type="number" class="jingle-frequency" data-period="late" value="30" min="5" max="60">
-                        </div>
-                    </div>
-                    
-                    <div class="schedule-actions">
-                        <button onclick="saveScheduleConfig()" class="btn-primary">💾 Salvar Programação</button>
-                        <button onclick="resetSchedule()" class="btn-secondary">🔄 Resetar</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Aba Automação -->
-        <div class="tab-content" id="automation-tab">
-            <div class="automation-settings">
-                <h3>🤖 Configurações de Automação</h3>
-                <div class="automation-grid">
-                    <div class="automation-card">
-                        <h4>🕐 Hora Certa</h4>
-                        <label class="switch">
-                            <input type="checkbox" id="hourlyTime" checked>
-                            <span class="slider"></span>
-                        </label>
-                        <p>Tocar hora certa a cada hora</p>
-                    </div>
-                    
-                    <div class="automation-card">
-                        <h4>📢 Vinhetas Automáticas</h4>
-                        <label class="switch">
-                            <input type="checkbox" id="autoJingles" checked>
-                            <span class="slider"></span>
-                        </label>
-                        <p>Inserir vinhetas automaticamente</p>
-                    </div>
-                    
-                    <div class="automation-card">
-                        <h4>🔄 Repetição</h4>
-                        <label class="switch">
-                            <input type="checkbox" id="avoidRepeat" checked>
-                            <span class="slider"></span>
-                        </label>
-                        <p>Evitar repetir músicas recentes</p>
-                        <input type="number" id="repeatInterval" value="50" min="10" max="200">
-                        <span>músicas de intervalo</span>
-                    </div>
-                    
-                    <div class="automation-card">
-                        <h4>📊 Crossfade</h4>
-                        <label class="switch">
-                            <input type="checkbox" id="crossfade">
-                            <span class="slider"></span>
-                        </label>
-                        <p>Transição suave entre faixas</p>
-                        <input type="range" id="crossfadeDuration" min="1" max="10" value="3">
-                        <span id="crossfadeValue">3s</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Aba Relatórios -->
-        <div class="tab-content" id="reports-tab">
-            <div class="reports-section">
-                <div class="reports-header">
-                    <h3>📈 Relatórios e Estatísticas</h3>
-                    <div class="reports-controls">
-                        <button onclick="exportReport()" class="btn-secondary">📥 Exportar</button>
-                        <button onclick="clearReports()" class="btn-danger">🗑 Limpar</button>
-                        <button onclick="refreshReports()" class="btn-primary">🔄 Atualizar</button>
-                    </div>
-                </div>
-                
-                <div class="reports-grid">
-                    <div class="report-card">
-                        <h4>🎵 Músicas Mais Tocadas</h4>
-                        <div class="report-list" id="topTracks"></div>
-                    </div>
-                    
-                    <div class="report-card">
-                        <h4>📅 Histórico Diário</h4>
-                        <div class="report-chart" id="dailyChart"></div>
-                    </div>
-                    
-                    <div class="report-card">
-                        <h4>📞 Pedidos dos Ouvintes</h4>
-                        <div class="report-list" id="requestsReport"></div>
-                    </div>
-                    
-                    <div class="report-card">
-                        <h4>⚠ Logs do Sistema</h4>
-                        <div class="log-list" id="systemLogs"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+      <!-- Navegação -->
+      <div class="navigation">
+        <button id="programacaoBtn">📅 Programação</button>
+        <button id="pedidosBtn">📨 Pedidos</button>
+        <button id="tocadasBtn">🎵 Tocadas</button>
+        <button id="estatisticasBtn">📊 Estatísticas</button>
+        <button id="logsBtn">📑 Logs do Sistema</button>
+        <button id="adminBtn">⚙ Admin</button>
+      </div>
+    </section>
 
-    <!-- Modais -->
-    <div id="passwordModal" class="modal">
-        <div class="modal-content glass">
-            <h3>🔐 Acesso Administrativo</h3>
-            <input type="password" id="adminPassword" placeholder="Digite a senha administrativa">
-            <div class="modal-buttons">
-                <button onclick="checkAdminPassword()" class="btn-primary">Entrar</button>
-                <button onclick="closeModal('passwordModal')" class="btn-secondary">Cancelar</button>
-            </div>
-        </div>
-    </div>
+    <!-- Tela programação -->
+    <section id="programacaoScreen" class="screen">
+      <h2>Programação</h2>
+      <div id="programacaoContent"></div>
+      <button id="backToMain1">⬅ Voltar</button>
+    </section>
 
-    <div id="uploadModal" class="modal">
-        <div class="modal-content glass">
-            <h3>📤 Upload em Andamento</h3>
-            <div class="upload-progress">
-                <div class="progress-bar">
-                    <div class="progress-fill" id="uploadProgress"></div>
-                </div>
-                <p id="uploadStatus">Preparando upload...</p>
-            </div>
-        </div>
-    </div>
+    <!-- Tela pedidos -->
+    <section id="pedidosScreen" class="screen">
+      <h2>Pedidos dos Ouvintes</h2>
+      <div id="pedidosContent"></div>
+      <button id="backToMain2">⬅ Voltar</button>
+    </section>
 
-    <div id="requestModal" class="modal">
-        <div class="modal-content glass">
-            <h3>🎵 Pedido Enviado!</h3>
-            <p>Seu pedido foi adicionado à lista. Obrigado por participar!</p>
-            <button onclick="closeModal('requestModal')" class="btn-primary">OK</button>
-        </div>
-    </div>
+    <!-- Tela tocadas -->
+    <section id="tocadasScreen" class="screen">
+      <h2>Músicas Tocadas</h2>
+      <div id="tocadasContent"></div>
+      <button id="backToMain3">⬅ Voltar</button>
+    </section>
 
-    <!-- Loading Overlay -->
-    <div id="loadingOverlay" class="loading-overlay">
-        <div class="spinner"></div>
-        <p>Carregando rádio...</p>
-    </div>
+    <!-- Tela estatísticas -->
+    <section id="estatisticasScreen" class="screen">
+      <h2>Estatísticas</h2>
+      <div id="estatisticasContent"></div>
+      <button id="backToMain4">⬅ Voltar</button>
+    </section>
 
-    <script src="script.js"></script>
+    <!-- Tela logs -->
+    <section id="logsScreen" class="screen">
+      <h2>Logs do Sistema</h2>
+      <div id="logsContent"></div>
+      <button id="backToMain5">⬅ Voltar</button>
+    </section>
+
+    <!-- Tela admin -->
+    <section id="adminScreen" class="screen">
+      <h2>Painel Administrativo</h2>
+      <div id="adminContent">
+        <p>Aqui você pode gerenciar músicas, álbuns, hora certa e mensagens.</p>
+        <!-- O conteúdo do painel será carregado pelo JS -->
+      </div>
+      <button id="backToPlayerBtn">⬅ Voltar ao Player</button>
+    </section>
+  </div>
+
+  <script src="radio_js.js"></script>
 </body>
 </html>
