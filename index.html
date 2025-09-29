@@ -1,126 +1,320 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Rádio Supermercado do Louro - AO VIVO 24h</title>
-
-  <!-- CSS -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rádio Supermercado do Louro – AO VIVO 24h</title>
   <link rel="stylesheet" href="styles.css">
-
-  <!-- Fonte -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <header class="header">
-    <h1>📻 Rádio Supermercado do Louro</h1>
-    <div id="broadcastStatus">⚫ OFFLINE</div>
-    <div>⏱ Uptime: <span id="uptime">00:00:00</span></div>
-  </header>
+  <!-- Fundo animado -->
+  <div class="background-effects">
+    <div class="floating-element floating-1"></div>
+    <div class="floating-element floating-2"></div>
+    <div class="floating-element floating-3"></div>
+    <div class="audio-waves">
+      <div class="wave wave-1"></div>
+      <div class="wave wave-2"></div>
+      <div class="wave wave-3"></div>
+    </div>
+  </div>
 
   <!-- Player -->
-  <main id="playerMode" class="mode">
-    <section class="player">
-      <div class="cover">
-        <img id="albumCover" src="" alt="Álbum" />
-        <img id="trackCover" src="" alt="Capa da faixa" />
+  <div id="playerMode" class="player-container">
+    <header class="player-header">
+      <h1>Rádio Supermercado do Louro</h1>
+      <p class="tagline">Transmitindo AO VIVO 24h – Sua música favorita</p>
+      <div class="live-badge">
+        <div class="pulse-dot"></div>
+        <span>AO VIVO</span>
       </div>
-      <div class="track-info">
-        <h2 id="albumTitle">---</h2>
-        <p id="currentTrack">---</p>
-        <p id="trackGenre">---</p>
-        <p id="trackTime">0:00 / 0:00</p>
+    </header>
+
+    <main class="player-main glass">
+      <section class="album-section">
+        <div class="cover-container">
+          <img id="albumCover" src="placeholder.jpg" alt="Capa do Álbum" class="main-cover">
+          <img id="trackCover" src="" alt="Capa da Faixa" class="track-cover" style="display:none">
+          <div class="vinyl-effect"></div>
+          <div class="cover-overlay">
+            <div class="play-indicator">
+              <div class="equalizer-mini">
+                <span></span><span></span><span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="track-info">
+          <h3 id="albumTitle">Carregando programação…</h3>
+          <p id="currentTrack">Conectando à transmissão…</p>
+          <div class="track-meta">
+            <span id="trackTime">00:00 / 00:00</span>
+            <span id="trackGenre"></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="program-info">
+        <div class="program-current">
+          <span class="program-label">AGORA:</span>
+          <span id="currentProgram">Música Ambiente</span>
+        </div>
+        <div class="program-next">
+          <span class="program-label">PRÓXIMO:</span>
+          <span id="nextProgram">Carregando…</span>
+        </div>
+      </section>
+
+      <section class="player-controls">
+        <audio id="audioPlayer" preload="auto"></audio>
+        <div class="main-controls">
+          <button id="playPauseBtn" class="btn-control btn-play">
+            <span class="play-icon">▶</span>
+            <span class="pause-icon" style="display:none">❚❚</span>
+          </button>
+        </div>
+        <div class="volume-control">
+          <span class="volume-icon">🔊</span>
+          <input type="range" id="volumeSlider" min="0" max="100" value="70">
+          <span id="volumeValue">70%</span>
+        </div>
+      </section>
+
+      <section class="radio-status">
+        <div class="status-left">
+          <div class="equalizer">
+            <div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+          </div>
+        </div>
+        <div class="status-right">
+          <div class="broadcast-info">
+            <div id="broadcastStatus">CONECTANDO…</div>
+            <div id="playCount">Faixas: 0</div>
+            <div class="broadcast-quality">HD</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <section class="info-panel">
+      <div class="info-tabs">
+        <button class="info-tab active" data-tab="schedule">Programação</button>
+        <button class="info-tab" data-tab="recent">Tocadas</button>
+        <button class="info-tab" data-tab="requests">Pedidos</button>
       </div>
-      <div class="controls">
-        <button id="playPauseBtn">▶</button>
-        <input type="range" id="volumeSlider" min="0" max="100" value="70" />
-        <span id="volumeValue">70%</span>
+      <div class="info-content">
+        <div id="schedule-section" class="info-section active">
+          <div id="scheduleList" class="schedule-list"></div>
+        </div>
+        <div id="recent-section" class="info-section">
+          <div id="recentTracks" class="recent-tracks"></div>
+        </div>
+        <div id="requests-section" class="info-section">
+          <div class="request-form">
+            <input type="text" id="requestSong" placeholder="Nome da música ou artista">
+            <button id="sendRequest" class="btn-primary">Enviar Pedido</button>
+          </div>
+          <div id="requestsList" class="requests-list"></div>
+        </div>
       </div>
     </section>
 
-    <section class="programming">
-      <h3>📅 Programação</h3>
-      <p>Agora: <span id="currentProgram">---</span></p>
-      <p>Próximo: <span id="nextProgram">---</span></p>
-      <div id="scheduleList" class="schedule-list"></div>
-    </section>
+    <button id="adminBtn" class="admin-access-btn">Admin</button>
+  </div>
 
-    <section class="stats">
-      <h3>📊 Estatísticas</h3>
-      <p id="playCount">Faixas: 0</p>
-      <p>Total Tocadas: <span id="totalPlayed">0</span></p>
-      <p>Status do servidor: <span id="serverStatus">---</span></p>
-    </section>
-
-    <section class="recent">
-      <h3>🎶 Tocadas Recentemente</h3>
-      <div id="recentTracks"></div>
-    </section>
-
-    <section class="requests">
-      <h3>📩 Pedidos dos Ouvintes</h3>
-      <div id="requestsList"></div>
-      <form onsubmit="event.preventDefault(); sendRequest();">
-        <input type="text" id="requestInput" placeholder="Peça sua música..." required />
-        <button type="submit">Enviar</button>
-      </form>
-    </section>
-
-    <button id="adminBtn">🔑 Admin</button>
-  </main>
-
-  <!-- Admin -->
-  <main id="adminMode" class="mode" style="display:none;">
-    <h2>⚙️ Administração</h2>
-    <button onclick="radioSystem.closeAdminModal()">Sair do Admin</button>
-
-    <section class="uploads">
-      <h3>📤 Upload de Conteúdo</h3>
-      <div class="upload-group">
-        <label>Músicas:</label>
-        <input type="file" id="musicUpload" multiple />
-        <button onclick="uploadContent('music')">Enviar</button>
+  <!-- Painel Administrativo -->
+  <div id="adminMode" class="admin-container" style="display:none">
+    <header class="admin-header">
+      <h1>Painel Administrativo</h1>
+      <div class="admin-controls">
+        <div class="broadcast-controls">
+          <button id="emergencyStop" class="btn-danger">Parar</button>
+          <button id="toggleBroadcast" class="btn-primary">Alternar</button>
+        </div>
+        <button id="backToPlayerBtn" class="btn-secondary">← Voltar</button>
       </div>
-      <div class="upload-group">
-        <label>Jingles:</label>
-        <input type="file" id="jingleUpload" multiple />
-        <button onclick="uploadContent('jingles')">Enviar</button>
+    </header>
+    <div class="admin-stats">
+      <div class="stat-card">
+        <h3>Estatísticas</h3>
+        <div><span>Tempo no ar:</span> <span id="uptime">00:00:00</span></div>
+        <div><span>Músicas tocadas:</span> <span id="totalPlayed">0</span></div>
+        <div><span>Status:</span> <span id="serverStatus">Online</span></div>
       </div>
-      <div class="upload-group">
-        <label>Hora Certa:</label>
-        <input type="file" id="timeUpload" multiple />
-        <button onclick="uploadContent('time')">Enviar</button>
+    </div>
+
+    <div class="admin-tabs">
+      <button class="tab-btn active" data-tab="content">Conteúdo</button>
+      <button class="tab-btn" data-tab="schedule">Programação</button>
+      <button class="tab-btn" data-tab="automation">Automação</button>
+      <button class="tab-btn" data-tab="reports">Relatórios</button>
+    </div>
+
+    <div id="content-tab" class="tab-content active">
+      <h3>Upload de Conteúdo</h3>
+      <div class="upload-grid">
+        <div class="upload-card">
+          <h4>Músicas</h4>
+          <input type="file" id="musicUpload" accept=".mp3,.wav,.ogg,.m4a" multiple>
+          <button onclick="uploadContent('music')" class="btn-primary">Enviar Músicas</button>
+        </div>
+        <div class="upload-card">
+          <h4>Vinhetas</h4>
+          <input type="file" id="jingleUpload" accept=".mp3,.wav,.ogg" multiple>
+          <button onclick="uploadContent('jingle')" class="btn-primary">Enviar Vinhetas</button>
+        </div>
+        <div class="upload-card">
+          <h4>Hora Certa</h4>
+          <input type="file" id="timeUpload" accept=".mp3,.wav,.ogg" multiple>
+          <button onclick="uploadContent('time')" class="btn-primary">Enviar Hora</button>
+        </div>
+        <div class="upload-card">
+          <h4>Programas</h4>
+          <select id="programSelect">
+            <option value="morning">Manhã</option>
+            <option value="afternoon">Tarde</option>
+            <option value="evening">Noite</option>
+            <option value="late">Madrugada</option>
+          </select>
+          <input type="file" id="programUpload" accept=".mp3,.wav,.ogg" multiple>
+          <button onclick="uploadContent('program')" class="btn-primary">Enviar Programas</button>
+        </div>
       </div>
-      <div class="upload-group">
-        <label>Programas:</label>
-        <select id="programSelect">
-          <option value="morning">Manhã</option>
-          <option value="afternoon">Tarde</option>
-          <option value="evening">Noite</option>
-          <option value="late">Madrugada</option>
-        </select>
-        <input type="file" id="programUpload" multiple />
-        <button onclick="uploadContent('programs')">Enviar</button>
+      <div class="content-library">
+        <h3>Biblioteca de Conteúdo</h3>
+        <div class="library-grid">
+          <div><h4>Músicas (<span id="musicCount">0</span>)</h4><div id="musicList"></div></div>
+          <div><h4>Vinhetas (<span id="jingleCount">0</span>)</h4><div id="jingleList"></div></div>
+          <div><h4>Hora Certa (<span id="timeCount">0</span>)</h4><div id="timeList"></div></div>
+          <div><h4>Programas (<span id="programCount">0</span>)</h4><div id="programList"></div></div>
+        </div>
       </div>
-    </section>
+    </div>
 
-    <section class="library">
-      <h3>📚 Biblioteca</h3>
-      <div id="contentLibrary"></div>
-    </section>
+    <div id="schedule-tab" class="tab-content">
+      <h3>Configurar Programação</h3>
+      <div class="time-slots">
+        <!-- manhã / tarde / noite / madrugada -->
+        <div class="time-slot" data-period="morning">
+          <h4>06:00–12:00</h4>
+          <label>Tipo:</label>
+          <select class="content-type-select">
+            <option value="music">Apenas Músicas</option>
+            <option value="program">Programa Específico</option>
+            <option value="mixed">Misto</option>
+          </select>
+          <label>Vinhetas (minutos):</label>
+          <input type="number" class="jingle-frequency" value="15">
+        </div>
+        <div class="time-slot" data-period="afternoon">
+          <h4>12:00–18:00</h4>
+          <label>Tipo:</label>
+          <select class="content-type-select">
+            <option value="music">Apenas Músicas</option>
+            <option value="program">Programa Específico</option>
+            <option value="mixed">Misto</option>
+          </select>
+          <label>Vinhetas (minutos):</label>
+          <input type="number" class="jingle-frequency" value="10">
+        </div>
+        <div class="time-slot" data-period="evening">
+          <h4>18:00–00:00</h4>
+          <label>Tipo:</label>
+          <select class="content-type-select">
+            <option value="music">Apenas Músicas</option>
+            <option value="program">Programa Específico</option>
+            <option value="mixed">Misto</option>
+          </select>
+          <label>Vinhetas (minutos):</label>
+          <input type="number" class="jingle-frequency" value="20">
+        </div>
+        <div class="time-slot" data-period="late">
+          <h4>00:00–06:00</h4>
+          <label>Tipo:</label>
+          <select class="content-type-select">
+            <option value="music">Apenas Músicas</option>
+            <option value="program">Programa Específico</option>
+            <option value="mixed">Misto</option>
+          </select>
+          <label>Vinhetas (minutos):</label>
+          <input type="number" class="jingle-frequency" value="30">
+        </div>
+      </div>
+      <div class="schedule-actions">
+        <button onclick="saveScheduleConfig()" class="btn-primary">Salvar</button>
+        <button onclick="resetSchedule()" class="btn-secondary">Resetar</button>
+      </div>
+    </div>
 
-    <section class="reports">
-      <h3>📝 Logs do Sistema</h3>
-      <div id="logs"></div>
-    </section>
-  </main>
+    <div id="automation-tab" class="tab-content">
+      <h3>Automação</h3>
+      <div class="automation-grid">
+        <div class="automation-card">
+          <h4>Hora Certa</h4>
+          <label class="switch"><input type="checkbox" id="hourlyTime" checked><span class="slider"></span></label>
+          <p>Tocar a cada hora</p>
+        </div>
+        <div class="automation-card">
+          <h4>Vinhetas</h4>
+          <label class="switch"><input type="checkbox" id="autoJingles" checked><span class="slider"></span></label>
+          <p>Automáticas</p>
+        </div>
+        <div class="automation-card">
+          <h4>Evitar Repetir</h4>
+          <label class="switch"><input type="checkbox" id="avoidRepeat" checked><span class="slider"></span></label>
+          <p>Intervalo (faixas): <input type="number" id="repeatInterval" value="50" min="10" max="200"></p>
+        </div>
+        <div class="automation-card">
+          <h4>Crossfade</h4>
+          <label class="switch"><input type="checkbox" id="crossfade"><span class="slider"></span></label>
+          <p>Duração: <input type="range" id="crossfadeDuration" min="1" max="10" value="3"><span id="crossfadeValue">3s</span></p>
+        </div>
+      </div>
+    </div>
 
-  <!-- Player escondido -->
-  <audio id="audioPlayer" preload="auto"></audio>
+    <div id="reports-tab" class="tab-content">
+      <h3>Relatórios</h3>
+      <div class="reports-controls">
+        <button onclick="exportReport()" class="btn-secondary">Exportar</button>
+        <button onclick="clearReports()" class="btn-danger">Limpar</button>
+        <button onclick="refreshReports()" class="btn-primary">Atualizar</button>
+      </div>
+      <div class="reports-grid">
+        <div>
+          <h4>Mais Tocadas</h4>
+          <div id="topTracks"></div>
+        </div>
+        <div>
+          <h4>Pedidos</h4>
+          <div id="requestsReport"></div>
+        </div>
+        <div>
+          <h4>Logs</h4>
+          <div id="systemLogs"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <!-- Script -->
-  <script src="script.js"></script>
+  <!-- Modais -->
+  <div id="passwordModal" class="modal">
+    <div class="modal-content glass">
+      <h3>Acesso Administrativo</h3>
+      <input type="password" id="adminPassword" placeholder="Senha">
+      <div class="modal-buttons">
+        <button onclick="checkAdminPassword()" class="btn-primary">Entrar</button>
+        <button onclick="closeModal('passwordModal')" class="btn-secondary">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overlay de carregamento -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <p>Carregando rádio…</p>
+  </div>
+
+  <script src="radio.js"></script>
 </body>
 </html>
