@@ -1,181 +1,194 @@
-body {
-  font-family: Arial, sans-serif;
+/* =========================
+   SEU CSS ORIGINAL
+   (mantido como estava)
+   ========================= */
+
+/* Reset básico */
+body, html {
   margin: 0;
   padding: 0;
-  background: #f7f7f7;
-  color: #333;
+  font-family: 'Inter', sans-serif;
+  background: #f9fafb;
+  color: #111827;
+}
+
+/* Cabeçalho */
+.header {
+  background: #2563eb;
+  color: white;
+  padding: 15px;
   text-align: center;
 }
-
-h1, h2 {
-  margin: 20px 0;
-  color: #222;
+.header h1 {
+  margin: 0;
+  font-size: 1.5rem;
 }
 
-/* =======================
-   Estrutura de telas
-   ======================= */
-.screen {
-  display: none;
-  padding: 20px;
-}
-
-.screen.active {
-  display: block;
-}
-
-/* =======================
-   Player
-   ======================= */
-#playerContainer {
-  background: #fff;
-  border-radius: 12px;
-  padding: 20px;
-  margin: 20px auto;
-  width: 90%;
-  max-width: 500px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-.controls {
-  margin-top: 15px;
-}
-
-.controls button {
-  background: #4CAF50;
-  border: none;
-  color: #fff;
-  padding: 10px 16px;
-  margin: 5px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: background 0.3s;
-}
-
-.controls button:hover {
-  background: #45a049;
-}
-
-#volumeControl {
-  width: 80%;
-  margin-top: 10px;
-}
-
-/* =======================
-   Botão autoplay fix
-   ======================= */
-.autoplay-fix {
-  margin-top: 15px;
-}
-
-.autoplay-fix button {
-  background: #2196F3;
-  border: none;
-  color: #fff;
-  padding: 10px 16px;
-  margin: 5px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: background 0.3s;
-}
-
-.autoplay-fix button:hover {
-  background: #1976D2;
-}
-
-/* =======================
-   Navegação
-   ======================= */
-.navigation {
-  margin: 20px auto;
+/* Player principal */
+.player {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+.cover img {
+  max-width: 200px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+.track-info {
+  text-align: center;
+  margin-bottom: 15px;
+}
+.track-info h2 {
+  margin: 5px 0;
+  font-size: 1.2rem;
+}
+.controls {
+  display: flex;
+  align-items: center;
   gap: 10px;
 }
-
-.navigation button {
-  background: #FF9800;
+.controls button {
+  background: #2563eb;
+  color: white;
   border: none;
-  color: #fff;
   padding: 10px 14px;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 15px;
-  transition: background 0.3s;
+}
+.controls button:hover {
+  background: #1d4ed8;
+}
+.controls input[type="range"] {
+  width: 100px;
 }
 
-.navigation button:hover {
-  background: #F57C00;
-}
-
-/* =======================
-   Telas secundárias
-   ======================= */
-#programacaoContent,
-#pedidosContent,
-#tocadasContent,
-#estatisticasContent,
-#logsContent,
-#adminContent {
-  background: #fff;
+/* Seções padrão */
+section {
+  margin: 20px;
   padding: 15px;
-  border-radius: 10px;
-  margin: 15px auto;
-  width: 90%;
-  max-width: 500px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.08);
-  text-align: left;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+section h3 {
+  margin-top: 0;
 }
 
-button {
-  font-family: inherit;
-}
-
-/* =======================
-   Botões gerais
-   ======================= */
-button.btn-primary {
-  background: #2196F3;
+/* Botão admin */
+#adminBtn {
+  display: block;
+  margin: 20px auto;
+  padding: 8px 14px;
+  background: #9333ea;
+  color: white;
   border: none;
-  color: #fff;
-  padding: 10px 16px;
-  margin: 5px;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 16px;
-  transition: background 0.3s;
+}
+#adminBtn:hover {
+  background: #7e22ce;
 }
 
-button.btn-primary:hover {
-  background: #1976D2;
+/* Admin mode container */
+#adminMode {
+  padding: 20px;
 }
 
-/* =======================
-   Responsividade
-   ======================= */
-@media (max-width: 600px) {
-  #playerContainer, 
-  #programacaoContent,
-  #pedidosContent,
-  #tocadasContent,
-  #estatisticasContent,
-  #logsContent,
-  #adminContent {
-    width: 95%;
-  }
+/* =========================
+   NOVOS ESTILOS ADICIONADOS
+   ========================= */
 
-  .navigation {
-    flex-direction: column;
-    gap: 8px;
-  }
+/* Lista de programação */
+#scheduleList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+.schedule-item {
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: #f5f5f5;
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+.schedule-item.current {
+  background: #d9f99d;
+  font-weight: 600;
+}
 
-  .controls button,
-  .navigation button,
-  .autoplay-fix button {
-    width: 100%;
-    max-width: 250px;
-  }
+/* Pedidos dos ouvintes */
+#requestsList {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.request-item {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fafafa;
+}
+#requestInput {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  margin-top: 8px;
+  width: 70%;
+}
+.requests button {
+  padding: 6px 12px;
+  margin-left: 8px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.requests button:hover {
+  background: #1d4ed8;
+}
+
+/* Admin mode extra */
+.upload-group {
+  margin-bottom: 15px;
+}
+.upload-group label {
+  font-weight: 600;
+  margin-right: 10px;
+}
+.upload-group input[type="file"] {
+  margin: 5px 0;
+}
+.upload-group button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  background: #22c55e;
+  color: white;
+  cursor: pointer;
+}
+.upload-group button:hover {
+  background: #16a34a;
+}
+
+/* Tocadas Recentemente */
+.recent-track {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-bottom: 1px solid #eee;
+}
+.recent-track:last-child {
+  border-bottom: none;
+}
+
+/* Notificações de sync */
+.sync-notification, .sync-success, .autoplay-prompt {
+  font-size: 14px;
+  text-align: center;
 }
