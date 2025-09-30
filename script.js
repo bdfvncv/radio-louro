@@ -11,9 +11,9 @@ const CLOUDINARY_CONFIG = {
 // 2. Configuração de Sincronização (Raw JSON via Cloudinary)
 const SYNC_CONFIG = {
   enabled: true,
-  interval: 10000,                       // checa a cada 10s
-  folder: 'radio-louro/sync',            // pasta no Cloudinary
-  publicId: 'radio-state',               // nome do arquivo JSON
+  interval: 10000,              // checa a cada 10s
+  folder: 'radio-louro_sync',   // pasta ajustada para underscore
+  publicId: 'radio-state',      // nome do arquivo JSON
   resourceType: 'raw'
 };
 
@@ -59,18 +59,12 @@ let elements = {},
 
 // 5. Gerente de Sincronização
 class RadioSyncManager {
-  constructor() {
-    this.init();
-  }
-
+  constructor() { this.init(); }
   init() {
     if (!SYNC_CONFIG.enabled) return;
-    // loop periódico
     this.intervalID = setInterval(() => this.syncFromCloud(), SYNC_CONFIG.interval);
-    // força sync ao voltar ao foco
     window.addEventListener('focus', () => this.syncFromCloud());
   }
-
   async syncFromCloud() {
     try {
       const url = `https://res.cloudinary.com/${CLOUDINARY_CONFIG.cloudName}/raw/upload/${SYNC_CONFIG.folder}/${SYNC_CONFIG.publicId}.json`;
@@ -83,9 +77,8 @@ class RadioSyncManager {
         localStorage.setItem('radioState', JSON.stringify(radioState));
         radioSystem.updateAllUI();
       }
-    } catch (e) { /* falha silenciosa */ }
+    } catch (e) {}
   }
-
   async publishUpdate() {
     const payload = { ...radioState, lastSync: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -96,7 +89,6 @@ class RadioSyncManager {
     form.append('resource_type', SYNC_CONFIG.resourceType);
     form.append('public_id', SYNC_CONFIG.publicId);
     form.append('overwrite', 'true');
-
     await fetch(
       `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/raw/upload`,
       { method: 'POST', body: form }
@@ -117,7 +109,7 @@ class RadioLive24 {
     this.cacheElements();
     this.loadState();
     this.bindUI();
-    this.syncManager.syncFromCloud();  // primeira sincronização
+    this.syncManager.syncFromCloud();
     this.startBroadcast();
   }
 
@@ -130,35 +122,28 @@ class RadioLive24 {
       'musicList','jingleList','timeList','programList',
       'scheduleList','recentTracks','requestsList',
       'adminBtn','passwordModal','adminMode','adminPassword','loadingOverlay',
-      'hourlyTime','autoJingles','avoidRepeat','repeatInterval','crossfade','crossfadeDuration','crossfadeValue'
+      'hourlyTime','autoJingles','avoidRepeat','repeatInterval','crossfade','crossfadeDuration','crossfadeValue',
+      'programSelect'
     ];
     ids.forEach(id => elements[id] = document.getElementById(id));
   }
 
   bindUI() {
-    // Play/Pause
     elements.playPauseBtn.onclick = () => this.togglePlay();
-    // Volume
-    elements.volumeSlider.oninput = (e) => this.setVolume(e.target.value);
-    // Áudio
+    elements.volumeSlider.oninput = e => this.setVolume(e.target.value);
     this.audio = elements.audioPlayer;
     this.audio.onended      = () => this.nextTrack();
     this.audio.ontimeupdate = () => this.updateTime();
 
-    // Abas do player
     document.querySelectorAll('.info-tab').forEach(tab => {
       tab.onclick = () => this.switchInfoTab(tab.dataset.tab);
     });
-
-    // Abas do admin
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.onclick = () => this.switchAdminTab(btn.dataset.tab);
     });
 
-    // Pedidos
     document.getElementById('sendRequest').onclick = () => this.sendRequest();
 
-    // Programação
     document.querySelectorAll('.content-type-select').forEach(sel => {
       sel.onchange = () => this.saveScheduleConfig();
     });
@@ -166,7 +151,6 @@ class RadioLive24 {
       inp.onchange = () => this.saveScheduleConfig();
     });
 
-    // Automação
     ['hourlyTime','autoJingles','avoidRepeat','crossfade'].forEach(id => {
       const cb = elements[id];
       if (cb) cb.onchange = () => {
@@ -174,23 +158,21 @@ class RadioLive24 {
         this.persist();
       };
     });
-    elements.repeatInterval.onchange = (e) => {
+    elements.repeatInterval.onchange = e => {
       radioState.automation.repeatInterval = +e.target.value;
       this.persist();
     };
-    elements.crossfadeDuration.oninput = (e) => {
+    elements.crossfadeDuration.oninput = e => {
       radioState.automation.crossfadeDuration = +e.target.value;
       elements.crossfadeValue.textContent = e.target.value + 's';
       this.persist();
     };
 
-    // Admin
-    elements.adminBtn.onclick = () => this.showModal('passwordModal');
+    elements.adminBtn.onclick                = () => this.showModal('passwordModal');
     document.getElementById('emergencyStop').onclick    = () => this.stopBroadcast();
     document.getElementById('toggleBroadcast').onclick = () => this.toggleBroadcast();
     document.getElementById('backToPlayerBtn').onclick = () => this.showPlayerMode();
 
-    // Modal senha
     document.querySelector('#passwordModal .btn-primary')
       .onclick = () => this.checkAdminPassword();
     document.querySelector('#passwordModal .btn-secondary')
@@ -209,7 +191,6 @@ class RadioLive24 {
     this.updateAllUI();
   }
 
-  // Controle de transmissão
   startBroadcast() {
     if (radioState.isLive) return;
     radioState.isLive = true;
@@ -227,7 +208,6 @@ class RadioLive24 {
     radioState.isLive ? this.stopBroadcast() : this.startBroadcast();
   }
 
-  // Play/Pause
   togglePlay() {
     if (!radioState.isPlaying) {
       this.audio.play().catch(() => {});
@@ -243,10 +223,9 @@ class RadioLive24 {
     const playI = elements.playPauseBtn.querySelector('.play-icon');
     const pauI  = elements.playPauseBtn.querySelector('.pause-icon');
     playI.style.display = radioState.isPlaying ? 'none' : 'block';
-    pauI.style.display  = radioState.isPlaying ? 'block': 'none';
+    pauI.style.display  = radioState.isPlaying ? 'block' : 'none';
   }
 
-  // Volume
   setVolume(v) {
     radioState.volume = +v;
     this.audio.volume = v/100;
@@ -254,27 +233,26 @@ class RadioLive24 {
     this.persist();
   }
 
-  // Tempo da faixa
   updateTime() {
     const c = this.audio.currentTime || 0;
     const d = this.audio.duration    || 0;
     elements.trackTime.textContent = this.formatTime(c) + ' / ' + this.formatTime(d);
   }
+
   formatTime(sec) {
     const m = Math.floor(sec/60),
           s = Math.floor(sec%60).toString().padStart(2,'0');
     return `${m}:${s}`;
   }
 
-  // Agenda a próxima faixa
   scheduleNextTrack() {
     if (!radioState.isLive) return;
     const period = this.currentPeriod();
     const config = radioState.schedule[period];
     let next = null;
-    if (config.type === 'music')      next = this.randomFrom(radioState.content.music);
+    if      (config.type === 'music')  next = this.randomFrom(radioState.content.music);
     else if (config.type === 'program') next = this.randomFrom(radioState.content.program[period]);
-    else                                next = this.randomFrom(radioState.content.music);
+    else                                 next = this.randomFrom(radioState.content.music);
 
     if (!next) {
       setTimeout(() => this.scheduleNextTrack(), 30000);
@@ -301,18 +279,15 @@ class RadioLive24 {
 
   randomFrom(arr) {
     if (!arr.length) return null;
-    const idx = Math.floor(Math.random()*arr.length);
-    return arr[idx];
+    return arr[Math.floor(Math.random()*arr.length)];
   }
 
-  // Atualiza UI da faixa
   updateTrackInfo(t) {
     elements.currentTrack.textContent = this.formatFilename(t.name);
     elements.albumTitle.textContent   = this.titleByType(t);
     elements.trackGenre.textContent   = this.detectGenre(t.name);
-    // capa
     if (t.url) {
-      elements.trackCover.src          = t.url;
+      elements.trackCover.src           = t.url;
       elements.trackCover.style.display = 'block';
       elements.albumCover.style.display = 'none';
     } else {
@@ -338,77 +313,74 @@ class RadioLive24 {
   }
 
   titleByType(track) {
-    if (radioState.content.jingle.some(t=>t.publicId===track.publicId))
+    if (radioState.content.jingle.some(t => t.publicId === track.publicId))
       return 'Vinheta';
-    if (radioState.content.time.some(t=>t.publicId===track.publicId))
+    if (radioState.content.time.some(t => t.publicId === track.publicId))
       return 'Hora Certa';
     for (let p of ['morning','afternoon','evening','late']) {
-      if (radioState.content.program[p].some(t=>t.publicId===track.publicId))
+      if (radioState.content.program[p].some(t => t.publicId === track.publicId))
         return this.titlePeriod(p);
     }
     return 'Música';
   }
 
   titlePeriod(key) {
-    if (key==='morning')   return 'Manhã Musical';
-    if (key==='afternoon') return 'Tarde Animada';
-    if (key==='evening')   return 'Noite Especial';
+    if (key === 'morning')   return 'Manhã Musical';
+    if (key === 'afternoon') return 'Tarde Animada';
+    if (key === 'evening')   return 'Noite Especial';
     return 'Madrugada Suave';
   }
 
-  // Periodo atual
   currentPeriod() {
     const h = new Date().getHours();
-    if (h>=6 && h<12)      return 'morning';
-    if (h>=12 && h<18)     return 'afternoon';
-    if (h>=18 && h<24)     return 'evening';
+    if (h >= 6 && h < 12)      return 'morning';
+    if (h >= 12 && h < 18)     return 'afternoon';
+    if (h >= 18 && h < 24)     return 'evening';
     return 'late';
   }
 
-  // Abas Player
   switchInfoTab(tab) {
-    document.querySelectorAll('.info-tab').forEach(t=>t.classList.remove('active'));
-    document.querySelectorAll('.info-section').forEach(s=>s.classList.remove('active'));
+    document.querySelectorAll('.info-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.info-section').forEach(s => s.classList.remove('active'));
     document.querySelector(`button[data-tab="${tab}"]`).classList.add('active');
-    document.getElementById(tab+'-section').classList.add('active');
-    if (tab==='schedule') this.renderSchedule();
-    if (tab==='recent')   this.renderRecent();
-    if (tab==='requests') this.renderRequests();
+    document.getElementById(`${tab}-section`).classList.add('active');
+    if (tab === 'schedule') this.renderSchedule();
+    if (tab === 'recent')   this.renderRecent();
+    if (tab === 'requests') this.renderRequests();
   }
 
-  // Abas Admin
   switchAdminTab(tab) {
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.querySelector(`button[data-tab="${tab}"]`).classList.add('active');
-    document.getElementById(tab+'-tab').classList.add('active');
-    if (tab==='content')  this.renderLibrary();
-    if (tab==='reports')  this.renderReports();
+    document.getElementById(`${tab}-tab`).classList.add('active');
+    if (tab === 'content') this.renderLibrary();
+    if (tab === 'reports') this.renderReports();
   }
 
-  // Render Schedule
   renderSchedule() {
     const list = elements.scheduleList;
     const periods = [
-      {key:'morning',   time:'06:00–12:00'},
-      {key:'afternoon', time:'12:00–18:00'},
-      {key:'evening',   time:'18:00–00:00'},
-      {key:'late',      time:'00:00–06:00'}
+      { key: 'morning',   time: '06:00–12:00' },
+      { key: 'afternoon', time: '12:00–18:00' },
+      { key: 'evening',   time: '18:00–00:00' },
+      { key: 'late',      time: '00:00–06:00' }
     ];
     list.innerHTML = periods.map(p => {
-      const cur = this.currentPeriod()===p.key ? 'current' : '';
+      const cur = this.currentPeriod() === p.key ? 'current' : '';
       return `
         <div class="schedule-item ${cur}">
           <span class="schedule-time">${p.time}</span>
           <span class="schedule-program">${this.titlePeriod(p.key)}</span>
-        </div>`;
+        </div>
+      `;
     }).join('');
   }
 
   saveScheduleConfig() {
     document.querySelectorAll('.time-slot').forEach(div => {
       const p = div.dataset.period;
-      radioState.schedule[p].type       = div.querySelector('.content-type-select').value;
+      radioState.schedule[p].type = div.querySelector('.content-type-select').value;
       radioState.schedule[p].jingleFreq = +div.querySelector('.jingle-frequency').value;
     });
     this.persist();
@@ -416,13 +388,12 @@ class RadioLive24 {
 
   resetSchedule() {
     Object.keys(radioState.schedule).forEach(k => {
-      radioState.schedule[k] = { type:'mixed', jingleFreq:15 };
+      radioState.schedule[k] = { type: 'mixed', jingleFreq: 15 };
     });
     this.persist();
     this.renderSchedule();
   }
 
-  // Render Recent
   renderRecent() {
     const c = elements.recentTracks;
     const arr = radioState.playHistory.slice(-5).reverse();
@@ -433,12 +404,12 @@ class RadioLive24 {
     c.innerHTML = arr.map(t => `
       <div class="recent-track">
         <span class="track-name">${this.formatFilename(t.name)}</span>
-        <span class="track-time">${new Date(t.uploadedAt)
-          .toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
+        <span class="track-time">${new Date(t.uploadedAt).toLocaleTimeString('pt-BR', {
+          hour: '2-digit', minute: '2-digit'
+        })}</span>
       </div>`).join('');
   }
 
-  // Render Requests
   renderRequests() {
     const c = elements.requestsList;
     const arr = radioState.stats.requests.slice(-10).reverse();
@@ -449,8 +420,9 @@ class RadioLive24 {
     c.innerHTML = arr.map(r => `
       <div class="request-item">
         <span class="request-song">${r.song}</span>
-        <span class="request-time">${new Date(r.timestamp)
-          .toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
+        <span class="request-time">${new Date(r.timestamp).toLocaleTimeString('pt-BR', {
+          hour: '2-digit', minute: '2-digit'
+        })}</span>
       </div>`).join('');
   }
 
@@ -464,19 +436,17 @@ class RadioLive24 {
     this.renderRequests();
   }
 
-  // Render Library (Admin)
   renderLibrary() {
-    elements.musicCount.textContent  = radioState.content.music.length;
+    elements.musicCount.textContent  = radioState.content.music.length; 
     elements.jingleCount.textContent = radioState.content.jingle.length;
     elements.timeCount.textContent   = radioState.content.time.length;
     const totalProg = Object.values(radioState.content.program).reduce((s,a)=>s+a.length,0);
     elements.programCount.textContent = totalProg;
 
-    this.renderList('musicList',  radioState.content.music,  'music');
+    this.renderList('musicList', radioState.content.music,   'music');
     this.renderList('jingleList', radioState.content.jingle, 'jingle');
     this.renderList('timeList',   radioState.content.time,   'time');
 
-    // Programas
     let html = '';
     ['morning','afternoon','evening','late'].forEach(p => {
       const arr = radioState.content.program[p];
@@ -504,7 +474,6 @@ class RadioLive24 {
       </div>`).join('');
   }
 
-  // Render Reports (Admin)
   renderReports() {
     this.renderTopTracks();
     this.renderRequestsReport();
@@ -514,7 +483,8 @@ class RadioLive24 {
   renderTopTracks() {
     const el = document.getElementById('topTracks');
     const arr = Object.entries(radioState.stats.popularTracks)
-      .sort((a,b)=>b[1]-a[1]).slice(0,10);
+      .sort((a,b) => b[1]-a[1])
+      .slice(0,10);
     if (!arr.length) {
       el.innerHTML = '<p>Nenhuma estatística ainda.</p>';
       return;
@@ -543,9 +513,9 @@ class RadioLive24 {
   renderLogs() {
     const el = document.getElementById('systemLogs');
     const logs = [
-      { time: new Date(), message: 'Sistema iniciado',      type:'info'    },
+      { time: new Date(), message: 'Sistema iniciado',      type:'info' },
       { time: new Date(Date.now()-30000), message: 'Transmissão ativa', type:'success' },
-      { time: new Date(Date.now()-60000), message: 'Conteúdo carregado', type:'info'    }
+      { time: new Date(Date.now()-60000), message: 'Conteúdo carregado', type:'info' }
     ];
     el.innerHTML = logs.map(log => `
       <div class="log-item ${log.type}">
@@ -554,7 +524,6 @@ class RadioLive24 {
       </div>`).join('');
   }
 
-  // Deleção (Admin)
   deleteContent(type, idx) {
     if (!confirm('Excluir este item?')) return;
     radioState.content[type].splice(idx,1);
@@ -567,10 +536,8 @@ class RadioLive24 {
     this.persist();
   }
 
-  // Atualiza toda a UI
   updateAllUI() {
     this.updatePlayPauseIcon();
-    this.updateTime();
     elements.playCount.textContent     = `Faixas: ${radioState.stats.totalPlayed}`;
     elements.broadcastStatus.textContent = radioState.isLive ? 'AO VIVO' : 'OFFLINE';
     elements.volumeSlider.value       = radioState.volume;
@@ -582,17 +549,14 @@ class RadioLive24 {
     this.renderReports();
   }
 
-  // Modal genérico
   showModal(id)  { document.getElementById(id).style.display = 'flex'; }
   closeModal(id) { document.getElementById(id).style.display = 'none';  }
-
   showPlayerMode() {
     elements.adminMode.style.display  = 'none';
     document.getElementById('playerMode').style.display = 'flex';
     this.syncManager.isAdmin = false;
   }
 
-  // Autenticação Admin
   checkAdminPassword() {
     const pwd = elements.adminPassword.value;
     if (pwd === 'admin123') {
@@ -636,7 +600,7 @@ class ContentUploader {
     const fd = new FormData();
     let folder = type;
     if (type === 'program') {
-      const p = document.getElementById('programSelect').value;
+      const p = elements.programSelect.value;
       folder = `program/${p}`;
     }
     fd.append('file', file);
@@ -656,7 +620,7 @@ class ContentUploader {
       uploadedAt: new Date().toISOString()
     };
     if (type === 'program') {
-      const p = document.getElementById('programSelect').value;
+      const p = elements.programSelect.value;
       radioState.content.program[p].push(obj);
     } else {
       radioState.content[type].push(obj);
