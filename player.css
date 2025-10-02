@@ -1,0 +1,481 @@
+/* ==========================================
+   PLAYER CSS - INTERFACE PÚBLICA
+   Rádio Supermercado do Louro
+   ========================================== */
+
+/* Container Principal */
+.player-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--espaco-xl);
+  background: linear-gradient(135deg, var(--verde-primario) 0%, #0a3a2a 50%, var(--verde-secundario) 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Efeitos de Fundo */
+.player-container::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, var(--verde-alpha-20) 0%, transparent 50%);
+  animation: rotate 30s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Header do Player */
+.player-header {
+  text-align: center;
+  margin-bottom: var(--espaco-3xl);
+  z-index: 1;
+  animation: fadeInDown 1s ease;
+}
+
+.player-logo {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto var(--espaco-lg);
+  background: var(--branco);
+  border-radius: var(--borda-radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--sombra-xl);
+}
+
+.player-logo-text {
+  font-size: var(--texto-3xl);
+  font-weight: 800;
+  color: var(--verde-primario);
+}
+
+.player-title {
+  font-size: var(--texto-5xl);
+  font-weight: 800;
+  color: var(--branco);
+  margin-bottom: var(--espaco-sm);
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  letter-spacing: -0.02em;
+}
+
+.player-subtitle {
+  font-size: var(--texto-xl);
+  color: var(--branco-alpha-80);
+  font-weight: 500;
+}
+
+/* Card Principal do Player */
+.player-card {
+  background: var(--branco);
+  border-radius: var(--borda-radius-2xl);
+  padding: var(--espaco-3xl);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+  width: 100%;
+  z-index: 1;
+  animation: fadeInUp 1s ease;
+  position: relative;
+}
+
+/* Status de Transmissão */
+.live-badge {
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ao-vivo);
+  color: var(--branco);
+  padding: var(--espaco-sm) var(--espaco-lg);
+  border-radius: var(--borda-radius-full);
+  font-weight: 700;
+  font-size: var(--texto-sm);
+  box-shadow: 0 4px 15px rgba(255, 68, 68, 0.4);
+  animation: pulse 2s infinite;
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-sm);
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--branco);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+/* Capa do Álbum */
+.album-artwork {
+  position: relative;
+  width: var(--album-cover-size);
+  height: var(--album-cover-size);
+  margin: 0 auto var(--espaco-xl);
+  border-radius: var(--borda-radius-xl);
+  overflow: hidden;
+  box-shadow: var(--sombra-2xl);
+}
+
+.album-artwork img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--transicao-normal);
+}
+
+.album-artwork:hover img {
+  transform: scale(1.05);
+}
+
+/* Overlay da Capa */
+.album-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+  padding: var(--espaco-lg);
+  color: var(--branco);
+}
+
+/* Informações da Música */
+.track-info {
+  text-align: center;
+  margin-bottom: var(--espaco-xl);
+}
+
+.track-title {
+  font-size: var(--texto-2xl);
+  font-weight: 700;
+  color: var(--verde-primario);
+  margin-bottom: var(--espaco-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.track-artist {
+  font-size: var(--texto-lg);
+  color: var(--cinza-escuro);
+  font-weight: 500;
+}
+
+.track-category {
+  display: inline-block;
+  margin-top: var(--espaco-sm);
+  padding: var(--espaco-xs) var(--espaco-md);
+  background: var(--verde-alpha-10);
+  color: var(--verde-secundario);
+  border-radius: var(--borda-radius-full);
+  font-size: var(--texto-sm);
+  font-weight: 600;
+}
+
+/* Barra de Progresso */
+.progress-container {
+  margin-bottom: var(--espaco-xl);
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--cinza-medio);
+  border-radius: var(--borda-radius-full);
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--gradiente-verde-claro);
+  border-radius: var(--borda-radius-full);
+  transition: width 0.1s linear;
+  position: relative;
+}
+
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  background: var(--verde-accent);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px var(--verde-alpha-50);
+}
+
+.progress-time {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--espaco-sm);
+  font-size: var(--texto-sm);
+  color: var(--cinza-escuro);
+  font-weight: 500;
+}
+
+/* Controles */
+.player-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espaco-lg);
+  margin-bottom: var(--espaco-xl);
+}
+
+.control-btn {
+  width: var(--control-button-size);
+  height: var(--control-button-size);
+  border-radius: 50%;
+  border: none;
+  background: var(--gradiente-verde);
+  color: var(--branco);
+  font-size: var(--texto-2xl);
+  cursor: pointer;
+  transition: all var(--transicao-normal);
+  box-shadow: var(--sombra-verde);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.control-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: var(--branco-alpha-20);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.control-btn:hover::before {
+  width: 100%;
+  height: 100%;
+}
+
+.control-btn:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--sombra-verde-forte);
+}
+
+.control-btn:active {
+  transform: translateY(-2px);
+}
+
+.control-btn-secondary {
+  width: 50px;
+  height: 50px;
+  background: var(--cinza-claro);
+  color: var(--verde-primario);
+  font-size: var(--texto-lg);
+  box-shadow: var(--sombra-md);
+}
+
+.control-btn-secondary:hover {
+  background: var(--cinza-medio);
+}
+
+/* Volume */
+.volume-container {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-md);
+  padding: var(--espaco-lg);
+  background: var(--cinza-claro);
+  border-radius: var(--borda-radius-lg);
+  margin-bottom: var(--espaco-xl);
+}
+
+.volume-icon {
+  font-size: var(--texto-xl);
+  color: var(--verde-primario);
+  min-width: 24px;
+}
+
+.volume-slider {
+  flex: 1;
+  height: 6px;
+  background: var(--cinza-medio);
+  border-radius: var(--borda-radius-full);
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: var(--verde-accent);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 8px var(--verde-alpha-50);
+  transition: all var(--transicao-rapida);
+}
+
+.volume-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.volume-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: var(--verde-accent);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 8px var(--verde-alpha-50);
+}
+
+.volume-value {
+  font-size: var(--texto-sm);
+  font-weight: 700;
+  color: var(--verde-primario);
+  min-width: 40px;
+  text-align: right;
+}
+
+/* Equalizador Visual */
+.equalizer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 40px;
+  margin-bottom: var(--espaco-lg);
+}
+
+.equalizer-bar {
+  width: 4px;
+  background: var(--gradiente-verde-claro);
+  border-radius: var(--borda-radius-sm);
+  animation: equalizer 1s ease-in-out infinite;
+}
+
+.equalizer-bar:nth-child(1) { height: 15px; animation-delay: 0s; }
+.equalizer-bar:nth-child(2) { height: 25px; animation-delay: 0.1s; }
+.equalizer-bar:nth-child(3) { height: 20px; animation-delay: 0.2s; }
+.equalizer-bar:nth-child(4) { height: 30px; animation-delay: 0.3s; }
+.equalizer-bar:nth-child(5) { height: 18px; animation-delay: 0.4s; }
+
+/* Histórico "Tocou Agora" */
+.now-playing-history {
+  background: var(--cinza-claro);
+  border-radius: var(--borda-radius-lg);
+  padding: var(--espaco-lg);
+}
+
+.history-title {
+  font-size: var(--texto-sm);
+  font-weight: 700;
+  color: var(--cinza-escuro);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--espaco-md);
+}
+
+.history-list {
+  list-style: none;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-md);
+  padding: var(--espaco-sm) 0;
+  border-bottom: 1px solid var(--cinza-medio);
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.history-time {
+  font-size: var(--texto-xs);
+  color: var(--cinza-escuro);
+  font-weight: 600;
+  min-width: 50px;
+}
+
+.history-track {
+  font-size: var(--texto-sm);
+  color: var(--preto-suave);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .player-container {
+    padding: var(--espaco-lg);
+  }
+  
+  .player-title {
+    font-size: var(--texto-3xl);
+  }
+  
+  .player-card {
+    padding: var(--espaco-xl);
+  }
+  
+  .album-artwork {
+    width: 220px;
+    height: 220px;
+  }
+  
+  .control-btn {
+    width: 60px;
+    height: 60px;
+    font-size: var(--texto-xl);
+  }
+  
+  .control-btn-secondary {
+    width: 45px;
+    height: 45px;
+  }
+}
+
+@media (max-width: 480px) {
+  .player-title {
+    font-size: var(--texto-2xl);
+  }
+  
+  .player-subtitle {
+    font-size: var(--texto-base);
+  }
+  
+  .album-artwork {
+    width: 180px;
+    height: 180px;
+  }
+  
+  .track-title {
+    font-size: var(--texto-xl);
+  }
+  
+  .player-controls {
+    gap: var(--espaco-md);
+  }
+}
