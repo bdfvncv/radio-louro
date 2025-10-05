@@ -1,11 +1,10 @@
 // ==========================================
-// ADMIN.JS - PAINEL ADMINISTRATIVO
+// ADMIN.JS - PAINEL ADMINISTRATIVO (SUPABASE)
 // ==========================================
 
 import { radioEngine } from './radio-engine.js';
-import { firebaseService } from './firebase-service.js';
+import { supabaseService } from './supabase-service.js';
 import { cloudinaryService } from './cloudinary-service.js';
-import { RADIO_CONFIG } from './config.js';
 
 class AdminController {
   constructor() {
@@ -13,44 +12,27 @@ class AdminController {
     this.confirmCallback = null;
   }
 
-  // ============================================
-  // INICIALIZAÇÃO
-  // ============================================
-
   async init() {
     try {
-      console.log('🛠️ Inicializando Admin Panel...');
+      console.log('🛠️ Inicializando Admin...');
       
-      // Inicializar Radio Engine
       await radioEngine.inicializar('radioPlayer');
       
-      // Configurar navegação
       this.setupNavigation();
-      
-      // Configurar eventos
       this.setupEvents();
       
-      // Carregar dados iniciais
       await this.loadDashboard();
-      
-      // Atualizar status
       this.updateRadioStatus();
       
-      console.log('✅ Admin Panel inicializado');
-      
+      console.log('✅ Admin inicializado');
     } catch (error) {
-      console.error('❌ Erro ao inicializar Admin:', error);
+      console.error('❌ Erro:', error);
       this.showToast('Erro ao carregar painel', 'error');
     }
   }
 
-  // ============================================
-  // NAVEGAÇÃO
-  // ============================================
-
   setupNavigation() {
     const navItems = document.querySelectorAll('.nav-item');
-    
     navItems.forEach(item => {
       item.addEventListener('click', (e) => {
         e.preventDefault();
@@ -61,7 +43,6 @@ class AdminController {
   }
 
   navigateTo(section) {
-    // Atualizar nav ativa
     document.querySelectorAll('.nav-item').forEach(item => {
       item.classList.remove('active');
       if (item.dataset.section === section) {
@@ -69,7 +50,6 @@ class AdminController {
       }
     });
     
-    // Atualizar seção ativa
     document.querySelectorAll('.content-section').forEach(sec => {
       sec.classList.remove('active');
     });
@@ -78,8 +58,6 @@ class AdminController {
     if (targetSection) {
       targetSection.classList.add('active');
       this.currentSection = section;
-      
-      // Carregar dados da seção
       this.loadSectionData(section);
     }
   }
@@ -101,17 +79,11 @@ class AdminController {
     }
   }
 
-  // ============================================
-  // EVENTOS
-  // ============================================
-
   setupEvents() {
-    // Toggle Transmissão
     document.getElementById('toggleTransmission')?.addEventListener('click', () => {
       this.toggleTransmission();
     });
     
-    // Refresh buttons
     document.getElementById('refreshStats')?.addEventListener('click', () => {
       this.loadDashboard();
     });
@@ -120,17 +92,14 @@ class AdminController {
       this.loadFiles();
     });
     
-    // Reset Stats
     document.getElementById('resetStats')?.addEventListener('click', () => {
       this.resetStats();
     });
     
-    // Save Config
     document.getElementById('saveConfig')?.addEventListener('click', () => {
       this.saveConfig();
     });
     
-    // Confirm Modal
     document.getElementById('confirmYes')?.addEventListener('click', () => {
       this.confirmAction(true);
     });
@@ -140,23 +109,16 @@ class AdminController {
     });
   }
 
-  // ============================================
-  // DASHBOARD
-  // ============================================
-
   async loadDashboard() {
     try {
-      const stats = await firebaseService.buscarEstatisticas();
-      
+      const stats = await supabaseService.buscarEstatisticas();
       if (!stats) return;
       
-      // Atualizar cards
       this.updateElement('totalMusicas', stats.porCategoria.musicas || 0);
       this.updateElement('totalVinhetas', stats.porCategoria.vinhetas || 0);
       this.updateElement('totalAvisos', stats.porCategoria.avisos || 0);
       this.updateElement('totalReproducoes', stats.totalReproducoes || 0);
       
-      // Atualizar "Tocando Agora"
       const trackInfo = radioEngine.getCurrentTrackInfo();
       if (trackInfo) {
         const html = `
@@ -171,15 +133,10 @@ class AdminController {
         `;
         document.getElementById('nowPlayingInfo').innerHTML = html;
       }
-      
     } catch (error) {
       console.error('❌ Erro ao carregar dashboard:', error);
     }
   }
-
-  // ============================================
-  // UPLOAD DE ARQUIVOS
-  // ============================================
 
   async uploadFiles(categoria) {
     try {
@@ -187,17 +144,13 @@ class AdminController {
       const input = document.getElementById(inputId);
       
       if (!input || input.files.length === 0) {
-        this.showToast('Selecione pelo menos um arquivo', 'warning');
+        this.showToast('Selecione arquivos', 'warning');
         return;
       }
       
-      // Obter metadados adicionais
       const metadados = this.getUploadMetadata(categoria);
-      
-      // Mostrar progresso
       this.showUploadProgress();
       
-      // Upload múltiplo
       const resultados = await cloudinaryService.uploadMultiplos(
         Array.from(input.files),
         categoria,
@@ -207,14 +160,12 @@ class AdminController {
         }
       );
       
-      // Processar resultados
       let sucessos = 0;
       let erros = 0;
       
       for (const resultado of resultados) {
         if (resultado.sucesso) {
-          // Salvar no Firestore
-          await firebaseService.salvarArquivo({
+          await supabaseService.salvarArquivo({
             ...resultado.arquivo,
             categoria: categoria,
             subcategoria: metadados.subcategoria,
@@ -225,28 +176,22 @@ class AdminController {
           sucessos++;
         } else {
           erros++;
-          console.error('Erro no upload:', resultado.nomeArquivo, resultado.erro);
+          console.error('Erro:', resultado.nomeArquivo, resultado.erro);
         }
       }
       
-      // Esconder progresso
       this.hideUploadProgress();
       
-      // Feedback
       if (sucessos > 0) {
-        this.showToast(`${sucessos} arquivo(s) enviado(s) com sucesso!`, 'success');
+        this.showToast(`${sucessos} arquivo(s) enviado(s)!`, 'success');
       }
       
       if (erros > 0) {
-        this.showToast(`${erros} arquivo(s) falharam no upload`, 'error');
+        this.showToast(`${erros} arquivo(s) falharam`, 'error');
       }
       
-      // Limpar input
       input.value = '';
-      
-      // Atualizar dashboard
       await this.loadDashboard();
-      
     } catch (error) {
       console.error('❌ Erro no upload:', error);
       this.showToast('Erro ao fazer upload', 'error');
@@ -288,7 +233,6 @@ class AdminController {
 
   updateUploadProgress(current, total, filename) {
     const percent = Math.round((current / total) * 100);
-    
     const statusEl = document.getElementById('uploadStatus');
     const percentEl = document.getElementById('uploadPercent');
     const fillEl = document.getElementById('uploadProgressFill');
@@ -307,19 +251,13 @@ class AdminController {
     }
   }
 
-  // ============================================
-  // GERENCIAR ARQUIVOS
-  // ============================================
-
   async loadFiles() {
     try {
       const categorias = ['musicas', 'vinhetas', 'avisos', 'propagandas'];
-      
       for (const categoria of categorias) {
-        const arquivos = await firebaseService.buscarArquivosPorCategoria(categoria);
+        const arquivos = await supabaseService.buscarArquivosPorCategoria(categoria);
         this.renderFileList(categoria, arquivos);
       }
-      
     } catch (error) {
       console.error('❌ Erro ao carregar arquivos:', error);
     }
@@ -333,13 +271,10 @@ class AdminController {
     const countEl = document.getElementById(countId);
     
     if (!listEl) return;
-    
-    // Atualizar contador
     if (countEl) countEl.textContent = arquivos.length;
     
-    // Renderizar lista
     if (arquivos.length === 0) {
-      listEl.innerHTML = '<p style="color: #6c757d;">Nenhum arquivo encontrado</p>';
+      listEl.innerHTML = '<p style="color: #6c757d;">Nenhum arquivo</p>';
       return;
     }
     
@@ -350,14 +285,14 @@ class AdminController {
           <div class="file-meta">
             ${arq.genero ? `${arq.genero} • ` : ''}
             ${arq.duracao ? this.formatTime(arq.duracao) : ''} • 
-            Tocou ${arq.playCount || 0}x
+            ${arq.play_count || 0}x
           </div>
         </div>
         <div class="file-actions">
-          <button class="btn-icon btn-icon-play" onclick="adminController.playPreview('${arq.cloudinaryUrl}')" title="Preview">
+          <button class="btn-icon btn-icon-play" onclick="adminController.playPreview('${arq.cloudinary_url}')" title="Preview">
             ▶️
           </button>
-          <button class="btn-icon btn-icon-delete" onclick="adminController.deleteFile('${arq.id}', '${arq.cloudinaryPublicId}', '${categoria}')" title="Deletar">
+          <button class="btn-icon btn-icon-delete" onclick="adminController.deleteFile('${arq.id}', '${arq.cloudinary_public_id}', '${categoria}')" title="Deletar">
             🗑️
           </button>
         </div>
@@ -370,49 +305,33 @@ class AdminController {
   async deleteFile(arquivoId, publicId, categoria) {
     this.showConfirm(
       'Deletar Arquivo',
-      'Tem certeza que deseja deletar este arquivo? Esta ação não pode ser desfeita.',
+      'Tem certeza que deseja deletar?',
       async () => {
         try {
-          // Deletar do Cloudinary
           await cloudinaryService.deleteAudio(publicId);
-          
-          // Deletar do Firestore
-          await firebaseService.delete('arquivos', arquivoId);
-          
-          this.showToast('Arquivo deletado com sucesso', 'success');
-          
-          // Atualizar lista
+          await supabaseService.delete('arquivos', arquivoId);
+          this.showToast('Arquivo deletado', 'success');
           await this.loadFiles();
           await this.loadDashboard();
-          
         } catch (error) {
           console.error('❌ Erro ao deletar:', error);
-          this.showToast('Erro ao deletar arquivo', 'error');
+          this.showToast('Erro ao deletar', 'error');
         }
       }
     );
   }
 
   playPreview(url) {
-    // Criar player temporário para preview
     const audio = new Audio(url);
     audio.volume = 0.5;
     audio.play();
-    
     this.showToast('Reproduzindo preview', 'info');
-    
-    // Parar após 10 segundos
     setTimeout(() => audio.pause(), 10000);
   }
 
-  // ============================================
-  // ESTATÍSTICAS
-  // ============================================
-
   async loadStats() {
     try {
-      const stats = await firebaseService.buscarEstatisticas();
-      
+      const stats = await supabaseService.buscarEstatisticas();
       if (!stats || !stats.maisTodastas) return;
       
       const tableBody = document.getElementById('topMusicasTable');
@@ -421,7 +340,7 @@ class AdminController {
         tableBody.innerHTML = `
           <tr>
             <td colspan="5" style="text-align: center; color: #6c757d;">
-              Nenhuma música foi tocada ainda
+              Nenhuma música tocada ainda
             </td>
           </tr>
         `;
@@ -434,101 +353,85 @@ class AdminController {
           <td>${this.formatTrackName(musica.nome)}</td>
           <td>${musica.genero || '-'}</td>
           <td>${musica.subcategoria || 'geral'}</td>
-          <td><span class="play-count-badge">${musica.playCount}x</span></td>
+          <td><span class="play-count-badge">${musica.play_count}x</span></td>
         </tr>
       `).join('');
       
       tableBody.innerHTML = html;
-      
     } catch (error) {
-      console.error('Erro ao carregar estatísticas:', error);
+      console.error('Erro:', error);
     }
   }
 
   resetStats() {
     this.showConfirm(
       'Resetar Estatísticas',
-      'Tem certeza que deseja resetar todos os contadores de reprodução? Esta ação não pode ser desfeita.',
+      'Tem certeza?',
       async () => {
         try {
-          const arquivos = await firebaseService.getAll('arquivos');
-          
+          const arquivos = await supabaseService.getAll('arquivos');
           for (const arq of arquivos) {
-            await firebaseService.update('arquivos', arq.id, {
-              playCount: 0,
-              ultimaReproducao: null
+            await supabaseService.update('arquivos', arq.id, {
+              play_count: 0,
+              ultima_reproducao: null
             });
           }
-          
-          this.showToast('Estatísticas resetadas com sucesso', 'success');
+          this.showToast('Estatísticas resetadas', 'success');
           await this.loadStats();
           await this.loadDashboard();
-          
         } catch (error) {
-          console.error('Erro ao resetar stats:', error);
-          this.showToast('Erro ao resetar estatísticas', 'error');
+          console.error('Erro:', error);
+          this.showToast('Erro ao resetar', 'error');
         }
       }
     );
   }
 
-  // ============================================
-  // CONFIGURAÇÕES
-  // ============================================
-
   async loadConfig() {
     try {
       const [configRotacao, configTransmissao] = await Promise.all([
-        firebaseService.buscarConfigRotacao(),
-        firebaseService.buscarConfig()
+        supabaseService.buscarConfigRotacao(),
+        supabaseService.buscarConfig()
       ]);
       
-      // Preencher campos
       if (configRotacao) {
-        this.updateElement('configIntervalo', configRotacao.intervaloMinimo, 'value');
-        document.getElementById('configBalancearGeneros').checked = configRotacao.balancearGeneros;
-        document.getElementById('configBalancearRitmos').checked = configRotacao.balancearRitmos;
-        document.getElementById('configConsiderarHorario').checked = configRotacao.considerarHorario;
+        this.updateElement('configIntervalo', configRotacao.intervalo_minimo, 'value');
+        document.getElementById('configBalancearGeneros').checked = configRotacao.balancear_generos;
+        document.getElementById('configBalancearRitmos').checked = configRotacao.balancear_ritmos;
+        document.getElementById('configConsiderarHorario').checked = configRotacao.considerar_horario;
       }
       
       if (configTransmissao) {
-        this.updateElement('configAlbumAtivo', configTransmissao.albumAtivo || 'geral', 'value');
+        this.updateElement('configAlbumAtivo', configTransmissao.album_ativo || 'geral', 'value');
       }
-      
     } catch (error) {
-      console.error('Erro ao carregar config:', error);
+      console.error('Erro:', error);
     }
   }
 
   async saveConfig() {
     try {
-      // Salvar config de rotação
-      await firebaseService.set('config', 'rotacao', {
-        intervaloMinimo: parseInt(document.getElementById('configIntervalo').value),
-        balancearGeneros: document.getElementById('configBalancearGeneros').checked,
-        balancearRitmos: document.getElementById('configBalancearRitmos').checked,
-        considerarHorario: document.getElementById('configConsiderarHorario').checked
+      await supabaseService.salvarConfig({
+        tipo: 'rotacao',
+        intervalo_minimo: parseInt(document.getElementById('configIntervalo').value),
+        balancear_generos: document.getElementById('configBalancearGeneros').checked,
+        balancear_ritmos: document.getElementById('configBalancearRitmos').checked,
+        considerar_horario: document.getElementById('configConsiderarHorario').checked
       });
       
-      // Salvar álbum ativo
       const albumAtivo = document.getElementById('configAlbumAtivo').value;
-      const config = await firebaseService.buscarConfig();
-      await firebaseService.salvarConfig({
+      const config = await supabaseService.buscarConfig();
+      await supabaseService.salvarConfig({
         ...config,
-        albumAtivo: albumAtivo
+        album_ativo: albumAtivo
       });
       
-      this.showToast('Configurações salvas com sucesso', 'success');
-      
+      this.showToast('Configurações salvas', 'success');
     } catch (error) {
-      console.error('Erro ao salvar config:', error);
-      this.showToast('Erro ao salvar configurações', 'error');
+      console.error('Erro:', error);
+      this.showToast('Erro ao salvar', 'error');
     }
   }
-
-  // ============================================
-  // CONTROLE DE TRANSMISSÃO
-  // ============================================
 
   async toggleTransmission() {
     if (radioEngine.isTransmitting) {
@@ -538,7 +441,6 @@ class AdminController {
       await radioEngine.iniciarTransmissao();
       this.showToast('Transmissão iniciada', 'success');
     }
-    
     this.updateRadioStatus();
   }
 
@@ -563,10 +465,6 @@ class AdminController {
     }
   }
 
-  // ============================================
-  // MODAL DE CONFIRMAÇÃO
-  // ============================================
-
   showConfirm(title, message, callback) {
     const modal = document.getElementById('confirmModal');
     const titleEl = document.getElementById('confirmTitle');
@@ -576,7 +474,6 @@ class AdminController {
     if (messageEl) messageEl.textContent = message;
     
     this.confirmCallback = callback;
-    
     modal?.classList.add('active');
   }
 
@@ -587,13 +484,8 @@ class AdminController {
     if (confirmed && this.confirmCallback) {
       this.confirmCallback();
     }
-    
     this.confirmCallback = null;
   }
-
-  // ============================================
-  // TOAST NOTIFICATIONS
-  // ============================================
 
   showToast(message, type = 'info') {
     const container = document.getElementById('toastContainer');
@@ -602,7 +494,6 @@ class AdminController {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.textContent = message;
-    
     container.appendChild(toast);
     
     setTimeout(() => {
@@ -611,15 +502,9 @@ class AdminController {
     }, 3000);
   }
 
-  // ============================================
-  // UTILITÁRIOS
-  // ============================================
-
   updateElement(id, value, property = 'textContent') {
     const el = document.getElementById(id);
-    if (el) {
-      el[property] = value;
-    }
+    if (el) el[property] = value;
   }
 
   formatTrackName(nome) {
@@ -651,10 +536,8 @@ class AdminController {
   }
 }
 
-// Criar instância global
 window.adminController = new AdminController();
 
-// Inicializar quando DOM estiver pronto
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     window.adminController.init();
@@ -663,4 +546,4 @@ if (document.readyState === 'loading') {
   window.adminController.init();
 }
 
-console.log('Admin.js carregado');
+console.log('✅ Admin.js carregado');
