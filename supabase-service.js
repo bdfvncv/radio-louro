@@ -1,26 +1,10 @@
 // ==========================================
-// FIREBASE SERVICE - GERENCIAMENTO FIRESTORE
+// SUPABASE SERVICE - GERENCIAMENTO DATABASE
 // ==========================================
 
-import { db } from './config.js';
-import { 
-  collection, 
-  doc, 
-  getDoc, 
-  getDocs, 
-  setDoc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc,
-  query,
-  where,
-  orderBy,
-  limit,
-  Timestamp,
-  onSnapshot
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { supabase } from './config.js';
 
-class FirebaseService {
+class SupabaseService {
   constructor() {
     this.listeners = new Map();
   }
@@ -29,125 +13,112 @@ class FirebaseService {
   // CRUD BÁSICO
   // ============================================
 
-  /**
-   * Adiciona um documento
-   */
-  async add(collectionName, data) {
+  async add(table, data) {
     try {
-      const docRef = await addDoc(collection(db, collectionName), {
-        ...data,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now()
-      });
-      console.log(`✅ Documento adicionado: ${docRef.id}`);
-      return docRef.id;
-    } catch (error) {
-      console.error('❌ Erro ao adicionar documento:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Atualiza um documento
-   */
-  async update(collectionName, docId, data) {
-    try {
-      const docRef = doc(db, collectionName, docId);
-      await updateDoc(docRef, {
-        ...data,
-        updatedAt: Timestamp.now()
-      });
-      console.log(`✅ Documento atualizado: ${docId}`);
-      return true;
-    } catch (error) {
-      console.error('❌ Erro ao atualizar documento:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Define um documento (cria ou substitui)
-   */
-  async set(collectionName, docId, data) {
-    try {
-      const docRef = doc(db, collectionName, docId);
-      await setDoc(docRef, {
-        ...data,
-        updatedAt: Timestamp.now()
-      }, { merge: true });
-      console.log(`✅ Documento definido: ${docId}`);
-      return true;
-    } catch (error) {
-      console.error('❌ Erro ao definir documento:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Busca um documento específico
-   */
-  async get(collectionName, docId) {
-    try {
-      const docRef = doc(db, collectionName, docId);
-      const docSnap = await getDoc(docRef);
+      const { data: result, error } = await supabase
+        .from(table)
+        .insert([{
+          ...data,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
       
-      if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() };
-      }
+      if (error) throw error;
+      
+      console.log(`✅ Documento adicionado: ${result.id}`);
+      return result.id;
+    } catch (error) {
+      console.error('❌ Erro ao adicionar:', error);
+      throw error;
+    }
+  }
+
+  async update(table, id, data) {
+    try {
+      const { error } = await supabase
+        .from(table)
+        .update({
+          ...data,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      console.log(`✅ Documento atualizado: ${id}`);
+      return true;
+    } catch (error) {
+      console.error('❌ Erro ao atualizar:', error);
+      throw error;
+    }
+  }
+
+  async get(table, id) {
+    try {
+      const { data, error } = await supabase
+        .from(table)
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) throw error;
+      
+      return data;
+    } catch (error) {
+      console.error('❌ Erro ao buscar:', error);
       return null;
-    } catch (error) {
-      console.error('❌ Erro ao buscar documento:', error);
-      throw error;
     }
   }
 
-  /**
-   * Busca todos os documentos de uma coleção
-   */
-  async getAll(collectionName, filters = {}) {
+  async getAll(table, filters = {}) {
     try {
-      let q = collection(db, collectionName);
+      let query = supabase.from(table).select('*');
       
-      // Aplicar filtros
       if (filters.where) {
         filters.where.forEach(([field, operator, value]) => {
-          q = query(q, where(field, operator, value));
+          if (operator === '==') query = query.eq(field, value);
+          else if (operator === '>') query = query.gt(field, value);
+          else if (operator === '>=') query = query.gte(field, value);
+          else if (operator === '<') query = query.lt(field, value);
+          else if (operator === '<=') query = query.lte(field, value);
         });
       }
       
       if (filters.orderBy) {
         const [field, direction = 'asc'] = filters.orderBy;
-        q = query(q, orderBy(field, direction));
+        query = query.order(field, { ascending: direction === 'asc' });
       }
       
       if (filters.limit) {
-        q = query(q, limit(filters.limit));
+        query = query.limit(filters.limit);
       }
       
-      const querySnapshot = await getDocs(q);
-      const results = [];
+      const { data, error } = await query;
       
-      querySnapshot.forEach((doc) => {
-        results.push({ id: doc.id, ...doc.data() });
-      });
+      if (error) throw error;
       
-      return results;
+      return data || [];
     } catch (error) {
-      console.error('❌ Erro ao buscar documentos:', error);
+      console.error('❌ Erro ao buscar todos:', error);
       throw error;
     }
   }
 
-  /**
-   * Deleta um documento
-   */
-  async delete(collectionName, docId) {
+  async delete(table, id) {
     try {
-      await deleteDoc(doc(db, collectionName, docId));
-      console.log(`✅ Documento deletado: ${docId}`);
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      console.log(`✅ Documento deletado: ${id}`);
       return true;
     } catch (error) {
-      console.error('❌ Erro ao deletar documento:', error);
+      console.error('❌ Erro ao deletar:', error);
       throw error;
     }
   }
@@ -156,30 +127,24 @@ class FirebaseService {
   // OPERAÇÕES ESPECÍFICAS DA RÁDIO
   // ============================================
 
-  /**
-   * Salva metadados de arquivo de áudio
-   */
   async salvarArquivo(dados) {
     const arquivo = {
       nome: dados.nome,
       categoria: dados.categoria,
       subcategoria: dados.subcategoria || 'geral',
-      cloudinaryUrl: dados.cloudinaryUrl,
-      cloudinaryPublicId: dados.cloudinaryPublicId,
+      cloudinary_url: dados.cloudinaryUrl,
+      cloudinary_public_id: dados.cloudinaryPublicId,
       duracao: dados.duracao || 0,
       genero: dados.genero || 'outros',
       ritmo: dados.ritmo || 'moderado',
-      horarioIdeal: dados.horarioIdeal || 'todos',
-      playCount: 0,
-      ultimaReproducao: null
+      horario_ideal: dados.horarioIdeal || 'todos',
+      play_count: 0,
+      ultima_reproducao: null
     };
     
     return await this.add('arquivos', arquivo);
   }
 
-  /**
-   * Busca arquivos por categoria
-   */
   async buscarArquivosPorCategoria(categoria, subcategoria = null) {
     const filters = {
       where: [['categoria', '==', categoria]]
@@ -192,16 +157,13 @@ class FirebaseService {
     return await this.getAll('arquivos', filters);
   }
 
-  /**
-   * Incrementa contador de reprodução
-   */
   async incrementarPlayCount(arquivoId) {
     try {
       const arquivo = await this.get('arquivos', arquivoId);
       if (arquivo) {
         await this.update('arquivos', arquivoId, {
-          playCount: (arquivo.playCount || 0) + 1,
-          ultimaReproducao: Timestamp.now()
+          play_count: (arquivo.play_count || 0) + 1,
+          ultima_reproducao: new Date().toISOString()
         });
       }
     } catch (error) {
@@ -209,66 +171,51 @@ class FirebaseService {
     }
   }
 
-  /**
-   * Salva no histórico de reprodução
-   */
   async salvarHistorico(dados) {
     const historico = {
-      arquivoId: dados.arquivoId,
+      arquivo_id: dados.arquivoId,
       nome: dados.nome,
       categoria: dados.categoria,
-      iniciadoEm: Timestamp.now(),
-      finalizadoEm: null,
+      iniciado_em: new Date().toISOString(),
+      finalizado_em: null,
       concluiu: false
     };
     
     return await this.add('historico', historico);
   }
 
-  /**
-   * Atualiza histórico quando música termina
-   */
   async finalizarHistorico(historicoId, concluiu = true) {
     return await this.update('historico', historicoId, {
-      finalizadoEm: Timestamp.now(),
+      finalizado_em: new Date().toISOString(),
       concluiu
     });
   }
 
-  /**
-   * Busca histórico recente
-   */
-  async buscarHistoricoRecente(limiteDocs = 10) {
+  async buscarHistoricoRecente(limite = 10) {
     return await this.getAll('historico', {
-      orderBy: ['iniciadoEm', 'desc'],
-      limit: limiteDocs
+      orderBy: ['iniciado_em', 'desc'],
+      limit: limite
     });
   }
 
-  /**
-   * Busca músicas não tocadas recentemente
-   */
   async buscarMusicasDisponiveis(categoria, minutosMinimo = 45) {
     try {
-      // Busca todas as músicas da categoria
       const todasMusicas = await this.buscarArquivosPorCategoria(categoria);
       
-      // Busca histórico recente
       const tempoLimite = new Date();
       tempoLimite.setMinutes(tempoLimite.getMinutes() - minutosMinimo);
       
-      const historicoRecente = await this.getAll('historico', {
-        where: [
-          ['categoria', '==', categoria],
-          ['iniciadoEm', '>=', Timestamp.fromDate(tempoLimite)]
-        ]
-      });
+      const { data: historicoRecente, error } = await supabase
+        .from('historico')
+        .select('arquivo_id')
+        .eq('categoria', categoria)
+        .gte('iniciado_em', tempoLimite.toISOString());
       
-      // IDs das músicas tocadas recentemente
-      const idsTocadas = new Set(historicoRecente.map(h => h.arquivoId));
+      if (error) throw error;
       
-      // Filtra músicas não tocadas recentemente
-      return todasMusicas.filter(musica => !idsTocadas.has(musica.id));
+      const idsTocados = new Set((historicoRecente || []).map(h => h.arquivo_id));
+      
+      return todasMusicas.filter(musica => !idsTocados.has(musica.id));
       
     } catch (error) {
       console.error('❌ Erro ao buscar músicas disponíveis:', error);
@@ -276,58 +223,97 @@ class FirebaseService {
     }
   }
 
-  /**
-   * Salva/Atualiza configuração da rádio
-   */
   async salvarConfig(config) {
-    return await this.set('config', 'transmissao', config);
+    try {
+      const { data: existing } = await supabase
+        .from('config')
+        .select('id')
+        .eq('tipo', 'transmissao')
+        .single();
+      
+      if (existing) {
+        const { error } = await supabase
+          .from('config')
+          .update({ ...config, updated_at: new Date().toISOString() })
+          .eq('tipo', 'transmissao');
+        
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('config')
+          .insert([{ ...config, tipo: 'transmissao' }]);
+        
+        if (error) throw error;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('❌ Erro ao salvar config:', error);
+      throw error;
+    }
   }
 
-  /**
-   * Busca configuração da rádio
-   */
   async buscarConfig() {
-    const config = await this.get('config', 'transmissao');
-    
-    if (!config) {
-      // Configuração padrão
-      const configPadrao = {
-        ativa: false,
-        albumAtivo: 'geral',
-        musicaAtual: null,
-        proximaNaFila: null,
-        ultimaHoraCerta: null
-      };
-      await this.salvarConfig(configPadrao);
-      return configPadrao;
+    try {
+      const { data, error } = await supabase
+        .from('config')
+        .select('*')
+        .eq('tipo', 'transmissao')
+        .single();
+      
+      if (error && error.code !== 'PGRST116') throw error;
+      
+      if (!data) {
+        const configPadrao = {
+          tipo: 'transmissao',
+          ativa: false,
+          album_ativo: 'geral',
+          musica_atual: null,
+          proxima_na_fila: null,
+          ultima_hora_certa: null
+        };
+        
+        await supabase.from('config').insert([configPadrao]);
+        return configPadrao;
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('❌ Erro ao buscar config:', error);
+      return null;
     }
-    
-    return config;
   }
 
-  /**
-   * Busca configurações de rotação
-   */
   async buscarConfigRotacao() {
-    const config = await this.get('config', 'rotacao');
-    
-    if (!config) {
-      const configPadrao = {
-        intervaloMinimo: 45,
-        balancearGeneros: true,
-        balancearRitmos: true,
-        considerarHorario: true
-      };
-      await this.set('config', 'rotacao', configPadrao);
-      return configPadrao;
+    try {
+      const { data, error } = await supabase
+        .from('config')
+        .select('*')
+        .eq('tipo', 'rotacao')
+        .single();
+      
+      if (error && error.code !== 'PGRST116') throw error;
+      
+      if (!data) {
+        const configPadrao = {
+          tipo: 'rotacao',
+          intervalo_minimo: 45,
+          balancear_generos: true,
+          balancear_ritmos: true,
+          considerar_horario: true
+        };
+        
+        await supabase.from('config').insert([configPadrao]);
+        return configPadrao;
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('❌ Erro ao buscar config rotação:', error);
+      return null;
     }
-    
-    return config;
   }
 
-  /**
-   * Busca estatísticas gerais
-   */
   async buscarEstatisticas() {
     try {
       const [arquivos, historico] = await Promise.all([
@@ -342,7 +328,6 @@ class FirebaseService {
         maisTodastas: []
       };
       
-      // Contagem por categoria
       arquivos.forEach(arq => {
         if (!stats.porCategoria[arq.categoria]) {
           stats.porCategoria[arq.categoria] = 0;
@@ -350,176 +335,51 @@ class FirebaseService {
         stats.porCategoria[arq.categoria]++;
       });
       
-      // Músicas mais tocadas
       stats.maisTodastas = arquivos
-        .filter(arq => arq.playCount > 0)
-        .sort((a, b) => b.playCount - a.playCount)
+        .filter(arq => arq.play_count > 0)
+        .sort((a, b) => b.play_count - a.play_count)
         .slice(0, 10);
       
       return stats;
-      
     } catch (error) {
       console.error('❌ Erro ao buscar estatísticas:', error);
       return null;
     }
   }
 
-  // ============================================
-  // LISTENERS EM TEMPO REAL
-  // ============================================
-
-  /**
-   * Escuta mudanças em tempo real
-   */
-  listenToCollection(collectionName, callback, filters = {}) {
-    let q = collection(db, collectionName);
+  listenToTable(table, callback) {
+    const channel = supabase
+      .channel(`public:${table}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: table },
+        (payload) => {
+          callback(payload);
+        }
+      )
+      .subscribe();
     
-    if (filters.where) {
-      filters.where.forEach(([field, operator, value]) => {
-        q = query(q, where(field, operator, value));
-      });
-    }
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = [];
-      snapshot.forEach((doc) => {
-        data.push({ id: doc.id, ...doc.data() });
-      });
-      callback(data);
-    });
-    
-    this.listeners.set(collectionName, unsubscribe);
-    return unsubscribe;
+    this.listeners.set(table, channel);
+    return channel;
   }
 
-  /**
-   * Escuta mudanças em um documento específico
-   */
-  listenToDocument(collectionName, docId, callback) {
-    const docRef = doc(db, collectionName, docId);
-    
-    const unsubscribe = onSnapshot(docRef, (doc) => {
-      if (doc.exists()) {
-        callback({ id: doc.id, ...doc.data() });
-      } else {
-        callback(null);
-      }
-    });
-    
-    const key = `${collectionName}/${docId}`;
-    this.listeners.set(key, unsubscribe);
-    return unsubscribe;
-  }
-
-  /**
-   * Remove listener
-   */
-  removeListener(key) {
-    const unsubscribe = this.listeners.get(key);
-    if (unsubscribe) {
-      unsubscribe();
-      this.listeners.delete(key);
-      console.log(`✅ Listener removido: ${key}`);
+  removeListener(table) {
+    const channel = this.listeners.get(table);
+    if (channel) {
+      supabase.removeChannel(channel);
+      this.listeners.delete(table);
+      console.log(`✅ Listener removido: ${table}`);
     }
   }
 
-  /**
-   * Remove todos os listeners
-   */
   removeAllListeners() {
-    this.listeners.forEach((unsubscribe, key) => {
-      unsubscribe();
-      console.log(`✅ Listener removido: ${key}`);
+    this.listeners.forEach((channel, table) => {
+      supabase.removeChannel(channel);
+      console.log(`✅ Listener removido: ${table}`);
     });
     this.listeners.clear();
   }
 
-  // ============================================
-  // OPERAÇÕES DE FILA
-  // ============================================
-
-  /**
-   * Adiciona item na fila de reprodução
-   */
-  async adicionarNaFila(item) {
-    try {
-      // Busca último item da fila para determinar ordem
-      const fila = await this.getAll('fila', {
-        orderBy: ['ordem', 'desc'],
-        limit: 1
-      });
-      
-      const ultimaOrdem = fila.length > 0 ? fila[0].ordem : 0;
-      
-      const novoItem = {
-        ordem: ultimaOrdem + 1,
-        arquivoId: item.arquivoId,
-        tipo: item.tipo,
-        adicionadoEm: Timestamp.now()
-      };
-      
-      return await this.add('fila', novoItem);
-    } catch (error) {
-      console.error('❌ Erro ao adicionar na fila:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Busca toda a fila ordenada
-   */
-  async buscarFila() {
-    return await this.getAll('fila', {
-      orderBy: ['ordem', 'asc']
-    });
-  }
-
-  /**
-   * Remove primeiro item da fila
-   */
-  async removerDaFila(filaId) {
-    return await this.delete('fila', filaId);
-  }
-
-  /**
-   * Limpa toda a fila
-   */
-  async limparFila() {
-    try {
-      const fila = await this.buscarFila();
-      const promises = fila.map(item => this.delete('fila', item.id));
-      await Promise.all(promises);
-      console.log('✅ Fila limpa');
-      return true;
-    } catch (error) {
-      console.error('❌ Erro ao limpar fila:', error);
-      throw error;
-    }
-  }
-
-  // ============================================
-  // UTILITÁRIOS
-  // ============================================
-
-  /**
-   * Converte Timestamp do Firebase para Date
-   */
-  timestampToDate(timestamp) {
-    if (!timestamp) return null;
-    return timestamp.toDate();
-  }
-
-  /**
-   * Converte Date para Timestamp do Firebase
-   */
-  dateToTimestamp(date) {
-    if (!date) return null;
-    return Timestamp.fromDate(date);
-  }
-
-  /**
-   * Formata duração em segundos para mm:ss
-   */
   formatarDuracao(segundos) {
     const mins = Math.floor(segundos / 60);
     const secs = Math.floor(segundos % 60);
@@ -527,7 +387,6 @@ class FirebaseService {
   }
 }
 
-// Exporta instância única (singleton)
-export const firebaseService = new FirebaseService();
+export const supabaseService = new SupabaseService();
 
-console.log('✅ Firebase Service carregado');
+console.log('✅ Supabase Service carregado');
