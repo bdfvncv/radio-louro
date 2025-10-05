@@ -1,9 +1,9 @@
 // ==========================================
-// PLAYER.JS - INTERFACE PÚBLICA
+// PLAYER.JS - INTERFACE PÚBLICA (SUPABASE)
 // ==========================================
 
 import { radioEngine } from './radio-engine.js';
-import { firebaseService } from './firebase-service.js';
+import { supabaseService } from './supabase-service.js';
 
 class PlayerUI {
   constructor() {
@@ -12,38 +12,24 @@ class PlayerUI {
     this.isInitialized = false;
   }
 
-  // ============================================
-  // INICIALIZAÇÃO
-  // ============================================
-
   async init() {
     try {
-      console.log('🎵 Inicializando Player UI...');
+      console.log('🎵 Inicializando Player...');
       
-      // Buscar elementos DOM
       this.cacheElements();
-      
-      // Configurar eventos
       this.setupEvents();
       
-      // Inicializar Radio Engine
       await radioEngine.inicializar('radioPlayer');
       
-      // Configurar listeners do engine
       this.setupEngineListeners();
-      
-      // Carregar histórico
       await this.carregarHistorico();
-      
-      // Ocultar loading
       this.hideLoading();
       
       this.isInitialized = true;
-      console.log('✅ Player UI inicializado');
-      
+      console.log('✅ Player inicializado');
     } catch (error) {
-      console.error('❌ Erro ao inicializar Player:', error);
-      this.showError('Erro ao carregar rádio. Recarregue a página.');
+      console.error('❌ Erro:', error);
+      this.showError('Erro ao carregar rádio');
     }
   }
 
@@ -66,18 +52,11 @@ class PlayerUI {
   }
 
   setupEvents() {
-    // Controles
     this.elements.playPauseBtn?.addEventListener('click', () => this.togglePlay());
     this.elements.nextBtn?.addEventListener('click', () => this.pularMusica());
     this.elements.prevBtn?.addEventListener('click', () => this.voltarMusica());
-    
-    // Volume
     this.elements.volumeSlider?.addEventListener('input', (e) => this.updateVolume(e));
-    
-    // Progresso
     this.elements.progressBar?.addEventListener('click', (e) => this.seekTrack(e));
-    
-    // Compartilhar
     this.elements.shareBtn?.addEventListener('click', () => this.openShareModal());
     this.elements.closeShareModal?.addEventListener('click', () => this.closeShareModal());
     this.elements.shareWhatsapp?.addEventListener('click', () => this.shareOnWhatsapp());
@@ -85,53 +64,41 @@ class PlayerUI {
     this.elements.shareTwitter?.addEventListener('click', () => this.shareOnTwitter());
     this.elements.copyLinkBtn?.addEventListener('click', () => this.copyLink());
     
-    // Fechar modal ao clicar fora
     this.elements.shareModal?.addEventListener('click', (e) => {
       if (e.target === this.elements.shareModal) {
         this.closeShareModal();
       }
     });
     
-    // Atalhos de teclado
     document.addEventListener('keydown', (e) => this.handleKeyboard(e));
   }
 
   setupEngineListeners() {
-    // Quando track muda
     radioEngine.addEventListener('trackChanged', (track) => {
       this.updateTrackInfo(track);
       this.addToHistory(track);
     });
     
-    // Atualização de tempo
     radioEngine.addEventListener('timeUpdate', (progress) => {
       this.updateProgress(progress);
     });
     
-    // Transmissão iniciada
     radioEngine.addEventListener('transmissaoIniciada', () => {
       this.updateLiveStatus(true);
     });
     
-    // Transmissão parada
     radioEngine.addEventListener('transmissaoParada', () => {
       this.updateLiveStatus(false);
     });
   }
 
-  // ============================================
-  // CONTROLES DO PLAYER
-  // ============================================
-
   togglePlay() {
     const player = this.elements.radioPlayer;
     
     if (!radioEngine.isTransmitting) {
-      // Iniciar transmissão
       radioEngine.iniciarTransmissao();
       this.elements.playPauseBtn.textContent = '⏸️';
     } else {
-      // Toggle play/pause
       if (player.paused) {
         player.play();
         this.elements.playPauseBtn.textContent = '⏸️';
@@ -147,7 +114,6 @@ class PlayerUI {
   }
 
   voltarMusica() {
-    // Voltar para início da música atual
     if (this.elements.radioPlayer) {
       this.elements.radioPlayer.currentTime = 0;
     }
@@ -161,7 +127,6 @@ class PlayerUI {
       this.elements.volumeValue.textContent = `${volume}%`;
     }
     
-    // Atualizar ícone
     this.updateVolumeIcon(volume);
   }
 
@@ -188,30 +153,20 @@ class PlayerUI {
     player.currentTime = seekTime;
   }
 
-  // ============================================
-  // ATUALIZAÇÃO DE INTERFACE
-  // ============================================
-
   updateTrackInfo(track) {
     if (!track) return;
     
-    // Título
     if (this.elements.trackTitle) {
       this.elements.trackTitle.textContent = this.formatTrackName(track.nome);
     }
     
-    // Artista/Descrição
     if (this.elements.trackArtist) {
       this.elements.trackArtist.textContent = this.getTrackDescription(track);
     }
     
-    // Categoria
     if (this.elements.trackCategory) {
       this.elements.trackCategory.textContent = this.formatCategoria(track.categoria);
     }
-    
-    // Capa (se houver)
-    // TODO: Implementar sistema de capas por música
     
     console.log(`🎵 Tocando: ${track.nome}`);
   }
@@ -219,17 +174,14 @@ class PlayerUI {
   updateProgress(progress) {
     if (!progress) return;
     
-    // Barra de progresso
     if (this.elements.progressFill) {
       this.elements.progressFill.style.width = `${progress.percentage}%`;
     }
     
-    // Tempo atual
     if (this.elements.currentTime) {
       this.elements.currentTime.textContent = this.formatTime(progress.current);
     }
     
-    // Duração
     if (this.elements.duration) {
       this.elements.duration.textContent = this.formatTime(progress.duration);
     }
@@ -249,19 +201,12 @@ class PlayerUI {
     }
   }
 
-  // ============================================
-  // HISTÓRICO "TOCOU AGORA"
-  // ============================================
-
   async carregarHistorico() {
     try {
-      const historico = await firebaseService.buscarHistoricoRecente(5);
-      
+      const historico = await supabaseService.buscarHistoricoRecente(5);
       if (historico.length === 0) return;
-      
       this.historico = historico;
       this.renderHistorico();
-      
     } catch (error) {
       console.error('❌ Erro ao carregar histórico:', error);
     }
@@ -275,12 +220,9 @@ class PlayerUI {
     };
     
     this.historico.unshift(item);
-    
-    // Manter apenas 5
     if (this.historico.length > 5) {
       this.historico.pop();
     }
-    
     this.renderHistorico();
   }
 
@@ -291,7 +233,7 @@ class PlayerUI {
       this.elements.historyList.innerHTML = `
         <li class="history-item">
           <span class="history-time">--:--</span>
-          <span class="history-track">Nenhuma música tocada ainda</span>
+          <span class="history-track">Nenhuma música tocada</span>
         </li>
       `;
       return;
@@ -307,16 +249,9 @@ class PlayerUI {
     this.elements.historyList.innerHTML = html;
   }
 
-  // ============================================
-  // COMPARTILHAMENTO
-  // ============================================
-
   openShareModal() {
     if (!this.elements.shareModal) return;
-    
     this.elements.shareModal.classList.add('active');
-    
-    // Preencher link
     if (this.elements.shareLinkInput) {
       this.elements.shareLinkInput.value = window.location.href;
     }
@@ -339,36 +274,27 @@ class PlayerUI {
   }
 
   shareOnTwitter() {
-    const text = encodeURIComponent('Ouça a Rádio Supermercado do Louro ao vivo!');
+    const text = encodeURIComponent('Ouça a Rádio Supermercado do Louro!');
     const url = encodeURIComponent(window.location.href);
     window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank');
   }
 
   async copyLink() {
     try {
-      const link = window.location.href;
-      await navigator.clipboard.writeText(link);
-      
-      // Feedback visual
+      await navigator.clipboard.writeText(window.location.href);
       const btn = this.elements.copyLinkBtn;
       const originalText = btn.textContent;
       btn.textContent = '✅ Copiado!';
       btn.style.background = '#28a745';
-      
       setTimeout(() => {
         btn.textContent = originalText;
         btn.style.background = '';
       }, 2000);
-      
     } catch (error) {
-      console.error('❌ Erro ao copiar link:', error);
+      console.error('❌ Erro ao copiar:', error);
       alert('Erro ao copiar link');
     }
   }
-
-  // ============================================
-  // EQUALIZADOR VISUAL
-  // ============================================
 
   startEqualizer() {
     if (!this.elements.equalizer) return;
@@ -380,30 +306,22 @@ class PlayerUI {
     this.elements.equalizer.classList.remove('active');
   }
 
-  // ============================================
-  // ATALHOS DE TECLADO
-  // ============================================
-
   handleKeyboard(event) {
-    // Espaço = Play/Pause
     if (event.code === 'Space' && event.target.tagName !== 'INPUT') {
       event.preventDefault();
       this.togglePlay();
     }
     
-    // Seta direita = Próxima
     if (event.code === 'ArrowRight') {
       event.preventDefault();
       this.pularMusica();
     }
     
-    // Seta esquerda = Voltar ao início
     if (event.code === 'ArrowLeft') {
       event.preventDefault();
       this.voltarMusica();
     }
     
-    // Seta cima = Volume +
     if (event.code === 'ArrowUp') {
       event.preventDefault();
       const vol = Math.min(100, parseInt(this.elements.volumeSlider.value) + 5);
@@ -411,7 +329,6 @@ class PlayerUI {
       this.updateVolume({ target: { value: vol } });
     }
     
-    // Seta baixo = Volume -
     if (event.code === 'ArrowDown') {
       event.preventDefault();
       const vol = Math.max(0, parseInt(this.elements.volumeSlider.value) - 5);
@@ -420,13 +337,8 @@ class PlayerUI {
     }
   }
 
-  // ============================================
-  // UTILITÁRIOS
-  // ============================================
-
   formatTime(seconds) {
     if (!seconds || isNaN(seconds)) return '0:00';
-    
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -434,7 +346,6 @@ class PlayerUI {
 
   formatTimestamp(date) {
     if (!date) return '--:--';
-    
     const d = date instanceof Date ? date : new Date(date);
     const hours = d.getHours().toString().padStart(2, '0');
     const minutes = d.getMinutes().toString().padStart(2, '0');
@@ -443,8 +354,6 @@ class PlayerUI {
 
   formatTrackName(nome) {
     if (!nome) return 'Sem título';
-    
-    // Remove extensão
     return nome.replace(/\.(mp3|wav|ogg|m4a)$/i, '');
   }
 
@@ -456,17 +365,13 @@ class PlayerUI {
       'propagandas': '📣 Propaganda',
       'horaCerta': '🕐 Hora Certa'
     };
-    
     return map[categoria] || '🎵 Música';
   }
 
   getTrackDescription(track) {
     if (track.categoria === 'musicas') {
-      return track.subcategoria 
-        ? this.capitalize(track.subcategoria) 
-        : 'Música Geral';
+      return track.subcategoria ? this.capitalize(track.subcategoria) : 'Música Geral';
     }
-    
     return this.formatCategoria(track.categoria).replace(/[^\w\s]/gi, '').trim();
   }
 
@@ -490,7 +395,6 @@ class PlayerUI {
   }
 }
 
-// Inicializar quando DOM estiver pronto
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     const player = new PlayerUI();
