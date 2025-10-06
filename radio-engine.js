@@ -1,5 +1,5 @@
 // ==========================================
-// RADIO ENGINE - MOTOR PRINCIPAL (SUPABASE)
+// RADIO ENGINE - MOTOR PRINCIPAL
 // ==========================================
 
 import { RADIO_CONFIG } from './config.js';
@@ -13,9 +13,6 @@ class RadioEngine {
     this.currentTrack = null;
     this.currentHistoricoId = null;
     this.fila = [];
-    this.historicoRecente = [];
-    this.ultimaHoraCerta = null;
-    this.sequenciaAtual = [];
     this.listeners = [];
     
     this.stats = {
@@ -39,8 +36,6 @@ class RadioEngine {
       const config = await supabaseService.buscarConfig();
       this.isTransmitting = config?.ativa || false;
       
-      await this.carregarHistoricoRecente();
-      
       console.log('✅ Radio Engine inicializado');
       
       if (this.isTransmitting) {
@@ -57,7 +52,6 @@ class RadioEngine {
   configurarEventosPlayer() {
     this.audioPlayer.addEventListener('ended', () => this.onTrackEnded());
     this.audioPlayer.addEventListener('error', (e) => this.onPlayerError(e));
-    this.audioPlayer.addEventListener('canplay', () => this.onCanPlay());
     this.audioPlayer.addEventListener('timeupdate', () => this.onTimeUpdate());
     console.log('✅ Eventos configurados');
   }
@@ -68,7 +62,6 @@ class RadioEngine {
       this.isTransmitting = true;
       
       await supabaseService.salvarConfig({ ativa: true });
-      this.iniciarVerificacaoHoraCerta();
       await this.reproduzirProximo();
       this.notificarListeners('transmissaoIniciada');
       
@@ -89,11 +82,6 @@ class RadioEngine {
     }
     
     await supabaseService.salvarConfig({ ativa: false });
-    
-    if (this.intervaloHoraCerta) {
-      clearInterval(this.intervaloHoraCerta);
-    }
-    
     this.notificarListeners('transmissaoParada');
     console.log('✅ Transmissão parada');
   }
@@ -152,41 +140,6 @@ class RadioEngine {
           albumAtivo === 'geral' ? null : albumAtivo
         );
         this.stats.ultimosGeneros = [];
-      }
-      
-      if (config.considerar_horario && horarioAtual !== 'todos') {
-        const horarioConfig = RADIO_CONFIG.horarios[horarioAtual];
-        const preferencias = horarioConfig.preferencia;
-        
-        const musicasHorario = musicasDisponiveis.filter(m => 
-          m.horario_ideal === 'todos' || 
-          m.horario_ideal === horarioAtual ||
-          preferencias.includes(m.ritmo)
-        );
-        
-        if (musicasHorario.length > 0) {
-          musicasDisponiveis = musicasHorario;
-        }
-      }
-      
-      if (config.balancear_generos && this.stats.ultimosGeneros.length >= RADIO_CONFIG.historicoMaximo) {
-        const contagemGeneros = {};
-        this.stats.ultimosGeneros.forEach(gen => {
-          contagemGeneros[gen] = (contagemGeneros[gen] || 0) + 1;
-        });
-        
-        musicasDisponiveis = musicasDisponiveis.filter(m => 
-          (contagemGeneros[m.genero] || 0) < RADIO_CONFIG.maxGeneroRepetido
-        );
-      }
-      
-      if (config.balancear_ritmos && this.stats.ultimoRitmo) {
-        const ritmoDesejado = this.alternarRitmo(this.stats.ultimoRitmo);
-        const musicasRitmo = musicasDisponiveis.filter(m => m.ritmo === ritmoDesejado);
-        
-        if (musicasRitmo.length > 0) {
-          musicasDisponiveis = musicasRitmo;
-        }
       }
       
       if (musicasDisponiveis.length === 0) {
@@ -298,10 +251,6 @@ class RadioEngine {
     await this.reproduzirProximo();
   }
 
-  onCanPlay() {
-    console.log('✅ Player pronto');
-  }
-
   onTimeUpdate() {
     if (!this.currentTrack || !this.audioPlayer) return;
     
@@ -323,47 +272,6 @@ class RadioEngine {
     }, 3000);
   }
 
-  iniciarVerificacaoHoraCerta() {
-    this.verificarHoraCerta();
-    this.intervaloHoraCerta = setInterval(() => {
-      this.verificarHoraCerta();
-    }, 60000);
-  }
-
-  async verificarHoraCerta() {
-    const agora = new Date();
-    const minuto = agora.getMinutes();
-    const hora = agora.getHours();
-    
-    if (minuto !== 0) return;
-    if (this.ultimaHoraCerta === hora) return;
-    
-    console.log(`🕐 Hora certa: ${hora}:00`);
-    
-    const horaCertaArquivos = await supabaseService.buscarArquivosPorCategoria('horaCerta');
-    
-    if (horaCertaArquivos.length === 0) {
-      console.log('⚠️ Sem hora certa');
-      return;
-    }
-    
-    const nomeArquivo = `${hora.toString().padStart(2, '0')}-horas`;
-    let arquivoHora = horaCertaArquivos.find(arq => 
-      arq.nome.toLowerCase().includes(nomeArquivo)
-    );
-    
-    if (!arquivoHora) {
-      arquivoHora = horaCertaArquivos[0];
-    }
-    
-    this.fila.unshift(arquivoHora);
-    this.ultimaHoraCerta = hora;
-    
-    if (this.audioPlayer.paused) {
-      await this.reproduzirProximo();
-    }
-  }
-
   determinarHorario() {
     const hora = new Date().getHours();
     if (hora >= 6 && hora < 12) return 'manha';
@@ -372,55 +280,14 @@ class RadioEngine {
     return 'madrugada';
   }
 
-  alternarRitmo(ritmoAtual) {
-    const alternancia = {
-      'calmo': 'animado',
-      'moderado': 'animado',
-      'animado': 'calmo',
-      'energetico': 'calmo'
-    };
-    return alternancia[ritmoAtual] || 'moderado';
-  }
-
   atualizarStats(musica) {
-    this.stats.ultimosGeneros.push(musica.genero);
-    if (this.stats.ultimosGeneros.length > RADIO_CONFIG.historicoMaximo) {
-      this.stats.ultimosGeneros.shift();
+    if (musica.genero) {
+      this.stats.ultimosGeneros.push(musica.genero);
+      if (this.stats.ultimosGeneros.length > RADIO_CONFIG.historicoMaximo) {
+        this.stats.ultimosGeneros.shift();
+      }
     }
     this.stats.ultimoRitmo = musica.ritmo;
-  }
-
-  async carregarHistoricoRecente() {
-    try {
-      const historico = await supabaseService.buscarHistoricoRecente(10);
-      const arquivosIds = historico.map(h => h.arquivo_id);
-      
-      const arquivosPromises = arquivosIds.map(id => 
-        supabaseService.get('arquivos', id)
-      );
-      
-      const arquivos = await Promise.all(arquivosPromises);
-      
-      arquivos.forEach(arq => {
-        if (arq && arq.genero) {
-          this.stats.ultimosGeneros.push(arq.genero);
-        }
-      });
-      
-      this.stats.ultimosGeneros = this.stats.ultimosGeneros.slice(-10);
-      console.log('✅ Histórico carregado');
-    } catch (error) {
-      console.error('❌ Erro ao carregar histórico:', error);
-    }
-  }
-
-  togglePlay() {
-    if (!this.audioPlayer) return;
-    if (this.audioPlayer.paused) {
-      this.audioPlayer.play();
-    } else {
-      this.audioPlayer.pause();
-    }
   }
 
   async pularMusica() {
@@ -438,31 +305,6 @@ class RadioEngine {
     console.log(`🔊 Volume: ${Math.round(vol * 100)}%`);
   }
 
-  async adicionarNaFila(arquivoId) {
-    try {
-      const arquivo = await supabaseService.get('arquivos', arquivoId);
-      if (!arquivo) throw new Error('Arquivo não encontrado');
-      this.fila.push(arquivo);
-      console.log(`➕ Na fila: ${arquivo.nome}`);
-      return true;
-    } catch (error) {
-      console.error('❌ Erro ao adicionar:', error);
-      return false;
-    }
-  }
-
-  getFilaInfo() {
-    return {
-      tamanho: this.fila.length,
-      proximo: this.fila[0] || null,
-      lista: this.fila.map(item => ({
-        id: item.id,
-        nome: item.nome,
-        categoria: item.categoria
-      }))
-    };
-  }
-
   getCurrentTrackInfo() {
     if (!this.currentTrack) return null;
     return {
@@ -473,15 +315,6 @@ class RadioEngine {
       currentTime: this.audioPlayer ? this.audioPlayer.currentTime : 0,
       duration: this.audioPlayer ? this.audioPlayer.duration : 0,
       isPlaying: this.audioPlayer ? !this.audioPlayer.paused : false
-    };
-  }
-
-  getStats() {
-    return {
-      ...this.stats,
-      isTransmitting: this.isTransmitting,
-      filaSize: this.fila.length,
-      currentTrack: this.currentTrack ? this.currentTrack.nome : null
     };
   }
 
@@ -505,23 +338,6 @@ class RadioEngine {
           console.error('❌ Erro no listener:', error);
         }
       });
-  }
-
-  formatarTempo(segundos) {
-    const mins = Math.floor(segundos / 60);
-    const secs = Math.floor(segundos % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  }
-
-  async destroy() {
-    console.log('🔚 Destruindo...');
-    await this.pararTransmissao();
-    if (this.intervaloHoraCerta) {
-      clearInterval(this.intervaloHoraCerta);
-    }
-    this.listeners = [];
-    this.fila = [];
-    console.log('✅ Destruído');
   }
 }
 
