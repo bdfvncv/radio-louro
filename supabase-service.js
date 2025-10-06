@@ -9,13 +9,6 @@ class SupabaseService {
     this.listeners = new Map();
   }
 
-  // ============================================
-  // CRUD BÁSICO
-  // ============================================
-
-  /**
-   * Adiciona um documento
-   */
   async add(table, data) {
     try {
       const { data: result, error } = await supabase
@@ -38,9 +31,6 @@ class SupabaseService {
     }
   }
 
-  /**
-   * Atualiza um documento
-   */
   async update(table, id, data) {
     try {
       const { error } = await supabase
@@ -61,9 +51,6 @@ class SupabaseService {
     }
   }
 
-  /**
-   * Busca um documento específico
-   */
   async get(table, id) {
     try {
       const { data, error } = await supabase
@@ -81,14 +68,10 @@ class SupabaseService {
     }
   }
 
-  /**
-   * Busca todos os documentos
-   */
   async getAll(table, filters = {}) {
     try {
       let query = supabase.from(table).select('*');
       
-      // Aplicar filtros
       if (filters.where) {
         filters.where.forEach(([field, operator, value]) => {
           if (operator === '==') query = query.eq(field, value);
@@ -99,13 +82,11 @@ class SupabaseService {
         });
       }
       
-      // Ordenação
       if (filters.orderBy) {
         const [field, direction = 'asc'] = filters.orderBy;
         query = query.order(field, { ascending: direction === 'asc' });
       }
       
-      // Limite
       if (filters.limit) {
         query = query.limit(filters.limit);
       }
@@ -121,9 +102,6 @@ class SupabaseService {
     }
   }
 
-  /**
-   * Deleta um documento
-   */
   async delete(table, id) {
     try {
       const { error } = await supabase
@@ -141,13 +119,6 @@ class SupabaseService {
     }
   }
 
-  // ============================================
-  // OPERAÇÕES ESPECÍFICAS DA RÁDIO
-  // ============================================
-
-  /**
-   * Salva arquivo de áudio
-   */
   async salvarArquivo(dados) {
     const arquivo = {
       nome: dados.nome,
@@ -166,9 +137,6 @@ class SupabaseService {
     return await this.add('arquivos', arquivo);
   }
 
-  /**
-   * Busca arquivos por categoria
-   */
   async buscarArquivosPorCategoria(categoria, subcategoria = null) {
     const filters = {
       where: [['categoria', '==', categoria]]
@@ -181,9 +149,6 @@ class SupabaseService {
     return await this.getAll('arquivos', filters);
   }
 
-  /**
-   * Incrementa contador de reprodução
-   */
   async incrementarPlayCount(arquivoId) {
     try {
       const arquivo = await this.get('arquivos', arquivoId);
@@ -198,9 +163,6 @@ class SupabaseService {
     }
   }
 
-  /**
-   * Salva no histórico
-   */
   async salvarHistorico(dados) {
     const historico = {
       arquivo_id: dados.arquivoId,
@@ -214,9 +176,6 @@ class SupabaseService {
     return await this.add('historico', historico);
   }
 
-  /**
-   * Finaliza histórico
-   */
   async finalizarHistorico(historicoId, concluiu = true) {
     return await this.update('historico', historicoId, {
       finalizado_em: new Date().toISOString(),
@@ -224,9 +183,6 @@ class SupabaseService {
     });
   }
 
-  /**
-   * Busca histórico recente
-   */
   async buscarHistoricoRecente(limite = 10) {
     return await this.getAll('historico', {
       orderBy: ['iniciado_em', 'desc'],
@@ -234,15 +190,10 @@ class SupabaseService {
     });
   }
 
-  /**
-   * Busca músicas disponíveis (não tocadas recentemente)
-   */
   async buscarMusicasDisponiveis(categoria, minutosMinimo = 45) {
     try {
-      // Buscar todas as músicas
       const todasMusicas = await this.buscarArquivosPorCategoria(categoria);
       
-      // Buscar histórico recente
       const tempoLimite = new Date();
       tempoLimite.setMinutes(tempoLimite.getMinutes() - minutosMinimo);
       
@@ -254,10 +205,8 @@ class SupabaseService {
       
       if (error) throw error;
       
-      // IDs tocados recentemente
       const idsTocados = new Set((historicoRecente || []).map(h => h.arquivo_id));
       
-      // Filtrar
       return todasMusicas.filter(musica => !idsTocados.has(musica.id));
       
     } catch (error) {
@@ -266,12 +215,8 @@ class SupabaseService {
     }
   }
 
-  /**
-   * Salva/Atualiza configuração
-   */
   async salvarConfig(config) {
     try {
-      // Verificar se já existe
       const { data: existing } = await supabase
         .from('config')
         .select('id')
@@ -279,7 +224,6 @@ class SupabaseService {
         .single();
       
       if (existing) {
-        // Atualizar
         const { error } = await supabase
           .from('config')
           .update({ ...config, updated_at: new Date().toISOString() })
@@ -287,7 +231,6 @@ class SupabaseService {
         
         if (error) throw error;
       } else {
-        // Inserir
         const { error } = await supabase
           .from('config')
           .insert([{ ...config, tipo: 'transmissao' }]);
@@ -302,9 +245,6 @@ class SupabaseService {
     }
   }
 
-  /**
-   * Busca configuração
-   */
   async buscarConfig() {
     try {
       const { data, error } = await supabase
@@ -316,7 +256,6 @@ class SupabaseService {
       if (error && error.code !== 'PGRST116') throw error;
       
       if (!data) {
-        // Criar config padrão
         const configPadrao = {
           tipo: 'transmissao',
           ativa: false,
@@ -337,9 +276,6 @@ class SupabaseService {
     }
   }
 
-  /**
-   * Busca config de rotação
-   */
   async buscarConfigRotacao() {
     try {
       const { data, error } = await supabase
@@ -370,9 +306,6 @@ class SupabaseService {
     }
   }
 
-  /**
-   * Busca estatísticas
-   */
   async buscarEstatisticas() {
     try {
       const [arquivos, historico] = await Promise.all([
@@ -387,7 +320,6 @@ class SupabaseService {
         maisTodastas: []
       };
       
-      // Por categoria
       arquivos.forEach(arq => {
         if (!stats.porCategoria[arq.categoria]) {
           stats.porCategoria[arq.categoria] = 0;
@@ -395,7 +327,6 @@ class SupabaseService {
         stats.porCategoria[arq.categoria]++;
       });
       
-      // Mais tocadas
       stats.maisTodastas = arquivos
         .filter(arq => arq.play_count > 0)
         .sort((a, b) => b.play_count - a.play_count)
@@ -407,65 +338,8 @@ class SupabaseService {
       return null;
     }
   }
-
-  // ============================================
-  // LISTENERS EM TEMPO REAL (Realtime)
-  // ============================================
-
-  /**
-   * Escuta mudanças em tempo real
-   */
-  listenToTable(table, callback) {
-    const channel = supabase
-      .channel(`public:${table}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: table },
-        (payload) => {
-          callback(payload);
-        }
-      )
-      .subscribe();
-    
-    this.listeners.set(table, channel);
-    return channel;
-  }
-
-  /**
-   * Remove listener
-   */
-  removeListener(table) {
-    const channel = this.listeners.get(table);
-    if (channel) {
-      supabase.removeChannel(channel);
-      this.listeners.delete(table);
-      console.log(`✅ Listener removido: ${table}`);
-    }
-  }
-
-  /**
-   * Remove todos os listeners
-   */
-  removeAllListeners() {
-    this.listeners.forEach((channel, table) => {
-      supabase.removeChannel(channel);
-      console.log(`✅ Listener removido: ${table}`);
-    });
-    this.listeners.clear();
-  }
-
-  // ============================================
-  // UTILITÁRIOS
-  // ============================================
-
-  formatarDuracao(segundos) {
-    const mins = Math.floor(segundos / 60);
-    const secs = Math.floor(segundos % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  }
 }
 
-// Exporta instância única
 export const supabaseService = new SupabaseService();
 
 console.log('✅ Supabase Service carregado');
