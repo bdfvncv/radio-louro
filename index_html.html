@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Rádio Supermercado do Louro - Ouça ao vivo 24 horas">
+    <meta name="theme-color" content="#0d4d3d">
+    <title>Rádio Supermercado do Louro - Ao Vivo</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/player.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+<body>
+    <!-- Container Principal -->
+    <div class="player-container">
+        
+        <!-- Header -->
+        <header class="player-header">
+            <div class="player-logo">
+                <span class="player-logo-text">🛒</span>
+            </div>
+            <h1 class="player-title">Rádio Supermercado do Louro</h1>
+            <p class="player-subtitle">Sua música enquanto você compra</p>
+        </header>
+
+        <!-- Card do Player -->
+        <div class="player-card">
+            
+            <!-- Badge Ao Vivo -->
+            <div class="live-badge" id="liveBadge">
+                <span class="live-dot"></span>
+                <span id="liveStatus">CONECTANDO...</span>
+            </div>
+
+            <!-- Capa do Álbum -->
+            <div class="album-artwork">
+                <img id="albumCover" src="https://via.placeholder.com/300x300/0d4d3d/ffffff?text=Radio+Louro" alt="Capa do Álbum">
+                <div class="album-overlay">
+                    <div id="albumInfo"></div>
+                </div>
+            </div>
+
+            <!-- Informações da Música -->
+            <div class="track-info">
+                <h2 class="track-title" id="trackTitle">Carregando...</h2>
+                <p class="track-artist" id="trackArtist">Aguarde</p>
+                <span class="track-category" id="trackCategory">Música</span>
+            </div>
+
+            <!-- Equalizador -->
+            <div class="equalizer" id="equalizer">
+                <div class="equalizer-bar"></div>
+                <div class="equalizer-bar"></div>
+                <div class="equalizer-bar"></div>
+                <div class="equalizer-bar"></div>
+                <div class="equalizer-bar"></div>
+            </div>
+
+            <!-- Barra de Progresso -->
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-time">
+                    <span id="currentTime">0:00</span>
+                    <span id="duration">0:00</span>
+                </div>
+            </div>
+
+            <!-- Controles -->
+            <div class="player-controls">
+                <button class="control-btn control-btn-secondary" id="prevBtn" title="Anterior">
+                    ⏮️
+                </button>
+                
+                <button class="control-btn" id="playPauseBtn" title="Play/Pause">
+                    ▶️
+                </button>
+                
+                <button class="control-btn control-btn-secondary" id="nextBtn" title="Próxima">
+                    ⏭️
+                </button>
+            </div>
+
+            <!-- Volume -->
+            <div class="volume-container">
+                <span class="volume-icon" id="volumeIcon">🔊</span>
+                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="70">
+                <span class="volume-value" id="volumeValue">70%</span>
+            </div>
+
+            <!-- Histórico "Tocou Agora" -->
+            <div class="now-playing-history">
+                <h3 class="history-title">📻 Tocou Agora</h3>
+                <ul class="history-list" id="historyList">
+                    <li class="history-item">
+                        <span class="history-time">--:--</span>
+                        <span class="history-track">Aguardando histórico...</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Botão Compartilhar -->
+            <button class="share-btn" id="shareBtn" title="Compartilhar">
+                🔗 Compartilhar Rádio
+            </button>
+
+        </div>
+
+        <!-- Link Admin (discreto) -->
+        <a href="admin.html" class="admin-link">
+            Acesso Admin
+        </a>
+
+    </div>
+
+    <!-- Player de Áudio (oculto) -->
+    <audio id="radioPlayer" preload="auto"></audio>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <p>Carregando rádio...</p>
+    </div>
+
+    <!-- Modal Compartilhar -->
+    <div class="modal" id="shareModal">
+        <div class="modal-content">
+            <h3>📡 Compartilhar Rádio</h3>
+            <p>Compartilhe nossa rádio com seus amigos!</p>
+            <div class="share-buttons">
+                <button class="share-social-btn whatsapp" id="shareWhatsapp">
+                    💬 WhatsApp
+                </button>
+                <button class="share-social-btn facebook" id="shareFacebook">
+                    📘 Facebook
+                </button>
+                <button class="share-social-btn twitter" id="shareTwitter">
+                    🐦 Twitter
+                </button>
+            </div>
+            <div class="share-link-container">
+                <input type="text" class="share-link-input" id="shareLinkInput" readonly>
+                <button class="copy-link-btn" id="copyLinkBtn">
+                    📋 Copiar Link
+                </button>
+            </div>
+            <button class="modal-close-btn" id="closeShareModal">Fechar</button>
+        </div>
+    </div>
+
+    <!-- Scripts na ordem correta -->
+    <script type="module" src="js/config.js"></script>
+    <script type="module" src="js/supabase-service.js"></script>
+    <script type="module" src="js/cloudinary-service.js"></script>
+    <script type="module" src="js/radio-engine.js"></script>
+    <script type="module" src="js/player.js"></script>
+
+    <!-- Estilos adicionais inline -->
+    <style>
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(13, 77, 61, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-overlay p {
+            color: #ffffff;
+            margin-top: 20px;
+            font-size: 1.2rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Botão Compartilhar */
+        .share-btn {
+            width: 100%;
+            margin-top: var(--espaco-lg);
+            padding: var(--espaco-md);
+            background: var(--gradiente-verde);
+            color: var(--branco);
+            border: none;
+            border-radius: var(--borda-radius-lg);
+            font-size: var(--texto-base);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transicao-normal);
+            box-shadow: var(--sombra-md);
+        }
+
+        .share-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--sombra-verde);
+        }
+
+        /* Link Admin */
+        .admin-link {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            border-radius: var(--borda-radius-full);
+            font-size: var(--texto-sm);
+            transition: all var(--transicao-normal);
+            backdrop-filter: blur(10px);
+        }
+
+        .admin-link:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--branco);
+            border-radius: var(--borda-radius-xl);
+            padding: var(--espaco-2xl);
+            max-width: 500px;
+            width: 90%;
+            box-shadow: var(--sombra-2xl);
+            animation: fadeInUp 0.3s ease;
+        }
+
+        .modal-content h3 {
+            color: var(--verde-primario);
+            margin-bottom: var(--espaco-lg);
+            font-size: var(--texto-2xl);
+        }
+
+        .modal-content p {
+            color: var(--cinza-escuro);
+            margin-bottom: var(--espaco-xl);
+        }
+
+        .share-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--espaco-md);
+            margin-bottom: var(--espaco-xl);
+        }
+
+        .share-social-btn {
+            padding: var(--espaco-md);
+            border: none;
+            border-radius: var(--borda-radius-lg);
+            font-size: var(--texto-sm);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transicao-normal);
+        }
+
+        .share-social-btn.whatsapp {
+            background: #25D366;
+            color: white;
+        }
+
+        .share-social-btn.facebook {
+            background: #1877F2;
+            color: white;
+        }
+
+        .share-social-btn.twitter {
+            background: #1DA1F2;
+            color: white;
+        }
+
+        .share-social-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--sombra-lg);
+        }
+
+        .share-link-container {
+            display: flex;
+            gap: var(--espaco-sm);
+            margin-bottom: var(--espaco-lg);
+        }
+
+        .share-link-input {
+            flex: 1;
+            padding: var(--espaco-md);
+            border: 2px solid var(--cinza-medio);
+            border-radius: var(--borda-radius-lg);
+            font-size: var(--texto-sm);
+        }
+
+        .copy-link-btn {
+            padding: var(--espaco-md) var(--espaco-lg);
+            background: var(--verde-secundario);
+            color: white;
+            border: none;
+            border-radius: var(--borda-radius-lg);
+            font-size: var(--texto-sm);
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .copy-link-btn:hover {
+            background: var(--verde-primario);
+        }
+
+        .modal-close-btn {
+            width: 100%;
+            padding: var(--espaco-md);
+            background: var(--cinza-claro);
+            border: none;
+            border-radius: var(--borda-radius-lg);
+            font-size: var(--texto-base);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transicao-normal);
+        }
+
+        .modal-close-btn:hover {
+            background: var(--cinza-medio);
+        }
+
+        /* Responsivo para modal */
+        @media (max-width: 480px) {
+            .share-buttons {
+                grid-template-columns: 1fr;
+            }
+
+            .share-link-container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</body>
+</html>
