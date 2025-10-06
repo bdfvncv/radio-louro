@@ -9,31 +9,20 @@ class CloudinaryService {
     this.config = CLOUDINARY_CONFIG;
   }
 
-  // ============================================
-  // UPLOAD DE ARQUIVOS
-  // ============================================
-
-  /**
-   * Faz upload de arquivo de áudio para o Cloudinary
-   */
   async uploadAudio(file, categoria, subcategoria = 'geral') {
     try {
       console.log(`📤 Iniciando upload: ${file.name}`);
       
-      // Validar arquivo
       this.validarArquivo(file);
       
-      // Determinar pasta de destino
       const folder = this.determinarPasta(categoria, subcategoria);
       
-      // Preparar FormData
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', this.config.uploadPreset);
       formData.append('folder', folder);
       formData.append('resource_type', 'auto');
       
-      // Fazer upload
       const response = await fetch(
         `${this.config.baseUrl}/auto/upload`,
         {
@@ -50,7 +39,6 @@ class CloudinaryService {
       
       console.log(`✅ Upload concluído: ${data.secure_url}`);
       
-      // Retornar dados estruturados
       return {
         nome: file.name,
         cloudinaryUrl: data.secure_url,
@@ -66,9 +54,6 @@ class CloudinaryService {
     }
   }
 
-  /**
-   * Faz upload múltiplo de arquivos
-   */
   async uploadMultiplos(files, categoria, subcategoria = 'geral', onProgress) {
     const resultados = [];
     const total = files.length;
@@ -93,18 +78,10 @@ class CloudinaryService {
     return resultados;
   }
 
-  // ============================================
-  // EXCLUSÃO DE ARQUIVOS
-  // ============================================
-
-  /**
-   * Deleta arquivo do Cloudinary
-   */
   async deleteAudio(publicId) {
     try {
       console.log(`🗑️ Deletando arquivo: ${publicId}`);
       
-      // Gerar assinatura para deletar
       const timestamp = Math.round(new Date().getTime() / 1000);
       const signature = await this.gerarAssinatura(publicId, timestamp);
       
@@ -137,24 +114,15 @@ class CloudinaryService {
     }
   }
 
-  // ============================================
-  // STREAMING E URLS
-  // ============================================
-
-  /**
-   * Gera URL otimizada para streaming
-   */
   getStreamUrl(publicId, options = {}) {
     const baseUrl = `https://res.cloudinary.com/${this.config.cloudName}/video/upload`;
     
     let transformations = [];
     
-    // Qualidade de áudio
     if (options.quality) {
       transformations.push(`q_${options.quality}`);
     }
     
-    // Format
     if (options.format) {
       transformations.push(`f_${options.format}`);
     }
@@ -166,9 +134,6 @@ class CloudinaryService {
     return `${baseUrl}/${transformString}${publicId}`;
   }
 
-  /**
-   * Gera URL com cache otimizado
-   */
   getCachedUrl(publicId) {
     return this.getStreamUrl(publicId, {
       quality: 'auto:good',
@@ -176,15 +141,8 @@ class CloudinaryService {
     });
   }
 
-  // ============================================
-  // UTILITÁRIOS
-  // ============================================
-
-  /**
-   * Valida arquivo antes do upload
-   */
   validarArquivo(file) {
-    const maxSize = 50 * 1024 * 1024; // 50MB
+    const maxSize = 50 * 1024 * 1024;
     const allowedTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg'];
     
     if (file.size > maxSize) {
@@ -198,9 +156,6 @@ class CloudinaryService {
     return true;
   }
 
-  /**
-   * Determina pasta de destino no Cloudinary
-   */
   determinarPasta(categoria, subcategoria) {
     const pastaBase = CLOUDINARY_FOLDERS[categoria] || 'radio-louro/outros';
     
@@ -211,14 +166,9 @@ class CloudinaryService {
     return pastaBase;
   }
 
-  /**
-   * Gera assinatura para operações autenticadas
-   * Nota: Idealmente isso deveria ser feito no backend por segurança
-   */
   async gerarAssinatura(publicId, timestamp) {
     const stringToSign = `public_id=${publicId}&timestamp=${timestamp}${this.config.apiSecret}`;
     
-    // Usar SHA-1 (em produção real, fazer no backend)
     const msgUint8 = new TextEncoder().encode(stringToSign);
     const hashBuffer = await crypto.subtle.digest('SHA-1', msgUint8);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
@@ -227,42 +177,6 @@ class CloudinaryService {
     return hashHex;
   }
 
-  /**
-   * Extrai public_id da URL do Cloudinary
-   */
-  extrairPublicId(url) {
-    const match = url.match(/\/v\d+\/(.+)\.\w+$/);
-    return match ? match[1] : null;
-  }
-
-  /**
-   * Obtém informações do arquivo
-   */
-  async getFileInfo(publicId) {
-    try {
-      const url = `${this.config.baseUrl}/resources/video/upload/${publicId}`;
-      
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Basic ${btoa(`${this.config.apiKey}:${this.config.apiSecret}`)}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Erro ao buscar informações do arquivo');
-      }
-      
-      return await response.json();
-      
-    } catch (error) {
-      console.error('❌ Erro ao buscar info:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Carrega áudio e extrai duração
-   */
   async extrairDuracaoAudio(file) {
     return new Promise((resolve, reject) => {
       const audio = new Audio();
@@ -282,9 +196,6 @@ class CloudinaryService {
     });
   }
 
-  /**
-   * Formata tamanho de arquivo
-   */
   formatarTamanho(bytes) {
     if (bytes === 0) return '0 Bytes';
     
@@ -295,16 +206,12 @@ class CloudinaryService {
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   }
 
-  /**
-   * Valida URL do Cloudinary
-   */
   isValidCloudinaryUrl(url) {
     if (!url) return false;
     return url.includes('cloudinary.com') && url.includes(this.config.cloudName);
   }
 }
 
-// Exporta instância única (singleton)
 export const cloudinaryService = new CloudinaryService();
 
 console.log('✅ Cloudinary Service carregado');
