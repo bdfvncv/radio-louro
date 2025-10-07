@@ -1,5 +1,5 @@
 // ==========================================
-// PLAYER.JS - INTERFACE PÚBLICA (SUPABASE)
+// PLAYER.JS - INTERFACE PÚBLICA
 // ==========================================
 
 import { radioEngine } from './radio-engine.js';
@@ -9,7 +9,6 @@ class PlayerUI {
   constructor() {
     this.elements = {};
     this.historico = [];
-    this.isInitialized = false;
   }
 
   async init() {
@@ -25,7 +24,6 @@ class PlayerUI {
       await this.carregarHistorico();
       this.hideLoading();
       
-      this.isInitialized = true;
       console.log('✅ Player inicializado');
     } catch (error) {
       console.error('❌ Erro:', error);
@@ -56,19 +54,12 @@ class PlayerUI {
     this.elements.nextBtn?.addEventListener('click', () => this.pularMusica());
     this.elements.prevBtn?.addEventListener('click', () => this.voltarMusica());
     this.elements.volumeSlider?.addEventListener('input', (e) => this.updateVolume(e));
-    this.elements.progressBar?.addEventListener('click', (e) => this.seekTrack(e));
     this.elements.shareBtn?.addEventListener('click', () => this.openShareModal());
     this.elements.closeShareModal?.addEventListener('click', () => this.closeShareModal());
     this.elements.shareWhatsapp?.addEventListener('click', () => this.shareOnWhatsapp());
     this.elements.shareFacebook?.addEventListener('click', () => this.shareOnFacebook());
     this.elements.shareTwitter?.addEventListener('click', () => this.shareOnTwitter());
     this.elements.copyLinkBtn?.addEventListener('click', () => this.copyLink());
-    
-    this.elements.shareModal?.addEventListener('click', (e) => {
-      if (e.target === this.elements.shareModal) {
-        this.closeShareModal();
-      }
-    });
     
     document.addEventListener('keydown', (e) => this.handleKeyboard(e));
   }
@@ -142,17 +133,6 @@ class PlayerUI {
     }
   }
 
-  seekTrack(event) {
-    const player = this.elements.radioPlayer;
-    if (!player || !player.duration) return;
-    
-    const rect = this.elements.progressBar.getBoundingClientRect();
-    const percent = (event.clientX - rect.left) / rect.width;
-    const seekTime = percent * player.duration;
-    
-    player.currentTime = seekTime;
-  }
-
   updateTrackInfo(track) {
     if (!track) return;
     
@@ -167,8 +147,6 @@ class PlayerUI {
     if (this.elements.trackCategory) {
       this.elements.trackCategory.textContent = this.formatCategoria(track.categoria);
     }
-    
-    console.log(`🎵 Tocando: ${track.nome}`);
   }
 
   updateProgress(progress) {
@@ -208,7 +186,7 @@ class PlayerUI {
       this.historico = historico;
       this.renderHistorico();
     } catch (error) {
-      console.error('❌ Erro ao carregar histórico:', error);
+      console.error('❌ Erro histórico:', error);
     }
   }
 
@@ -263,7 +241,7 @@ class PlayerUI {
   }
 
   shareOnWhatsapp() {
-    const text = encodeURIComponent('Ouça a Rádio Supermercado do Louro ao vivo!');
+    const text = encodeURIComponent('Ouça a Rádio Supermercado do Louro!');
     const url = encodeURIComponent(window.location.href);
     window.open(`https://wa.me/?text=${text}%20${url}`, '_blank');
   }
@@ -285,14 +263,11 @@ class PlayerUI {
       const btn = this.elements.copyLinkBtn;
       const originalText = btn.textContent;
       btn.textContent = '✅ Copiado!';
-      btn.style.background = '#28a745';
       setTimeout(() => {
         btn.textContent = originalText;
-        btn.style.background = '';
       }, 2000);
     } catch (error) {
       console.error('❌ Erro ao copiar:', error);
-      alert('Erro ao copiar link');
     }
   }
 
@@ -310,30 +285,6 @@ class PlayerUI {
     if (event.code === 'Space' && event.target.tagName !== 'INPUT') {
       event.preventDefault();
       this.togglePlay();
-    }
-    
-    if (event.code === 'ArrowRight') {
-      event.preventDefault();
-      this.pularMusica();
-    }
-    
-    if (event.code === 'ArrowLeft') {
-      event.preventDefault();
-      this.voltarMusica();
-    }
-    
-    if (event.code === 'ArrowUp') {
-      event.preventDefault();
-      const vol = Math.min(100, parseInt(this.elements.volumeSlider.value) + 5);
-      this.elements.volumeSlider.value = vol;
-      this.updateVolume({ target: { value: vol } });
-    }
-    
-    if (event.code === 'ArrowDown') {
-      event.preventDefault();
-      const vol = Math.max(0, parseInt(this.elements.volumeSlider.value) - 5);
-      this.elements.volumeSlider.value = vol;
-      this.updateVolume({ target: { value: vol } });
     }
   }
 
