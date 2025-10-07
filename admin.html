@@ -3,129 +3,185 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Rádio Supermercado do Louro - Ouça ao vivo 24 horas">
-    <meta name="theme-color" content="#0d4d3d">
-    <title>Rádio Supermercado do Louro - Ao Vivo</title>
+    <meta name="robots" content="noindex">
+    <title>Admin - Rádio Louro</title>
     
-    <!-- CSS - Arquivos na raiz -->
     <link rel="stylesheet" href="./variables.css">
-    <link rel="stylesheet" href="./player.css">
+    <link rel="stylesheet" href="./admin.css">
 </head>
 <body>
-    <div class="player-container">
-        <header class="player-header">
-            <div class="player-logo">
-                <span class="player-logo-text">🛒</span>
+    <div class="admin-container">
+        <aside class="admin-sidebar">
+            <div class="admin-logo">
+                <div class="admin-logo-icon">🛒</div>
+                <h1>Admin Panel</h1>
+                <p>Rádio Louro</p>
             </div>
-            <h1 class="player-title">Rádio Supermercado do Louro</h1>
-            <p class="player-subtitle">Sua música enquanto você compra</p>
-        </header>
-
-        <div class="player-card">
-            <div class="live-badge" id="liveBadge">
-                <span class="live-dot"></span>
-                <span id="liveStatus">CONECTANDO...</span>
-            </div>
-
-            <div class="album-artwork">
-                <img id="albumCover" src="https://via.placeholder.com/300x300/0d4d3d/ffffff?text=Radio+Louro" alt="Capa do Álbum">
-                <div class="album-overlay">
-                    <div id="albumInfo"></div>
+            
+            <nav class="admin-nav">
+                <a class="nav-item active" data-section="dashboard" href="#dash">
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a class="nav-item" data-section="upload" href="#upload">
+                    <span class="nav-icon">📤</span>
+                    <span>Upload</span>
+                </a>
+                <a class="nav-item" data-section="files" href="#files">
+                    <span class="nav-icon">📁</span>
+                    <span>Arquivos</span>
+                </a>
+                <a class="nav-item" data-section="config" href="#config">
+                    <span class="nav-icon">⚙️</span>
+                    <span>Config</span>
+                </a>
+            </nav>
+            
+            <div class="radio-status">
+                <h3>Status</h3>
+                <div class="status-indicator">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span id="statusText">...</span>
                 </div>
-            </div>
-
-            <div class="track-info">
-                <h2 class="track-title" id="trackTitle">Carregando...</h2>
-                <p class="track-artist" id="trackArtist">Aguarde</p>
-                <span class="track-category" id="trackCategory">Música</span>
-            </div>
-
-            <div class="equalizer" id="equalizer">
-                <div class="equalizer-bar"></div>
-                <div class="equalizer-bar"></div>
-                <div class="equalizer-bar"></div>
-                <div class="equalizer-bar"></div>
-                <div class="equalizer-bar"></div>
-            </div>
-
-            <div class="progress-container">
-                <div class="progress-bar" id="progressBar">
-                    <div class="progress-fill" id="progressFill"></div>
-                </div>
-                <div class="progress-time">
-                    <span id="currentTime">0:00</span>
-                    <span id="duration">0:00</span>
-                </div>
-            </div>
-
-            <div class="player-controls">
-                <button class="control-btn control-btn-secondary" id="prevBtn" title="Anterior" aria-label="Voltar">
-                    ⮜
+                <button class="btn-admin btn-secondary-admin" id="toggleTransmission" style="width:100%">
+                    <span id="toggleBtnText">Iniciar</span>
                 </button>
+            </div>
+            
+            <div style="margin-top:auto;padding-top:2rem">
+                <a href="./index.html" class="btn-admin btn-secondary-admin" style="width:100%;justify-content:center">← Voltar</a>
+            </div>
+        </aside>
+        
+        <main class="admin-content">
+            <section id="dashboard-section" class="content-section active">
+                <div class="content-header">
+                    <h2 class="content-title">Dashboard</h2>
+                    <button class="btn-admin btn-primary-admin" id="refreshStats">🔄</button>
+                </div>
                 
-                <button class="control-btn" id="playPauseBtn" title="Play/Pause" aria-label="Reproduzir">
-                    ▶️
-                </button>
+                <div class="cards-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-value" id="totalMusicas">0</div>
+                                <div class="stat-label">Músicas</div>
+                            </div>
+                            <div class="stat-icon">🎵</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-value" id="totalVinhetas">0</div>
+                                <div class="stat-label">Vinhetas</div>
+                            </div>
+                            <div class="stat-icon">📻</div>
+                        </div>
+                    </div>
+                </div>
                 
-                <button class="control-btn control-btn-secondary" id="nextBtn" title="Próxima" aria-label="Pular">
-                    ⮞
-                </button>
-            </div>
-
-            <div class="volume-container">
-                <label for="volumeSlider" class="volume-icon" id="volumeIcon">🔊</label>
-                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="70" aria-label="Volume">
-                <span class="volume-value" id="volumeValue">70%</span>
-            </div>
-
-            <div class="now-playing-history">
-                <h3 class="history-title">📻 Tocou Agora</h3>
-                <ul class="history-list" id="historyList">
-                    <li class="history-item">
-                        <span class="history-time">--:--</span>
-                        <span class="history-track">Aguardando histórico...</span>
-                    </li>
-                </ul>
-            </div>
-
-            <button class="share-btn" id="shareBtn" title="Compartilhar">
-                🔗 Compartilhar Rádio
-            </button>
-        </div>
-
-        <a href="./admin.html" class="admin-link">Acesso Admin</a>
+                <div class="upload-section">
+                    <h3 class="section-title">🎵 Tocando Agora</h3>
+                    <div id="nowPlayingInfo"><p>Aguardando...</p></div>
+                </div>
+            </section>
+            
+            <section id="upload-section" class="content-section">
+                <div class="content-header">
+                    <h2 class="content-title">Upload</h2>
+                </div>
+                
+                <div class="upload-section">
+                    <div class="upload-grid">
+                        <div class="upload-card">
+                            <div class="upload-card-icon">🎵</div>
+                            <h4 class="upload-card-title">Músicas</h4>
+                            
+                            <div class="metadata-inputs">
+                                <div class="input-group">
+                                    <label class="input-label" for="musicCategoria">Categoria</label>
+                                    <select class="select-input" id="musicCategoria">
+                                        <option value="geral">Geral</option>
+                                        <option value="natal">Natal</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label class="input-label" for="musicGenero">Gênero</label>
+                                    <select class="select-input" id="musicGenero">
+                                        <option value="pop">Pop</option>
+                                        <option value="rock">Rock</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <label for="musicasInput" class="input-label">Arquivos</label>
+                            <input type="file" class="file-input" id="musicasInput" accept="audio/*" multiple>
+                            <button class="btn-admin btn-primary-admin" onclick="adminController.uploadFiles('musicas')" style="width:100%">
+                                📤 Enviar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="uploadProgress" class="upload-progress" style="display:none;margin-top:2rem">
+                        <div class="progress-info">
+                            <span id="uploadStatus">Enviando...</span>
+                            <span id="uploadPercent">0%</span>
+                        </div>
+                        <div class="progress-bar-admin">
+                            <div class="progress-fill-admin" id="uploadProgressFill"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="files-section" class="content-section">
+                <div class="content-header">
+                    <h2 class="content-title">Arquivos</h2>
+                    <button class="btn-admin btn-secondary-admin" id="refreshFiles">🔄</button>
+                </div>
+                <div class="files-section">
+                    <div id="listMusicas"><p>Carregando...</p></div>
+                </div>
+            </section>
+            
+            <section id="config-section" class="content-section">
+                <div class="content-header">
+                    <h2 class="content-title">Configurações</h2>
+                    <button class="btn-admin btn-primary-admin" id="saveConfig">💾 Salvar</button>
+                </div>
+                <div class="upload-section">
+                    <div class="input-group">
+                        <label class="input-label" for="configIntervalo">Intervalo (min)</label>
+                        <input type="number" class="text-input" id="configIntervalo" value="45">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label" for="configAlbumAtivo">Álbum</label>
+                        <select class="select-input" id="configAlbumAtivo">
+                            <option value="geral">Geral</option>
+                            <option value="natal">Natal</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+        </main>
     </div>
-
-    <audio id="radioPlayer" preload="auto"></audio>
-
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="spinner"></div>
-        <p>Carregando rádio...</p>
-    </div>
-
-    <div class="modal" id="shareModal">
-        <div class="modal-content">
-            <h3>📡 Compartilhar Rádio</h3>
-            <p>Compartilhe nossa rádio com seus amigos!</p>
-            <div class="share-buttons">
-                <button class="share-social-btn whatsapp" id="shareWhatsapp">💬 WhatsApp</button>
-                <button class="share-social-btn facebook" id="shareFacebook">📘 Facebook</button>
-                <button class="share-social-btn twitter" id="shareTwitter">🦅 Twitter</button>
-            </div>
-            <div class="share-link-container">
-                <label for="shareLinkInput" style="display:none;">Link</label>
-                <input type="text" class="share-link-input" id="shareLinkInput" readonly>
-                <button class="copy-link-btn" id="copyLinkBtn">📋 Copiar Link</button>
-            </div>
-            <button class="modal-close-btn" id="closeShareModal">Fechar</button>
-        </div>
-    </div>
-
-    <!-- Scripts - Arquivos na raiz -->
+    
+    <div id="toastContainer"></div>
+    
     <script type="module" src="./config.js"></script>
     <script type="module" src="./supabase-service.js"></script>
     <script type="module" src="./cloudinary_service.js"></script>
     <script type="module" src="./radio-engine.js"></script>
-    <script type="module" src="./player_js_supabase.js"></script>
+    <script type="module" src="./admin.js"></script>
+    
+    <style>
+        .content-section{display:none}
+        .content-section.active{display:block}
+        .upload-progress{background:#f5f5f5;padding:1.5rem;border-radius:0.75rem}
+        .progress-info{display:flex;justify-content:space-between;margin-bottom:0.5rem;font-weight:600}
+        .progress-bar-admin{height:8px;background:#e0e0e0;border-radius:4px;overflow:hidden}
+        .progress-fill-admin{height:100%;background:linear-gradient(135deg,#1a7a5e,#2ea57d);width:0%;transition:width 0.3s}
+    </style>
 </body>
 </html>
