@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Rádio Supermercado do Louro - Ouça ao vivo 24 horas">
+    <meta name="theme-color" content="#0d4d3d">
+    <title>Rádio Supermercado do Louro - Ao Vivo</title>
+    
+    <!-- CSS - Arquivos na raiz -->
+    <link rel="stylesheet" href="./variables.css">
+    <link rel="stylesheet" href="./player.css">
+</head>
+<body>
+    <div class="player-container">
+        <header class="player-header">
+            <div class="player-logo">
+                <span class="player-logo-text">🛒</span>
+            </div>
+            <h1 class="player-title">Rádio Supermercado do Louro</h1>
+            <p class="player-subtitle">Sua música enquanto você compra</p>
+        </header>
+
+        <div class="player-card">
+            <div class="live-badge" id="liveBadge">
+                <span class="live-dot"></span>
+                <span id="liveStatus">CONECTANDO...</span>
+            </div>
+
+            <div class="album-artwork">
+                <img id="albumCover" src="https://via.placeholder.com/300x300/0d4d3d/ffffff?text=Radio+Louro" alt="Capa do Álbum">
+                <div class="album-overlay">
+                    <div id="albumInfo"></div>
+                </div>
+            </div>
+
+            <div class="track-info">
+                <h2 class="track-title" id="trackTitle">Carregando...</h2>
+                <p class="track-artist" id="trackArtist">Aguarde</p>
+                <span class="track-category" id="trackCategory">Música</span>
+            </div>
+
+            <div class="equalizer" id="equalizer">
+                <div class="equalizer-bar"></div>
+                <div class="equalizer-bar"></div>
+                <div class="equalizer-bar"></div>
+                <div class="equalizer-bar"></div>
+                <div class="equalizer-bar"></div>
+            </div>
+
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-time">
+                    <span id="currentTime">0:00</span>
+                    <span id="duration">0:00</span>
+                </div>
+            </div>
+
+            <div class="player-controls">
+                <button class="control-btn control-btn-secondary" id="prevBtn" title="Anterior" aria-label="Voltar">
+                    ⮜
+                </button>
+                
+                <button class="control-btn" id="playPauseBtn" title="Play/Pause" aria-label="Reproduzir">
+                    ▶️
+                </button>
+                
+                <button class="control-btn control-btn-secondary" id="nextBtn" title="Próxima" aria-label="Pular">
+                    ⮞
+                </button>
+            </div>
+
+            <div class="volume-container">
+                <label for="volumeSlider" class="volume-icon" id="volumeIcon">🔊</label>
+                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="70" aria-label="Volume">
+                <span class="volume-value" id="volumeValue">70%</span>
+            </div>
+
+            <div class="now-playing-history">
+                <h3 class="history-title">📻 Tocou Agora</h3>
+                <ul class="history-list" id="historyList">
+                    <li class="history-item">
+                        <span class="history-time">--:--</span>
+                        <span class="history-track">Aguardando histórico...</span>
+                    </li>
+                </ul>
+            </div>
+
+            <button class="share-btn" id="shareBtn" title="Compartilhar">
+                🔗 Compartilhar Rádio
+            </button>
+        </div>
+
+        <a href="./admin.html" class="admin-link">Acesso Admin</a>
+    </div>
+
+    <audio id="radioPlayer" preload="auto"></audio>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <p>Carregando rádio...</p>
+    </div>
+
+    <div class="modal" id="shareModal">
+        <div class="modal-content">
+            <h3>📡 Compartilhar Rádio</h3>
+            <p>Compartilhe nossa rádio com seus amigos!</p>
+            <div class="share-buttons">
+                <button class="share-social-btn whatsapp" id="shareWhatsapp">💬 WhatsApp</button>
+                <button class="share-social-btn facebook" id="shareFacebook">📘 Facebook</button>
+                <button class="share-social-btn twitter" id="shareTwitter">🦅 Twitter</button>
+            </div>
+            <div class="share-link-container">
+                <label for="shareLinkInput" style="display:none;">Link</label>
+                <input type="text" class="share-link-input" id="shareLinkInput" readonly>
+                <button class="copy-link-btn" id="copyLinkBtn">📋 Copiar Link</button>
+            </div>
+            <button class="modal-close-btn" id="closeShareModal">Fechar</button>
+        </div>
+    </div>
+
+    <!-- Scripts - Arquivos na raiz -->
+    <script type="module" src="./config.js"></script>
+    <script type="module" src="./supabase-service.js"></script>
+    <script type="module" src="./cloudinary_service.js"></script>
+    <script type="module" src="./radio-engine.js"></script>
+    <script type="module" src="./player_js_supabase.js"></script>
+</body>
+</html>
