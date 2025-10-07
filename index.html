@@ -3,11 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Rádio Supermercado do Louro - Ouça ao vivo 24 horas">
-    <meta name="theme-color" content="#0d4d3d">
-    <title>Rádio Supermercado do Louro - Ao Vivo</title>
+    <title>Rádio Supermercado do Louro</title>
     
-    <!-- CSS - Arquivos na raiz -->
+    <!-- CSS -->
     <link rel="stylesheet" href="./variables.css">
     <link rel="stylesheet" href="./player.css">
 </head>
@@ -28,10 +26,7 @@
             </div>
 
             <div class="album-artwork">
-                <img id="albumCover" src="https://via.placeholder.com/300x300/0d4d3d/ffffff?text=Radio+Louro" alt="Capa do Álbum">
-                <div class="album-overlay">
-                    <div id="albumInfo"></div>
-                </div>
+                <img id="albumCover" src="https://via.placeholder.com/300x300/0d4d3d/ffffff?text=Radio+Louro" alt="Capa">
             </div>
 
             <div class="track-info">
@@ -59,17 +54,9 @@
             </div>
 
             <div class="player-controls">
-                <button class="control-btn control-btn-secondary" id="prevBtn" title="Anterior" aria-label="Voltar">
-                    ⮜
-                </button>
-                
-                <button class="control-btn" id="playPauseBtn" title="Play/Pause" aria-label="Reproduzir">
-                    ▶️
-                </button>
-                
-                <button class="control-btn control-btn-secondary" id="nextBtn" title="Próxima" aria-label="Pular">
-                    ⮞
-                </button>
+                <button class="control-btn control-btn-secondary" id="prevBtn" aria-label="Anterior">⮜</button>
+                <button class="control-btn" id="playPauseBtn" aria-label="Play">▶️</button>
+                <button class="control-btn control-btn-secondary" id="nextBtn" aria-label="Próxima">⮞</button>
             </div>
 
             <div class="volume-container">
@@ -83,45 +70,41 @@
                 <ul class="history-list" id="historyList">
                     <li class="history-item">
                         <span class="history-time">--:--</span>
-                        <span class="history-track">Aguardando histórico...</span>
+                        <span class="history-track">Aguardando...</span>
                     </li>
                 </ul>
             </div>
 
-            <button class="share-btn" id="shareBtn" title="Compartilhar">
-                🔗 Compartilhar Rádio
-            </button>
+            <button class="share-btn" id="shareBtn">🔗 Compartilhar</button>
         </div>
 
-        <a href="./admin.html" class="admin-link">Acesso Admin</a>
+        <a href="./admin.html" class="admin-link">Admin</a>
     </div>
 
     <audio id="radioPlayer" preload="auto"></audio>
 
     <div class="loading-overlay" id="loadingOverlay">
         <div class="spinner"></div>
-        <p>Carregando rádio...</p>
+        <p>Carregando...</p>
     </div>
 
     <div class="modal" id="shareModal">
         <div class="modal-content">
-            <h3>📡 Compartilhar Rádio</h3>
-            <p>Compartilhe nossa rádio com seus amigos!</p>
+            <h3>📡 Compartilhar</h3>
+            <p>Compartilhe nossa rádio!</p>
             <div class="share-buttons">
                 <button class="share-social-btn whatsapp" id="shareWhatsapp">💬 WhatsApp</button>
                 <button class="share-social-btn facebook" id="shareFacebook">📘 Facebook</button>
                 <button class="share-social-btn twitter" id="shareTwitter">🦅 Twitter</button>
             </div>
             <div class="share-link-container">
-                <label for="shareLinkInput" style="display:none;">Link</label>
-                <input type="text" class="share-link-input" id="shareLinkInput" readonly>
-                <button class="copy-link-btn" id="copyLinkBtn">📋 Copiar Link</button>
+                <input type="text" class="share-link-input" id="shareLinkInput" readonly aria-label="Link">
+                <button class="copy-link-btn" id="copyLinkBtn">📋 Copiar</button>
             </div>
             <button class="modal-close-btn" id="closeShareModal">Fechar</button>
         </div>
     </div>
 
-    <!-- Scripts - Arquivos na raiz -->
     <script type="module" src="./config.js"></script>
     <script type="module" src="./supabase-service.js"></script>
     <script type="module" src="./cloudinary_service.js"></script>
