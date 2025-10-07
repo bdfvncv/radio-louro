@@ -1,5 +1,5 @@
 // ==========================================
-// SUPABASE SERVICE - GERENCIAMENTO DATABASE
+// SUPABASE SERVICE
 // ==========================================
 
 import { supabase } from './config.js';
@@ -23,10 +23,10 @@ class SupabaseService {
       
       if (error) throw error;
       
-      console.log(`✅ Documento adicionado: ${result.id}`);
+      console.log(`✅ Add: ${result.id}`);
       return result.id;
     } catch (error) {
-      console.error('❌ Erro ao adicionar:', error);
+      console.error('❌ Erro add:', error);
       throw error;
     }
   }
@@ -43,10 +43,10 @@ class SupabaseService {
       
       if (error) throw error;
       
-      console.log(`✅ Documento atualizado: ${id}`);
+      console.log(`✅ Update: ${id}`);
       return true;
     } catch (error) {
-      console.error('❌ Erro ao atualizar:', error);
+      console.error('❌ Erro update:', error);
       throw error;
     }
   }
@@ -60,10 +60,9 @@ class SupabaseService {
         .single();
       
       if (error) throw error;
-      
       return data;
     } catch (error) {
-      console.error('❌ Erro ao buscar:', error);
+      console.error('❌ Erro get:', error);
       return null;
     }
   }
@@ -77,8 +76,6 @@ class SupabaseService {
           if (operator === '==') query = query.eq(field, value);
           else if (operator === '>') query = query.gt(field, value);
           else if (operator === '>=') query = query.gte(field, value);
-          else if (operator === '<') query = query.lt(field, value);
-          else if (operator === '<=') query = query.lte(field, value);
         });
       }
       
@@ -92,12 +89,11 @@ class SupabaseService {
       }
       
       const { data, error } = await query;
-      
       if (error) throw error;
       
       return data || [];
     } catch (error) {
-      console.error('❌ Erro ao buscar todos:', error);
+      console.error('❌ Erro getAll:', error);
       throw error;
     }
   }
@@ -111,10 +107,10 @@ class SupabaseService {
       
       if (error) throw error;
       
-      console.log(`✅ Documento deletado: ${id}`);
+      console.log(`✅ Delete: ${id}`);
       return true;
     } catch (error) {
-      console.error('❌ Erro ao deletar:', error);
+      console.error('❌ Erro delete:', error);
       throw error;
     }
   }
@@ -159,7 +155,7 @@ class SupabaseService {
         });
       }
     } catch (error) {
-      console.error('❌ Erro ao incrementar play count:', error);
+      console.error('❌ Erro play count:', error);
     }
   }
 
@@ -206,11 +202,10 @@ class SupabaseService {
       if (error) throw error;
       
       const idsTocados = new Set((historicoRecente || []).map(h => h.arquivo_id));
-      
       return todasMusicas.filter(musica => !idsTocados.has(musica.id));
       
     } catch (error) {
-      console.error('❌ Erro ao buscar músicas disponíveis:', error);
+      console.error('❌ Erro músicas disponíveis:', error);
       return [];
     }
   }
@@ -228,19 +223,17 @@ class SupabaseService {
           .from('config')
           .update({ ...config, updated_at: new Date().toISOString() })
           .eq('tipo', 'transmissao');
-        
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('config')
           .insert([{ ...config, tipo: 'transmissao' }]);
-        
         if (error) throw error;
       }
       
       return true;
     } catch (error) {
-      console.error('❌ Erro ao salvar config:', error);
+      console.error('❌ Erro config:', error);
       throw error;
     }
   }
@@ -260,18 +253,15 @@ class SupabaseService {
           tipo: 'transmissao',
           ativa: false,
           album_ativo: 'geral',
-          musica_atual: null,
-          proxima_na_fila: null,
-          ultima_hora_certa: null
+          musica_atual: null
         };
-        
         await supabase.from('config').insert([configPadrao]);
         return configPadrao;
       }
       
       return data;
     } catch (error) {
-      console.error('❌ Erro ao buscar config:', error);
+      console.error('❌ Erro buscar config:', error);
       return null;
     }
   }
@@ -294,14 +284,13 @@ class SupabaseService {
           balancear_ritmos: true,
           considerar_horario: true
         };
-        
         await supabase.from('config').insert([configPadrao]);
         return configPadrao;
       }
       
       return data;
     } catch (error) {
-      console.error('❌ Erro ao buscar config rotação:', error);
+      console.error('❌ Erro config rotação:', error);
       return null;
     }
   }
@@ -334,12 +323,11 @@ class SupabaseService {
       
       return stats;
     } catch (error) {
-      console.error('❌ Erro ao buscar estatísticas:', error);
+      console.error('❌ Erro estatísticas:', error);
       return null;
     }
   }
 }
 
 export const supabaseService = new SupabaseService();
-
 console.log('✅ Supabase Service carregado');
