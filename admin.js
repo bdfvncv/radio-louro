@@ -1,20 +1,19 @@
 // ==========================================
-// ADMIN.JS - PAINEL ADMINISTRATIVO (SUPABASE)
+// ADMIN.JS - PAINEL ADMINISTRATIVO
 // ==========================================
 
 import { radioEngine } from './radio-engine.js';
 import { supabaseService } from './supabase-service.js';
-import { cloudinaryService } from './cloudinary-service.js';
+import { cloudinaryService } from './cloudinary_service.js';
 
 class AdminController {
   constructor() {
     this.currentSection = 'dashboard';
-    this.confirmCallback = null;
   }
 
   async init() {
     try {
-      console.log('🛠️ Inicializando Admin...');
+      console.log('🛠️ Init Admin...');
       
       await radioEngine.inicializar('radioPlayer');
       
@@ -24,10 +23,10 @@ class AdminController {
       await this.loadDashboard();
       this.updateRadioStatus();
       
-      console.log('✅ Admin inicializado');
+      console.log('✅ Admin OK');
     } catch (error) {
       console.error('❌ Erro:', error);
-      this.showToast('Erro ao carregar painel', 'error');
+      this.showToast('Erro ao carregar', 'error');
     }
   }
 
@@ -70,9 +69,6 @@ class AdminController {
       case 'files':
         await this.loadFiles();
         break;
-      case 'stats':
-        await this.loadStats();
-        break;
       case 'config':
         await this.loadConfig();
         break;
@@ -92,20 +88,8 @@ class AdminController {
       this.loadFiles();
     });
     
-    document.getElementById('resetStats')?.addEventListener('click', () => {
-      this.resetStats();
-    });
-    
     document.getElementById('saveConfig')?.addEventListener('click', () => {
       this.saveConfig();
-    });
-    
-    document.getElementById('confirmYes')?.addEventListener('click', () => {
-      this.confirmAction(true);
-    });
-    
-    document.getElementById('confirmNo')?.addEventListener('click', () => {
-      this.confirmAction(false);
     });
   }
 
@@ -122,19 +106,15 @@ class AdminController {
       const trackInfo = radioEngine.getCurrentTrackInfo();
       if (trackInfo) {
         const html = `
-          <div style="padding: 1.5rem; background: #f5f5f5; border-radius: 0.75rem;">
-            <h4 style="color: #0d4d3d; margin-bottom: 0.5rem;">${this.formatTrackName(trackInfo.nome)}</h4>
-            <p style="color: #6c757d; margin-bottom: 1rem;">${this.formatCategoria(trackInfo.categoria)}</p>
-            <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: #6c757d;">
-              <span>${this.formatTime(trackInfo.currentTime)} / ${this.formatTime(trackInfo.duration)}</span>
-              <span>${trackInfo.isPlaying ? '▶️ Tocando' : '⏸️ Pausado'}</span>
-            </div>
+          <div style="padding:1.5rem;background:#f5f5f5;border-radius:0.75rem">
+            <h4 style="color:#0d4d3d;margin-bottom:0.5rem">${this.formatTrackName(trackInfo.nome)}</h4>
+            <p style="color:#6c757d">${this.formatCategoria(trackInfo.categoria)}</p>
           </div>
         `;
         document.getElementById('nowPlayingInfo').innerHTML = html;
       }
     } catch (error) {
-      console.error('❌ Erro ao carregar dashboard:', error);
+      console.error('❌ Erro dashboard:', error);
     }
   }
 
@@ -176,7 +156,6 @@ class AdminController {
           sucessos++;
         } else {
           erros++;
-          console.error('Erro:', resultado.nomeArquivo, resultado.erro);
         }
       }
       
@@ -187,13 +166,13 @@ class AdminController {
       }
       
       if (erros > 0) {
-        this.showToast(`${erros} arquivo(s) falharam`, 'error');
+        this.showToast(`${erros} falhou(ram)`, 'error');
       }
       
       input.value = '';
       await this.loadDashboard();
     } catch (error) {
-      console.error('❌ Erro no upload:', error);
+      console.error('❌ Erro upload:', error);
       this.showToast('Erro ao fazer upload', 'error');
       this.hideUploadProgress();
     }
@@ -216,8 +195,6 @@ class AdminController {
       metadata.subcategoria = document.getElementById('vinhetaTipo')?.value || 'identificacao';
     } else if (categoria === 'avisos') {
       metadata.subcategoria = document.getElementById('avisoTipo')?.value || 'promocoes';
-    } else if (categoria === 'propagandas') {
-      metadata.subcategoria = document.getElementById('propagandaTipo')?.value || 'produtos';
     }
     
     return metadata;
@@ -253,28 +230,24 @@ class AdminController {
 
   async loadFiles() {
     try {
-      const categorias = ['musicas', 'vinhetas', 'avisos', 'propagandas'];
+      const categorias = ['musicas', 'vinhetas', 'avisos'];
       for (const categoria of categorias) {
         const arquivos = await supabaseService.buscarArquivosPorCategoria(categoria);
         this.renderFileList(categoria, arquivos);
       }
     } catch (error) {
-      console.error('❌ Erro ao carregar arquivos:', error);
+      console.error('❌ Erro files:', error);
     }
   }
 
   renderFileList(categoria, arquivos) {
     const listId = `list${this.capitalize(categoria)}`;
-    const countId = `count${this.capitalize(categoria)}`;
-    
     const listEl = document.getElementById(listId);
-    const countEl = document.getElementById(countId);
     
     if (!listEl) return;
-    if (countEl) countEl.textContent = arquivos.length;
     
     if (arquivos.length === 0) {
-      listEl.innerHTML = '<p style="color: #6c757d;">Nenhum arquivo</p>';
+      listEl.innerHTML = '<p style="color:#6c757d">Nenhum arquivo</p>';
       return;
     }
     
@@ -282,109 +255,12 @@ class AdminController {
       <div class="file-item">
         <div class="file-info">
           <div class="file-name">${this.formatTrackName(arq.nome)}</div>
-          <div class="file-meta">
-            ${arq.genero ? `${arq.genero} • ` : ''}
-            ${arq.duracao ? this.formatTime(arq.duracao) : ''} • 
-            ${arq.play_count || 0}x
-          </div>
-        </div>
-        <div class="file-actions">
-          <button class="btn-icon btn-icon-play" onclick="adminController.playPreview('${arq.cloudinary_url}')" title="Preview">
-            ▶️
-          </button>
-          <button class="btn-icon btn-icon-delete" onclick="adminController.deleteFile('${arq.id}', '${arq.cloudinary_public_id}', '${categoria}')" title="Deletar">
-            🗑️
-          </button>
+          <div class="file-meta">${arq.play_count || 0}x reproduzido</div>
         </div>
       </div>
     `).join('');
     
     listEl.innerHTML = html;
-  }
-
-  async deleteFile(arquivoId, publicId, categoria) {
-    this.showConfirm(
-      'Deletar Arquivo',
-      'Tem certeza que deseja deletar?',
-      async () => {
-        try {
-          await cloudinaryService.deleteAudio(publicId);
-          await supabaseService.delete('arquivos', arquivoId);
-          this.showToast('Arquivo deletado', 'success');
-          await this.loadFiles();
-          await this.loadDashboard();
-        } catch (error) {
-          console.error('❌ Erro ao deletar:', error);
-          this.showToast('Erro ao deletar', 'error');
-        }
-      }
-    );
-  }
-
-  playPreview(url) {
-    const audio = new Audio(url);
-    audio.volume = 0.5;
-    audio.play();
-    this.showToast('Reproduzindo preview', 'info');
-    setTimeout(() => audio.pause(), 10000);
-  }
-
-  async loadStats() {
-    try {
-      const stats = await supabaseService.buscarEstatisticas();
-      if (!stats || !stats.maisTodastas) return;
-      
-      const tableBody = document.getElementById('topMusicasTable');
-      
-      if (stats.maisTodastas.length === 0) {
-        tableBody.innerHTML = `
-          <tr>
-            <td colspan="5" style="text-align: center; color: #6c757d;">
-              Nenhuma música tocada ainda
-            </td>
-          </tr>
-        `;
-        return;
-      }
-      
-      const html = stats.maisTodastas.map((musica, index) => `
-        <tr>
-          <td>${index + 1}</td>
-          <td>${this.formatTrackName(musica.nome)}</td>
-          <td>${musica.genero || '-'}</td>
-          <td>${musica.subcategoria || 'geral'}</td>
-          <td><span class="play-count-badge">${musica.play_count}x</span></td>
-        </tr>
-      `).join('');
-      
-      tableBody.innerHTML = html;
-    } catch (error) {
-      console.error('Erro:', error);
-    }
-  }
-
-  resetStats() {
-    this.showConfirm(
-      'Resetar Estatísticas',
-      'Tem certeza?',
-      async () => {
-        try {
-          const arquivos = await supabaseService.getAll('arquivos');
-          for (const arq of arquivos) {
-            await supabaseService.update('arquivos', arq.id, {
-              play_count: 0,
-              ultima_reproducao: null
-            });
-          }
-          this.showToast('Estatísticas resetadas', 'success');
-          await this.loadStats();
-          await this.loadDashboard();
-        } catch (error) {
-          console.error('Erro:', error);
-          this.showToast('Erro ao resetar', 'error');
-        }
-      }
-    );
   }
 
   async loadConfig() {
@@ -396,16 +272,13 @@ class AdminController {
       
       if (configRotacao) {
         this.updateElement('configIntervalo', configRotacao.intervalo_minimo, 'value');
-        document.getElementById('configBalancearGeneros').checked = configRotacao.balancear_generos;
-        document.getElementById('configBalancearRitmos').checked = configRotacao.balancear_ritmos;
-        document.getElementById('configConsiderarHorario').checked = configRotacao.considerar_horario;
       }
       
       if (configTransmissao) {
         this.updateElement('configAlbumAtivo', configTransmissao.album_ativo || 'geral', 'value');
       }
     } catch (error) {
-      console.error('Erro:', error);
+      console.error('❌ Erro config:', error);
     }
   }
 
@@ -413,10 +286,7 @@ class AdminController {
     try {
       await supabaseService.salvarConfig({
         tipo: 'rotacao',
-        intervalo_minimo: parseInt(document.getElementById('configIntervalo').value),
-        balancear_generos: document.getElementById('configBalancearGeneros').checked,
-        balancear_ritmos: document.getElementById('configBalancearRitmos').checked,
-        considerar_horario: document.getElementById('configConsiderarHorario').checked
+        intervalo_minimo: parseInt(document.getElementById('configIntervalo').value)
       });
       
       const albumAtivo = document.getElementById('configAlbumAtivo').value;
@@ -426,9 +296,9 @@ class AdminController {
         album_ativo: albumAtivo
       });
       
-      this.showToast('Configurações salvas', 'success');
+      this.showToast('Config salvas', 'success');
     } catch (error) {
-      console.error('Erro:', error);
+      console.error('❌ Erro:', error);
       this.showToast('Erro ao salvar', 'error');
     }
   }
@@ -454,37 +324,11 @@ class AdminController {
       statusDot?.classList.remove('offline');
       if (statusText) statusText.textContent = 'AO VIVO';
       if (toggleBtnText) toggleBtnText.textContent = 'Parar';
-      toggleBtn?.classList.remove('btn-secondary-admin');
-      toggleBtn?.classList.add('btn-danger-admin');
     } else {
       statusDot?.classList.add('offline');
       if (statusText) statusText.textContent = 'OFFLINE';
       if (toggleBtnText) toggleBtnText.textContent = 'Iniciar';
-      toggleBtn?.classList.remove('btn-danger-admin');
-      toggleBtn?.classList.add('btn-secondary-admin');
     }
-  }
-
-  showConfirm(title, message, callback) {
-    const modal = document.getElementById('confirmModal');
-    const titleEl = document.getElementById('confirmTitle');
-    const messageEl = document.getElementById('confirmMessage');
-    
-    if (titleEl) titleEl.textContent = title;
-    if (messageEl) messageEl.textContent = message;
-    
-    this.confirmCallback = callback;
-    modal?.classList.add('active');
-  }
-
-  confirmAction(confirmed) {
-    const modal = document.getElementById('confirmModal');
-    modal?.classList.remove('active');
-    
-    if (confirmed && this.confirmCallback) {
-      this.confirmCallback();
-    }
-    this.confirmCallback = null;
   }
 
   showToast(message, type = 'info') {
@@ -494,6 +338,7 @@ class AdminController {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.textContent = message;
+    toast.style.cssText = 'position:fixed;bottom:20px;right:20px;padding:1rem 1.5rem;background:#0d4d3d;color:white;border-radius:0.75rem;z-index:9999';
     container.appendChild(toast);
     
     setTimeout(() => {
@@ -521,13 +366,6 @@ class AdminController {
       'horaCerta': 'Hora Certa'
     };
     return map[categoria] || 'Música';
-  }
-
-  formatTime(seconds) {
-    if (!seconds || isNaN(seconds)) return '0:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
 
   capitalize(str) {
