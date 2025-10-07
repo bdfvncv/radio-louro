@@ -7,18 +7,12 @@
     <meta name="theme-color" content="#0d4d3d">
     <title>Rádio Supermercado do Louro - Ao Vivo</title>
     
-    <!-- CSS -->
-    <link rel="stylesheet" href="css/variables.css">
-    <link rel="stylesheet" href="css/player.css">
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="assets/favicon.png">
+    <!-- CSS - Arquivos na raiz -->
+    <link rel="stylesheet" href="./variables.css">
+    <link rel="stylesheet" href="./player.css">
 </head>
 <body>
-    <!-- Container Principal -->
     <div class="player-container">
-        
-        <!-- Header -->
         <header class="player-header">
             <div class="player-logo">
                 <span class="player-logo-text">🛒</span>
@@ -27,16 +21,12 @@
             <p class="player-subtitle">Sua música enquanto você compra</p>
         </header>
 
-        <!-- Card do Player -->
         <div class="player-card">
-            
-            <!-- Badge Ao Vivo -->
             <div class="live-badge" id="liveBadge">
                 <span class="live-dot"></span>
                 <span id="liveStatus">CONECTANDO...</span>
             </div>
 
-            <!-- Capa do Álbum -->
             <div class="album-artwork">
                 <img id="albumCover" src="https://via.placeholder.com/300x300/0d4d3d/ffffff?text=Radio+Louro" alt="Capa do Álbum">
                 <div class="album-overlay">
@@ -44,14 +34,12 @@
                 </div>
             </div>
 
-            <!-- Informações da Música -->
             <div class="track-info">
                 <h2 class="track-title" id="trackTitle">Carregando...</h2>
                 <p class="track-artist" id="trackArtist">Aguarde</p>
                 <span class="track-category" id="trackCategory">Música</span>
             </div>
 
-            <!-- Equalizador -->
             <div class="equalizer" id="equalizer">
                 <div class="equalizer-bar"></div>
                 <div class="equalizer-bar"></div>
@@ -60,7 +48,6 @@
                 <div class="equalizer-bar"></div>
             </div>
 
-            <!-- Barra de Progresso -->
             <div class="progress-container">
                 <div class="progress-bar" id="progressBar">
                     <div class="progress-fill" id="progressFill"></div>
@@ -71,29 +58,26 @@
                 </div>
             </div>
 
-            <!-- Controles -->
             <div class="player-controls">
-                <button class="control-btn control-btn-secondary" id="prevBtn" title="Anterior">
+                <button class="control-btn control-btn-secondary" id="prevBtn" title="Anterior" aria-label="Voltar">
                     ⮜
                 </button>
                 
-                <button class="control-btn" id="playPauseBtn" title="Play/Pause">
+                <button class="control-btn" id="playPauseBtn" title="Play/Pause" aria-label="Reproduzir">
                     ▶️
                 </button>
                 
-                <button class="control-btn control-btn-secondary" id="nextBtn" title="Próxima">
+                <button class="control-btn control-btn-secondary" id="nextBtn" title="Próxima" aria-label="Pular">
                     ⮞
                 </button>
             </div>
 
-            <!-- Volume -->
             <div class="volume-container">
-                <span class="volume-icon" id="volumeIcon">🔊</span>
-                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="70">
+                <label for="volumeSlider" class="volume-icon" id="volumeIcon">🔊</label>
+                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="70" aria-label="Volume">
                 <span class="volume-value" id="volumeValue">70%</span>
             </div>
 
-            <!-- Histórico "Tocou Agora" -->
             <div class="now-playing-history">
                 <h3 class="history-title">📻 Tocou Agora</h3>
                 <ul class="history-list" id="historyList">
@@ -104,60 +88,44 @@
                 </ul>
             </div>
 
-            <!-- Botão Compartilhar -->
             <button class="share-btn" id="shareBtn" title="Compartilhar">
                 🔗 Compartilhar Rádio
             </button>
-
         </div>
 
-        <!-- Link Admin (discreto) -->
-        <a href="admin.html" class="admin-link">
-            Acesso Admin
-        </a>
-
+        <a href="./admin.html" class="admin-link">Acesso Admin</a>
     </div>
 
-    <!-- Player de Áudio (oculto) -->
     <audio id="radioPlayer" preload="auto"></audio>
 
-    <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="spinner"></div>
         <p>Carregando rádio...</p>
     </div>
 
-    <!-- Modal Compartilhar -->
     <div class="modal" id="shareModal">
         <div class="modal-content">
             <h3>📡 Compartilhar Rádio</h3>
             <p>Compartilhe nossa rádio com seus amigos!</p>
             <div class="share-buttons">
-                <button class="share-social-btn whatsapp" id="shareWhatsapp">
-                    💬 WhatsApp
-                </button>
-                <button class="share-social-btn facebook" id="shareFacebook">
-                    📘 Facebook
-                </button>
-                <button class="share-social-btn twitter" id="shareTwitter">
-                    🦅 Twitter
-                </button>
+                <button class="share-social-btn whatsapp" id="shareWhatsapp">💬 WhatsApp</button>
+                <button class="share-social-btn facebook" id="shareFacebook">📘 Facebook</button>
+                <button class="share-social-btn twitter" id="shareTwitter">🦅 Twitter</button>
             </div>
             <div class="share-link-container">
+                <label for="shareLinkInput" style="display:none;">Link</label>
                 <input type="text" class="share-link-input" id="shareLinkInput" readonly>
-                <button class="copy-link-btn" id="copyLinkBtn">
-                    📋 Copiar Link
-                </button>
+                <button class="copy-link-btn" id="copyLinkBtn">📋 Copiar Link</button>
             </div>
             <button class="modal-close-btn" id="closeShareModal">Fechar</button>
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script type="module" src="js/config.js"></script>
-    <script type="module" src="js/supabase-service.js"></script>
-    <script type="module" src="js/cloudinary-service.js"></script>
-    <script type="module" src="js/radio-engine.js"></script>
-    <script type="module" src="js/player.js"></script>
+    <!-- Scripts - Arquivos na raiz -->
+    <script type="module" src="./config.js"></script>
+    <script type="module" src="./supabase-service.js"></script>
+    <script type="module" src="./cloudinary_service.js"></script>
+    <script type="module" src="./radio-engine.js"></script>
+    <script type="module" src="./player_js_supabase.js"></script>
 </body>
 </html>
