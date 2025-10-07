@@ -11,7 +11,7 @@ class CloudinaryService {
 
   async uploadAudio(file, categoria, subcategoria = 'geral') {
     try {
-      console.log(`📤 Iniciando upload: ${file.name}`);
+      console.log(`📤 Upload: ${file.name}`);
       
       this.validarArquivo(file);
       
@@ -37,7 +37,7 @@ class CloudinaryService {
       
       const data = await response.json();
       
-      console.log(`✅ Upload concluído: ${data.secure_url}`);
+      console.log(`✅ Upload OK: ${data.secure_url}`);
       
       return {
         nome: file.name,
@@ -49,7 +49,7 @@ class CloudinaryService {
       };
       
     } catch (error) {
-      console.error('❌ Erro no upload:', error);
+      console.error('❌ Erro upload:', error);
       throw error;
     }
   }
@@ -80,7 +80,7 @@ class CloudinaryService {
 
   async deleteAudio(publicId) {
     try {
-      console.log(`🗑️ Deletando arquivo: ${publicId}`);
+      console.log(`🗑️ Deletando: ${publicId}`);
       
       const timestamp = Math.round(new Date().getTime() / 1000);
       const signature = await this.gerarAssinatura(publicId, timestamp);
@@ -104,7 +104,7 @@ class CloudinaryService {
       }
       
       const data = await response.json();
-      console.log(`✅ Arquivo deletado: ${data.result}`);
+      console.log(`✅ Deletado: ${data.result}`);
       
       return data.result === 'ok';
       
@@ -146,11 +146,11 @@ class CloudinaryService {
     const allowedTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg'];
     
     if (file.size > maxSize) {
-      throw new Error(`Arquivo muito grande. Tamanho máximo: 50MB`);
+      throw new Error(`Arquivo muito grande. Max: 50MB`);
     }
     
     if (!allowedTypes.includes(file.type)) {
-      throw new Error(`Formato não suportado. Use: MP3, WAV ou OGG`);
+      throw new Error(`Formato não suportado. Use: MP3, WAV, OGG`);
     }
     
     return true;
