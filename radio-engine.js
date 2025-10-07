@@ -4,7 +4,7 @@
 
 import { RADIO_CONFIG } from './config.js';
 import { supabaseService } from './supabase-service.js';
-import { cloudinaryService } from './cloudinary-service.js';
+import { cloudinaryService } from './cloudinary_service.js';
 
 class RadioEngine {
   constructor() {
@@ -36,7 +36,7 @@ class RadioEngine {
       const config = await supabaseService.buscarConfig();
       this.isTransmitting = config?.ativa || false;
       
-      console.log('✅ Radio Engine inicializado');
+      console.log('✅ Radio Engine OK');
       
       if (this.isTransmitting) {
         await this.iniciarTransmissao();
@@ -44,7 +44,7 @@ class RadioEngine {
       
       return true;
     } catch (error) {
-      console.error('❌ Erro ao inicializar:', error);
+      console.error('❌ Erro init:', error);
       throw error;
     }
   }
@@ -53,7 +53,6 @@ class RadioEngine {
     this.audioPlayer.addEventListener('ended', () => this.onTrackEnded());
     this.audioPlayer.addEventListener('error', (e) => this.onPlayerError(e));
     this.audioPlayer.addEventListener('timeupdate', () => this.onTimeUpdate());
-    console.log('✅ Eventos configurados');
   }
 
   async iniciarTransmissao() {
@@ -67,14 +66,14 @@ class RadioEngine {
       
       console.log('✅ Transmissão iniciada');
     } catch (error) {
-      console.error('❌ Erro ao iniciar:', error);
+      console.error('❌ Erro:', error);
       this.isTransmitting = false;
       throw error;
     }
   }
 
   async pararTransmissao() {
-    console.log('⏹️ Parando transmissão...');
+    console.log('⏹️ Parando...');
     this.isTransmitting = false;
     
     if (this.audioPlayer) {
@@ -83,21 +82,19 @@ class RadioEngine {
     
     await supabaseService.salvarConfig({ ativa: false });
     this.notificarListeners('transmissaoParada');
-    console.log('✅ Transmissão parada');
   }
 
   async montarProximaSequencia() {
     try {
       console.log('📋 Montando sequência...');
       const sequencia = [];
-      const horarioAtual = this.determinarHorario();
       
       for (const bloco of RADIO_CONFIG.sequenciaPadrao) {
         for (let i = 0; i < bloco.quantidade; i++) {
           let item;
           
           if (bloco.tipo === 'musica') {
-            item = await this.selecionarMusica(horarioAtual);
+            item = await this.selecionarMusica();
           } else {
             item = await this.selecionarOutro(bloco.tipo, bloco.subtipo);
           }
@@ -111,12 +108,12 @@ class RadioEngine {
       console.log(`✅ Sequência: ${sequencia.length} itens`);
       return sequencia;
     } catch (error) {
-      console.error('❌ Erro ao montar sequência:', error);
+      console.error('❌ Erro sequência:', error);
       return [];
     }
   }
 
-  async selecionarMusica(horarioAtual) {
+  async selecionarMusica() {
     try {
       const config = await supabaseService.buscarConfigRotacao();
       const configGeral = await supabaseService.buscarConfig();
@@ -134,7 +131,7 @@ class RadioEngine {
       }
       
       if (musicasDisponiveis.length === 0) {
-        console.log('⚠️ Sem músicas, resetando pool');
+        console.log('⚠️ Sem músicas, resetando...');
         musicasDisponiveis = await supabaseService.buscarArquivosPorCategoria(
           'musicas', 
           albumAtivo === 'geral' ? null : albumAtivo
@@ -143,7 +140,7 @@ class RadioEngine {
       }
       
       if (musicasDisponiveis.length === 0) {
-        console.log('⚠️ Nenhuma música válida');
+        console.log('⚠️ Nenhuma música');
         return null;
       }
       
@@ -152,10 +149,10 @@ class RadioEngine {
       ];
       
       this.atualizarStats(musicaSelecionada);
-      console.log(`🎵 Selecionada: ${musicaSelecionada.nome}`);
+      console.log(`🎵 ${musicaSelecionada.nome}`);
       return musicaSelecionada;
     } catch (error) {
-      console.error('❌ Erro ao selecionar música:', error);
+      console.error('❌ Erro música:', error);
       return null;
     }
   }
@@ -165,15 +162,14 @@ class RadioEngine {
       let arquivos = await supabaseService.buscarArquivosPorCategoria(tipo, subtipo);
       
       if (arquivos.length === 0) {
-        console.log(`⚠️ Nenhum ${tipo} encontrado`);
+        console.log(`⚠️ Sem ${tipo}`);
         return null;
       }
       
       const selecionado = arquivos[Math.floor(Math.random() * arquivos.length)];
-      console.log(`📢 ${tipo}: ${selecionado.nome}`);
       return selecionado;
     } catch (error) {
-      console.error(`❌ Erro ao selecionar ${tipo}:`, error);
+      console.error(`❌ Erro ${tipo}:`, error);
       return null;
     }
   }
@@ -181,7 +177,7 @@ class RadioEngine {
   async reproduzirProximo() {
     try {
       if (!this.isTransmitting) {
-        console.log('⏸️ Transmissão parada');
+        console.log('⏸️ Parado');
         return;
       }
       
@@ -201,14 +197,14 @@ class RadioEngine {
       
       await this.reproduzir(proximoItem);
     } catch (error) {
-      console.error('❌ Erro ao reproduzir:', error);
+      console.error('❌ Erro:', error);
       setTimeout(() => this.reproduzirProximo(), 5000);
     }
   }
 
   async reproduzir(item) {
     try {
-      console.log(`▶️ Reproduzindo: ${item.nome}`);
+      console.log(`▶️ ${item.nome}`);
       this.currentTrack = item;
       
       this.currentHistoricoId = await supabaseService.salvarHistorico({
@@ -227,8 +223,7 @@ class RadioEngine {
         musica_atual: {
           id: item.id,
           nome: item.nome,
-          categoria: item.categoria,
-          iniciado_em: new Date().toISOString()
+          categoria: item.categoria
         }
       });
       
@@ -236,13 +231,13 @@ class RadioEngine {
       this.notificarListeners('trackChanged', item);
       this.stats.musicasTocadas++;
     } catch (error) {
-      console.error('❌ Erro ao reproduzir:', error);
+      console.error('❌ Erro reproduzir:', error);
       setTimeout(() => this.reproduzirProximo(), 2000);
     }
   }
 
   async onTrackEnded() {
-    console.log('✅ Track finalizado');
+    console.log('✅ Track fim');
     
     if (this.currentHistoricoId) {
       await supabaseService.finalizarHistorico(this.currentHistoricoId, true);
@@ -264,20 +259,12 @@ class RadioEngine {
   }
 
   onPlayerError(error) {
-    console.error('❌ Erro no player:', error);
+    console.error('❌ Erro player:', error);
     setTimeout(() => {
       if (this.isTransmitting) {
         this.reproduzirProximo();
       }
     }, 3000);
-  }
-
-  determinarHorario() {
-    const hora = new Date().getHours();
-    if (hora >= 6 && hora < 12) return 'manha';
-    if (hora >= 12 && hora < 18) return 'tarde';
-    if (hora >= 18 && hora < 22) return 'noite';
-    return 'madrugada';
   }
 
   atualizarStats(musica) {
@@ -291,7 +278,7 @@ class RadioEngine {
   }
 
   async pularMusica() {
-    console.log('⏭️ Pulando música...');
+    console.log('⏭️ Pular');
     if (this.currentHistoricoId) {
       await supabaseService.finalizarHistorico(this.currentHistoricoId, false);
     }
@@ -302,7 +289,6 @@ class RadioEngine {
     if (!this.audioPlayer) return;
     const vol = Math.max(0, Math.min(1, volume / 100));
     this.audioPlayer.volume = vol;
-    console.log(`🔊 Volume: ${Math.round(vol * 100)}%`);
   }
 
   getCurrentTrackInfo() {
@@ -335,7 +321,7 @@ class RadioEngine {
         try {
           l.callback(data);
         } catch (error) {
-          console.error('❌ Erro no listener:', error);
+          console.error('❌ Listener:', error);
         }
       });
   }
