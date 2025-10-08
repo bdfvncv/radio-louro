@@ -5,21 +5,302 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rádio Supermercado do Louro</title>
     
-    <link rel="stylesheet" href="variables.css">
-    <link rel="stylesheet" href="player.css">
+    <style>
+        :root {
+            --verde-primario: #0d4d3d;
+            --verde-secundario: #1a7a5e;
+            --verde-accent: #2ea57d;
+            --branco: #ffffff;
+            --cinza-claro: #f5f5f5;
+            --cinza-medio: #e0e0e0;
+            --cinza-escuro: #6c757d;
+            --ao-vivo: #ff4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, var(--verde-primario) 0%, #0a3a2a 50%, var(--verde-secundario) 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        
+        .player-container {
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        .player-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: var(--branco);
+        }
+        
+        .player-logo {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 1rem;
+            background: var(--branco);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+        }
+        
+        .player-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+        
+        .player-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .player-card {
+            background: var(--branco);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        
+        .live-badge {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--ao-vivo);
+            color: var(--branco);
+            padding: 0.5rem 1.5rem;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--branco);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .album-artwork {
+            width: 280px;
+            height: 280px;
+            margin: 2rem auto 1.5rem;
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .album-artwork img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .track-info {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .track-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--verde-primario);
+            margin-bottom: 0.5rem;
+        }
+        
+        .track-artist {
+            font-size: 1.1rem;
+            color: var(--cinza-escuro);
+        }
+        
+        .track-category {
+            display: inline-block;
+            margin-top: 0.5rem;
+            padding: 0.25rem 1rem;
+            background: rgba(13, 77, 61, 0.1);
+            color: var(--verde-secundario);
+            border-radius: 50px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        
+        .progress-container {
+            margin-bottom: 1.5rem;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--cinza-medio);
+            border-radius: 50px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, var(--verde-secundario), var(--verde-accent));
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .progress-time {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.875rem;
+            color: var(--cinza-escuro);
+        }
+        
+        .player-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .control-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, var(--verde-primario), var(--verde-secundario));
+            color: var(--branco);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .control-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(13, 77, 61, 0.4);
+        }
+        
+        .control-btn-secondary {
+            width: 50px;
+            height: 50px;
+            background: var(--cinza-claro);
+            color: var(--verde-primario);
+            font-size: 1.2rem;
+        }
+        
+        .volume-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--cinza-claro);
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .volume-icon {
+            font-size: 1.5rem;
+        }
+        
+        .volume-slider {
+            flex: 1;
+            height: 6px;
+            background: var(--cinza-medio);
+            border-radius: 50px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--verde-accent);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .volume-value {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: var(--verde-primario);
+            min-width: 40px;
+            text-align: right;
+        }
+        
+        .admin-link {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            border-radius: 50px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+        }
+        
+        .admin-link:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: var(--branco);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--cinza-escuro);
+        }
+        
+        @media (max-width: 768px) {
+            .player-title {
+                font-size: 2rem;
+            }
+            .album-artwork {
+                width: 220px;
+                height: 220px;
+            }
+            .control-btn {
+                width: 60px;
+                height: 60px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="player-container">
         <header class="player-header">
             <div class="player-logo">
-                <span class="player-logo-text">🛒</span>
+                <span>🛒</span>
             </div>
             <h1 class="player-title">Rádio Supermercado do Louro</h1>
             <p class="player-subtitle">Sua música enquanto você compra</p>
         </header>
 
         <div class="player-card">
-            <div class="live-badge" id="liveBadge">
+            <div class="live-badge">
                 <span class="live-dot"></span>
                 <span id="liveStatus">CONECTANDO...</span>
             </div>
@@ -34,16 +315,8 @@
                 <span class="track-category" id="trackCategory">Música</span>
             </div>
 
-            <div class="equalizer" id="equalizer">
-                <div class="equalizer-bar"></div>
-                <div class="equalizer-bar"></div>
-                <div class="equalizer-bar"></div>
-                <div class="equalizer-bar"></div>
-                <div class="equalizer-bar"></div>
-            </div>
-
             <div class="progress-container">
-                <div class="progress-bar" id="progressBar">
+                <div class="progress-bar">
                     <div class="progress-fill" id="progressFill"></div>
                 </div>
                 <div class="progress-time">
@@ -64,17 +337,9 @@
                 <span class="volume-value" id="volumeValue">70%</span>
             </div>
 
-            <div class="now-playing-history">
-                <h3 class="history-title">📻 Tocou Agora</h3>
-                <ul class="history-list" id="historyList">
-                    <li class="history-item">
-                        <span class="history-time">--:--</span>
-                        <span class="history-track">Aguardando...</span>
-                    </li>
-                </ul>
+            <div id="statusMessage" class="loading">
+                Inicializando rádio...
             </div>
-
-            <button class="share-btn" id="shareBtn">🔗 Compartilhar</button>
         </div>
 
         <a href="admin.html" class="admin-link">Admin</a>
@@ -82,146 +347,270 @@
 
     <audio id="radioPlayer" preload="auto"></audio>
 
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="spinner"></div>
-        <p>Carregando...</p>
-    </div>
-
-    <div class="modal" id="shareModal">
-        <div class="modal-content">
-            <h3>📡 Compartilhar</h3>
-            <p>Compartilhe nossa rádio!</p>
-            <div class="share-buttons">
-                <button class="share-social-btn whatsapp" id="shareWhatsapp">💬 WhatsApp</button>
-                <button class="share-social-btn facebook" id="shareFacebook">📘 Facebook</button>
-                <button class="share-social-btn twitter" id="shareTwitter">🦅 Twitter</button>
-            </div>
-            <div class="share-link-container">
-                <input type="text" class="share-link-input" id="shareLinkInput" readonly>
-                <button class="copy-link-btn" id="copyLinkBtn">📋 Copiar</button>
-            </div>
-            <button class="modal-close-btn" id="closeShareModal">Fechar</button>
-        </div>
-    </div>
-
     <script type="module">
-        import { radioEngine } from './radio-engine.js';
-        import { supabaseService } from './supabase-service.js';
+        // Importações do Supabase
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-        class PlayerUI {
-            constructor() {
-                this.elements = {};
-            }
+        // Configurações
+        const SUPABASE_URL = 'https://dyzjsgfoaxyeyepoylvg.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5empzZ2ZvYXh5ZXllcG95bHZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1ODUzNjUsImV4cCI6MjA3NTE2MTM2NX0.PwmaMI04EhcTqUQioTRInyVKUlw3t1ap0lM5hI29s2I';
+        
+        const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-            async init() {
-                try {
-                    console.log('🎵 Iniciando...');
-                    this.cacheElements();
-                    this.setupEvents();
-                    await radioEngine.inicializar('radioPlayer');
-                    this.setupEngineListeners();
-                    this.hideLoading();
-                    console.log('✅ OK');
-                } catch (error) {
-                    console.error('❌ Erro:', error);
-                    alert('Erro: ' + error.message);
-                    this.hideLoading();
-                }
-            }
+        // Elementos
+        const elements = {
+            player: document.getElementById('radioPlayer'),
+            playBtn: document.getElementById('playPauseBtn'),
+            nextBtn: document.getElementById('nextBtn'),
+            prevBtn: document.getElementById('prevBtn'),
+            volumeSlider: document.getElementById('volumeSlider'),
+            volumeValue: document.getElementById('volumeValue'),
+            volumeIcon: document.getElementById('volumeIcon'),
+            trackTitle: document.getElementById('trackTitle'),
+            trackArtist: document.getElementById('trackArtist'),
+            trackCategory: document.getElementById('trackCategory'),
+            currentTime: document.getElementById('currentTime'),
+            duration: document.getElementById('duration'),
+            progressFill: document.getElementById('progressFill'),
+            liveStatus: document.getElementById('liveStatus'),
+            statusMessage: document.getElementById('statusMessage')
+        };
 
-            cacheElements() {
-                const ids = ['radioPlayer', 'playPauseBtn', 'nextBtn', 'prevBtn',
-                    'volumeSlider', 'volumeValue', 'volumeIcon', 'trackTitle', 
-                    'trackArtist', 'trackCategory', 'currentTime', 'duration',
-                    'progressFill', 'liveStatus', 'liveBadge', 'equalizer',
-                    'shareBtn', 'shareModal', 'closeShareModal', 'loadingOverlay'];
-                ids.forEach(id => this.elements[id] = document.getElementById(id));
-            }
+        // Estado
+        let currentTrack = null;
+        let isTransmitting = false;
+        let fila = [];
 
-            setupEvents() {
-                this.elements.playPauseBtn?.addEventListener('click', () => this.togglePlay());
-                this.elements.nextBtn?.addEventListener('click', () => radioEngine.pularMusica());
-                this.elements.prevBtn?.addEventListener('click', () => {
-                    if (this.elements.radioPlayer) this.elements.radioPlayer.currentTime = 0;
-                });
-                this.elements.volumeSlider?.addEventListener('input', (e) => {
-                    radioEngine.setVolume(e.target.value);
-                    if (this.elements.volumeValue) {
-                        this.elements.volumeValue.textContent = `${e.target.value}%`;
-                    }
-                });
-                this.elements.shareBtn?.addEventListener('click', () => {
-                    if (this.elements.shareModal) this.elements.shareModal.classList.add('active');
-                });
-                this.elements.closeShareModal?.addEventListener('click', () => {
-                    if (this.elements.shareModal) this.elements.shareModal.classList.remove('active');
-                });
-            }
-
-            setupEngineListeners() {
-                radioEngine.addEventListener('trackChanged', (track) => {
-                    if (this.elements.trackTitle) {
-                        this.elements.trackTitle.textContent = track.nome.replace(/\.(mp3|wav)$/i, '');
-                    }
-                    if (this.elements.trackArtist) {
-                        this.elements.trackArtist.textContent = track.subcategoria || 'Geral';
-                    }
-                });
+        // Inicializar
+        async function init() {
+            try {
+                console.log('🎵 Iniciando rádio...');
                 
-                radioEngine.addEventListener('timeUpdate', (progress) => {
-                    if (this.elements.progressFill) {
-                        this.elements.progressFill.style.width = `${progress.percentage}%`;
-                    }
-                    if (this.elements.currentTime) {
-                        this.elements.currentTime.textContent = this.formatTime(progress.current);
-                    }
-                    if (this.elements.duration) {
-                        this.elements.duration.textContent = this.formatTime(progress.duration);
-                    }
-                });
+                setupEvents();
                 
-                radioEngine.addEventListener('transmissaoIniciada', () => {
-                    if (this.elements.liveStatus) this.elements.liveStatus.textContent = 'AO VIVO';
-                    this.elements.liveBadge?.classList.add('active');
-                    this.elements.equalizer?.classList.add('active');
-                });
-            }
-
-            togglePlay() {
-                const player = this.elements.radioPlayer;
-                if (!radioEngine.isTransmitting) {
-                    radioEngine.iniciarTransmissao();
-                    if (this.elements.playPauseBtn) this.elements.playPauseBtn.textContent = '⏸️';
+                const config = await buscarConfig();
+                if (config?.ativa) {
+                    await iniciarTransmissao();
                 } else {
-                    if (player.paused) {
-                        player.play();
-                        if (this.elements.playPauseBtn) this.elements.playPauseBtn.textContent = '⏸️';
-                    } else {
-                        player.pause();
-                        if (this.elements.playPauseBtn) this.elements.playPauseBtn.textContent = '▶️';
-                    }
+                    elements.statusMessage.textContent = 'Clique em Play para iniciar';
+                    elements.liveStatus.textContent = 'OFFLINE';
                 }
+                
+                console.log('✅ Rádio pronta');
+            } catch (error) {
+                console.error('❌ Erro:', error);
+                elements.statusMessage.textContent = 'Erro ao carregar: ' + error.message;
             }
+        }
 
-            formatTime(seconds) {
-                if (!seconds || isNaN(seconds)) return '0:00';
-                const mins = Math.floor(seconds / 60);
-                const secs = Math.floor(seconds % 60);
-                return `${mins}:${secs.toString().padStart(2, '0')}`;
-            }
+        // Configurar eventos
+        function setupEvents() {
+            elements.playBtn.addEventListener('click', togglePlay);
+            elements.nextBtn.addEventListener('click', pularMusica);
+            elements.prevBtn.addEventListener('click', () => {
+                if (elements.player) elements.player.currentTime = 0;
+            });
+            elements.volumeSlider.addEventListener('input', (e) => {
+                const vol = e.target.value;
+                elements.player.volume = vol / 100;
+                elements.volumeValue.textContent = `${vol}%`;
+                updateVolumeIcon(vol);
+            });
+            
+            elements.player.addEventListener('ended', onTrackEnded);
+            elements.player.addEventListener('timeupdate', onTimeUpdate);
+            elements.player.addEventListener('error', (e) => {
+                console.error('❌ Erro player:', e);
+                setTimeout(() => reproduzirProximo(), 3000);
+            });
+        }
 
-            hideLoading() {
-                if (this.elements.loadingOverlay) {
-                    this.elements.loadingOverlay.classList.add('hidden');
-                    setTimeout(() => this.elements.loadingOverlay.style.display = 'none', 300);
+        // Toggle play
+        async function togglePlay() {
+            if (!isTransmitting) {
+                await iniciarTransmissao();
+                elements.playBtn.textContent = '⏸️';
+            } else {
+                if (elements.player.paused) {
+                    await elements.player.play();
+                    elements.playBtn.textContent = '⏸️';
+                } else {
+                    elements.player.pause();
+                    elements.playBtn.textContent = '▶️';
                 }
             }
         }
 
+        // Iniciar transmissão
+        async function iniciarTransmissao() {
+            try {
+                console.log('🔴 Iniciando transmissão...');
+                isTransmitting = true;
+                elements.liveStatus.textContent = 'AO VIVO';
+                elements.statusMessage.style.display = 'none';
+                
+                await reproduzirProximo();
+                
+                console.log('✅ Transmissão iniciada');
+            } catch (error) {
+                console.error('❌ Erro ao iniciar:', error);
+                elements.statusMessage.textContent = 'Erro: ' + error.message;
+            }
+        }
+
+        // Reproduzir próximo
+        async function reproduzirProximo() {
+            try {
+                if (!isTransmitting) return;
+                
+                if (fila.length === 0) {
+                    const musicas = await buscarMusicas();
+                    if (musicas.length === 0) {
+                        elements.statusMessage.style.display = 'block';
+                        elements.statusMessage.textContent = 'Nenhuma música disponível';
+                        return;
+                    }
+                    fila = [...musicas];
+                }
+                
+                const musica = fila.shift();
+                await reproduzir(musica);
+            } catch (error) {
+                console.error('❌ Erro:', error);
+                setTimeout(() => reproduzirProximo(), 5000);
+            }
+        }
+
+        // Reproduzir música
+        async function reproduzir(musica) {
+            try {
+                console.log(`▶️ Tocando: ${musica.nome}`);
+                currentTrack = musica;
+                
+                elements.trackTitle.textContent = musica.nome.replace(/\.(mp3|wav|ogg)$/i, '');
+                elements.trackArtist.textContent = musica.subcategoria || 'Geral';
+                elements.trackCategory.textContent = '🎵 ' + (musica.categoria || 'Música');
+                
+                elements.player.src = musica.cloudinary_url;
+                await elements.player.play();
+                
+                await incrementarPlayCount(musica.id);
+            } catch (error) {
+                console.error('❌ Erro ao reproduzir:', error);
+                setTimeout(() => reproduzirProximo(), 2000);
+            }
+        }
+
+        // Pular música
+        async function pularMusica() {
+            console.log('⏭️ Pulando...');
+            await reproduzirProximo();
+        }
+
+        // Track ended
+        async function onTrackEnded() {
+            console.log('✅ Música finalizada');
+            await reproduzirProximo();
+        }
+
+        // Time update
+        function onTimeUpdate() {
+            if (!currentTrack || !elements.player) return;
+            
+            const current = elements.player.currentTime;
+            const duration = elements.player.duration;
+            
+            if (duration) {
+                const percentage = (current / duration) * 100;
+                elements.progressFill.style.width = `${percentage}%`;
+                elements.currentTime.textContent = formatTime(current);
+                elements.duration.textContent = formatTime(duration);
+            }
+        }
+
+        // Update volume icon
+        function updateVolumeIcon(vol) {
+            if (vol == 0) {
+                elements.volumeIcon.textContent = '🔇';
+            } else if (vol < 50) {
+                elements.volumeIcon.textContent = '🔉';
+            } else {
+                elements.volumeIcon.textContent = '🔊';
+            }
+        }
+
+        // Buscar config
+        async function buscarConfig() {
+            try {
+                const { data, error } = await supabase
+                    .from('config')
+                    .select('*')
+                    .eq('tipo', 'transmissao')
+                    .single();
+                
+                if (error && error.code !== 'PGRST116') throw error;
+                return data;
+            } catch (error) {
+                console.error('❌ Erro config:', error);
+                return null;
+            }
+        }
+
+        // Buscar músicas
+        async function buscarMusicas() {
+            try {
+                const { data, error } = await supabase
+                    .from('arquivos')
+                    .select('*')
+                    .eq('categoria', 'musicas')
+                    .limit(50);
+                
+                if (error) throw error;
+                
+                // Embaralhar
+                return (data || []).sort(() => Math.random() - 0.5);
+            } catch (error) {
+                console.error('❌ Erro buscar músicas:', error);
+                return [];
+            }
+        }
+
+        // Incrementar play count
+        async function incrementarPlayCount(id) {
+            try {
+                const { data } = await supabase
+                    .from('arquivos')
+                    .select('play_count')
+                    .eq('id', id)
+                    .single();
+                
+                if (data) {
+                    await supabase
+                        .from('arquivos')
+                        .update({ 
+                            play_count: (data.play_count || 0) + 1,
+                            ultima_reproducao: new Date().toISOString()
+                        })
+                        .eq('id', id);
+                }
+            } catch (error) {
+                console.error('❌ Erro play count:', error);
+            }
+        }
+
+        // Format time
+        function formatTime(seconds) {
+            if (!seconds || isNaN(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Iniciar quando carregar
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => new PlayerUI().init());
+            document.addEventListener('DOMContentLoaded', init);
         } else {
-            new PlayerUI().init();
+            init();
         }
     </script>
 </body>
