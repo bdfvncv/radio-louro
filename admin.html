@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="robots" content="noindex">
     <title>Admin - Rádio Louro</title>
     
-    <link rel="stylesheet" href="./variables.css">
-    <link rel="stylesheet" href="./admin.css">
+    <link rel="stylesheet" href="variables.css">
+    <link rel="stylesheet" href="admin.css">
 </head>
 <body>
     <div class="admin-container">
@@ -19,19 +18,15 @@
             </div>
             
             <nav class="admin-nav">
-                <a class="nav-item active" data-section="dashboard" href="#dash">
+                <a class="nav-item active" data-section="dashboard">
                     <span class="nav-icon">📊</span>
                     <span>Dashboard</span>
                 </a>
-                <a class="nav-item" data-section="upload" href="#upload">
+                <a class="nav-item" data-section="upload">
                     <span class="nav-icon">📤</span>
                     <span>Upload</span>
                 </a>
-                <a class="nav-item" data-section="files" href="#files">
-                    <span class="nav-icon">📁</span>
-                    <span>Arquivos</span>
-                </a>
-                <a class="nav-item" data-section="config" href="#config">
+                <a class="nav-item" data-section="config">
                     <span class="nav-icon">⚙️</span>
                     <span>Config</span>
                 </a>
@@ -49,7 +44,7 @@
             </div>
             
             <div style="margin-top:auto;padding-top:2rem">
-                <a href="./index.html" class="btn-admin btn-secondary-admin" style="width:100%;justify-content:center">← Voltar</a>
+                <a href="index.html" class="btn-admin btn-secondary-admin" style="width:100%;justify-content:center">← Voltar</a>
             </div>
         </aside>
         
@@ -89,59 +84,46 @@
             
             <section id="upload-section" class="content-section">
                 <div class="content-header">
-                    <h2 class="content-title">Upload</h2>
+                    <h2 class="content-title">Upload de Arquivos</h2>
                 </div>
                 
                 <div class="upload-section">
-                    <div class="upload-grid">
-                        <div class="upload-card">
-                            <div class="upload-card-icon">🎵</div>
-                            <h4 class="upload-card-title">Músicas</h4>
-                            
-                            <div class="metadata-inputs">
-                                <div class="input-group">
-                                    <label class="input-label" for="musicCategoria">Categoria</label>
-                                    <select class="select-input" id="musicCategoria">
-                                        <option value="geral">Geral</option>
-                                        <option value="natal">Natal</option>
-                                    </select>
-                                </div>
-                                <div class="input-group">
-                                    <label class="input-label" for="musicGenero">Gênero</label>
-                                    <select class="select-input" id="musicGenero">
-                                        <option value="pop">Pop</option>
-                                        <option value="rock">Rock</option>
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            <label for="musicasInput" class="input-label">Arquivos</label>
-                            <input type="file" class="file-input" id="musicasInput" accept="audio/*" multiple>
-                            <button class="btn-admin btn-primary-admin" onclick="adminController.uploadFiles('musicas')" style="width:100%">
-                                📤 Enviar
-                            </button>
+                    <div class="upload-card">
+                        <div class="upload-card-icon">🎵</div>
+                        <h4 class="upload-card-title">Músicas</h4>
+                        
+                        <div class="input-group">
+                            <label for="musicCategoria">Categoria</label>
+                            <select id="musicCategoria" class="select-input">
+                                <option value="geral">Geral</option>
+                                <option value="natal">Natal</option>
+                                <option value="pascoa">Páscoa</option>
+                            </select>
                         </div>
+                        
+                        <div class="input-group">
+                            <label for="musicGenero">Gênero</label>
+                            <select id="musicGenero" class="select-input">
+                                <option value="pop">Pop</option>
+                                <option value="rock">Rock</option>
+                                <option value="mpb">MPB</option>
+                            </select>
+                        </div>
+                        
+                        <label for="musicasInput">Arquivos de áudio</label>
+                        <input type="file" id="musicasInput" accept="audio/*" multiple class="file-input">
+                        <button class="btn-admin btn-primary-admin" onclick="uploadMusicas()" style="width:100%">📤 Enviar</button>
                     </div>
                     
-                    <div id="uploadProgress" class="upload-progress" style="display:none;margin-top:2rem">
-                        <div class="progress-info">
+                    <div id="uploadProgress" style="display:none;margin-top:2rem;padding:1.5rem;background:#f5f5f5;border-radius:0.75rem">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;font-weight:600">
                             <span id="uploadStatus">Enviando...</span>
                             <span id="uploadPercent">0%</span>
                         </div>
-                        <div class="progress-bar-admin">
-                            <div class="progress-fill-admin" id="uploadProgressFill"></div>
+                        <div style="height:8px;background:#e0e0e0;border-radius:4px;overflow:hidden">
+                            <div id="uploadProgressFill" style="height:100%;background:linear-gradient(135deg,#1a7a5e,#2ea57d);width:0%;transition:width 0.3s"></div>
                         </div>
                     </div>
-                </div>
-            </section>
-            
-            <section id="files-section" class="content-section">
-                <div class="content-header">
-                    <h2 class="content-title">Arquivos</h2>
-                    <button class="btn-admin btn-secondary-admin" id="refreshFiles">🔄</button>
-                </div>
-                <div class="files-section">
-                    <div id="listMusicas"><p>Carregando...</p></div>
                 </div>
             </section>
             
@@ -150,16 +132,19 @@
                     <h2 class="content-title">Configurações</h2>
                     <button class="btn-admin btn-primary-admin" id="saveConfig">💾 Salvar</button>
                 </div>
+                
                 <div class="upload-section">
                     <div class="input-group">
-                        <label class="input-label" for="configIntervalo">Intervalo (min)</label>
-                        <input type="number" class="text-input" id="configIntervalo" value="45">
+                        <label for="configIntervalo">Intervalo Mínimo (minutos)</label>
+                        <input type="number" id="configIntervalo" value="45" class="text-input">
                     </div>
+                    
                     <div class="input-group">
-                        <label class="input-label" for="configAlbumAtivo">Álbum</label>
-                        <select class="select-input" id="configAlbumAtivo">
-                            <option value="geral">Geral</option>
+                        <label for="configAlbumAtivo">Álbum Ativo</label>
+                        <select id="configAlbumAtivo" class="select-input">
+                            <option value="geral">Geral (Todas)</option>
                             <option value="natal">Natal</option>
+                            <option value="pascoa">Páscoa</option>
                         </select>
                     </div>
                 </div>
@@ -169,19 +154,203 @@
     
     <div id="toastContainer"></div>
     
-    <script type="module" src="./config.js"></script>
-    <script type="module" src="./supabase-service.js"></script>
-    <script type="module" src="./cloudinary_service.js"></script>
-    <script type="module" src="./radio-engine.js"></script>
-    <script type="module" src="./admin.js"></script>
+    <script type="module">
+        import { radioEngine } from './radio-engine.js';
+        import { supabaseService } from './supabase-service.js';
+        import { cloudinaryService } from './cloudinary_service.js';
+
+        // Navegação entre seções
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const section = item.dataset.section;
+                
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                
+                document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+                document.getElementById(`${section}-section`)?.classList.add('active');
+            });
+        });
+
+        // Inicializar
+        (async () => {
+            try {
+                console.log('🛠️ Init Admin...');
+                await radioEngine.inicializar('radioPlayer');
+                updateStatus();
+                await loadDashboard();
+                console.log('✅ Admin OK');
+            } catch (error) {
+                console.error('❌ Erro:', error);
+                showToast('Erro ao inicializar', 'error');
+            }
+        })();
+
+        // Atualizar status da rádio
+        function updateStatus() {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            const btn = document.getElementById('toggleBtnText');
+            
+            if (radioEngine.isTransmitting) {
+                dot?.classList.remove('offline');
+                if (text) text.textContent = 'AO VIVO';
+                if (btn) btn.textContent = 'Parar';
+            } else {
+                dot?.classList.add('offline');
+                if (text) text.textContent = 'OFFLINE';
+                if (btn) btn.textContent = 'Iniciar';
+            }
+        }
+
+        // Toggle transmissão
+        document.getElementById('toggleTransmission')?.addEventListener('click', async () => {
+            try {
+                if (radioEngine.isTransmitting) {
+                    await radioEngine.pararTransmissao();
+                    showToast('Transmissão parada', 'warning');
+                } else {
+                    await radioEngine.iniciarTransmissao();
+                    showToast('Transmissão iniciada', 'success');
+                }
+                updateStatus();
+            } catch (error) {
+                console.error('❌ Erro:', error);
+                showToast('Erro', 'error');
+            }
+        });
+
+        // Carregar dashboard
+        async function loadDashboard() {
+            try {
+                const stats = await supabaseService.buscarEstatisticas();
+                if (stats) {
+                    const musicas = document.getElementById('totalMusicas');
+                    const vinhetas = document.getElementById('totalVinhetas');
+                    if (musicas) musicas.textContent = stats.porCategoria.musicas || 0;
+                    if (vinhetas) vinhetas.textContent = stats.porCategoria.vinhetas || 0;
+                }
+                
+                const trackInfo = radioEngine.getCurrentTrackInfo();
+                if (trackInfo) {
+                    const html = `
+                        <div style="padding:1.5rem;background:#f5f5f5;border-radius:0.75rem">
+                            <h4 style="color:#0d4d3d;margin-bottom:0.5rem">${trackInfo.nome.replace(/\.(mp3|wav)$/i, '')}</h4>
+                            <p style="color:#6c757d">${trackInfo.categoria}</p>
+                        </div>
+                    `;
+                    document.getElementById('nowPlayingInfo').innerHTML = html;
+                }
+            } catch (error) {
+                console.error('❌ Erro dashboard:', error);
+            }
+        }
+
+        document.getElementById('refreshStats')?.addEventListener('click', loadDashboard);
+
+        // Upload de músicas
+        window.uploadMusicas = async function() {
+            try {
+                const input = document.getElementById('musicasInput');
+                if (!input || input.files.length === 0) {
+                    showToast('Selecione arquivos', 'warning');
+                    return;
+                }
+
+                const categoria = document.getElementById('musicCategoria').value;
+                const genero = document.getElementById('musicGenero').value;
+                
+                document.getElementById('uploadProgress').style.display = 'block';
+                
+                const results = await cloudinaryService.uploadMultiplos(
+                    Array.from(input.files),
+                    'musicas',
+                    categoria,
+                    (current, total, filename) => {
+                        const percent = Math.round((current / total) * 100);
+                        document.getElementById('uploadStatus').textContent = `Enviando: ${filename}`;
+                        document.getElementById('uploadPercent').textContent = `${percent}%`;
+                        document.getElementById('uploadProgressFill').style.width = `${percent}%`;
+                    }
+                );
+
+                let success = 0;
+                for (const r of results) {
+                    if (r.sucesso) {
+                        await supabaseService.salvarArquivo({
+                            ...r.arquivo,
+                            categoria: 'musicas',
+                            subcategoria: categoria,
+                            genero: genero,
+                            ritmo: 'moderado',
+                            horarioIdeal: 'todos'
+                        });
+                        success++;
+                    }
+                }
+
+                document.getElementById('uploadProgress').style.display = 'none';
+                showToast(`${success} arquivo(s) enviado(s)!`, 'success');
+                input.value = '';
+                await loadDashboard();
+            } catch (error) {
+                console.error('❌ Erro upload:', error);
+                showToast('Erro ao enviar', 'error');
+                document.getElementById('uploadProgress').style.display = 'none';
+            }
+        };
+
+        // Salvar configurações
+        document.getElementById('saveConfig')?.addEventListener('click', async () => {
+            try {
+                const intervalo = parseInt(document.getElementById('configIntervalo').value);
+                await supabaseService.salvarConfig({
+                    tipo: 'rotacao',
+                    intervalo_minimo: intervalo
+                });
+                
+                const album = document.getElementById('configAlbumAtivo').value;
+                const config = await supabaseService.buscarConfig();
+                await supabaseService.salvarConfig({
+                    ...config,
+                    album_ativo: album
+                });
+                
+                showToast('Configurações salvas', 'success');
+            } catch (error) {
+                console.error('❌ Erro:', error);
+                showToast('Erro ao salvar', 'error');
+            }
+        });
+
+        // Mostrar toast
+        function showToast(msg, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            
+            const toast = document.createElement('div');
+            toast.textContent = msg;
+            toast.style.cssText = 'position:fixed;bottom:20px;right:20px;padding:1rem 1.5rem;background:#0d4d3d;color:white;border-radius:0.75rem;z-index:9999;box-shadow:0 4px 15px rgba(0,0,0,0.3)';
+            
+            if (type === 'error') toast.style.background = '#dc3545';
+            if (type === 'warning') toast.style.background = '#ffc107';
+            if (type === 'success') toast.style.background = '#28a745';
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
     
     <style>
-        .content-section{display:none}
-        .content-section.active{display:block}
-        .upload-progress{background:#f5f5f5;padding:1.5rem;border-radius:0.75rem}
-        .progress-info{display:flex;justify-content:space-between;margin-bottom:0.5rem;font-weight:600}
-        .progress-bar-admin{height:8px;background:#e0e0e0;border-radius:4px;overflow:hidden}
-        .progress-fill-admin{height:100%;background:linear-gradient(135deg,#1a7a5e,#2ea57d);width:0%;transition:width 0.3s}
+        .content-section { display: none; }
+        .content-section.active { display: block; }
+        .status-dot.offline { background: #6c757d !important; animation: none !important; }
     </style>
 </body>
 </html>
