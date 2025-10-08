@@ -5,8 +5,352 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Rádio Louro</title>
     
-    <link rel="stylesheet" href="variables.css">
-    <link rel="stylesheet" href="admin.css">
+    <style>
+        :root {
+            --verde-primario: #0d4d3d;
+            --verde-secundario: #1a7a5e;
+            --verde-accent: #2ea57d;
+            --branco: #ffffff;
+            --cinza-claro: #f5f5f5;
+            --cinza-medio: #e0e0e0;
+            --cinza-escuro: #6c757d;
+            --erro: #dc3545;
+            --sucesso: #28a745;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--cinza-claro);
+        }
+        
+        .admin-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .admin-sidebar {
+            width: 280px;
+            background: var(--verde-primario);
+            color: var(--branco);
+            padding: 2rem;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        
+        .admin-logo {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .admin-logo-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .admin-logo h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .admin-nav {
+            margin-bottom: 2rem;
+        }
+        
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 0.75rem;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .nav-item:hover {
+            background: rgba(255,255,255,0.1);
+            color: var(--branco);
+        }
+        
+        .nav-item.active {
+            background: var(--branco);
+            color: var(--verde-primario);
+        }
+        
+        .nav-icon {
+            font-size: 1.5rem;
+        }
+        
+        .radio-status {
+            padding: 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 0.75rem;
+            margin-bottom: 2rem;
+        }
+        
+        .radio-status h3 {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+            opacity: 0.8;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--sucesso);
+            animation: pulse 2s infinite;
+        }
+        
+        .status-dot.offline {
+            background: var(--cinza-medio);
+            animation: none;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .admin-content {
+            margin-left: 280px;
+            flex: 1;
+            padding: 2rem;
+        }
+        
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 2px solid var(--cinza-medio);
+        }
+        
+        .content-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--verde-primario);
+        }
+        
+        .btn-admin {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary-admin {
+            background: linear-gradient(135deg, var(--verde-primario), var(--verde-secundario));
+            color: var(--branco);
+        }
+        
+        .btn-primary-admin:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(13,77,61,0.3);
+        }
+        
+        .btn-secondary-admin {
+            background: var(--branco);
+            color: var(--verde-primario);
+            border: 2px solid var(--verde-secundario);
+        }
+        
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: var(--branco);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-left: 4px solid var(--verde-accent);
+        }
+        
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .stat-value {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--verde-primario);
+        }
+        
+        .stat-label {
+            font-size: 1rem;
+            color: var(--cinza-escuro);
+            font-weight: 600;
+        }
+        
+        .stat-icon {
+            font-size: 3rem;
+            opacity: 0.8;
+        }
+        
+        .upload-section {
+            background: var(--branco);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--verde-primario);
+            margin-bottom: 1.5rem;
+        }
+        
+        .upload-card {
+            padding: 2rem;
+            background: var(--cinza-claro);
+            border-radius: 0.75rem;
+            border: 2px dashed var(--cinza-medio);
+            margin-bottom: 2rem;
+        }
+        
+        .upload-card-icon {
+            font-size: 3rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        
+        .upload-card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--verde-primario);
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .input-group {
+            margin-bottom: 1rem;
+        }
+        
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--cinza-escuro);
+        }
+        
+        .select-input, .text-input, .file-input {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid var(--cinza-medio);
+            border-radius: 0.75rem;
+            font-size: 1rem;
+        }
+        
+        .content-section {
+            display: none;
+        }
+        
+        .content-section.active {
+            display: block;
+        }
+        
+        .upload-progress {
+            display: none;
+            background: var(--cinza-claro);
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            margin-top: 2rem;
+        }
+        
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        
+        .progress-bar-admin {
+            height: 8px;
+            background: var(--cinza-medio);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill-admin {
+            height: 100%;
+            background: linear-gradient(135deg, var(--verde-secundario), var(--verde-accent));
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        #toastContainer {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        
+        .toast {
+            padding: 1rem 1.5rem;
+            background: var(--verde-primario);
+            color: var(--branco);
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            margin-top: 1rem;
+            animation: slideIn 0.3s;
+        }
+        
+        .toast.success { background: var(--sucesso); }
+        .toast.error { background: var(--erro); }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .admin-sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+            .admin-content {
+                margin-left: 0;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="admin-container">
@@ -28,15 +372,15 @@
                 </a>
                 <a class="nav-item" data-section="config">
                     <span class="nav-icon">⚙️</span>
-                    <span>Config</span>
+                    <span>Configurações</span>
                 </a>
             </nav>
             
             <div class="radio-status">
-                <h3>Status</h3>
+                <h3>Status da Rádio</h3>
                 <div class="status-indicator">
-                    <span class="status-dot" id="statusDot"></span>
-                    <span id="statusText">...</span>
+                    <span class="status-dot offline" id="statusDot"></span>
+                    <span id="statusText">OFFLINE</span>
                 </div>
                 <button class="btn-admin btn-secondary-admin" id="toggleTransmission" style="width:100%">
                     <span id="toggleBtnText">Iniciar</span>
@@ -44,15 +388,18 @@
             </div>
             
             <div style="margin-top:auto;padding-top:2rem">
-                <a href="index.html" class="btn-admin btn-secondary-admin" style="width:100%;justify-content:center">← Voltar</a>
+                <a href="index.html" class="btn-admin btn-secondary-admin" style="width:100%;display:block;text-align:center;text-decoration:none">
+                    ← Voltar ao Player
+                </a>
             </div>
         </aside>
         
         <main class="admin-content">
+            <!-- DASHBOARD -->
             <section id="dashboard-section" class="content-section active">
                 <div class="content-header">
                     <h2 class="content-title">Dashboard</h2>
-                    <button class="btn-admin btn-primary-admin" id="refreshStats">🔄</button>
+                    <button class="btn-admin btn-primary-admin" id="refreshStats">🔄 Atualizar</button>
                 </div>
                 
                 <div class="cards-grid">
@@ -60,11 +407,12 @@
                         <div class="stat-header">
                             <div>
                                 <div class="stat-value" id="totalMusicas">0</div>
-                                <div class="stat-label">Músicas</div>
+                                <div class="stat-label">Total de Músicas</div>
                             </div>
                             <div class="stat-icon">🎵</div>
                         </div>
                     </div>
+                    
                     <div class="stat-card">
                         <div class="stat-header">
                             <div>
@@ -74,14 +422,27 @@
                             <div class="stat-icon">📻</div>
                         </div>
                     </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-value" id="totalReproducoes">0</div>
+                                <div class="stat-label">Reproduções</div>
+                            </div>
+                            <div class="stat-icon">▶️</div>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="upload-section">
                     <h3 class="section-title">🎵 Tocando Agora</h3>
-                    <div id="nowPlayingInfo"><p>Aguardando...</p></div>
+                    <div id="nowPlayingInfo">
+                        <p style="color:#6c757d">Aguardando informações...</p>
+                    </div>
                 </div>
             </section>
             
+            <!-- UPLOAD -->
             <section id="upload-section" class="content-section">
                 <div class="content-header">
                     <h2 class="content-title">Upload de Arquivos</h2>
@@ -98,6 +459,8 @@
                                 <option value="geral">Geral</option>
                                 <option value="natal">Natal</option>
                                 <option value="pascoa">Páscoa</option>
+                                <option value="saojoao">São João</option>
+                                <option value="carnaval">Carnaval</option>
                             </select>
                         </div>
                         
@@ -107,26 +470,34 @@
                                 <option value="pop">Pop</option>
                                 <option value="rock">Rock</option>
                                 <option value="mpb">MPB</option>
+                                <option value="sertanejo">Sertanejo</option>
+                                <option value="forro">Forró</option>
                             </select>
                         </div>
                         
-                        <label for="musicasInput">Arquivos de áudio</label>
-                        <input type="file" id="musicasInput" accept="audio/*" multiple class="file-input">
-                        <button class="btn-admin btn-primary-admin" onclick="uploadMusicas()" style="width:100%">📤 Enviar</button>
+                        <div class="input-group">
+                            <label for="musicasInput">Arquivos de Áudio (MP3, WAV, OGG)</label>
+                            <input type="file" id="musicasInput" accept="audio/*" multiple class="file-input">
+                        </div>
+                        
+                        <button class="btn-admin btn-primary-admin" onclick="uploadMusicas()" style="width:100%">
+                            📤 Enviar Músicas
+                        </button>
                     </div>
                     
-                    <div id="uploadProgress" style="display:none;margin-top:2rem;padding:1.5rem;background:#f5f5f5;border-radius:0.75rem">
-                        <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;font-weight:600">
+                    <div id="uploadProgress" class="upload-progress">
+                        <div class="progress-info">
                             <span id="uploadStatus">Enviando...</span>
                             <span id="uploadPercent">0%</span>
                         </div>
-                        <div style="height:8px;background:#e0e0e0;border-radius:4px;overflow:hidden">
-                            <div id="uploadProgressFill" style="height:100%;background:linear-gradient(135deg,#1a7a5e,#2ea57d);width:0%;transition:width 0.3s"></div>
+                        <div class="progress-bar-admin">
+                            <div class="progress-fill-admin" id="uploadProgressFill"></div>
                         </div>
                     </div>
                 </div>
             </section>
             
+            <!-- CONFIGURAÇÕES -->
             <section id="config-section" class="content-section">
                 <div class="content-header">
                     <h2 class="content-title">Configurações</h2>
@@ -134,17 +505,21 @@
                 </div>
                 
                 <div class="upload-section">
+                    <h3 class="section-title">⚙️ Configurações da Rádio</h3>
+                    
                     <div class="input-group">
-                        <label for="configIntervalo">Intervalo Mínimo (minutos)</label>
-                        <input type="number" id="configIntervalo" value="45" class="text-input">
+                        <label for="configIntervalo">Intervalo Mínimo de Repetição (minutos)</label>
+                        <input type="number" id="configIntervalo" value="45" min="10" max="120" class="text-input">
                     </div>
                     
                     <div class="input-group">
                         <label for="configAlbumAtivo">Álbum Ativo</label>
                         <select id="configAlbumAtivo" class="select-input">
-                            <option value="geral">Geral (Todas)</option>
+                            <option value="geral">Playlist Geral (Todas)</option>
                             <option value="natal">Natal</option>
                             <option value="pascoa">Páscoa</option>
+                            <option value="saojoao">São João</option>
+                            <option value="carnaval">Carnaval</option>
                         </select>
                     </div>
                 </div>
@@ -155,11 +530,20 @@
     <div id="toastContainer"></div>
     
     <script type="module">
-        import { radioEngine } from './radio-engine.js';
-        import { supabaseService } from './supabase-service.js';
-        import { cloudinaryService } from './cloudinary_service.js';
-
-        // Navegação entre seções
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+        
+        // Config
+        const SUPABASE_URL = 'https://dyzjsgfoaxyeyepoylvg.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5empzZ2ZvYXh5ZXllcG95bHZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1ODUzNjUsImV4cCI6MjA3NTE2MTM2NX0.PwmaMI04EhcTqUQioTRInyVKUlw3t1ap0lM5hI29s2I';
+        const CLOUDINARY_CONFIG = {
+            cloudName: 'dygbrcrr6',
+            uploadPreset: 'radio_preset',
+            baseUrl: 'https://api.cloudinary.com/v1_1/dygbrcrr6'
+        };
+        
+        const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // Navegação
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -172,171 +556,161 @@
                 document.getElementById(`${section}-section`)?.classList.add('active');
             });
         });
-
-        // Inicializar
+        
+        // Init
         (async () => {
             try {
-                console.log('🛠️ Init Admin...');
-                await radioEngine.inicializar('radioPlayer');
-                updateStatus();
                 await loadDashboard();
-                console.log('✅ Admin OK');
+                await loadConfig();
             } catch (error) {
                 console.error('❌ Erro:', error);
-                showToast('Erro ao inicializar', 'error');
             }
         })();
-
-        // Atualizar status da rádio
-        function updateStatus() {
-            const dot = document.getElementById('statusDot');
-            const text = document.getElementById('statusText');
-            const btn = document.getElementById('toggleBtnText');
-            
-            if (radioEngine.isTransmitting) {
-                dot?.classList.remove('offline');
-                if (text) text.textContent = 'AO VIVO';
-                if (btn) btn.textContent = 'Parar';
-            } else {
-                dot?.classList.add('offline');
-                if (text) text.textContent = 'OFFLINE';
-                if (btn) btn.textContent = 'Iniciar';
-            }
-        }
-
-        // Toggle transmissão
-        document.getElementById('toggleTransmission')?.addEventListener('click', async () => {
-            try {
-                if (radioEngine.isTransmitting) {
-                    await radioEngine.pararTransmissao();
-                    showToast('Transmissão parada', 'warning');
-                } else {
-                    await radioEngine.iniciarTransmissao();
-                    showToast('Transmissão iniciada', 'success');
-                }
-                updateStatus();
-            } catch (error) {
-                console.error('❌ Erro:', error);
-                showToast('Erro', 'error');
-            }
-        });
-
-        // Carregar dashboard
+        
+        // Dashboard
         async function loadDashboard() {
             try {
-                const stats = await supabaseService.buscarEstatisticas();
-                if (stats) {
-                    const musicas = document.getElementById('totalMusicas');
-                    const vinhetas = document.getElementById('totalVinhetas');
-                    if (musicas) musicas.textContent = stats.porCategoria.musicas || 0;
-                    if (vinhetas) vinhetas.textContent = stats.porCategoria.vinhetas || 0;
-                }
+                const { data: arquivos } = await supabase.from('arquivos').select('*');
+                const { data: historico } = await supabase.from('historico').select('*');
                 
-                const trackInfo = radioEngine.getCurrentTrackInfo();
-                if (trackInfo) {
-                    const html = `
-                        <div style="padding:1.5rem;background:#f5f5f5;border-radius:0.75rem">
-                            <h4 style="color:#0d4d3d;margin-bottom:0.5rem">${trackInfo.nome.replace(/\.(mp3|wav)$/i, '')}</h4>
-                            <p style="color:#6c757d">${trackInfo.categoria}</p>
-                        </div>
-                    `;
-                    document.getElementById('nowPlayingInfo').innerHTML = html;
-                }
+                const musicas = (arquivos || []).filter(a => a.categoria === 'musicas').length;
+                const vinhetas = (arquivos || []).filter(a => a.categoria === 'vinhetas').length;
+                
+                document.getElementById('totalMusicas').textContent = musicas;
+                document.getElementById('totalVinhetas').textContent = vinhetas;
+                document.getElementById('totalReproducoes').textContent = (historico || []).length;
             } catch (error) {
                 console.error('❌ Erro dashboard:', error);
             }
         }
-
+        
         document.getElementById('refreshStats')?.addEventListener('click', loadDashboard);
-
-        // Upload de músicas
+        
+        // Upload
         window.uploadMusicas = async function() {
             try {
                 const input = document.getElementById('musicasInput');
                 if (!input || input.files.length === 0) {
-                    showToast('Selecione arquivos', 'warning');
+                    showToast('Selecione arquivos', 'error');
                     return;
                 }
-
+                
                 const categoria = document.getElementById('musicCategoria').value;
                 const genero = document.getElementById('musicGenero').value;
+                const files = Array.from(input.files);
                 
                 document.getElementById('uploadProgress').style.display = 'block';
                 
-                const results = await cloudinaryService.uploadMultiplos(
-                    Array.from(input.files),
-                    'musicas',
-                    categoria,
-                    (current, total, filename) => {
-                        const percent = Math.round((current / total) * 100);
-                        document.getElementById('uploadStatus').textContent = `Enviando: ${filename}`;
-                        document.getElementById('uploadPercent').textContent = `${percent}%`;
-                        document.getElementById('uploadProgressFill').style.width = `${percent}%`;
-                    }
-                );
-
                 let success = 0;
-                for (const r of results) {
-                    if (r.sucesso) {
-                        await supabaseService.salvarArquivo({
-                            ...r.arquivo,
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const percent = Math.round(((i + 1) / files.length) * 100);
+                    
+                    document.getElementById('uploadStatus').textContent = `Enviando: ${file.name}`;
+                    document.getElementById('uploadPercent').textContent = `${percent}%`;
+                    document.getElementById('uploadProgressFill').style.width = `${percent}%`;
+                    
+                    try {
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
+                        formData.append('folder', `radio-louro/musicas/${categoria}`);
+                        
+                        const response = await fetch(`${CLOUDINARY_CONFIG.baseUrl}/auto/upload`, {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        if (!response.ok) throw new Error('Erro no upload');
+                        
+                        const data = await response.json();
+                        
+                        await supabase.from('arquivos').insert([{
+                            nome: file.name,
                             categoria: 'musicas',
                             subcategoria: categoria,
+                            cloudinary_url: data.secure_url,
+                            cloudinary_public_id: data.public_id,
+                            duracao: data.duration || 0,
                             genero: genero,
                             ritmo: 'moderado',
-                            horarioIdeal: 'todos'
-                        });
+                            horario_ideal: 'todos',
+                            play_count: 0,
+                            created_at: new Date().toISOString()
+                        }]);
+                        
                         success++;
+                    } catch (error) {
+                        console.error('❌ Erro arquivo:', file.name, error);
                     }
                 }
-
+                
                 document.getElementById('uploadProgress').style.display = 'none';
                 showToast(`${success} arquivo(s) enviado(s)!`, 'success');
                 input.value = '';
                 await loadDashboard();
             } catch (error) {
                 console.error('❌ Erro upload:', error);
-                showToast('Erro ao enviar', 'error');
                 document.getElementById('uploadProgress').style.display = 'none';
+                showToast('Erro ao enviar', 'error');
             }
         };
-
-        // Salvar configurações
+        
+        // Config
+        async function loadConfig() {
+            try {
+                const { data } = await supabase
+                    .from('config')
+                    .select('*')
+                    .eq('tipo', 'transmissao')
+                    .single();
+                
+                if (data) {
+                    document.getElementById('configAlbumAtivo').value = data.album_ativo || 'geral';
+                }
+                
+                const { data: rotacao } = await supabase
+                    .from('config')
+                    .select('*')
+                    .eq('tipo', 'rotacao')
+                    .single();
+                
+                if (rotacao) {
+                    document.getElementById('configIntervalo').value = rotacao.intervalo_minimo || 45;
+                }
+            } catch (error) {
+                console.error('❌ Erro config:', error);
+            }
+        }
+        
         document.getElementById('saveConfig')?.addEventListener('click', async () => {
             try {
                 const intervalo = parseInt(document.getElementById('configIntervalo').value);
-                await supabaseService.salvarConfig({
-                    tipo: 'rotacao',
-                    intervalo_minimo: intervalo
-                });
-                
                 const album = document.getElementById('configAlbumAtivo').value;
-                const config = await supabaseService.buscarConfig();
-                await supabaseService.salvarConfig({
-                    ...config,
-                    album_ativo: album
-                });
                 
-                showToast('Configurações salvas', 'success');
+                await supabase.from('config').upsert([
+                    { tipo: 'rotacao', intervalo_minimo: intervalo }
+                ]);
+                
+                await supabase.from('config').upsert([
+                    { tipo: 'transmissao', album_ativo: album }
+                ]);
+                
+                showToast('Configurações salvas!', 'success');
             } catch (error) {
                 console.error('❌ Erro:', error);
                 showToast('Erro ao salvar', 'error');
             }
         });
-
-        // Mostrar toast
+        
+        // Toast
         function showToast(msg, type = 'info') {
             const container = document.getElementById('toastContainer');
             if (!container) return;
             
             const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
             toast.textContent = msg;
-            toast.style.cssText = 'position:fixed;bottom:20px;right:20px;padding:1rem 1.5rem;background:#0d4d3d;color:white;border-radius:0.75rem;z-index:9999;box-shadow:0 4px 15px rgba(0,0,0,0.3)';
-            
-            if (type === 'error') toast.style.background = '#dc3545';
-            if (type === 'warning') toast.style.background = '#ffc107';
-            if (type === 'success') toast.style.background = '#28a745';
-            
             container.appendChild(toast);
             
             setTimeout(() => {
@@ -346,11 +720,5 @@
             }, 3000);
         }
     </script>
-    
-    <style>
-        .content-section { display: none; }
-        .content-section.active { display: block; }
-        .status-dot.offline { background: #6c757d !important; animation: none !important; }
-    </style>
 </body>
 </html>
