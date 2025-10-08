@@ -5,9 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rádio Supermercado do Louro</title>
     
-    <!-- CSS -->
-    <link rel="stylesheet" href="./variables.css">
-    <link rel="stylesheet" href="./player.css">
+    <link rel="stylesheet" href="variables.css">
+    <link rel="stylesheet" href="player.css">
 </head>
 <body>
     <div class="player-container">
@@ -61,7 +60,7 @@
 
             <div class="volume-container">
                 <label for="volumeSlider" class="volume-icon" id="volumeIcon">🔊</label>
-                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="70" aria-label="Volume">
+                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="70">
                 <span class="volume-value" id="volumeValue">70%</span>
             </div>
 
@@ -78,7 +77,7 @@
             <button class="share-btn" id="shareBtn">🔗 Compartilhar</button>
         </div>
 
-        <a href="./admin.html" class="admin-link">Admin</a>
+        <a href="admin.html" class="admin-link">Admin</a>
     </div>
 
     <audio id="radioPlayer" preload="auto"></audio>
@@ -98,17 +97,132 @@
                 <button class="share-social-btn twitter" id="shareTwitter">🦅 Twitter</button>
             </div>
             <div class="share-link-container">
-                <input type="text" class="share-link-input" id="shareLinkInput" readonly aria-label="Link">
+                <input type="text" class="share-link-input" id="shareLinkInput" readonly>
                 <button class="copy-link-btn" id="copyLinkBtn">📋 Copiar</button>
             </div>
             <button class="modal-close-btn" id="closeShareModal">Fechar</button>
         </div>
     </div>
 
-    <script type="module" src="./config.js"></script>
-    <script type="module" src="./supabase-service.js"></script>
-    <script type="module" src="./cloudinary_service.js"></script>
-    <script type="module" src="./radio-engine.js"></script>
-    <script type="module" src="./player_js_supabase.js"></script>
+    <script type="module">
+        import { radioEngine } from './radio-engine.js';
+        import { supabaseService } from './supabase-service.js';
+
+        class PlayerUI {
+            constructor() {
+                this.elements = {};
+            }
+
+            async init() {
+                try {
+                    console.log('🎵 Iniciando...');
+                    this.cacheElements();
+                    this.setupEvents();
+                    await radioEngine.inicializar('radioPlayer');
+                    this.setupEngineListeners();
+                    this.hideLoading();
+                    console.log('✅ OK');
+                } catch (error) {
+                    console.error('❌ Erro:', error);
+                    alert('Erro: ' + error.message);
+                    this.hideLoading();
+                }
+            }
+
+            cacheElements() {
+                const ids = ['radioPlayer', 'playPauseBtn', 'nextBtn', 'prevBtn',
+                    'volumeSlider', 'volumeValue', 'volumeIcon', 'trackTitle', 
+                    'trackArtist', 'trackCategory', 'currentTime', 'duration',
+                    'progressFill', 'liveStatus', 'liveBadge', 'equalizer',
+                    'shareBtn', 'shareModal', 'closeShareModal', 'loadingOverlay'];
+                ids.forEach(id => this.elements[id] = document.getElementById(id));
+            }
+
+            setupEvents() {
+                this.elements.playPauseBtn?.addEventListener('click', () => this.togglePlay());
+                this.elements.nextBtn?.addEventListener('click', () => radioEngine.pularMusica());
+                this.elements.prevBtn?.addEventListener('click', () => {
+                    if (this.elements.radioPlayer) this.elements.radioPlayer.currentTime = 0;
+                });
+                this.elements.volumeSlider?.addEventListener('input', (e) => {
+                    radioEngine.setVolume(e.target.value);
+                    if (this.elements.volumeValue) {
+                        this.elements.volumeValue.textContent = `${e.target.value}%`;
+                    }
+                });
+                this.elements.shareBtn?.addEventListener('click', () => {
+                    if (this.elements.shareModal) this.elements.shareModal.classList.add('active');
+                });
+                this.elements.closeShareModal?.addEventListener('click', () => {
+                    if (this.elements.shareModal) this.elements.shareModal.classList.remove('active');
+                });
+            }
+
+            setupEngineListeners() {
+                radioEngine.addEventListener('trackChanged', (track) => {
+                    if (this.elements.trackTitle) {
+                        this.elements.trackTitle.textContent = track.nome.replace(/\.(mp3|wav)$/i, '');
+                    }
+                    if (this.elements.trackArtist) {
+                        this.elements.trackArtist.textContent = track.subcategoria || 'Geral';
+                    }
+                });
+                
+                radioEngine.addEventListener('timeUpdate', (progress) => {
+                    if (this.elements.progressFill) {
+                        this.elements.progressFill.style.width = `${progress.percentage}%`;
+                    }
+                    if (this.elements.currentTime) {
+                        this.elements.currentTime.textContent = this.formatTime(progress.current);
+                    }
+                    if (this.elements.duration) {
+                        this.elements.duration.textContent = this.formatTime(progress.duration);
+                    }
+                });
+                
+                radioEngine.addEventListener('transmissaoIniciada', () => {
+                    if (this.elements.liveStatus) this.elements.liveStatus.textContent = 'AO VIVO';
+                    this.elements.liveBadge?.classList.add('active');
+                    this.elements.equalizer?.classList.add('active');
+                });
+            }
+
+            togglePlay() {
+                const player = this.elements.radioPlayer;
+                if (!radioEngine.isTransmitting) {
+                    radioEngine.iniciarTransmissao();
+                    if (this.elements.playPauseBtn) this.elements.playPauseBtn.textContent = '⏸️';
+                } else {
+                    if (player.paused) {
+                        player.play();
+                        if (this.elements.playPauseBtn) this.elements.playPauseBtn.textContent = '⏸️';
+                    } else {
+                        player.pause();
+                        if (this.elements.playPauseBtn) this.elements.playPauseBtn.textContent = '▶️';
+                    }
+                }
+            }
+
+            formatTime(seconds) {
+                if (!seconds || isNaN(seconds)) return '0:00';
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            }
+
+            hideLoading() {
+                if (this.elements.loadingOverlay) {
+                    this.elements.loadingOverlay.classList.add('hidden');
+                    setTimeout(() => this.elements.loadingOverlay.style.display = 'none', 300);
+                }
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => new PlayerUI().init());
+        } else {
+            new PlayerUI().init();
+        }
+    </script>
 </body>
 </html>
