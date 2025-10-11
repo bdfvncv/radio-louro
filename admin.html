@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Rádio 24H Supermercado do Louro</title>
     <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📻</text></svg>">
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="./css/styles.css">
 </head>
 <body>
     <div class="container">
@@ -43,6 +43,16 @@
                     <p>Configure um arquivo MP3 para cada hora do dia (00:00 às 23:00)</p>
                 </div>
 
+                <!-- 
+                ⚠️ AVISO DE SEGURANÇA ⚠️
+                A senha 'senhaDev' está hardcoded apenas para desenvolvimento.
+                Em produção, use:
+                - Variáveis de ambiente
+                - Autenticação Supabase Auth
+                - Sistema de autenticação próprio com backend
+                Nunca exponha senhas no código frontend em produção!
+                -->
+
                 <div class="hours-grid" id="hoursGrid">
                     <!-- Os 24 slots de hora serão gerados via JavaScript -->
                 </div>
@@ -58,7 +68,7 @@
                         <li>Faça upload dos arquivos MP3 no Cloudinary</li>
                         <li>Copie a URL pública de cada arquivo</li>
                         <li>Cole a URL no campo correspondente à hora desejada</li>
-                        <li>Marque "Ativo" para habilitar a reprodução naquela hora</li>
+                        <li>Marque "Habilitado" para ativar a reprodução naquela hora</li>
                         <li>Use o botão "Testar" para verificar se o áudio está funcionando</li>
                         <li>Clique em "Salvar" para aplicar as mudanças</li>
                     </ol>
@@ -76,7 +86,7 @@
     <!-- Modal para testar áudio -->
     <div id="testModal" class="modal" style="display: none;">
         <div class="modal-content">
-            <span class="close" id="closeModal">×</span>
+            <span class="close" id="closeModal">&times;</span>
             <h3>🎵 Testar Áudio</h3>
             <audio id="testAudio" controls></audio>
             <p id="testInfo"></p>
@@ -84,8 +94,8 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/config.js"></script>
-    <script src="js/supabase-client.js"></script>
-    <script src="js/admin.js"></script>
+    <script src="./js/config.js"></script>
+    <script src="./js/supabase-client.js"></script>
+    <script src="./js/admin.js"></script>
 </body>
 </html>
