@@ -43,16 +43,6 @@
                     <p>Configure um arquivo MP3 para cada hora do dia (00:00 às 23:00)</p>
                 </div>
 
-                <!-- 
-                ⚠️ AVISO DE SEGURANÇA ⚠️
-                A senha 'senhaDev' está hardcoded apenas para desenvolvimento.
-                Em produção, use:
-                - Variáveis de ambiente
-                - Autenticação Supabase Auth
-                - Sistema de autenticação próprio com backend
-                Nunca exponha senhas no código frontend em produção!
-                -->
-
                 <div class="hours-grid" id="hoursGrid">
                     <!-- Os 24 slots de hora serão gerados via JavaScript -->
                 </div>
@@ -86,7 +76,7 @@
     <!-- Modal para testar áudio -->
     <div id="testModal" class="modal" style="display: none;">
         <div class="modal-content">
-            <span class="close" id="closeModal">&times;</span>
+            <span class="close" id="closeModal">×</span>
             <h3>🎵 Testar Áudio</h3>
             <audio id="testAudio" controls></audio>
             <p id="testInfo"></p>
