@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Painel Administrativo - Rádio 24H Supermercado do Louro">
+    <title>🔒 Admin - Rádio 24H Supermercado do Louro</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="logo">🔒 Painel Administrativo</div>
+            <div class="tagline">Rádio 24H Supermercado do Louro</div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- Login Section -->
+        <section class="login-section" id="loginSection">
+            <h2>🔑 Login de Administrador</h2>
+            <div class="form-group">
+                <label for="passwordInput">Senha:</label>
+                <input type="password" id="passwordInput" class="form-control" placeholder="Digite a senha">
+            </div>
+            <button class="btn btn-primary" id="loginBtn" style="width: 100%;">Entrar</button>
+        </section>
+
+        <!-- Admin Panel -->
+        <div class="admin-panel" id="adminPanel">
+            <!-- Admin Header -->
+            <div class="admin-header">
+                <h2>📊 Gerenciar Programação</h2>
+                <button class="btn btn-secondary" id="logoutBtn">Sair</button>
+            </div>
+
+            <!-- Tabela de Programação -->
+            <section class="table-section">
+                <h3>📅 Programação das 24 Horas</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Hora</th>
+                            <th>URL do Áudio</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="programacaoTableBody">
+                        <!-- Preenchido dinamicamente -->
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Formulário de Edição -->
+            <section class="form-section" id="formSection">
+                <h3>✏️ Editar Programa</h3>
+                <form id="adminForm">
+                    <input type="hidden" id="programaId">
+                    
+                    <div class="form-group">
+                        <label for="hourSelect">Hora (0-23):</label>
+                        <select id="hourSelect" class="form-control" required>
+                            <option value="0">00:00</option>
+                            <option value="1">01:00</option>
+                            <option value="2">02:00</option>
+                            <option value="3">03:00</option>
+                            <option value="4">04:00</option>
+                            <option value="5">05:00</option>
+                            <option value="6">06:00</option>
+                            <option value="7">07:00</option>
+                            <option value="8">08:00</option>
+                            <option value="9">09:00</option>
+                            <option value="10">10:00</option>
+                            <option value="11">11:00</option>
+                            <option value="12">12:00</option>
+                            <option value="13">13:00</option>
+                            <option value="14">14:00</option>
+                            <option value="15">15:00</option>
+                            <option value="16">16:00</option>
+                            <option value="17">17:00</option>
+                            <option value="18">18:00</option>
+                            <option value="19">19:00</option>
+                            <option value="20">20:00</option>
+                            <option value="21">21:00</option>
+                            <option value="22">22:00</option>
+                            <option value="23">23:00</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="urlAudio">URL do Áudio (Cloudinary):</label>
+                        <input type="url" id="urlAudio" class="form-control" placeholder="https://res.cloudinary.com/..." required>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="enabledCheck" checked>
+                            <label for="enabledCheck">Ativo</label>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">💾 Salvar</button>
+                        <button type="button" class="btn btn-secondary" id="testAudioBtn">▶️ Testar Reprodução</button>
+                    </div>
+                </form>
+
+                <!-- Player de teste -->
+                <audio id="testAudioPlayer" controls style="width: 100%; margin-top: 20px;"></audio>
+            </section>
+
+            <!-- Instruções Cloudinary -->
+            <section class="cloudinary-instructions">
+                <h3>📁 Como Fazer Upload no Cloudinary</h3>
+                <ol>
+                    <li>Acesse <a href="https://cloudinary.com" target="_blank">cloudinary.com</a> e faça login</li>
+                    <li>Vá para <strong>Media Library</strong></li>
+                    <li>Clique em <strong>Upload</strong> e selecione seu arquivo MP3</li>
+                    <li>Após o upload, clique no arquivo</li>
+                    <li>Copie a <strong>URL pública</strong> (exemplo: <code>https://res.cloudinary.com/dygbrcrr6/video/upload/v1234567890/audio.mp3</code>)</li>
+                    <li>Cole a URL no campo acima</li>
+                </ol>
+                <p><strong>Dica:</strong> Use arquivos MP3 com taxa de bits de 128-192 kbps para melhor qualidade e performance.</p>
+                <p><strong>Credenciais Cloudinary:</strong></p>
+                <ul>
+                    <li>Cloud Name: <code>dygbrcrr6</code></li>
+                    <li>API Key: <code>888572786733292</code></li>
+                </ul>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2024 Rádio 24H Supermercado do Louro | <a href="index.html">🎵 Voltar ao Player</a></p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="js/config.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>
