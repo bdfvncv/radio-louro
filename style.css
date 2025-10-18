@@ -1,0 +1,610 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #00a86b 0%, #008556 100%);
+    min-height: 100vh;
+    color: #333;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header */
+.header {
+    background: #ffffff;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    margin-bottom: 30px;
+    position: relative;
+}
+
+.header h1 {
+    color: #00a86b;
+    font-size: 2.5em;
+    margin-bottom: 10px;
+}
+
+.live-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: #ff4444;
+    color: #ffffff;
+    padding: 8px 20px;
+    border-radius: 25px;
+    font-weight: bold;
+    font-size: 0.9em;
+    margin-top: 10px;
+}
+
+.pulse {
+    width: 12px;
+    height: 12px;
+    background: #ffffff;
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.2); }
+}
+
+/* Main Content */
+.main-content {
+    display: grid;
+    gap: 20px;
+}
+
+.clock-section {
+    background: #ffffff;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.current-time {
+    font-size: 4em;
+    font-weight: bold;
+    color: #00a86b;
+    margin-bottom: 15px;
+    font-variant-numeric: tabular-nums;
+}
+
+.countdown {
+    font-size: 1.2em;
+    color: #666;
+}
+
+#countdownTimer {
+    color: #00a86b;
+    font-weight: bold;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Player Section */
+.player-section {
+    background: #ffffff;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.now-playing {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.now-playing h2 {
+    color: #00a86b;
+    margin-bottom: 10px;
+}
+
+.now-playing p {
+    font-size: 1.5em;
+    color: #333;
+    font-weight: 500;
+}
+
+.player-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.control-btn {
+    background: #00a86b;
+    color: #ffffff;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 10px;
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+}
+
+.control-btn:hover {
+    background: #008556;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 168, 107, 0.3);
+}
+
+.control-btn:active {
+    transform: translateY(0);
+}
+
+.control-btn.playing {
+    background: #ff4444;
+}
+
+.volume-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f5f5f5;
+    padding: 10px 20px;
+    border-radius: 10px;
+}
+
+.volume-control input[type="range"] {
+    width: 120px;
+}
+
+#volumeValue {
+    font-weight: bold;
+    color: #00a86b;
+    min-width: 40px;
+}
+
+.sync-btn {
+    background: #666;
+}
+
+.sync-btn:hover {
+    background: #555;
+}
+
+.status-message {
+    text-align: center;
+    padding: 15px;
+    border-radius: 8px;
+    font-weight: 500;
+    display: none;
+}
+
+.status-message.success {
+    background: #d4edda;
+    color: #155724;
+    display: block;
+}
+
+.status-message.error {
+    background: #f8d7da;
+    color: #721c24;
+    display: block;
+}
+
+.status-message.info {
+    background: #d1ecf1;
+    color: #0c5460;
+    display: block;
+}
+
+/* Schedule Section */
+.schedule-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.schedule-card {
+    background: #ffffff;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.schedule-card.highlight {
+    background: linear-gradient(135deg, #00a86b 0%, #008556 100%);
+    color: #ffffff;
+}
+
+.schedule-card h3 {
+    margin-bottom: 10px;
+    font-size: 1.2em;
+}
+
+.schedule-card p {
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+/* Footer */
+.footer {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    margin-top: 30px;
+    color: #666;
+}
+
+.footer a {
+    color: #00a86b;
+    text-decoration: none;
+    font-weight: bold;
+    margin-left: 15px;
+}
+
+.footer a:hover {
+    text-decoration: underline;
+}
+
+/* Admin Styles */
+.logout-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: #ff4444;
+    color: #ffffff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.logout-btn:hover {
+    background: #cc0000;
+}
+
+.login-screen {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 60vh;
+}
+
+.login-card {
+    background: #ffffff;
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+}
+
+.login-card h2 {
+    color: #00a86b;
+    margin-bottom: 15px;
+}
+
+.login-card p {
+    color: #666;
+    margin-bottom: 25px;
+}
+
+#loginForm {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+#loginForm input {
+    padding: 15px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 1em;
+}
+
+#loginForm input:focus {
+    outline: none;
+    border-color: #00a86b;
+}
+
+.submit-btn {
+    background: #00a86b;
+    color: #ffffff;
+    border: none;
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.submit-btn:hover {
+    background: #008556;
+}
+
+.error-message {
+    color: #ff4444;
+    font-weight: bold;
+    margin-top: 10px;
+    display: none;
+}
+
+.error-message.show {
+    display: block;
+}
+
+.back-link {
+    display: inline-block;
+    margin-top: 20px;
+    color: #00a86b;
+    text-decoration: none;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+/* Admin Panel */
+.instructions-section,
+.editor-section,
+.schedule-table-section {
+    background: #ffffff;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.instructions-section h2,
+.editor-section h2,
+.schedule-table-section h2 {
+    color: #00a86b;
+    margin-bottom: 20px;
+}
+
+.instructions-card {
+    background: #f5f5f5;
+    padding: 20px;
+    border-radius: 10px;
+    border-left: 4px solid #00a86b;
+}
+
+.instructions-card h3 {
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.instructions-card ol {
+    padding-left: 20px;
+}
+
+.instructions-card li {
+    margin-bottom: 10px;
+    line-height: 1.6;
+}
+
+.instructions-card a {
+    color: #00a86b;
+    font-weight: bold;
+}
+
+.edit-form {
+    display: grid;
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-weight: bold;
+    color: #333;
+}
+
+.form-group input,
+.form-group select {
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 1em;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #00a86b;
+}
+
+.checkbox-group {
+    flex-direction: row;
+    align-items: center;
+}
+
+.checkbox-group input {
+    width: auto;
+    margin-right: 8px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.test-btn {
+    background: #ffa500;
+    color: #ffffff;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.test-btn:hover {
+    background: #ff8c00;
+}
+
+.clear-btn {
+    background: #666;
+    color: #ffffff;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.clear-btn:hover {
+    background: #555;
+}
+
+/* Table */
+.table-container {
+    overflow-x: auto;
+}
+
+.schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.schedule-table th,
+.schedule-table td {
+    padding: 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.schedule-table th {
+    background: #00a86b;
+    color: #ffffff;
+    font-weight: bold;
+}
+
+.schedule-table tr:hover {
+    background: #f5f5f5;
+}
+
+.schedule-table .status-badge {
+    display: inline-block;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.85em;
+}
+
+.schedule-table .status-badge.active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.schedule-table .status-badge.inactive {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.schedule-table .audio-url {
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.schedule-table .action-btns {
+    display: flex;
+    gap: 8px;
+}
+
+.schedule-table .btn-edit,
+.schedule-table .btn-toggle,
+.schedule-table .btn-delete {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.85em;
+    font-weight: bold;
+}
+
+.schedule-table .btn-edit {
+    background: #007bff;
+    color: #ffffff;
+}
+
+.schedule-table .btn-edit:hover {
+    background: #0056b3;
+}
+
+.schedule-table .btn-toggle {
+    background: #ffc107;
+    color: #333;
+}
+
+.schedule-table .btn-toggle:hover {
+    background: #e0a800;
+}
+
+.schedule-table .btn-delete {
+    background: #dc3545;
+    color: #ffffff;
+}
+
+.schedule-table .btn-delete:hover {
+    background: #c82333;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .header h1 {
+        font-size: 1.8em;
+    }
+
+    .current-time {
+        font-size: 2.5em;
+    }
+
+    .player-controls {
+        flex-direction: column;
+    }
+
+    .control-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .schedule-section {
+        grid-template-columns: 1fr;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .form-actions button {
+        width: 100%;
+    }
+}
