@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Rádio 24H Supermercado do Louro</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🔐 Painel Administrativo</h1>
+            <button class="logout-btn" id="logoutBtn">Sair</button>
+        </header>
+
+        <!-- Login Screen -->
+        <div class="login-screen" id="loginScreen">
+            <div class="login-card">
+                <h2>🔐 Acesso Restrito</h2>
+                <p>Digite a senha para acessar o painel administrativo</p>
+                <form id="loginForm">
+                    <input type="password" id="passwordInput" placeholder="Digite a senha" required>
+                    <button type="submit" class="submit-btn">Entrar</button>
+                </form>
+                <p class="error-message" id="loginError"></p>
+                <a href="index.html" class="back-link">← Voltar ao Player</a>
+            </div>
+        </div>
+
+        <!-- Admin Panel -->
+        <div class="admin-panel" id="adminPanel" style="display: none;">
+            <div class="instructions-section">
+                <h2>📋 Instruções de Upload</h2>
+                <div class="instructions-card">
+                    <h3>Como fazer upload no Cloudinary:</h3>
+                    <ol>
+                        <li>Acesse: <a href="https://cloudinary.com/console" target="_blank">cloudinary.com/console</a></li>
+                        <li>Faça login com: <strong>Cloud Name: dygbrcrr6</strong></li>
+                        <li>Clique em "Media Library" → "Upload"</li>
+                        <li>Selecione seu arquivo MP3</li>
+                        <li>Após o upload, clique no arquivo</li>
+                        <li>Copie a URL pública (terminada em .mp3)</li>
+                        <li>Cole a URL no formulário abaixo</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="editor-section">
+                <h2>✏️ Editor de Programação</h2>
+                <form id="editForm" class="edit-form">
+                    <div class="form-group">
+                        <label for="hourSelect">Hora (0-23):</label>
+                        <select id="hourSelect" required>
+                            <option value="">Selecione uma hora</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="audioUrl">URL do Áudio:</label>
+                        <input type="url" id="audioUrl" placeholder="https://res.cloudinary.com/..." required>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <label>
+                            <input type="checkbox" id="enabledCheckbox" checked>
+                            Ativo (habilitado)
+                        </label>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="submit-btn">💾 Salvar</button>
+                        <button type="button" class="test-btn" id="testBtn">▶️ Testar Reprodução</button>
+                        <button type="button" class="clear-btn" id="clearBtn">🗑️ Limpar</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="schedule-table-section">
+                <h2>📅 Programação Completa (24 Horas)</h2>
+                <div class="table-container">
+                    <table class="schedule-table">
+                        <thead>
+                            <tr>
+                                <th>Hora</th>
+                                <th>Status</th>
+                                <th>URL do Áudio</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scheduleTableBody">
+                            <!-- Conteúdo gerado dinamicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <audio id="testAudio" style="display: none;"></audio>
+        </div>
+
+        <footer class="footer">
+            <p>© 2025 Rádio 24H Supermercado do Louro - Painel Admin</p>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
