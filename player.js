@@ -22,6 +22,13 @@ const nextProgram = document.getElementById('nextProgram');
 let isPlaying = false;
 let currentHourData = null;
 let allSchedules = [];
+let backgroundPlaylist = [];
+let advertisements = [];
+let currentBackgroundIndex = 0;
+let currentAdIndex = 0;
+let tracksPlayedSinceLastAd = 0;
+let isPlayingHourCerta = false;
+let isPlayingAd = false;
 
 // Inicializar
 init();
@@ -33,6 +40,12 @@ async function init() {
         
         // Carregar programação
         await loadSchedule();
+        
+        // Carregar playlist de fundo
+        await loadBackgroundPlaylist();
+        
+        // Carregar propagandas
+        await loadAdvertisements();
         
         // Configurar listeners
         setupEventListeners();
@@ -80,17 +93,67 @@ CREATE TABLE IF NOT EXISTS radio_schedule (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Criar índice para melhor performance
+CREATE TABLE IF NOT EXISTS background_playlist (
+    id SERIAL PRIMARY KEY,
+    audio_url TEXT NOT NULL,
+    title TEXT,
+    enabled BOOLEAN DEFAULT true,
+    play_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Criar índices
 CREATE INDEX IF NOT EXISTS idx_radio_schedule_hour ON radio_schedule(hour);
 CREATE INDEX IF NOT EXISTS idx_radio_schedule_enabled ON radio_schedule(enabled);
-
--- Inserir dados padrão (opcional)
-INSERT INTO radio_schedule (hour, audio_url, enabled) 
-VALUES (0, '', false) ON CONFLICT (hour) DO NOTHING;
+CREATE INDEX IF NOT EXISTS idx_background_playlist_order ON background_playlist(play_order);
             `);
         }
     } catch (error) {
         console.error('Erro ao verificar tabela:', error);
+    }
+}
+
+async function loadBackgroundPlaylist() {
+    try {
+        const { data, error } = await supabase
+            .from('background_playlist')
+            .select('*')
+            .eq('enabled', true)
+            .order('play_order', { ascending: true });
+        
+        if (error) {
+            console.error('Erro ao carregar playlist de fundo:', error);
+            backgroundPlaylist = [];
+            return;
+        }
+        
+        backgroundPlaylist = data || [];
+        console.log('Playlist de fundo carregada:', backgroundPlaylist.length, 'músicas');
+    } catch (error) {
+        console.error('Erro ao carregar playlist:', error);
+        backgroundPlaylist = [];
+    }
+}
+
+async function loadAdvertisements() {
+    try {
+        const { data, error } = await supabase
+            .from('advertisements')
+            .select('*')
+            .eq('enabled', true)
+            .order('play_order', { ascending: true });
+        
+        if (error) {
+            console.error('Erro ao carregar propagandas:', error);
+            advertisements = [];
+            return;
+        }
+        
+        advertisements = data || [];
+        console.log('Propagandas carregadas:', advertisements.length, 'anúncios');
+    } catch (error) {
+        console.error('Erro ao carregar propagandas:', error);
+        advertisements = [];
     }
 }
 
@@ -172,6 +235,7 @@ function updateScheduleDisplay() {
 
 async function loadCurrentHourAudio() {
     const currentHourNum = new Date().getHours();
+    const currentMinute = new Date().getMinutes();
     
     try {
         const { data, error } = await supabase
@@ -183,8 +247,8 @@ async function loadCurrentHourAudio() {
         
         if (error) {
             if (error.code === 'PGRST116') {
-                // Nenhum registro encontrado
-                handleNoAudio();
+                // Nenhum registro encontrado - tocar playlist de fundo
+                playBackgroundMusic();
                 return;
             }
             throw error;
@@ -192,9 +256,12 @@ async function loadCurrentHourAudio() {
         
         currentHourData = data;
         
-        if (data && data.audio_url && data.audio_url.trim() !== '') {
+        // Se está no minuto 00, 01 ou 02, tocar hora certa
+        // Depois disso, tocar música de fundo
+        if (currentMinute <= 2 && data && data.audio_url && data.audio_url.trim() !== '') {
+            isPlayingHourCerta = true;
             audioPlayer.src = data.audio_url;
-            currentProgram.textContent = `Programa das ${String(currentHourNum).padStart(2, '0')}:00`;
+            currentProgram.textContent = `🎙️ Hora Certa - ${String(currentHourNum).padStart(2, '0')}:00`;
             
             // Auto-play se estava tocando
             if (isPlaying) {
@@ -204,11 +271,81 @@ async function loadCurrentHourAudio() {
                 });
             }
         } else {
-            handleNoAudio();
+            // Fora do horário da hora certa, tocar música de fundo
+            playBackgroundMusic();
         }
     } catch (error) {
         console.error('Erro ao carregar áudio:', error);
+        playBackgroundMusic();
+    }
+}
+
+function playBackgroundMusic() {
+    isPlayingHourCerta = false;
+    isPlayingAd = false;
+    
+    if (backgroundPlaylist.length === 0) {
         handleNoAudio();
+        return;
+    }
+    
+    // Verificar se deve tocar propaganda
+    const adFrequency = advertisements.length > 0 && advertisements[currentAdIndex] 
+        ? advertisements[currentAdIndex].frequency 
+        : 3;
+    
+    if (advertisements.length > 0 && tracksPlayedSinceLastAd >= adFrequency) {
+        playAdvertisement();
+        return;
+    }
+    
+    // Tocar música atual da playlist
+    const currentTrack = backgroundPlaylist[currentBackgroundIndex];
+    
+    if (currentTrack && currentTrack.audio_url) {
+        audioPlayer.src = currentTrack.audio_url;
+        currentProgram.textContent = `🎵 ${currentTrack.title || 'Música ' + (currentBackgroundIndex + 1)}`;
+        
+        tracksPlayedSinceLastAd++;
+        
+        // Auto-play se estava tocando
+        if (isPlaying) {
+            audioPlayer.play().catch(err => {
+                console.error('Erro ao reproduzir música de fundo:', err);
+            });
+        }
+    } else {
+        handleNoAudio();
+    }
+}
+
+function playAdvertisement() {
+    if (advertisements.length === 0) {
+        playBackgroundMusic();
+        return;
+    }
+    
+    isPlayingAd = true;
+    isPlayingHourCerta = false;
+    tracksPlayedSinceLastAd = 0;
+    
+    const currentAd = advertisements[currentAdIndex];
+    
+    if (currentAd && currentAd.audio_url) {
+        audioPlayer.src = currentAd.audio_url;
+        currentProgram.textContent = `📢 ${currentAd.title}${currentAd.advertiser ? ' - ' + currentAd.advertiser : ''}`;
+        
+        // Auto-play se estava tocando
+        if (isPlaying) {
+            audioPlayer.play().catch(err => {
+                console.error('Erro ao reproduzir propaganda:', err);
+            });
+        }
+        
+        // Avançar para próxima propaganda
+        currentAdIndex = (currentAdIndex + 1) % advertisements.length;
+    } else {
+        playBackgroundMusic();
     }
 }
 
@@ -302,11 +439,34 @@ async function checkHourChange() {
 
 function handleAudioEnded() {
     console.log('Áudio finalizado');
-    // Pode repetir ou tocar próximo
-    if (currentHourData && currentHourData.audio_url) {
-        audioPlayer.play().catch(err => {
-            console.error('Erro ao repetir:', err);
-        });
+    
+    // Se estava tocando hora certa, mudar para playlist de fundo
+    if (isPlayingHourCerta) {
+        console.log('Hora certa finalizada, verificando propagandas...');
+        // Após hora certa, tocar propaganda se houver
+        if (advertisements.length > 0) {
+            playAdvertisement();
+        } else {
+            playBackgroundMusic();
+        }
+    } else if (isPlayingAd) {
+        // Se estava tocando propaganda, voltar para playlist
+        console.log('Propaganda finalizada, voltando para playlist');
+        playBackgroundMusic();
+    } else {
+        // Se estava tocando música de fundo, avançar para próxima
+        if (backgroundPlaylist.length > 0) {
+            currentBackgroundIndex = (currentBackgroundIndex + 1) % backgroundPlaylist.length;
+            console.log('Avançando para próxima música:', currentBackgroundIndex);
+            playBackgroundMusic();
+        } else {
+            // Se não houver playlist, repetir o áudio atual
+            if (audioPlayer.src) {
+                audioPlayer.play().catch(err => {
+                    console.error('Erro ao repetir:', err);
+                });
+            }
+        }
     }
 }
 
