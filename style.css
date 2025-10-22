@@ -364,7 +364,9 @@ body {
 /* Admin Panel */
 .instructions-section,
 .editor-section,
-.schedule-table-section {
+.schedule-table-section,
+.playlist-section,
+.ads-section {
     background: #ffffff;
     padding: 30px;
     border-radius: 15px;
@@ -374,9 +376,29 @@ body {
 
 .instructions-section h2,
 .editor-section h2,
-.schedule-table-section h2 {
+.schedule-table-section h2,
+.playlist-section h2,
+.ads-section h2 {
     color: #00a86b;
     margin-bottom: 20px;
+}
+
+.section-description {
+    background: #f0f9f5;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #00a86b;
+    margin-bottom: 20px;
+    color: #555;
+    line-height: 1.6;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 5px;
+    color: #666;
+    font-size: 0.85em;
+    font-style: italic;
 }
 
 .instructions-card {
