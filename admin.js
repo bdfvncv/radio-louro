@@ -57,7 +57,7 @@ let editingAdId = null;
 // Inicializar
 init();
 
-function init() {
+async function init() {
     // Verificar autenticação
     checkAuth();
     
@@ -69,9 +69,9 @@ function init() {
     
     // Carregar programação se autenticado
     if (isAuthenticated) {
-        loadAllSchedules();
-        loadBackgroundPlaylist();
-        loadAdvertisements();
+        await loadAllSchedules();
+        await loadBackgroundPlaylist();
+        await loadAdvertisements();
         setupRealtimeSubscription();
     }
 }
@@ -115,7 +115,7 @@ function setupEventListeners() {
     clearAdBtn.addEventListener('click', handleClearAdForm);
 }
 
-function handleLogin(e) {
+async function handleLogin(e) {
     e.preventDefault();
     
     const password = passwordInput.value;
@@ -124,9 +124,9 @@ function handleLogin(e) {
         sessionStorage.setItem('radio_admin_auth', 'authenticated');
         isAuthenticated = true;
         showAdminPanel();
-        loadAllSchedules();
-        loadBackgroundPlaylist();
-        loadAdvertisements();
+        await loadAllSchedules();
+        await loadBackgroundPlaylist();
+        await loadAdvertisements();
         setupRealtimeSubscription();
         loginError.classList.remove('show');
     } else {
