@@ -312,6 +312,9 @@ function playBackgroundMusic() {
         if (isPlaying) {
             audioPlayer.play().catch(err => {
                 console.error('Erro ao reproduzir música de fundo:', err);
+                // Tentar próxima música se esta falhar
+                currentBackgroundIndex = (currentBackgroundIndex + 1) % backgroundPlaylist.length;
+                setTimeout(() => playBackgroundMusic(), 1000);
             });
         }
     } else {
@@ -339,6 +342,8 @@ function playAdvertisement() {
         if (isPlaying) {
             audioPlayer.play().catch(err => {
                 console.error('Erro ao reproduzir propaganda:', err);
+                // Se propaganda falhar, pular para música
+                playBackgroundMusic();
             });
         }
         
@@ -458,28 +463,54 @@ function handleAudioEnded() {
         if (backgroundPlaylist.length > 0) {
             currentBackgroundIndex = (currentBackgroundIndex + 1) % backgroundPlaylist.length;
             console.log('Avançando para próxima música:', currentBackgroundIndex);
-            playBackgroundMusic();
+            // Pequeno delay para evitar problemas de carregamento
+            setTimeout(() => playBackgroundMusic(), 500);
         } else {
-            // Se não houver playlist, repetir o áudio atual
-            if (audioPlayer.src) {
-                audioPlayer.play().catch(err => {
-                    console.error('Erro ao repetir:', err);
-                });
-            }
+            // Se não houver playlist, tentar recarregar
+            console.log('Playlist vazia, recarregando...');
+            loadBackgroundPlaylist().then(() => {
+                if (backgroundPlaylist.length > 0) {
+                    playBackgroundMusic();
+                } else {
+                    handleNoAudio();
+                }
+            });
         }
     }
 }
 
 function handleAudioError(event) {
     console.error('Erro no áudio:', event);
-    showMessage('Erro ao carregar áudio. Verifique a URL.', 'error');
-    if (isPlaying) {
-        togglePlay();
+    showMessage('Erro ao carregar áudio. Tentando próximo...', 'error');
+    
+    // Tentar próximo áudio automaticamente
+    if (isPlayingHourCerta) {
+        // Se hora certa falhou, ir para playlist
+        playBackgroundMusic();
+    } else if (isPlayingAd) {
+        // Se propaganda falhou, ir para música
+        playBackgroundMusic();
+    } else {
+        // Se música falhou, tentar próxima
+        if (backgroundPlaylist.length > 1) {
+            currentBackgroundIndex = (currentBackgroundIndex + 1) % backgroundPlaylist.length;
+            setTimeout(() => playBackgroundMusic(), 1000);
+        } else {
+            if (isPlaying) {
+                togglePlay();
+            }
+        }
     }
 }
 
 function handleCanPlay() {
     console.log('Áudio pronto para reprodução');
+    // Se está em modo play, garantir que toca
+    if (isPlaying && audioPlayer.paused) {
+        audioPlayer.play().catch(err => {
+            console.error('Erro ao auto-reproduzir:', err);
+        });
+    }
 }
 
 function showMessage(message, type) {
