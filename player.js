@@ -328,12 +328,16 @@ function setupRealtimeSubscription() {
 async function handleRealtimeUpdate(payload) {
     console.log('Atualização em tempo real:', payload);
     
-    await loadSchedule();
-    await loadBackgroundPlaylist();
-    await loadAdvertisements();
-    await generateDailySchedule();
-    
-    showMessage('Programação atualizada!', 'info');
+    try {
+        await loadSchedule();
+        await loadBackgroundPlaylist();
+        await loadAdvertisements();
+        await generateDailySchedule();
+        
+        showMessage('Programação atualizada!', 'info');
+    } catch (error) {
+        console.error('Erro ao atualizar:', error);
+    }
 }
 
 async function loadSchedule() {
