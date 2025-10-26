@@ -112,6 +112,7 @@ async function generateDailySchedule() {
 async function buildStreamTimeline() {
     streamTimeline = [];
     let currentTimeOffset = 0; // Em segundos desde meia-noite
+    let adRotationIndex = 0; // Para rotacionar propagandas
     
     // Para cada hora do dia
     for (let hour = 0; hour < 24; hour++) {
@@ -131,8 +132,7 @@ async function buildStreamTimeline() {
             
             // Adicionar propaganda após hora certa (se houver)
             if (advertisements.length > 0) {
-                const adIndex = hour % advertisements.length;
-                const ad = advertisements[adIndex];
+                const ad = advertisements[adRotationIndex % advertisements.length];
                 if (ad && ad.enabled) {
                     streamTimeline.push({
                         type: 'advertisement',
@@ -143,6 +143,7 @@ async function buildStreamTimeline() {
                         duration: 30 // Estimado: 30 segundos
                     });
                     currentTimeOffset += 30;
+                    adRotationIndex++;
                 }
             }
         }
@@ -155,11 +156,11 @@ async function buildStreamTimeline() {
         while (currentTimeOffset < hourEndTime && dailyPlaylist.length > 0) {
             const track = dailyPlaylist[trackIndex % dailyPlaylist.length];
             
-            if (track && track.enabled && track.audio_url) {
+            if (track && track.enabled) {
                 streamTimeline.push({
                     type: 'music',
                     url: track.audio_url,
-                    title: track.title || 'Música',
+                    title: track.title,
                     startTime: currentTimeOffset,
                     duration: 210 // Estimado: 3.5 minutos
                 });
@@ -167,22 +168,20 @@ async function buildStreamTimeline() {
                 tracksInThisHour++;
                 
                 // Adicionar propaganda a cada X músicas
-                if (advertisements.length > 0) {
-                    const adFrequency = advertisements[0].frequency || 3;
-                    if (tracksInThisHour % adFrequency === 0) {
-                        const adIndex = trackIndex % advertisements.length;
-                        const ad = advertisements[adIndex];
-                        if (ad && ad.enabled) {
-                            streamTimeline.push({
-                                type: 'advertisement',
-                                url: ad.audio_url,
-                                title: ad.title,
-                                advertiser: ad.advertiser,
-                                startTime: currentTimeOffset,
-                                duration: 30
-                            });
-                            currentTimeOffset += 30;
-                        }
+                const adFrequency = advertisements.length > 0 && advertisements[0].frequency ? advertisements[0].frequency : 3;
+                if (tracksInThisHour % adFrequency === 0 && advertisements.length > 0) {
+                    const ad = advertisements[adRotationIndex % advertisements.length];
+                    if (ad && ad.enabled) {
+                        streamTimeline.push({
+                            type: 'advertisement',
+                            url: ad.audio_url,
+                            title: ad.title,
+                            advertiser: ad.advertiser,
+                            startTime: currentTimeOffset,
+                            duration: 30
+                        });
+                        currentTimeOffset += 30;
+                        adRotationIndex++;
                     }
                 }
             }
@@ -199,69 +198,61 @@ async function buildStreamTimeline() {
 
 // Iniciar transmissão ao vivo
 async function startLiveStream() {
-    // Validar se tem dados carregados
-    if (backgroundPlaylist.length === 0) {
-        console.warn('Nenhuma música na playlist. Aguardando carregamento...');
-        setTimeout(() => startLiveStream(), 2000);
-        return;
-    }
-    
-    if (streamTimeline.length === 0) {
-        console.warn('Timeline vazia. Gerando...');
-        await generateDailySchedule();
-    }
-    
-    const currentItem = getCurrentStreamItem();
-    
-    if (!currentItem || !currentItem.url) {
-        console.warn('Nenhum item disponível na transmissão');
-        handleNoAudio();
-        return;
-    }
-    
-    // Calcular tempo desde meia-noite
-    const now = new Date();
-    const secondsSinceMidnight = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
-    
-    // Calcular posição atual dentro do item
-    const itemElapsed = secondsSinceMidnight - currentItem.startTime;
-    const startPosition = Math.max(0, Math.min(itemElapsed, currentItem.duration - 1));
-    
-    console.log('Entrando na transmissão ao vivo:', {
-        item: currentItem.title,
-        position: startPosition + 's',
-        type: currentItem.type
-    });
-    
-    // Carregar áudio e posicionar
-    audioPlayer.src = currentItem.url;
-    
-    // Aguardar carregamento antes de posicionar
-    audioPlayer.addEventListener('loadedmetadata', function setPosition() {
-        if (audioPlayer.duration && startPosition < audioPlayer.duration) {
-            audioPlayer.currentTime = startPosition;
+    try {
+        const currentItem = getCurrentStreamItem();
+        
+        if (!currentItem) {
+            console.warn('Nenhum item disponível na transmissão');
+            handleNoAudio();
+            return;
         }
-        audioPlayer.removeEventListener('loadedmetadata', setPosition);
-    });
-    
-    // Atualizar display
-    updateNowPlayingDisplay(currentItem);
-    
-    // Se estava tocando, continuar
-    if (isPlaying) {
-        audioPlayer.play().catch(err => {
-            console.error('Erro ao reproduzir:', err);
+        
+        // Calcular tempo desde meia-noite
+        const now = new Date();
+        const secondsSinceMidnight = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+        
+        // Calcular posição atual dentro do item
+        const itemElapsed = secondsSinceMidnight - currentItem.startTime;
+        const startPosition = Math.max(0, Math.min(itemElapsed, currentItem.duration - 1));
+        
+        console.log('Entrando na transmissão ao vivo:', {
+            item: currentItem.title,
+            position: startPosition + 's',
+            type: currentItem.type
         });
-    }
-    
-    // Verificar se precisa trocar de faixa
-    const remaining = currentItem.duration - itemElapsed;
-    if (remaining > 0 && remaining < 86400) { // Menos de 24h
-        setTimeout(() => {
-            if (isPlaying) { // Só trocar se ainda estiver tocando
-                startLiveStream();
-            }
-        }, remaining * 1000);
+        
+        // Carregar áudio e posicionar
+        audioPlayer.src = currentItem.url;
+        
+        // Aguardar áudio estar pronto antes de posicionar
+        audioPlayer.addEventListener('loadedmetadata', function setPosition() {
+            audioPlayer.currentTime = startPosition;
+            audioPlayer.removeEventListener('loadedmetadata', setPosition);
+        });
+        
+        // Atualizar display
+        updateNowPlayingDisplay(currentItem);
+        
+        // Se estava tocando, continuar
+        if (isPlaying) {
+            audioPlayer.play().catch(err => {
+                console.error('Erro ao reproduzir:', err);
+            });
+        }
+        
+        // Verificar se precisa trocar de faixa
+        const remaining = currentItem.duration - itemElapsed;
+        if (remaining > 0) {
+            setTimeout(() => {
+                startLiveStream(); // Carregar próximo item
+            }, remaining * 1000);
+        } else {
+            // Item já terminou, carregar próximo imediatamente
+            setTimeout(() => startLiveStream(), 100);
+        }
+    } catch (error) {
+        console.error('Erro ao iniciar transmissão:', error);
+        setTimeout(() => startLiveStream(), 5000); // Tentar novamente em 5s
     }
 }
 
