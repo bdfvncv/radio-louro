@@ -131,7 +131,8 @@ async function buildStreamTimeline() {
             
             // Adicionar propaganda após hora certa (se houver)
             if (advertisements.length > 0) {
-                const ad = advertisements[hour % advertisements.length];
+                const adIndex = hour % advertisements.length;
+                const ad = advertisements[adIndex];
                 if (ad && ad.enabled) {
                     streamTimeline.push({
                         type: 'advertisement',
@@ -154,11 +155,11 @@ async function buildStreamTimeline() {
         while (currentTimeOffset < hourEndTime && dailyPlaylist.length > 0) {
             const track = dailyPlaylist[trackIndex % dailyPlaylist.length];
             
-            if (track && track.enabled) {
+            if (track && track.enabled && track.audio_url) {
                 streamTimeline.push({
                     type: 'music',
                     url: track.audio_url,
-                    title: track.title,
+                    title: track.title || 'Música',
                     startTime: currentTimeOffset,
                     duration: 210 // Estimado: 3.5 minutos
                 });
@@ -166,19 +167,22 @@ async function buildStreamTimeline() {
                 tracksInThisHour++;
                 
                 // Adicionar propaganda a cada X músicas
-                const adFrequency = advertisements.length > 0 ? advertisements[0].frequency : 3;
-                if (tracksInThisHour % adFrequency === 0 && advertisements.length > 0) {
-                    const ad = advertisements[trackIndex % advertisements.length];
-                    if (ad && ad.enabled) {
-                        streamTimeline.push({
-                            type: 'advertisement',
-                            url: ad.audio_url,
-                            title: ad.title,
-                            advertiser: ad.advertiser,
-                            startTime: currentTimeOffset,
-                            duration: 30
-                        });
-                        currentTimeOffset += 30;
+                if (advertisements.length > 0) {
+                    const adFrequency = advertisements[0].frequency || 3;
+                    if (tracksInThisHour % adFrequency === 0) {
+                        const adIndex = trackIndex % advertisements.length;
+                        const ad = advertisements[adIndex];
+                        if (ad && ad.enabled) {
+                            streamTimeline.push({
+                                type: 'advertisement',
+                                url: ad.audio_url,
+                                title: ad.title,
+                                advertiser: ad.advertiser,
+                                startTime: currentTimeOffset,
+                                duration: 30
+                            });
+                            currentTimeOffset += 30;
+                        }
                     }
                 }
             }
@@ -195,9 +199,22 @@ async function buildStreamTimeline() {
 
 // Iniciar transmissão ao vivo
 async function startLiveStream() {
+    // Validar se tem dados carregados
+    if (backgroundPlaylist.length === 0) {
+        console.warn('Nenhuma música na playlist. Aguardando carregamento...');
+        setTimeout(() => startLiveStream(), 2000);
+        return;
+    }
+    
+    if (streamTimeline.length === 0) {
+        console.warn('Timeline vazia. Gerando...');
+        await generateDailySchedule();
+    }
+    
     const currentItem = getCurrentStreamItem();
     
-    if (!currentItem) {
+    if (!currentItem || !currentItem.url) {
+        console.warn('Nenhum item disponível na transmissão');
         handleNoAudio();
         return;
     }
@@ -208,7 +225,7 @@ async function startLiveStream() {
     
     // Calcular posição atual dentro do item
     const itemElapsed = secondsSinceMidnight - currentItem.startTime;
-    const startPosition = Math.max(0, itemElapsed);
+    const startPosition = Math.max(0, Math.min(itemElapsed, currentItem.duration - 1));
     
     console.log('Entrando na transmissão ao vivo:', {
         item: currentItem.title,
@@ -218,7 +235,14 @@ async function startLiveStream() {
     
     // Carregar áudio e posicionar
     audioPlayer.src = currentItem.url;
-    audioPlayer.currentTime = startPosition;
+    
+    // Aguardar carregamento antes de posicionar
+    audioPlayer.addEventListener('loadedmetadata', function setPosition() {
+        if (audioPlayer.duration && startPosition < audioPlayer.duration) {
+            audioPlayer.currentTime = startPosition;
+        }
+        audioPlayer.removeEventListener('loadedmetadata', setPosition);
+    });
     
     // Atualizar display
     updateNowPlayingDisplay(currentItem);
@@ -232,9 +256,11 @@ async function startLiveStream() {
     
     // Verificar se precisa trocar de faixa
     const remaining = currentItem.duration - itemElapsed;
-    if (remaining > 0) {
+    if (remaining > 0 && remaining < 86400) { // Menos de 24h
         setTimeout(() => {
-            startLiveStream(); // Carregar próximo item
+            if (isPlaying) { // Só trocar se ainda estiver tocando
+                startLiveStream();
+            }
         }, remaining * 1000);
     }
 }
