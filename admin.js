@@ -136,10 +136,16 @@ function populateHourSelect() {
 }
 
 function loadAllData() {
-    loadAllSchedules();
-    loadBackgroundPlaylist();
-    loadAdvertisements();
-    setupRealtimeSubscription();
+    Promise.all([
+        loadAllSchedules(),
+        loadBackgroundPlaylist(),
+        loadAdvertisements()
+    ]).then(() => {
+        setupRealtimeSubscription();
+        console.log('Todos os dados carregados');
+    }).catch(error => {
+        console.error('Erro ao carregar dados:', error);
+    });
 }
 
 function setupRealtimeSubscription() {
