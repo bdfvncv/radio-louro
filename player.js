@@ -18,539 +18,17 @@ const previousProgram = document.getElementById('previousProgram');
 const currentHour = document.getElementById('currentHour');
 const nextProgram = document.getElementById('nextProgram');
 
-// Estado do player - TRANSMISSÃO AO VIVO
+// Estado do player
 let isPlaying = false;
 let currentHourData = null;
 let allSchedules = [];
 let backgroundPlaylist = [];
 let advertisements = [];
-let dailyPlaylist = []; // Playlist embaralhada do dia
-let currentDailySeed = ''; // Seed do dia para embaralhar
-let streamTimeline = []; // Timeline completa da transmissão
-let isLiveStream = true; // Flag para modo transmissão ao vivo
-
-// Inicializar
-init();
-
-async function init() {
-    try {
-        await ensureTableExists();
-        await loadSchedule();
-        await loadBackgroundPlaylist();
-        await loadAdvertisements();
-        
-        setupEventListeners();
-        setupRealtimeSubscription();
-        
-        updateClock();
-        setInterval(updateClock, 1000);
-        
-        // Gerar programação diária e iniciar transmissão
-        await generateDailySchedule();
-        await startLiveStream();
-        
-        showMessage('Transmissão ao vivo carregada!', 'success');
-    } catch (error) {
-        console.error('Erro ao inicializar:', error);
-        showMessage('Erro ao carregar transmissão.', 'error');
-    }
-}
-
-// Gerar seed baseado na data (muda a cada dia)
-function getDailySeed() {
-    const now = new Date();
-    return `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
-}
-
-// Embaralhar array com seed (mesmo resultado para mesmo seed)
-function seededShuffle(array, seed) {
-    const arr = [...array];
-    let currentSeed = hashCode(seed);
-    
-    for (let i = arr.length - 1; i > 0; i--) {
-        currentSeed = (currentSeed * 9301 + 49297) % 233280;
-        const j = Math.floor((currentSeed / 233280) * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    
-    return arr;
-}
-
-function hashCode(str) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        const char = str.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
-    }
-    return Math.abs(hash);
-}
-
-// Gerar programação diária embaralhada
-async function generateDailySchedule() {
-    const todaySeed = getDailySeed();
-    
-    // Se já gerou hoje, não gera de novo
-    if (currentDailySeed === todaySeed && dailyPlaylist.length > 0) {
-        console.log('Programação diária já gerada');
-        return;
-    }
-    
-    console.log('Gerando nova programação diária:', todaySeed);
-    currentDailySeed = todaySeed;
-    
-    // Embaralhar playlist de fundo com seed do dia
-    dailyPlaylist = seededShuffle(backgroundPlaylist.filter(t => t.enabled), todaySeed);
-    
-    // Criar timeline da transmissão (24 horas)
-    await buildStreamTimeline();
-    
-    console.log('Programação diária gerada:', dailyPlaylist.length, 'músicas');
-}
-
-// Construir timeline completa da transmissão
-async function buildStreamTimeline() {
-    streamTimeline = [];
-    let currentTimeOffset = 0; // Em segundos desde meia-noite
-    let adRotationIndex = 0; // Para rotacionar propagandas
-    
-    // Para cada hora do dia
-    for (let hour = 0; hour < 24; hour++) {
-        const hourSchedule = allSchedules.find(s => s.hour === hour && s.enabled);
-        
-        // Se tem hora certa configurada
-        if (hourSchedule && hourSchedule.audio_url) {
-            streamTimeline.push({
-                type: 'hour_certa',
-                hour: hour,
-                url: hourSchedule.audio_url,
-                title: `Hora Certa ${String(hour).padStart(2, '0')}:00`,
-                startTime: currentTimeOffset,
-                duration: 180 // Estimado: 3 minutos
-            });
-            currentTimeOffset += 180;
-            
-            // Adicionar propaganda após hora certa (se houver)
-            if (advertisements.length > 0) {
-                const ad = advertisements[adRotationIndex % advertisements.length];
-                if (ad && ad.enabled) {
-                    streamTimeline.push({
-                        type: 'advertisement',
-                        url: ad.audio_url,
-                        title: ad.title,
-                        advertiser: ad.advertiser,
-                        startTime: currentTimeOffset,
-                        duration: 30 // Estimado: 30 segundos
-                    });
-                    currentTimeOffset += 30;
-                    adRotationIndex++;
-                }
-            }
-        }
-        
-        // Preencher resto da hora com músicas da playlist diária
-        const hourEndTime = (hour + 1) * 3600; // Fim desta hora em segundos
-        let trackIndex = 0;
-        let tracksInThisHour = 0;
-        
-        while (currentTimeOffset < hourEndTime && dailyPlaylist.length > 0) {
-            const track = dailyPlaylist[trackIndex % dailyPlaylist.length];
-            
-            if (track && track.enabled) {
-                streamTimeline.push({
-                    type: 'music',
-                    url: track.audio_url,
-                    title: track.title,
-                    startTime: currentTimeOffset,
-                    duration: 210 // Estimado: 3.5 minutos
-                });
-                currentTimeOffset += 210;
-                tracksInThisHour++;
-                
-                // Adicionar propaganda a cada X músicas
-                const adFrequency = advertisements.length > 0 && advertisements[0].frequency ? advertisements[0].frequency : 3;
-                if (tracksInThisHour % adFrequency === 0 && advertisements.length > 0) {
-                    const ad = advertisements[adRotationIndex % advertisements.length];
-                    if (ad && ad.enabled) {
-                        streamTimeline.push({
-                            type: 'advertisement',
-                            url: ad.audio_url,
-                            title: ad.title,
-                            advertiser: ad.advertiser,
-                            startTime: currentTimeOffset,
-                            duration: 30
-                        });
-                        currentTimeOffset += 30;
-                        adRotationIndex++;
-                    }
-                }
-            }
-            
-            trackIndex++;
-            
-            // Evitar loop infinito
-            if (trackIndex > dailyPlaylist.length * 50) break;
-        }
-    }
-    
-    console.log('Timeline gerada:', streamTimeline.length, 'itens');
-}
-
-// Iniciar transmissão ao vivo
-async function startLiveStream() {
-    try {
-        const currentItem = getCurrentStreamItem();
-        
-        if (!currentItem) {
-            console.warn('Nenhum item disponível na transmissão');
-            handleNoAudio();
-            return;
-        }
-        
-        // Calcular tempo desde meia-noite
-        const now = new Date();
-        const secondsSinceMidnight = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
-        
-        // Calcular posição atual dentro do item
-        const itemElapsed = secondsSinceMidnight - currentItem.startTime;
-        const startPosition = Math.max(0, Math.min(itemElapsed, currentItem.duration - 1));
-        
-        console.log('Entrando na transmissão ao vivo:', {
-            item: currentItem.title,
-            position: startPosition + 's',
-            type: currentItem.type
-        });
-        
-        // Carregar áudio e posicionar
-        audioPlayer.src = currentItem.url;
-        
-        // Aguardar áudio estar pronto antes de posicionar
-        audioPlayer.addEventListener('loadedmetadata', function setPosition() {
-            audioPlayer.currentTime = startPosition;
-            audioPlayer.removeEventListener('loadedmetadata', setPosition);
-        });
-        
-        // Atualizar display
-        updateNowPlayingDisplay(currentItem);
-        
-        // Se estava tocando, continuar
-        if (isPlaying) {
-            audioPlayer.play().catch(err => {
-                console.error('Erro ao reproduzir:', err);
-            });
-        }
-        
-        // Verificar se precisa trocar de faixa
-        const remaining = currentItem.duration - itemElapsed;
-        if (remaining > 0) {
-            setTimeout(() => {
-                startLiveStream(); // Carregar próximo item
-            }, remaining * 1000);
-        } else {
-            // Item já terminou, carregar próximo imediatamente
-            setTimeout(() => startLiveStream(), 100);
-        }
-    } catch (error) {
-        console.error('Erro ao iniciar transmissão:', error);
-        setTimeout(() => startLiveStream(), 5000); // Tentar novamente em 5s
-    }
-}
-
-// Obter item atual da transmissão
-function getCurrentStreamItem() {
-    const now = new Date();
-    const secondsSinceMidnight = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
-    
-    // Encontrar item atual na timeline
-    for (let i = 0; i < streamTimeline.length; i++) {
-        const item = streamTimeline[i];
-        const itemEnd = item.startTime + item.duration;
-        
-        if (secondsSinceMidnight >= item.startTime && secondsSinceMidnight < itemEnd) {
-            return item;
-        }
-    }
-    
-    // Se não encontrou, retornar primeiro item (fallback)
-    return streamTimeline[0] || null;
-}
-
-function updateNowPlayingDisplay(item) {
-    if (!item) return;
-    
-    let icon = '🎵';
-    let label = '';
-    
-    switch (item.type) {
-        case 'hour_certa':
-            icon = '🎙️';
-            label = 'HORA CERTA';
-            break;
-        case 'advertisement':
-            icon = '📢';
-            label = item.advertiser ? `PROPAGANDA - ${item.advertiser}` : 'PROPAGANDA';
-            break;
-        case 'music':
-            icon = '🎵';
-            label = 'AO VIVO';
-            break;
-    }
-    
-    currentProgram.textContent = `${icon} ${label}: ${item.title}`;
-}
-
-async function ensureTableExists() {
-    try {
-        const { data, error } = await supabase
-            .from('radio_schedule')
-            .select('hour')
-            .limit(1);
-        
-        if (error && error.code === '42P01') {
-            console.warn('Tabelas não existem. Execute o SQL de configuração no Supabase.');
-            showMessage('Configure as tabelas no Supabase primeiro.', 'info');
-        }
-    } catch (error) {
-        console.error('Erro ao verificar tabela:', error);
-    }
-}
-
-function setupEventListeners() {
-    playBtn.addEventListener('click', togglePlay);
-    volumeSlider.addEventListener('input', updateVolume);
-    syncBtn.addEventListener('click', forceSync);
-    
-    audioPlayer.addEventListener('ended', handleAudioEnded);
-    audioPlayer.addEventListener('error', handleAudioError);
-}
-
-function setupRealtimeSubscription() {
-    supabase
-        .channel('radio_schedule_changes')
-        .on('postgres_changes', 
-            { event: '*', schema: 'public', table: 'radio_schedule' },
-            handleRealtimeUpdate
-        )
-        .on('postgres_changes', 
-            { event: '*', schema: 'public', table: 'background_playlist' },
-            handleRealtimeUpdate
-        )
-        .on('postgres_changes', 
-            { event: '*', schema: 'public', table: 'advertisements' },
-            handleRealtimeUpdate
-        )
-        .subscribe();
-}
-
-async function handleRealtimeUpdate(payload) {
-    console.log('Atualização em tempo real:', payload);
-    
-    try {
-        await loadSchedule();
-        await loadBackgroundPlaylist();
-        await loadAdvertisements();
-        await generateDailySchedule();
-        
-        showMessage('Programação atualizada!', 'info');
-    } catch (error) {
-        console.error('Erro ao atualizar:', error);
-    }
-}
-
-async function loadSchedule() {
-    try {
-        const { data, error } = await supabase
-            .from('radio_schedule')
-            .select('*')
-            .order('hour', { ascending: true });
-        
-        if (error) throw error;
-        
-        allSchedules = data || [];
-        updateScheduleDisplay();
-    } catch (error) {
-        console.error('Erro ao carregar programação:', error);
-        allSchedules = [];
-    }
-}
-
-async function loadBackgroundPlaylist() {
-    try {
-        const { data, error } = await supabase
-            .from('background_playlist')
-            .select('*')
-            .eq('enabled', true)
-            .order('play_order', { ascending: true });
-        
-        if (error) {
-            console.error('Erro ao carregar playlist de fundo:', error);
-            backgroundPlaylist = [];
-            return;
-        }
-        
-        backgroundPlaylist = data || [];
-        console.log('Playlist de fundo carregada:', backgroundPlaylist.length, 'músicas');
-    } catch (error) {
-        console.error('Erro ao carregar playlist:', error);
-        backgroundPlaylist = [];
-    }
-}
-
-async function loadAdvertisements() {
-    try {
-        const { data, error } = await supabase
-            .from('advertisements')
-            .select('*')
-            .eq('enabled', true)
-            .order('play_order', { ascending: true });
-        
-        if (error) {
-            console.error('Erro ao carregar propagandas:', error);
-            advertisements = [];
-            return;
-        }
-        
-        advertisements = data || [];
-        console.log('Propagandas carregadas:', advertisements.length, 'anúncios');
-    } catch (error) {
-        console.error('Erro ao carregar propagandas:', error);
-        advertisements = [];
-    }
-}
-
-function updateScheduleDisplay() {
-    const now = new Date();
-    const currentHourNum = now.getHours();
-    const prevHourNum = (currentHourNum - 1 + 24) % 24;
-    const nextHourNum = (currentHourNum + 1) % 24;
-    
-    const prevData = allSchedules.find(s => s.hour === prevHourNum);
-    const currData = allSchedules.find(s => s.hour === currentHourNum);
-    const nextData = allSchedules.find(s => s.hour === nextHourNum);
-    
-    previousProgram.textContent = prevData && prevData.enabled 
-        ? `${String(prevHourNum).padStart(2, '0')}:00 - Programado`
-        : `${String(prevHourNum).padStart(2, '0')}:00 - Playlist`;
-    
-    currentHour.textContent = currData && currData.enabled 
-        ? `${String(currentHourNum).padStart(2, '0')}:00 - Hora Certa`
-        : `${String(currentHourNum).padStart(2, '0')}:00 - Playlist`;
-    
-    nextProgram.textContent = nextData && nextData.enabled 
-        ? `${String(nextHourNum).padStart(2, '0')}:00 - Próximo`
-        : `${String(nextHourNum).padStart(2, '0')}:00 - Playlist`;
-}
-
-function handleNoAudio() {
-    audioPlayer.src = '';
-    currentProgram.textContent = 'Programação temporariamente indisponível';
-    showMessage('Nenhum conteúdo disponível no momento', 'info');
-    if (isPlaying) {
-        togglePlay();
-    }
-}
-
-function togglePlay() {
-    if (!audioPlayer.src) {
-        showMessage('Nenhum áudio disponível', 'error');
-        return;
-    }
-    
-    if (isPlaying) {
-        audioPlayer.pause();
-        isPlaying = false;
-        playBtn.innerHTML = '<span class="icon">▶️</span><span class="text">Play</span>';
-        playBtn.classList.remove('playing');
-    } else {
-        // Ao dar play, sincronizar com transmissão ao vivo
-        startLiveStream().then(() => {
-            audioPlayer.play()
-                .then(() => {
-                    isPlaying = true;
-                    playBtn.innerHTML = '<span class="icon">⏸️</span><span class="text">Pause</span>';
-                    playBtn.classList.add('playing');
-                })
-                .catch(error => {
-                    console.error('Erro ao reproduzir:', error);
-                    showMessage('Erro ao reproduzir áudio.', 'error');
-                });
-        });
-    }
-}
-
-function updateVolume() {
-    const volume = volumeSlider.value / 100;
-    audioPlayer.volume = volume;
-    volumeValue.textContent = `${volumeSlider.value}%`;
-}
-
-async function forceSync() {
-    showMessage('Sincronizando com transmissão ao vivo...', 'info');
-    syncBtn.disabled = true;
-    
-    try {
-        await loadSchedule();
-        await loadBackgroundPlaylist();
-        await loadAdvertisements();
-        await generateDailySchedule();
-        await startLiveStream();
-        showMessage('Sincronização concluída!', 'success');
-    } catch (error) {
-        showMessage('Erro na sincronização', 'error');
-    } finally {
-        setTimeout(() => {
-            syncBtn.disabled = false;
-        }, 2000);
-    }
-}
-
-function updateClock() {
-    const now = new Date();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-    
-    currentTime.textContent = `${hours}:${minutes}:${seconds}`;
-    
-    const nextHour = new Date(now);
-    nextHour.setHours(now.getHours() + 1, 0, 0, 0);
-    const diff = nextHour - now;
-    
-    const minutesLeft = Math.floor(diff / 60000);
-    const secondsLeft = Math.floor((diff % 60000) / 1000);
-    
-    countdownTimer.textContent = `${String(minutesLeft).padStart(2, '0')}:${String(secondsLeft).padStart(2, '0')}`;
-    
-    // Verificar se mudou o dia (gerar nova programação)
-    const todaySeed = getDailySeed();
-    if (todaySeed !== currentDailySeed) {
-        console.log('Novo dia detectado! Gerando nova programação...');
-        generateDailySchedule().then(() => startLiveStream());
-    }
-}
-
-function handleAudioEnded() {
-    console.log('Áudio finalizado, carregando próximo da transmissão...');
-    startLiveStream();
-}
-
-function handleAudioError(event) {
-    console.error('Erro no áudio:', event);
-    showMessage('Erro ao carregar áudio.', 'error');
-    // Tentar próximo item
-    setTimeout(() => startLiveStream(), 2000);
-}
-
-function showMessage(message, type) {
-    statusMessage.textContent = message;
-    statusMessage.className = `status-message ${type}`;
-    
-    setTimeout(() => {
-        statusMessage.className = 'status-message';
-    }, 5000);
-}
-
-audioPlayer.volume = 0.7;
+let currentBackgroundIndex = 0;
+let currentAdIndex = 0;
+let tracksPlayedSinceLastAd = 0;
+let isPlayingHourCerta = false;
+let isPlayingAd = false;
 
 // Inicializar
 init();
@@ -637,11 +115,14 @@ CREATE INDEX IF NOT EXISTS idx_background_playlist_order ON background_playlist(
 
 async function loadBackgroundPlaylist() {
     try {
+        // Verificar se precisa embaralhar (novo dia)
+        await checkAndShuffleIfNewDay();
+        
         const { data, error } = await supabase
             .from('background_playlist')
             .select('*')
             .eq('enabled', true)
-            .order('play_order', { ascending: true });
+            .order('daily_order', { ascending: true });
         
         if (error) {
             console.error('Erro ao carregar playlist de fundo:', error);
@@ -651,9 +132,90 @@ async function loadBackgroundPlaylist() {
         
         backgroundPlaylist = data || [];
         console.log('Playlist de fundo carregada:', backgroundPlaylist.length, 'músicas');
+        console.log('🎲 Ordem do dia aplicada!');
     } catch (error) {
         console.error('Erro ao carregar playlist:', error);
         backgroundPlaylist = [];
+    }
+}
+
+async function checkAndShuffleIfNewDay() {
+    try {
+        // Buscar data do último embaralhamento
+        const { data, error } = await supabase
+            .from('background_playlist')
+            .select('last_shuffle_date')
+            .limit(1)
+            .single();
+        
+        if (error && error.code !== 'PGRST116') {
+            console.error('Erro ao verificar data:', error);
+            return;
+        }
+        
+        const today = new Date().toISOString().split('T')[0];
+        const lastShuffleDate = data?.last_shuffle_date;
+        
+        // Se é um novo dia, embaralhar
+        if (!lastShuffleDate || lastShuffleDate !== today) {
+            console.log('🎲 Novo dia detectado! Embaralhando playlist...');
+            await shufflePlaylistForToday();
+        } else {
+            console.log('✅ Playlist do dia já configurada');
+        }
+    } catch (error) {
+        console.error('Erro ao verificar dia:', error);
+    }
+}
+
+async function shufflePlaylistForToday() {
+    try {
+        // Buscar todas as músicas ativas
+        const { data: allTracks, error: fetchError } = await supabase
+            .from('background_playlist')
+            .select('id, original_order')
+            .eq('enabled', true)
+            .order('original_order', { ascending: true });
+        
+        if (fetchError) throw fetchError;
+        
+        if (!allTracks || allTracks.length === 0) {
+            console.log('Nenhuma música para embaralhar');
+            return;
+        }
+        
+        // Criar array de índices e embaralhar (Fisher-Yates shuffle)
+        const shuffledIndices = [...Array(allTracks.length).keys()];
+        for (let i = shuffledIndices.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffledIndices[i], shuffledIndices[j]] = [shuffledIndices[j], shuffledIndices[i]];
+        }
+        
+        // Atualizar cada música com nova ordem
+        const today = new Date().toISOString().split('T')[0];
+        
+        for (let i = 0; i < allTracks.length; i++) {
+            const track = allTracks[i];
+            const newOrder = shuffledIndices[i];
+            
+            const { error: updateError } = await supabase
+                .from('background_playlist')
+                .update({
+                    daily_order: newOrder,
+                    last_shuffle_date: today
+                })
+                .eq('id', track.id);
+            
+            if (updateError) {
+                console.error('Erro ao atualizar ordem:', updateError);
+            }
+        }
+        
+        console.log('🎲 Playlist embaralhada com sucesso!');
+        console.log(`📅 Nova programação para: ${today}`);
+        
+    } catch (error) {
+        console.error('Erro ao embaralhar playlist:', error);
     }
 }
 
