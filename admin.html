@@ -132,7 +132,8 @@
                     <table class="schedule-table">
                         <thead>
                             <tr>
-                                <th>Ordem</th>
+                                <th>Ordem Original</th>
+                                <th>Ordem do Dia 🎲</th>
                                 <th>Título</th>
                                 <th>Status</th>
                                 <th>URL do Áudio</th>
@@ -143,6 +144,12 @@
                             <!-- Conteúdo gerado dinamicamente -->
                         </tbody>
                     </table>
+                </div>
+                
+                <div style="margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196f3;">
+                    <h4 style="margin: 0 0 10px 0; color: #1976d2;">🎲 Programação Dinâmica Diária</h4>
+                    <p style="margin: 0; color: #555;">A "Ordem do Dia" é embaralhada automaticamente à meia-noite. A ordem original nunca muda.</p>
+                    <button class="test-btn" id="forceShuffleBtn" style="margin-top: 10px;">🎲 Forçar Embaralhamento Agora</button>
                 </div>
             </div>
 
