@@ -41,7 +41,7 @@ async function init() {
         // Carregar programação
         await loadSchedule();
         
-        // Carregar playlist de fundo
+        // Carregar playlist de fundo (com embaralhamento se necessário)
         await loadBackgroundPlaylist();
         
         // Carregar propagandas
@@ -59,6 +59,9 @@ async function init() {
         
         // Verificar mudança de hora
         setInterval(checkHourChange, 30000); // A cada 30 segundos
+        
+        // Verificar novo dia (a cada minuto)
+        setInterval(checkAndShuffleIfNewDay, 60000);
         
         // Carregar áudio da hora atual
         await loadCurrentHourAudio();
@@ -99,13 +102,30 @@ CREATE TABLE IF NOT EXISTS background_playlist (
     title TEXT,
     enabled BOOLEAN DEFAULT true,
     play_order INTEGER DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    original_order INTEGER DEFAULT 0,
+    daily_order INTEGER DEFAULT 0,
+    last_shuffle_date DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS advertisements (
+    id SERIAL PRIMARY KEY,
+    audio_url TEXT NOT NULL,
+    title TEXT NOT NULL,
+    advertiser TEXT,
+    frequency INTEGER DEFAULT 3,
+    play_order INTEGER DEFAULT 0,
+    enabled BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Criar índices
 CREATE INDEX IF NOT EXISTS idx_radio_schedule_hour ON radio_schedule(hour);
 CREATE INDEX IF NOT EXISTS idx_radio_schedule_enabled ON radio_schedule(enabled);
-CREATE INDEX IF NOT EXISTS idx_background_playlist_order ON background_playlist(play_order);
+CREATE INDEX IF NOT EXISTS idx_background_playlist_daily_order ON background_playlist(daily_order);
+CREATE INDEX IF NOT EXISTS idx_advertisements_order ON advertisements(play_order);
             `);
         }
     } catch (error) {
@@ -113,31 +133,9 @@ CREATE INDEX IF NOT EXISTS idx_background_playlist_order ON background_playlist(
     }
 }
 
-async function loadBackgroundPlaylist() {
-    try {
-        // Verificar se precisa embaralhar (novo dia)
-        await checkAndShuffleIfNewDay();
-        
-        const { data, error } = await supabase
-            .from('background_playlist')
-            .select('*')
-            .eq('enabled', true)
-            .order('daily_order', { ascending: true });
-        
-        if (error) {
-            console.error('Erro ao carregar playlist de fundo:', error);
-            backgroundPlaylist = [];
-            return;
-        }
-        
-        backgroundPlaylist = data || [];
-        console.log('Playlist de fundo carregada:', backgroundPlaylist.length, 'músicas');
-        console.log('🎲 Ordem do dia aplicada!');
-    } catch (error) {
-        console.error('Erro ao carregar playlist:', error);
-        backgroundPlaylist = [];
-    }
-}
+// ==========================================
+// 🎲 PROGRAMAÇÃO DINÂMICA DIÁRIA - NOVO!
+// ==========================================
 
 async function checkAndShuffleIfNewDay() {
     try {
@@ -160,8 +158,10 @@ async function checkAndShuffleIfNewDay() {
         if (!lastShuffleDate || lastShuffleDate !== today) {
             console.log('🎲 Novo dia detectado! Embaralhando playlist...');
             await shufflePlaylistForToday();
+            // Recarregar playlist após embaralhar
+            await loadBackgroundPlaylist();
         } else {
-            console.log('✅ Playlist do dia já configurada');
+            console.log('✅ Playlist do dia já configurada para:', today);
         }
     } catch (error) {
         console.error('Erro ao verificar dia:', error);
@@ -219,6 +219,45 @@ async function shufflePlaylistForToday() {
     }
 }
 
+// ==========================================
+// FIM - PROGRAMAÇÃO DINÂMICA DIÁRIA
+// ==========================================
+
+async function loadBackgroundPlaylist() {
+    try {
+        // Verificar se precisa embaralhar (novo dia)
+        await checkAndShuffleIfNewDay();
+        
+        // IMPORTANTE: Usar daily_order ao invés de play_order
+        const { data, error } = await supabase
+            .from('background_playlist')
+            .select('*')
+            .eq('enabled', true)
+            .order('daily_order', { ascending: true });
+        
+        if (error) {
+            console.error('Erro ao carregar playlist de fundo:', error);
+            backgroundPlaylist = [];
+            return;
+        }
+        
+        backgroundPlaylist = data || [];
+        console.log('🎵 Playlist de fundo carregada:', backgroundPlaylist.length, 'músicas');
+        console.log('🎲 Ordem do dia aplicada!');
+        
+        // Log da ordem do dia para debug
+        if (backgroundPlaylist.length > 0) {
+            console.log('📋 Ordem de reprodução hoje:');
+            backgroundPlaylist.forEach((track, index) => {
+                console.log(`  ${index + 1}. ${track.title} (Original: ${track.original_order}, Dia: ${track.daily_order})`);
+            });
+        }
+    } catch (error) {
+        console.error('Erro ao carregar playlist:', error);
+        backgroundPlaylist = [];
+    }
+}
+
 async function loadAdvertisements() {
     try {
         const { data, error } = await supabase
@@ -234,7 +273,7 @@ async function loadAdvertisements() {
         }
         
         advertisements = data || [];
-        console.log('Propagandas carregadas:', advertisements.length, 'anúncios');
+        console.log('📢 Propagandas carregadas:', advertisements.length, 'anúncios');
     } catch (error) {
         console.error('Erro ao carregar propagandas:', error);
         advertisements = [];
@@ -252,11 +291,36 @@ function setupEventListeners() {
 }
 
 function setupRealtimeSubscription() {
+    // Subscription para mudanças na programação de hora certa
     supabase
         .channel('radio_schedule_changes')
         .on('postgres_changes', 
             { event: '*', schema: 'public', table: 'radio_schedule' },
             handleRealtimeUpdate
+        )
+        .subscribe();
+    
+    // Subscription para mudanças na playlist
+    supabase
+        .channel('playlist_changes')
+        .on('postgres_changes',
+            { event: '*', schema: 'public', table: 'background_playlist' },
+            () => {
+                console.log('🔄 Playlist atualizada, recarregando...');
+                loadBackgroundPlaylist();
+            }
+        )
+        .subscribe();
+    
+    // Subscription para mudanças nas propagandas
+    supabase
+        .channel('ads_changes')
+        .on('postgres_changes',
+            { event: '*', schema: 'public', table: 'advertisements' },
+            () => {
+                console.log('🔄 Propagandas atualizadas, recarregando...');
+                loadAdvertisements();
+            }
         )
         .subscribe();
 }
@@ -392,6 +456,8 @@ function playBackgroundMusic() {
         
         tracksPlayedSinceLastAd++;
         
+        console.log(`🎵 Tocando: ${currentTrack.title} (${currentBackgroundIndex + 1}/${backgroundPlaylist.length})`);
+        
         // Auto-play se estava tocando
         if (isPlaying) {
             audioPlayer.play().catch(err => {
@@ -418,6 +484,8 @@ function playAdvertisement() {
     if (currentAd && currentAd.audio_url) {
         audioPlayer.src = currentAd.audio_url;
         currentProgram.textContent = `📢 ${currentAd.title}${currentAd.advertiser ? ' - ' + currentAd.advertiser : ''}`;
+        
+        console.log(`📢 Tocando propaganda: ${currentAd.title}`);
         
         // Auto-play se estava tocando
         if (isPlaying) {
@@ -479,6 +547,8 @@ async function forceSync() {
     
     try {
         await loadSchedule();
+        await loadBackgroundPlaylist();
+        await loadAdvertisements();
         await loadCurrentHourAudio();
         showMessage('Sincronização concluída!', 'success');
     } catch (error) {
@@ -515,18 +585,18 @@ async function checkHourChange() {
     
     // Se mudou de hora e estamos no minuto 00
     if (now.getMinutes() === 0 && (!currentHourData || currentHourData.hour !== currentHourNum)) {
-        console.log('Mudança de hora detectada, recarregando...');
+        console.log('🕐 Mudança de hora detectada, recarregando...');
         await loadCurrentHourAudio();
         updateScheduleDisplay();
     }
 }
 
 function handleAudioEnded() {
-    console.log('Áudio finalizado');
+    console.log('🎵 Áudio finalizado');
     
     // Se estava tocando hora certa, mudar para playlist de fundo
     if (isPlayingHourCerta) {
-        console.log('Hora certa finalizada, verificando propagandas...');
+        console.log('✅ Hora certa finalizada, verificando propagandas...');
         // Após hora certa, tocar propaganda se houver
         if (advertisements.length > 0) {
             playAdvertisement();
@@ -535,13 +605,13 @@ function handleAudioEnded() {
         }
     } else if (isPlayingAd) {
         // Se estava tocando propaganda, voltar para playlist
-        console.log('Propaganda finalizada, voltando para playlist');
+        console.log('✅ Propaganda finalizada, voltando para playlist');
         playBackgroundMusic();
     } else {
         // Se estava tocando música de fundo, avançar para próxima
         if (backgroundPlaylist.length > 0) {
             currentBackgroundIndex = (currentBackgroundIndex + 1) % backgroundPlaylist.length;
-            console.log('Avançando para próxima música:', currentBackgroundIndex);
+            console.log(`➡️ Avançando para próxima música: ${currentBackgroundIndex + 1}/${backgroundPlaylist.length}`);
             playBackgroundMusic();
         } else {
             // Se não houver playlist, repetir o áudio atual
@@ -555,7 +625,7 @@ function handleAudioEnded() {
 }
 
 function handleAudioError(event) {
-    console.error('Erro no áudio:', event);
+    console.error('❌ Erro no áudio:', event);
     showMessage('Erro ao carregar áudio. Verifique a URL.', 'error');
     if (isPlaying) {
         togglePlay();
@@ -563,7 +633,7 @@ function handleAudioError(event) {
 }
 
 function handleCanPlay() {
-    console.log('Áudio pronto para reprodução');
+    console.log('✅ Áudio pronto para reprodução');
 }
 
 function showMessage(message, type) {
