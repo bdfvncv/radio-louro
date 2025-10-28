@@ -32,6 +32,7 @@ const playlistEnabled = document.getElementById('playlistEnabled');
 const testPlaylistBtn = document.getElementById('testPlaylistBtn');
 const clearPlaylistBtn = document.getElementById('clearPlaylistBtn');
 const playlistTableBody = document.getElementById('playlistTableBody');
+const forceShuffleBtn = document.getElementById('forceShuffleBtn');
 
 // Ads elements
 const adsForm = document.getElementById('adsForm');
@@ -95,6 +96,11 @@ function setupEventListeners() {
     playlistForm.addEventListener('submit', handleSavePlaylist);
     testPlaylistBtn.addEventListener('click', handleTestPlaylistAudio);
     clearPlaylistBtn.addEventListener('click', handleClearPlaylistForm);
+    
+    // NOVO: Listener para botão de embaralhamento
+    if (forceShuffleBtn) {
+        forceShuffleBtn.addEventListener('click', handleForceShufflePlaylist);
+    }
     
     adsForm.addEventListener('submit', handleSaveAd);
     testAdBtn.addEventListener('click', handleTestAdAudio);
@@ -372,12 +378,77 @@ function handleHourSelect() {
     }
 }
 
+// ==========================================
+// 🎲 PROGRAMAÇÃO DINÂMICA DIÁRIA - NOVO!
+// ==========================================
+
+async function handleForceShufflePlaylist() {
+    if (!confirm('🎲 Deseja embaralhar a playlist agora?\n\nIsso criará uma nova ordem aleatória para reprodução hoje.')) {
+        return;
+    }
+    
+    try {
+        // Buscar todas as músicas ativas
+        const { data: allTracks, error: fetchError } = await supabase
+            .from('background_playlist')
+            .select('id, original_order')
+            .eq('enabled', true)
+            .order('original_order', { ascending: true });
+        
+        if (fetchError) throw fetchError;
+        
+        if (!allTracks || allTracks.length === 0) {
+            alert('❌ Nenhuma música ativa para embaralhar!');
+            return;
+        }
+        
+        // Criar array de índices e embaralhar (Fisher-Yates shuffle)
+        const shuffledIndices = [...Array(allTracks.length).keys()];
+        for (let i = shuffledIndices.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffledIndices[i], shuffledIndices[j]] = [shuffledIndices[j], shuffledIndices[i]];
+        }
+        
+        // Atualizar cada música com nova ordem
+        const today = new Date().toISOString().split('T')[0];
+        
+        for (let i = 0; i < allTracks.length; i++) {
+            const track = allTracks[i];
+            const newOrder = shuffledIndices[i];
+            
+            const { error: updateError } = await supabase
+                .from('background_playlist')
+                .update({
+                    daily_order: newOrder,
+                    last_shuffle_date: today
+                })
+                .eq('id', track.id);
+            
+            if (updateError) {
+                console.error('Erro ao atualizar ordem:', updateError);
+            }
+        }
+        
+        alert('🎲 Playlist embaralhada com sucesso!\n\n✅ Nova ordem de reprodução aplicada.');
+        loadBackgroundPlaylist();
+        
+    } catch (error) {
+        console.error('Erro ao embaralhar:', error);
+        alert('❌ Erro ao embaralhar playlist: ' + error.message);
+    }
+}
+
+// ==========================================
+// FIM - PROGRAMAÇÃO DINÂMICA DIÁRIA
+// ==========================================
+
 async function loadBackgroundPlaylist() {
     try {
+        // Carregar usando daily_order
         const { data, error } = await supabase
             .from('background_playlist')
             .select('*')
-            .order('play_order', { ascending: true });
+            .order('original_order', { ascending: true }); // Mostrar por ordem original no admin
         
         if (error) throw error;
         
@@ -393,7 +464,7 @@ function renderPlaylistTable() {
     
     if (backgroundPlaylist.length === 0) {
         const tr = document.createElement('tr');
-        tr.innerHTML = '<td colspan="5" style="text-align: center; padding: 30px; color: #999;">Nenhuma música na playlist. Adicione músicas usando o formulário acima.</td>';
+        tr.innerHTML = '<td colspan="6" style="text-align: center; padding: 30px; color: #999;">Nenhuma música na playlist. Adicione músicas usando o formulário acima.</td>';
         playlistTableBody.appendChild(tr);
         return;
     }
@@ -401,10 +472,24 @@ function renderPlaylistTable() {
     backgroundPlaylist.forEach(track => {
         const tr = document.createElement('tr');
         
-        const tdOrder = document.createElement('td');
-        tdOrder.textContent = track.play_order;
-        tdOrder.style.fontWeight = 'bold';
-        tr.appendChild(tdOrder);
+        // NOVO: Coluna Ordem Original
+        const tdOriginalOrder = document.createElement('td');
+        tdOriginalOrder.textContent = track.original_order || track.play_order || 0;
+        tdOriginalOrder.style.fontWeight = 'bold';
+        tdOriginalOrder.style.color = '#666';
+        tr.appendChild(tdOriginalOrder);
+        
+        // NOVO: Coluna Ordem do Dia (embaralhada)
+        const tdDailyOrder = document.createElement('td');
+        const dailyBadge = document.createElement('span');
+        dailyBadge.style.padding = '5px 12px';
+        dailyBadge.style.background = '#e3f2fd';
+        dailyBadge.style.borderRadius = '15px';
+        dailyBadge.style.fontWeight = 'bold';
+        dailyBadge.style.color = '#1976d2';
+        dailyBadge.textContent = `🎲 ${track.daily_order !== undefined ? track.daily_order : (track.play_order || 0)}`;
+        tdDailyOrder.appendChild(dailyBadge);
+        tr.appendChild(tdDailyOrder);
         
         const tdTitle = document.createElement('td');
         tdTitle.textContent = track.title || 'Sem título';
@@ -482,6 +567,7 @@ async function handleSavePlaylist(e) {
                     audio_url: url,
                     title: title,
                     play_order: order,
+                    original_order: order, // Manter original_order sincronizado
                     enabled: enabled,
                     updated_at: new Date().toISOString()
                 })
@@ -496,6 +582,8 @@ async function handleSavePlaylist(e) {
                     audio_url: url,
                     title: title,
                     play_order: order,
+                    original_order: order, // Definir original_order igual ao play_order
+                    daily_order: order, // Inicialmente, daily_order = play_order
                     enabled: enabled
                 }]);
             
