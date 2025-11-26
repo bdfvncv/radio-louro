@@ -16,9 +16,11 @@ const loginError = document.getElementById('loginError');
 const logoutBtn = document.getElementById('logoutBtn');
 const hourSelect = document.getElementById('hourSelect');
 const audioUrl = document.getElementById('audioUrl');
+const audioUrlHalf = document.getElementById('audioUrlHalf'); // 🆕 NOVO CAMPO
 const enabledCheckbox = document.getElementById('enabledCheckbox');
 const editForm = document.getElementById('editForm');
 const testBtn = document.getElementById('testBtn');
+const testBtnHalf = document.getElementById('testBtnHalf'); // 🆕 NOVO BOTÃO
 const clearBtn = document.getElementById('clearBtn');
 const scheduleTableBody = document.getElementById('scheduleTableBody');
 const testAudio = document.getElementById('testAudio');
@@ -90,6 +92,9 @@ function setupEventListeners() {
     logoutBtn.addEventListener('click', handleLogout);
     editForm.addEventListener('submit', handleSaveSchedule);
     testBtn.addEventListener('click', handleTestAudio);
+    if (testBtnHalf) {
+        testBtnHalf.addEventListener('click', handleTestAudioHalf); // 🆕 NOVO LISTENER
+    }
     clearBtn.addEventListener('click', handleClearForm);
     hourSelect.addEventListener('change', handleHourSelect);
     
@@ -206,13 +211,24 @@ function renderScheduleTable() {
         tdStatus.appendChild(statusBadge);
         tr.appendChild(tdStatus);
         
+        // 🆕 COLUNA PARA :00
         const tdUrl = document.createElement('td');
         const urlSpan = document.createElement('span');
         urlSpan.className = 'audio-url';
-        urlSpan.textContent = schedule && schedule.audio_url ? schedule.audio_url : 'Nenhuma URL configurada';
+        urlSpan.textContent = schedule && schedule.audio_url ? schedule.audio_url : 'Nenhuma URL (:00)';
         urlSpan.title = schedule && schedule.audio_url ? schedule.audio_url : '';
         tdUrl.appendChild(urlSpan);
         tr.appendChild(tdUrl);
+        
+        // 🆕 NOVA COLUNA PARA :30
+        const tdUrlHalf = document.createElement('td');
+        const urlHalfSpan = document.createElement('span');
+        urlHalfSpan.className = 'audio-url';
+        urlHalfSpan.textContent = schedule && schedule.audio_url_half ? schedule.audio_url_half : 'Nenhuma URL (:30)';
+        urlHalfSpan.title = schedule && schedule.audio_url_half ? schedule.audio_url_half : '';
+        urlHalfSpan.style.color = schedule && schedule.audio_url_half ? '#333' : '#999';
+        tdUrlHalf.appendChild(urlHalfSpan);
+        tr.appendChild(tdUrlHalf);
         
         const tdActions = document.createElement('td');
         const actionsDiv = document.createElement('div');
@@ -251,6 +267,7 @@ function editSchedule(hour) {
     editingHour = hour;
     hourSelect.value = hour;
     audioUrl.value = schedule ? schedule.audio_url : '';
+    audioUrlHalf.value = schedule ? (schedule.audio_url_half || '') : ''; // 🆕 NOVO CAMPO
     enabledCheckbox.checked = schedule ? schedule.enabled : true;
     
     editForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -262,10 +279,11 @@ async function handleSaveSchedule(e) {
     
     const hour = parseInt(hourSelect.value);
     const url = audioUrl.value.trim();
+    const urlHalf = audioUrlHalf.value.trim(); // 🆕 NOVO CAMPO
     const enabled = enabledCheckbox.checked;
     
     if (!url) {
-        alert('Por favor, insira uma URL válida!');
+        alert('Por favor, insira pelo menos a URL para :00!');
         return;
     }
     
@@ -277,6 +295,7 @@ async function handleSaveSchedule(e) {
                 .from('radio_schedule')
                 .update({
                     audio_url: url,
+                    audio_url_half: urlHalf || null, // 🆕 NOVO CAMPO
                     enabled: enabled,
                     updated_at: new Date().toISOString()
                 })
@@ -290,6 +309,7 @@ async function handleSaveSchedule(e) {
                 .insert([{
                     hour: hour,
                     audio_url: url,
+                    audio_url_half: urlHalf || null, // 🆕 NOVO CAMPO
                     enabled: enabled
                 }]);
             
@@ -367,6 +387,7 @@ function handleTestAudio() {
 function handleClearForm() {
     hourSelect.value = '';
     audioUrl.value = '';
+    audioUrlHalf.value = ''; // 🆕 NOVO CAMPO
     enabledCheckbox.checked = true;
     editingHour = null;
 }
@@ -376,6 +397,28 @@ function handleHourSelect() {
     if (!isNaN(hour)) {
         editSchedule(hour);
     }
+}
+
+// 🆕 NOVA FUNÇÃO PARA TESTAR ÁUDIO DE :30
+function handleTestAudioHalf() {
+    const url = audioUrlHalf.value.trim();
+    
+    if (!url) {
+        alert('Por favor, insira uma URL para :30 para testar!');
+        return;
+    }
+    
+    testAudio.src = url;
+    testAudio.play()
+        .then(() => {
+            alert('▶️ Reproduzindo áudio de :30...\nClique em OK para parar.');
+            testAudio.pause();
+            testAudio.currentTime = 0;
+        })
+        .catch(error => {
+            console.error('Erro ao testar áudio:', error);
+            alert('❌ Erro ao reproduzir áudio. Verifique se a URL está correta.');
+        });
 }
 
 // ==========================================
@@ -799,8 +842,8 @@ async function handleSaveAd(e) {
         return;
     }
     
-    if (frequency < 1 || frequency > 10) {
-        alert('A frequência deve estar entre 1 e 10!');
+    if (frequency < 1 || frequency > 100) {
+        alert('A frequência deve estar entre 1 e 100!');
         return;
     }
     
