@@ -404,14 +404,32 @@ async function loadCurrentHourAudio() {
         
         currentHourData = data;
         
-        // Se está no minuto 00, 01 ou 02, tocar hora certa
-        // Depois disso, tocar música de fundo
-        if (currentMinute <= 2 && data && data.audio_url && data.audio_url.trim() !== '') {
+        // 🆕 HORA CERTA em 2 momentos com ÁUDIOS DIFERENTES:
+        // 1. Minutos 00, 01, 02 (hora cheia) → usa audio_url
+        // 2. Minutos 30, 31, 32 (meia hora) → usa audio_url_half
+        const isHourExact = currentMinute <= 2;
+        const isHalfHour = currentMinute >= 30 && currentMinute <= 32;
+        
+        if (isHourExact && data && data.audio_url && data.audio_url.trim() !== '') {
+            // HORA CHEIA (XX:00)
             isPlayingHourCerta = true;
             audioPlayer.src = data.audio_url;
             currentProgram.textContent = `🎙️ Hora Certa - ${String(currentHourNum).padStart(2, '0')}:00`;
+            console.log(`🎙️ Tocando Hora Certa (hora cheia): ${currentProgram.textContent}`);
             
-            // Auto-play se estava tocando
+            if (isPlaying) {
+                audioPlayer.play().catch(err => {
+                    console.error('Erro ao reproduzir:', err);
+                    showMessage('Clique em Play para ouvir', 'info');
+                });
+            }
+        } else if (isHalfHour && data && data.audio_url_half && data.audio_url_half.trim() !== '') {
+            // MEIA HORA (XX:30)
+            isPlayingHourCerta = true;
+            audioPlayer.src = data.audio_url_half;
+            currentProgram.textContent = `🎙️ Hora Certa - ${String(currentHourNum).padStart(2, '0')}:30`;
+            console.log(`🎙️ Tocando Hora Certa (meia hora): ${currentProgram.textContent}`);
+            
             if (isPlaying) {
                 audioPlayer.play().catch(err => {
                     console.error('Erro ao reproduzir:', err);
@@ -419,7 +437,7 @@ async function loadCurrentHourAudio() {
                 });
             }
         } else {
-            // Fora do horário da hora certa, tocar música de fundo
+            // Fora do horário da hora certa OU sem áudio configurado
             playBackgroundMusic();
         }
     } catch (error) {
@@ -582,10 +600,14 @@ function updateClock() {
 async function checkHourChange() {
     const now = new Date();
     const currentHourNum = now.getHours();
+    const currentMinute = now.getMinutes();
     
-    // Se mudou de hora e estamos no minuto 00
-    if (now.getMinutes() === 0 && (!currentHourData || currentHourData.hour !== currentHourNum)) {
-        console.log('🕐 Mudança de hora detectada, recarregando...');
+    // 🆕 Verificar mudança de hora (:00) ou meia hora (:30)
+    const isHourChange = currentMinute === 0;
+    const isHalfHourChange = currentMinute === 30;
+    
+    if ((isHourChange || isHalfHourChange) && (!currentHourData || currentHourData.hour !== currentHourNum)) {
+        console.log('🕐 Mudança detectada (hora cheia ou meia hora), recarregando...');
         await loadCurrentHourAudio();
         updateScheduleDisplay();
     }
