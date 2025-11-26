@@ -47,6 +47,7 @@
 
             <div class="editor-section">
                 <h2>✏️ Editor de Programação</h2>
+                <p class="section-description">Configure os áudios para cada hora. Você pode definir um áudio para :00 (hora cheia) e outro para :30 (meia hora).</p>
                 <form id="editForm" class="edit-form">
                     <div class="form-group">
                         <label for="hourSelect">Hora (0-23):</label>
@@ -56,8 +57,15 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="audioUrl">URL do Áudio:</label>
+                        <label for="audioUrl">URL do Áudio (:00 - Hora Cheia):</label>
                         <input type="url" id="audioUrl" placeholder="https://res.cloudinary.com/..." required>
+                        <small>Áudio que tocará em XX:00 (ex: 14:00, 15:00, etc.)</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="audioUrlHalf">URL do Áudio (:30 - Meia Hora) - Opcional:</label>
+                        <input type="url" id="audioUrlHalf" placeholder="https://res.cloudinary.com/...">
+                        <small>Áudio que tocará em XX:30 (ex: 14:30, 15:30, etc.) - Deixe vazio para não tocar aos :30</small>
                     </div>
 
                     <div class="form-group checkbox-group">
@@ -69,7 +77,8 @@
 
                     <div class="form-actions">
                         <button type="submit" class="submit-btn">💾 Salvar</button>
-                        <button type="button" class="test-btn" id="testBtn">▶️ Testar Reprodução</button>
+                        <button type="button" class="test-btn" id="testBtn">▶️ Testar :00</button>
+                        <button type="button" class="test-btn" id="testBtnHalf">▶️ Testar :30</button>
                         <button type="button" class="clear-btn" id="clearBtn">🗑️ Limpar</button>
                     </div>
                 </form>
@@ -83,7 +92,8 @@
                             <tr>
                                 <th>Hora</th>
                                 <th>Status</th>
-                                <th>URL do Áudio</th>
+                                <th>URL do Áudio (:00)</th>
+                                <th>URL do Áudio (:30)</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
@@ -175,8 +185,8 @@
 
                     <div class="form-group">
                         <label for="adFrequency">Frequência (a cada quantas músicas):</label>
-                        <input type="number" id="adFrequency" value="3" min="1" max="10" required>
-                        <small>Valor 3 = toca a cada 3 músicas</small>
+                        <input type="number" id="adFrequency" value="3" min="1" max="100" required>
+                        <small>Valor 3 = toca a cada 3 músicas | Valor 10 = toca a cada 10 músicas | Máximo: 100</small>
                     </div>
 
                     <div class="form-group">
