@@ -359,26 +359,63 @@ async function loadSchedule() {
 function updateScheduleDisplay() {
     const now = new Date();
     const currentHourNum = now.getHours();
-    const prevHourNum = (currentHourNum - 1 + 24) % 24;
-    const nextHourNum = (currentHourNum + 1) % 24;
+    const currentMinute = now.getMinutes();
+    
+    // Determinar qual é o horário atual (hora cheia ou meia hora)
+    let currentSlot, prevSlot, nextSlot;
+    
+    if (currentMinute < 30) {
+        // Estamos entre :00 e :29 - hora cheia é a atual
+        currentSlot = { hour: currentHourNum, half: false, label: `${String(currentHourNum).padStart(2, '0')}:00` };
+        
+        // Anterior: meia hora da hora anterior
+        const prevHour = (currentHourNum - 1 + 24) % 24;
+        prevSlot = { hour: prevHour, half: true, label: `${String(prevHour).padStart(2, '0')}:30` };
+        
+        // Próximo: meia hora desta hora
+        nextSlot = { hour: currentHourNum, half: true, label: `${String(currentHourNum).padStart(2, '0')}:30` };
+    } else {
+        // Estamos entre :30 e :59 - meia hora é a atual
+        currentSlot = { hour: currentHourNum, half: true, label: `${String(currentHourNum).padStart(2, '0')}:30` };
+        
+        // Anterior: hora cheia desta hora
+        prevSlot = { hour: currentHourNum, half: false, label: `${String(currentHourNum).padStart(2, '0')}:00` };
+        
+        // Próximo: hora cheia da próxima hora
+        const nextHour = (currentHourNum + 1) % 24;
+        nextSlot = { hour: nextHour, half: false, label: `${String(nextHour).padStart(2, '0')}:00` };
+    }
     
     // Buscar dados das horas
-    const prevData = allSchedules.find(s => s.hour === prevHourNum);
-    const currData = allSchedules.find(s => s.hour === currentHourNum);
-    const nextData = allSchedules.find(s => s.hour === nextHourNum);
+    const prevData = allSchedules.find(s => s.hour === prevSlot.hour);
+    const currData = allSchedules.find(s => s.hour === currentSlot.hour);
+    const nextData = allSchedules.find(s => s.hour === nextSlot.hour);
+    
+    // Verificar se tem áudio configurado para cada slot
+    const prevHasAudio = prevSlot.half 
+        ? (prevData && prevData.audio_url_half && prevData.enabled)
+        : (prevData && prevData.audio_url && prevData.enabled);
+    
+    const currHasAudio = currentSlot.half
+        ? (currData && currData.audio_url_half && currData.enabled)
+        : (currData && currData.audio_url && currData.enabled);
+    
+    const nextHasAudio = nextSlot.half
+        ? (nextData && nextData.audio_url_half && nextData.enabled)
+        : (nextData && nextData.audio_url && nextData.enabled);
     
     // Atualizar display
-    previousProgram.textContent = prevData && prevData.enabled 
-        ? `${String(prevHourNum).padStart(2, '0')}:00 - Programado`
-        : `${String(prevHourNum).padStart(2, '0')}:00 - Sem programação`;
+    previousProgram.textContent = prevHasAudio 
+        ? `${prevSlot.label} - Programado`
+        : `${prevSlot.label} - Sem programação`;
     
-    currentHour.textContent = currData && currData.enabled 
-        ? `${String(currentHourNum).padStart(2, '0')}:00 - No Ar`
-        : `${String(currentHourNum).padStart(2, '0')}:00 - Sem programação`;
+    currentHour.textContent = currHasAudio 
+        ? `${currentSlot.label} - No Ar`
+        : `${currentSlot.label} - Sem programação`;
     
-    nextProgram.textContent = nextData && nextData.enabled 
-        ? `${String(nextHourNum).padStart(2, '0')}:00 - Próximo`
-        : `${String(nextHourNum).padStart(2, '0')}:00 - Sem programação`;
+    nextProgram.textContent = nextHasAudio 
+        ? `${nextSlot.label} - Próximo`
+        : `${nextSlot.label} - Sem programação`;
 }
 
 async function loadCurrentHourAudio() {
@@ -586,11 +623,21 @@ function updateClock() {
     
     currentTime.textContent = `${hours}:${minutes}:${seconds}`;
     
-    // Countdown para próxima hora
-    const nextHour = new Date(now);
-    nextHour.setHours(now.getHours() + 1, 0, 0, 0);
-    const diff = nextHour - now;
+    // Countdown para próximo slot (hora cheia OU meia hora)
+    const currentMinute = now.getMinutes();
+    let nextSlotTime;
     
+    if (currentMinute < 30) {
+        // Próximo slot é :30 desta hora
+        nextSlotTime = new Date(now);
+        nextSlotTime.setMinutes(30, 0, 0);
+    } else {
+        // Próximo slot é :00 da próxima hora
+        nextSlotTime = new Date(now);
+        nextSlotTime.setHours(now.getHours() + 1, 0, 0, 0);
+    }
+    
+    const diff = nextSlotTime - now;
     const minutesLeft = Math.floor(diff / 60000);
     const secondsLeft = Math.floor((diff % 60000) / 1000);
     
@@ -606,7 +653,7 @@ async function checkHourChange() {
     const isHourChange = currentMinute === 0;
     const isHalfHourChange = currentMinute === 30;
     
-    if ((isHourChange || isHalfHourChange) && (!currentHourData || currentHourData.hour !== currentHourNum)) {
+    if (isHourChange || isHalfHourChange) {
         console.log('🕐 Mudança detectada (hora cheia ou meia hora), recarregando...');
         await loadCurrentHourAudio();
         updateScheduleDisplay();
