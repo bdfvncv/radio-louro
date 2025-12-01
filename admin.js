@@ -80,11 +80,13 @@ function checkAuth() {
 function showLoginScreen() {
     loginScreen.style.display = 'flex';
     adminPanel.style.display = 'none';
+    logoutBtn.style.display = 'none'; // Esconder botão Sair na tela de login
 }
 
 function showAdminPanel() {
     loginScreen.style.display = 'none';
     adminPanel.style.display = 'block';
+    logoutBtn.style.display = 'block'; // Mostrar botão Sair no painel
 }
 
 function setupEventListeners() {
@@ -135,6 +137,10 @@ function handleLogout() {
     isAuthenticated = false;
     showLoginScreen();
     passwordInput.value = '';
+    
+    // Se quiser redirecionar para o player ao invés de mostrar tela de login
+    // Descomente a linha abaixo:
+    // window.location.href = 'index.html';
 }
 
 function populateHourSelect() {
