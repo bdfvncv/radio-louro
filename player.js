@@ -29,6 +29,7 @@ let currentAdIndex = 0;
 let tracksPlayedSinceLastAd = 0;
 let isPlayingHourCerta = false;
 let isPlayingAd = false;
+let lastPlayedSlot = null; // 🆕 NOVO: Controle para evitar repetição
 
 // Inicializar
 init();
@@ -447,11 +448,22 @@ async function loadCurrentHourAudio() {
         const isHourExact = currentMinute <= 2;
         const isHalfHour = currentMinute >= 30 && currentMinute <= 32;
         
+        // 🆕 CRIAR IDENTIFICADOR ÚNICO PARA O SLOT
+        const currentSlot = isHourExact ? `${currentHourNum}:00` : `${currentHourNum}:30`;
+        
+        // 🆕 VERIFICAR SE JÁ TOCOU ESTE SLOT
+        if (lastPlayedSlot === currentSlot) {
+            console.log(`⏭️ Slot ${currentSlot} já foi reproduzido, pulando para playlist`);
+            playBackgroundMusic();
+            return;
+        }
+        
         if (isHourExact && data && data.audio_url && data.audio_url.trim() !== '') {
             // HORA CHEIA (XX:00)
             isPlayingHourCerta = true;
             audioPlayer.src = data.audio_url;
             currentProgram.textContent = `🎙️ Hora Certa - ${String(currentHourNum).padStart(2, '0')}:00`;
+            lastPlayedSlot = currentSlot; // 🆕 MARCAR COMO REPRODUZIDO
             console.log(`🎙️ Tocando Hora Certa (hora cheia): ${currentProgram.textContent}`);
             
             if (isPlaying) {
@@ -465,6 +477,7 @@ async function loadCurrentHourAudio() {
             isPlayingHourCerta = true;
             audioPlayer.src = data.audio_url_half;
             currentProgram.textContent = `🎙️ Hora Certa - ${String(currentHourNum).padStart(2, '0')}:30`;
+            lastPlayedSlot = currentSlot; // 🆕 MARCAR COMO REPRODUZIDO
             console.log(`🎙️ Tocando Hora Certa (meia hora): ${currentProgram.textContent}`);
             
             if (isPlaying) {
@@ -654,9 +667,14 @@ async function checkHourChange() {
     const isHalfHourChange = currentMinute === 30;
     
     if (isHourChange || isHalfHourChange) {
-        console.log('🕐 Mudança detectada (hora cheia ou meia hora), recarregando...');
-        await loadCurrentHourAudio();
-        updateScheduleDisplay();
+        // 🆕 Resetar o controle quando muda para novo slot
+        const newSlot = isHourChange ? `${currentHourNum}:00` : `${currentHourNum}:30`;
+        if (lastPlayedSlot !== newSlot) {
+            console.log(`🕐 Mudança para novo slot: ${newSlot}`);
+            lastPlayedSlot = null; // Resetar para permitir nova reprodução
+            await loadCurrentHourAudio();
+            updateScheduleDisplay();
+        }
     }
 }
 
@@ -666,6 +684,7 @@ function handleAudioEnded() {
     // Se estava tocando hora certa, mudar para playlist de fundo
     if (isPlayingHourCerta) {
         console.log('✅ Hora certa finalizada, verificando propagandas...');
+        // 🆕 NÃO resetar lastPlayedSlot aqui - só no próximo slot
         // Após hora certa, tocar propaganda se houver
         if (advertisements.length > 0) {
             playAdvertisement();
