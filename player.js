@@ -29,42 +29,35 @@ let currentAdIndex = 0;
 let tracksPlayedSinceLastAd = 0;
 let isPlayingHourCerta = false;
 let isPlayingAd = false;
-let lastPlayedSlot = null; // 🆕 NOVO: Controle para evitar repetição
+let lastPlayedSlot = null;
+let lastKnownDate = null; // 🆕 NOVO: Controlar última data conhecida
 
 // Inicializar
 init();
 
 async function init() {
     try {
-        // Verificar se a tabela existe, se não, criar
         await ensureTableExists();
-        
-        // Carregar programação
         await loadSchedule();
         
-        // Carregar playlist de fundo (com embaralhamento se necessário)
-        await loadBackgroundPlaylist();
+        // 🆕 NOVO: Inicializar data antes de carregar playlist
+        lastKnownDate = new Date().toISOString().split('T')[0];
+        console.log(`📅 Sistema iniciado em: ${lastKnownDate}`);
         
-        // Carregar propagandas
+        await loadBackgroundPlaylist();
         await loadAdvertisements();
         
-        // Configurar listeners
         setupEventListeners();
-        
-        // Configurar tempo real
         setupRealtimeSubscription();
         
-        // Atualizar relógio
         updateClock();
         setInterval(updateClock, 1000);
         
-        // Verificar mudança de hora
-        setInterval(checkHourChange, 30000); // A cada 30 segundos
+        setInterval(checkHourChange, 30000);
         
-        // Verificar novo dia (a cada minuto)
-        setInterval(checkAndShuffleIfNewDay, 60000);
+        // 🆕 NOVO: Verificar novo dia a cada 10 segundos (mais frequente)
+        setInterval(checkAndShuffleIfNewDay, 10000);
         
-        // Carregar áudio da hora atual
         await loadCurrentHourAudio();
         
         showMessage('Sistema carregado com sucesso!', 'success');
@@ -76,14 +69,12 @@ async function init() {
 
 async function ensureTableExists() {
     try {
-        // Tentar fazer uma query simples para verificar se a tabela existe
         const { data, error } = await supabase
             .from('radio_schedule')
             .select('hour')
             .limit(1);
         
         if (error && error.code === '42P01') {
-            // Tabela não existe, mostrar mensagem para criar
             console.warn('Tabela radio_schedule não existe. Execute o SQL de criação no Supabase.');
             showMessage('Configure a tabela no Supabase primeiro. Veja o console.', 'info');
             console.log(`
@@ -122,7 +113,6 @@ CREATE TABLE IF NOT EXISTS advertisements (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Criar índices
 CREATE INDEX IF NOT EXISTS idx_radio_schedule_hour ON radio_schedule(hour);
 CREATE INDEX IF NOT EXISTS idx_radio_schedule_enabled ON radio_schedule(enabled);
 CREATE INDEX IF NOT EXISTS idx_background_playlist_daily_order ON background_playlist(daily_order);
@@ -135,15 +125,34 @@ CREATE INDEX IF NOT EXISTS idx_advertisements_order ON advertisements(play_order
 }
 
 // ==========================================
-// 🎲 PROGRAMAÇÃO DINÂMICA DIÁRIA - NOVO!
+// 🎲 PROGRAMAÇÃO DINÂMICA DIÁRIA - CORRIGIDO!
 // ==========================================
 
 async function checkAndShuffleIfNewDay() {
     try {
-        // Buscar data do último embaralhamento
+        const today = new Date().toISOString().split('T')[0];
+        
+        // 🆕 NOVO: Verificar se mudou de dia comparando com data conhecida
+        if (lastKnownDate && lastKnownDate !== today) {
+            console.log(`🌅 MUDANÇA DE DIA DETECTADA!`);
+            console.log(`   Dia anterior: ${lastKnownDate}`);
+            console.log(`   Dia atual: ${today}`);
+            console.log(`🎲 Iniciando embaralhamento automático...`);
+            
+            await shufflePlaylistForToday();
+            await loadBackgroundPlaylist();
+            
+            lastKnownDate = today;
+            
+            showMessage('🎲 Nova programação do dia carregada!', 'success');
+            return;
+        }
+        
+        // 🆕 NOVO: Verificar também pelo banco de dados
         const { data, error } = await supabase
             .from('background_playlist')
             .select('last_shuffle_date')
+            .eq('enabled', true)
             .limit(1)
             .single();
         
@@ -152,17 +161,24 @@ async function checkAndShuffleIfNewDay() {
             return;
         }
         
-        const today = new Date().toISOString().split('T')[0];
         const lastShuffleDate = data?.last_shuffle_date;
         
-        // Se é um novo dia, embaralhar
         if (!lastShuffleDate || lastShuffleDate !== today) {
-            console.log('🎲 Novo dia detectado! Embaralhando playlist...');
+            console.log(`🎲 Data do banco desatualizada. Embaralhando...`);
+            console.log(`   Última data no banco: ${lastShuffleDate || 'nunca'}`);
+            console.log(`   Data atual: ${today}`);
+            
             await shufflePlaylistForToday();
-            // Recarregar playlist após embaralhar
             await loadBackgroundPlaylist();
+            
+            lastKnownDate = today;
+            
+            showMessage('🎲 Playlist embaralhada automaticamente!', 'success');
         } else {
-            console.log('✅ Playlist do dia já configurada para:', today);
+            // Atualizar data conhecida
+            if (!lastKnownDate) {
+                lastKnownDate = today;
+            }
         }
     } catch (error) {
         console.error('Erro ao verificar dia:', error);
@@ -171,28 +187,27 @@ async function checkAndShuffleIfNewDay() {
 
 async function shufflePlaylistForToday() {
     try {
-        // Buscar todas as músicas ativas
         const { data: allTracks, error: fetchError } = await supabase
             .from('background_playlist')
-            .select('id, original_order')
+            .select('id, original_order, title')
             .eq('enabled', true)
             .order('original_order', { ascending: true });
         
         if (fetchError) throw fetchError;
         
         if (!allTracks || allTracks.length === 0) {
-            console.log('Nenhuma música para embaralhar');
+            console.log('⚠️ Nenhuma música ativa para embaralhar');
             return;
         }
         
-        // Criar array de índices e embaralhar (Fisher-Yates shuffle)
+        console.log(`🎵 Embaralhando ${allTracks.length} músicas...`);
+        
         const shuffledIndices = [...Array(allTracks.length).keys()];
         for (let i = shuffledIndices.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [shuffledIndices[i], shuffledIndices[j]] = [shuffledIndices[j], shuffledIndices[i]];
         }
         
-        // Atualizar cada música com nova ordem
         const today = new Date().toISOString().split('T')[0];
         
         for (let i = 0; i < allTracks.length; i++) {
@@ -212,11 +227,21 @@ async function shufflePlaylistForToday() {
             }
         }
         
-        console.log('🎲 Playlist embaralhada com sucesso!');
-        console.log(`📅 Nova programação para: ${today}`);
+        console.log('✅ Playlist embaralhada com sucesso!');
+        console.log(`📅 Data registrada: ${today}`);
+        
+        console.log('📋 Nova ordem de reprodução:');
+        const sortedByDaily = [...allTracks].sort((a, b) => {
+            const aOrder = shuffledIndices[allTracks.indexOf(a)];
+            const bOrder = shuffledIndices[allTracks.indexOf(b)];
+            return aOrder - bOrder;
+        });
+        sortedByDaily.forEach((track, index) => {
+            console.log(`  ${index + 1}. ${track.title}`);
+        });
         
     } catch (error) {
-        console.error('Erro ao embaralhar playlist:', error);
+        console.error('❌ Erro ao embaralhar playlist:', error);
     }
 }
 
@@ -226,10 +251,8 @@ async function shufflePlaylistForToday() {
 
 async function loadBackgroundPlaylist() {
     try {
-        // Verificar se precisa embaralhar (novo dia)
         await checkAndShuffleIfNewDay();
         
-        // IMPORTANTE: Usar daily_order ao invés de play_order
         const { data, error } = await supabase
             .from('background_playlist')
             .select('*')
@@ -246,9 +269,8 @@ async function loadBackgroundPlaylist() {
         console.log('🎵 Playlist de fundo carregada:', backgroundPlaylist.length, 'músicas');
         console.log('🎲 Ordem do dia aplicada!');
         
-        // Log da ordem do dia para debug
         if (backgroundPlaylist.length > 0) {
-            console.log('📋 Ordem de reprodução hoje:');
+            console.log('📋 Ordem de reprodução atual:');
             backgroundPlaylist.forEach((track, index) => {
                 console.log(`  ${index + 1}. ${track.title} (Original: ${track.original_order}, Dia: ${track.daily_order})`);
             });
@@ -292,7 +314,6 @@ function setupEventListeners() {
 }
 
 function setupRealtimeSubscription() {
-    // Subscription para mudanças na programação de hora certa
     supabase
         .channel('radio_schedule_changes')
         .on('postgres_changes', 
@@ -301,7 +322,6 @@ function setupRealtimeSubscription() {
         )
         .subscribe();
     
-    // Subscription para mudanças na playlist
     supabase
         .channel('playlist_changes')
         .on('postgres_changes',
@@ -313,7 +333,6 @@ function setupRealtimeSubscription() {
         )
         .subscribe();
     
-    // Subscription para mudanças nas propagandas
     supabase
         .channel('ads_changes')
         .on('postgres_changes',
@@ -329,10 +348,8 @@ function setupRealtimeSubscription() {
 async function handleRealtimeUpdate(payload) {
     console.log('Atualização em tempo real:', payload);
     
-    // Recarregar programação
     await loadSchedule();
     
-    // Se a atualização foi na hora atual, recarregar áudio
     const currentHourNum = new Date().getHours();
     if (payload.new && payload.new.hour === currentHourNum) {
         showMessage('Programação atualizada! Recarregando...', 'info');
@@ -362,37 +379,24 @@ function updateScheduleDisplay() {
     const currentHourNum = now.getHours();
     const currentMinute = now.getMinutes();
     
-    // Determinar qual é o horário atual (hora cheia ou meia hora)
     let currentSlot, prevSlot, nextSlot;
     
     if (currentMinute < 30) {
-        // Estamos entre :00 e :29 - hora cheia é a atual
         currentSlot = { hour: currentHourNum, half: false, label: `${String(currentHourNum).padStart(2, '0')}:00` };
-        
-        // Anterior: meia hora da hora anterior
         const prevHour = (currentHourNum - 1 + 24) % 24;
         prevSlot = { hour: prevHour, half: true, label: `${String(prevHour).padStart(2, '0')}:30` };
-        
-        // Próximo: meia hora desta hora
         nextSlot = { hour: currentHourNum, half: true, label: `${String(currentHourNum).padStart(2, '0')}:30` };
     } else {
-        // Estamos entre :30 e :59 - meia hora é a atual
         currentSlot = { hour: currentHourNum, half: true, label: `${String(currentHourNum).padStart(2, '0')}:30` };
-        
-        // Anterior: hora cheia desta hora
         prevSlot = { hour: currentHourNum, half: false, label: `${String(currentHourNum).padStart(2, '0')}:00` };
-        
-        // Próximo: hora cheia da próxima hora
         const nextHour = (currentHourNum + 1) % 24;
         nextSlot = { hour: nextHour, half: false, label: `${String(nextHour).padStart(2, '0')}:00` };
     }
     
-    // Buscar dados das horas
     const prevData = allSchedules.find(s => s.hour === prevSlot.hour);
     const currData = allSchedules.find(s => s.hour === currentSlot.hour);
     const nextData = allSchedules.find(s => s.hour === nextSlot.hour);
     
-    // Verificar se tem áudio configurado para cada slot
     const prevHasAudio = prevSlot.half 
         ? (prevData && prevData.audio_url_half && prevData.enabled)
         : (prevData && prevData.audio_url && prevData.enabled);
@@ -405,7 +409,6 @@ function updateScheduleDisplay() {
         ? (nextData && nextData.audio_url_half && nextData.enabled)
         : (nextData && nextData.audio_url && nextData.enabled);
     
-    // Atualizar display
     previousProgram.textContent = prevHasAudio 
         ? `${prevSlot.label} - Programado`
         : `${prevSlot.label} - Sem programação`;
@@ -423,6 +426,9 @@ async function loadCurrentHourAudio() {
     const currentHourNum = new Date().getHours();
     const currentMinute = new Date().getMinutes();
     
+    // 🆕 NOVO: Verificar novo dia antes de carregar áudio
+    await checkAndShuffleIfNewDay();
+    
     try {
         const { data, error } = await supabase
             .from('radio_schedule')
@@ -433,7 +439,6 @@ async function loadCurrentHourAudio() {
         
         if (error) {
             if (error.code === 'PGRST116') {
-                // Nenhum registro encontrado - tocar playlist de fundo
                 playBackgroundMusic();
                 return;
             }
@@ -442,16 +447,11 @@ async function loadCurrentHourAudio() {
         
         currentHourData = data;
         
-        // 🆕 HORA CERTA em 2 momentos com ÁUDIOS DIFERENTES:
-        // 1. Minutos 00, 01, 02 (hora cheia) → usa audio_url
-        // 2. Minutos 30, 31, 32 (meia hora) → usa audio_url_half
         const isHourExact = currentMinute <= 2;
         const isHalfHour = currentMinute >= 30 && currentMinute <= 32;
         
-        // 🆕 CRIAR IDENTIFICADOR ÚNICO PARA O SLOT
         const currentSlot = isHourExact ? `${currentHourNum}:00` : `${currentHourNum}:30`;
         
-        // 🆕 VERIFICAR SE JÁ TOCOU ESTE SLOT
         if (lastPlayedSlot === currentSlot) {
             console.log(`⏭️ Slot ${currentSlot} já foi reproduzido, pulando para playlist`);
             playBackgroundMusic();
@@ -459,11 +459,10 @@ async function loadCurrentHourAudio() {
         }
         
         if (isHourExact && data && data.audio_url && data.audio_url.trim() !== '') {
-            // HORA CHEIA (XX:00)
             isPlayingHourCerta = true;
             audioPlayer.src = data.audio_url;
             currentProgram.textContent = `🎙️ Hora Certa - ${String(currentHourNum).padStart(2, '0')}:00`;
-            lastPlayedSlot = currentSlot; // 🆕 MARCAR COMO REPRODUZIDO
+            lastPlayedSlot = currentSlot;
             console.log(`🎙️ Tocando Hora Certa (hora cheia): ${currentProgram.textContent}`);
             
             if (isPlaying) {
@@ -473,11 +472,10 @@ async function loadCurrentHourAudio() {
                 });
             }
         } else if (isHalfHour && data && data.audio_url_half && data.audio_url_half.trim() !== '') {
-            // MEIA HORA (XX:30)
             isPlayingHourCerta = true;
             audioPlayer.src = data.audio_url_half;
             currentProgram.textContent = `🎙️ Hora Certa - ${String(currentHourNum).padStart(2, '0')}:30`;
-            lastPlayedSlot = currentSlot; // 🆕 MARCAR COMO REPRODUZIDO
+            lastPlayedSlot = currentSlot;
             console.log(`🎙️ Tocando Hora Certa (meia hora): ${currentProgram.textContent}`);
             
             if (isPlaying) {
@@ -487,7 +485,6 @@ async function loadCurrentHourAudio() {
                 });
             }
         } else {
-            // Fora do horário da hora certa OU sem áudio configurado
             playBackgroundMusic();
         }
     } catch (error) {
@@ -505,7 +502,6 @@ function playBackgroundMusic() {
         return;
     }
     
-    // Verificar se deve tocar propaganda
     const adFrequency = advertisements.length > 0 && advertisements[currentAdIndex] 
         ? advertisements[currentAdIndex].frequency 
         : 3;
@@ -515,7 +511,6 @@ function playBackgroundMusic() {
         return;
     }
     
-    // Tocar música atual da playlist
     const currentTrack = backgroundPlaylist[currentBackgroundIndex];
     
     if (currentTrack && currentTrack.audio_url) {
@@ -526,7 +521,6 @@ function playBackgroundMusic() {
         
         console.log(`🎵 Tocando: ${currentTrack.title} (${currentBackgroundIndex + 1}/${backgroundPlaylist.length})`);
         
-        // Auto-play se estava tocando
         if (isPlaying) {
             audioPlayer.play().catch(err => {
                 console.error('Erro ao reproduzir música de fundo:', err);
@@ -555,14 +549,12 @@ function playAdvertisement() {
         
         console.log(`📢 Tocando propaganda: ${currentAd.title}`);
         
-        // Auto-play se estava tocando
         if (isPlaying) {
             audioPlayer.play().catch(err => {
                 console.error('Erro ao reproduzir propaganda:', err);
             });
         }
         
-        // Avançar para próxima propaganda
         currentAdIndex = (currentAdIndex + 1) % advertisements.length;
     } else {
         playBackgroundMusic();
@@ -636,16 +628,13 @@ function updateClock() {
     
     currentTime.textContent = `${hours}:${minutes}:${seconds}`;
     
-    // Countdown para próximo slot (hora cheia OU meia hora)
     const currentMinute = now.getMinutes();
     let nextSlotTime;
     
     if (currentMinute < 30) {
-        // Próximo slot é :30 desta hora
         nextSlotTime = new Date(now);
         nextSlotTime.setMinutes(30, 0, 0);
     } else {
-        // Próximo slot é :00 da próxima hora
         nextSlotTime = new Date(now);
         nextSlotTime.setHours(now.getHours() + 1, 0, 0, 0);
     }
@@ -662,16 +651,14 @@ async function checkHourChange() {
     const currentHourNum = now.getHours();
     const currentMinute = now.getMinutes();
     
-    // 🆕 Verificar mudança de hora (:00) ou meia hora (:30)
     const isHourChange = currentMinute === 0;
     const isHalfHourChange = currentMinute === 30;
     
     if (isHourChange || isHalfHourChange) {
-        // 🆕 Resetar o controle quando muda para novo slot
         const newSlot = isHourChange ? `${currentHourNum}:00` : `${currentHourNum}:30`;
         if (lastPlayedSlot !== newSlot) {
             console.log(`🕐 Mudança para novo slot: ${newSlot}`);
-            lastPlayedSlot = null; // Resetar para permitir nova reprodução
+            lastPlayedSlot = null;
             await loadCurrentHourAudio();
             updateScheduleDisplay();
         }
@@ -681,28 +668,22 @@ async function checkHourChange() {
 function handleAudioEnded() {
     console.log('🎵 Áudio finalizado');
     
-    // Se estava tocando hora certa, mudar para playlist de fundo
     if (isPlayingHourCerta) {
         console.log('✅ Hora certa finalizada, verificando propagandas...');
-        // 🆕 NÃO resetar lastPlayedSlot aqui - só no próximo slot
-        // Após hora certa, tocar propaganda se houver
         if (advertisements.length > 0) {
             playAdvertisement();
         } else {
             playBackgroundMusic();
         }
     } else if (isPlayingAd) {
-        // Se estava tocando propaganda, voltar para playlist
         console.log('✅ Propaganda finalizada, voltando para playlist');
         playBackgroundMusic();
     } else {
-        // Se estava tocando música de fundo, avançar para próxima
         if (backgroundPlaylist.length > 0) {
             currentBackgroundIndex = (currentBackgroundIndex + 1) % backgroundPlaylist.length;
             console.log(`➡️ Avançando para próxima música: ${currentBackgroundIndex + 1}/${backgroundPlaylist.length}`);
             playBackgroundMusic();
         } else {
-            // Se não houver playlist, repetir o áudio atual
             if (audioPlayer.src) {
                 audioPlayer.play().catch(err => {
                     console.error('Erro ao repetir:', err);
@@ -733,5 +714,4 @@ function showMessage(message, type) {
     }, 5000);
 }
 
-// Configurar volume inicial
 audioPlayer.volume = 0.7;
