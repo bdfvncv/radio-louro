@@ -45,6 +45,430 @@
                 </div>
             </div>
 
+            <!-- 🎄 NOVO: PLAYLISTS TEMÁTICAS -->
+            <div class="seasonal-section">
+                <h2>🎭 Playlists Temáticas Sazonais</h2>
+                <p class="section-description">
+                    Configure músicas e propagandas especiais para datas comemorativas. Quando uma playlist temática é ativada, ela substitui temporariamente a playlist normal, mas as horas certas continuam funcionando normalmente.
+                </p>
+
+                <div class="seasonal-tabs">
+                    <button class="seasonal-tab active" data-category="natal">🎄 Natal</button>
+                    <button class="seasonal-tab" data-category="ano_novo">🎆 Ano-Novo</button>
+                    <button class="seasonal-tab" data-category="pascoa">🐰 Páscoa</button>
+                    <button class="seasonal-tab" data-category="sao_joao">🔥 São João</button>
+                </div>
+
+                <div class="seasonal-content">
+                    <!-- Natal -->
+                    <div class="seasonal-panel active" data-category="natal">
+                        <div class="seasonal-header">
+                            <h3>🎄 Playlist de Natal</h3>
+                            <div class="seasonal-status">
+                                <span class="status-badge" id="statusNatal">❌ Inativo</span>
+                                <button class="toggle-seasonal-btn" id="toggleNatal" data-category="natal">
+                                    🎄 Ativar Natal
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Músicas de Natal -->
+                        <div class="seasonal-subsection">
+                            <h4>🎵 Músicas de Natal</h4>
+                            <form class="seasonal-form" id="formMusicNatal">
+                                <div class="form-group">
+                                    <label>URL do Áudio:</label>
+                                    <input type="url" class="seasonal-url" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Título:</label>
+                                    <input type="text" class="seasonal-title" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Ordem:</label>
+                                    <input type="number" class="seasonal-order" value="0" min="0">
+                                </div>
+                                <div class="form-actions">
+                                    <button type="submit" class="submit-btn">💾 Adicionar Música</button>
+                                    <button type="button" class="test-btn seasonal-test">▶️ Testar</button>
+                                    <button type="button" class="clear-btn seasonal-clear">🗑️ Limpar</button>
+                                </div>
+                            </form>
+                            <div class="table-container">
+                                <table class="schedule-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Ordem</th>
+                                            <th>Título</th>
+                                <th>Anunciante</th>
+                                <th>Frequência</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <audio id="testAudio" style="display: none;"></audio>
+        </div>
+
+        <footer class="footer">
+            <p>© 2025 Rádio 24H Supermercado do Louro - Painel Admin</p>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
+                                            <th>Status</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tableMusicNatal"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Propagandas de Natal -->
+                        <div class="seasonal-subsection">
+                            <h4>📢 Propagandas de Natal</h4>
+                            <form class="seasonal-form" id="formAdNatal">
+                                <div class="form-group">
+                                    <label>URL do Áudio:</label>
+                                    <input type="url" class="seasonal-url" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Título:</label>
+                                    <input type="text" class="seasonal-title" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Anunciante:</label>
+                                    <input type="text" class="seasonal-advertiser">
+                                </div>
+                                <div class="form-group">
+                                    <label>Frequência (a cada X músicas):</label>
+                                    <input type="number" class="seasonal-frequency" value="3" min="1" max="100">
+                                </div>
+                                <div class="form-group">
+                                    <label>Ordem:</label>
+                                    <input type="number" class="seasonal-order" value="0" min="0">
+                                </div>
+                                <div class="form-actions">
+                                    <button type="submit" class="submit-btn">💾 Adicionar Propaganda</button>
+                                    <button type="button" class="test-btn seasonal-test">▶️ Testar</button>
+                                    <button type="button" class="clear-btn seasonal-clear">🗑️ Limpar</button>
+                                </div>
+                            </form>
+                            <div class="table-container">
+                                <table class="schedule-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Ordem</th>
+                                            <th>Título</th>
+                                            <th>Anunciante</th>
+                                            <th>Frequência</th>
+                                            <th>Status</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tableAdNatal"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ano-Novo -->
+                    <div class="seasonal-panel" data-category="ano_novo">
+                        <div class="seasonal-header">
+                            <h3>🎆 Playlist de Ano-Novo</h3>
+                            <div class="seasonal-status">
+                                <span class="status-badge" id="statusAnoNovo">❌ Inativo</span>
+                                <button class="toggle-seasonal-btn" id="toggleAnoNovo" data-category="ano_novo">
+                                    🎆 Ativar Ano-Novo
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="seasonal-subsection">
+                            <h4>🎵 Músicas de Ano-Novo</h4>
+                            <form class="seasonal-form" id="formMusicAnoNovo">
+                                <div class="form-group">
+                                    <label>URL do Áudio:</label>
+                                    <input type="url" class="seasonal-url" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Título:</label>
+                                    <input type="text" class="seasonal-title" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Ordem:</label>
+                                    <input type="number" class="seasonal-order" value="0" min="0">
+                                </div>
+                                <div class="form-actions">
+                                    <button type="submit" class="submit-btn">💾 Adicionar Música</button>
+                                    <button type="button" class="test-btn seasonal-test">▶️ Testar</button>
+                                    <button type="button" class="clear-btn seasonal-clear">🗑️ Limpar</button>
+                                </div>
+                            </form>
+                            <div class="table-container">
+                                <table class="schedule-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Ordem</th>
+                                            <th>Título</th>
+                                            <th>Status</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tableMusicAnoNovo"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="seasonal-subsection">
+                            <h4>📢 Propagandas de Ano-Novo</h4>
+                            <form class="seasonal-form" id="formAdAnoNovo">
+                                <div class="form-group">
+                                    <label>URL do Áudio:</label>
+                                    <input type="url" class="seasonal-url" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Título:</label>
+                                    <input type="text" class="seasonal-title" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Anunciante:</label>
+                                    <input type="text" class="seasonal-advertiser">
+                                </div>
+                                <div class="form-group">
+                                    <label>Frequência (a cada X músicas):</label>
+                                    <input type="number" class="seasonal-frequency" value="3" min="1" max="100">
+                                </div>
+                                <div class="form-group">
+                                    <label>Ordem:</label>
+                                    <input type="number" class="seasonal-order" value="0" min="0">
+                                </div>
+                                <div class="form-actions">
+                                    <button type="submit" class="submit-btn">💾 Adicionar Propaganda</button>
+                                    <button type="button" class="test-btn seasonal-test">▶️ Testar</button>
+                                    <button type="button" class="clear-btn seasonal-clear">🗑️ Limpar</button>
+                                </div>
+                            </form>
+                            <div class="table-container">
+                                <table class="schedule-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Ordem</th>
+                                            <th>Título</th>
+                                            <th>Anunciante</th>
+                                            <th>Frequência</th>
+                                            <th>Status</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tableAdAnoNovo"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Páscoa -->
+                    <div class="seasonal-panel" data-category="pascoa">
+                        <div class="seasonal-header">
+                            <h3>🐰 Playlist de Páscoa</h3>
+                            <div class="seasonal-status">
+                                <span class="status-badge" id="statusPascoa">❌ Inativo</span>
+                                <button class="toggle-seasonal-btn" id="togglePascoa" data-category="pascoa">
+                                    🐰 Ativar Páscoa
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="seasonal-subsection">
+                            <h4>🎵 Músicas de Páscoa</h4>
+                            <form class="seasonal-form" id="formMusicPascoa">
+                                <div class="form-group">
+                                    <label>URL do Áudio:</label>
+                                    <input type="url" class="seasonal-url" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Título:</label>
+                                    <input type="text" class="seasonal-title" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Ordem:</label>
+                                    <input type="number" class="seasonal-order" value="0" min="0">
+                                </div>
+                                <div class="form-actions">
+                                    <button type="submit" class="submit-btn">💾 Adicionar Música</button>
+                                    <button type="button" class="test-btn seasonal-test">▶️ Testar</button>
+                                    <button type="button" class="clear-btn seasonal-clear">🗑️ Limpar</button>
+                                </div>
+                            </form>
+                            <div class="table-container">
+                                <table class="schedule-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Ordem</th>
+                                            <th>Título</th>
+                                            <th>Status</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tableMusicPascoa"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="seasonal-subsection">
+                            <h4>📢 Propagandas de Páscoa</h4>
+                            <form class="seasonal-form" id="formAdPascoa">
+                                <div class="form-group">
+                                    <label>URL do Áudio:</label>
+                                    <input type="url" class="seasonal-url" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Título:</label>
+                                    <input type="text" class="seasonal-title" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Anunciante:</label>
+                                    <input type="text" class="seasonal-advertiser">
+                                </div>
+                                <div class="form-group">
+                                    <label>Frequência (a cada X músicas):</label>
+                                    <input type="number" class="seasonal-frequency" value="3" min="1" max="100">
+                                </div>
+                                <div class="form-group">
+                                    <label>Ordem:</label>
+                                    <input type="number" class="seasonal-order" value="0" min="0">
+                                </div>
+                                <div class="form-actions">
+                                    <button type="submit" class="submit-btn">💾 Adicionar Propaganda</button>
+                                    <button type="button" class="test-btn seasonal-test">▶️ Testar</button>
+                                    <button type="button" class="clear-btn seasonal-clear">🗑️ Limpar</button>
+                                </div>
+                            </form>
+                            <div class="table-container">
+                                <table class="schedule-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Ordem</th>
+                                            <th>Título</th>
+                                            <th>Anunciante</th>
+                                            <th>Frequência</th>
+                                            <th>Status</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tableAdPascoa"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- São João -->
+                    <div class="seasonal-panel" data-category="sao_joao">
+                        <div class="seasonal-header">
+                            <h3>🔥 Playlist de São João</h3>
+                            <div class="seasonal-status">
+                                <span class="status-badge" id="statusSaoJoao">❌ Inativo</span>
+                                <button class="toggle-seasonal-btn" id="toggleSaoJoao" data-category="sao_joao">
+                                    🔥 Ativar São João
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="seasonal-subsection">
+                            <h4>🎵 Músicas de São João</h4>
+                            <form class="seasonal-form" id="formMusicSaoJoao">
+                                <div class="form-group">
+                                    <label>URL do Áudio:</label>
+                                    <input type="url" class="seasonal-url" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Título:</label>
+                                    <input type="text" class="seasonal-title" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Ordem:</label>
+                                    <input type="number" class="seasonal-order" value="0" min="0">
+                                </div>
+                                <div class="form-actions">
+                                    <button type="submit" class="submit-btn">💾 Adicionar Música</button>
+                                    <button type="button" class="test-btn seasonal-test">▶️ Testar</button>
+                                    <button type="button" class="clear-btn seasonal-clear">🗑️ Limpar</button>
+                                </div>
+                            </form>
+                            <div class="table-container">
+                                <table class="schedule-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Ordem</th>
+                                            <th>Título</th>
+                                            <th>Status</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tableMusicSaoJoao"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="seasonal-subsection">
+                            <h4>📢 Propagandas de São João</h4>
+                            <form class="seasonal-form" id="formAdSaoJoao">
+                                <div class="form-group">
+                                    <label>URL do Áudio:</label>
+                                    <input type="url" class="seasonal-url" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Título:</label>
+                                    <input type="text" class="seasonal-title" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Anunciante:</label>
+                                    <input type="text" class="seasonal-advertiser">
+                                </div>
+                                <div class="form-group">
+                                    <label>Frequência (a cada X músicas):</label>
+                                    <input type="number" class="seasonal-frequency" value="3" min="1" max="100">
+                                </div>
+                                <div class="form-group">
+                                    <label>Ordem:</label>
+                                    <input type="number" class="seasonal-order" value="0" min="0">
+                                </div>
+                                <div class="form-actions">
+                                    <button type="submit" class="submit-btn">💾 Adicionar Propaganda</button>
+                                    <button type="button" class="test-btn seasonal-test">▶️ Testar</button>
+                                    <button type="button" class="clear-btn seasonal-clear">🗑️ Limpar</button>
+                                </div>
+                            </form>
+                            <div class="table-container">
+                                <table class="schedule-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Ordem</th>
+                                            <th>Título</th>
+                                            <th>Anunciante</th>
+                                            <th>Frequência</th>
+                                            <th>Status</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tableAdSaoJoao"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- FIM PLAYLISTS TEMÁTICAS -->
+
             <div class="editor-section">
                 <h2>✏️ Editor de Programação</h2>
                 <p class="section-description">Configure os áudios para cada hora. Você pode definir um áudio para :00 (hora cheia) e outro para :30 (meia hora).</p>
@@ -98,7 +522,6 @@
                             </tr>
                         </thead>
                         <tbody id="scheduleTableBody">
-                            <!-- Conteúdo gerado dinamicamente -->
                         </tbody>
                     </table>
                 </div>
@@ -151,7 +574,6 @@
                             </tr>
                         </thead>
                         <tbody id="playlistTableBody">
-                            <!-- Conteúdo gerado dinamicamente -->
                         </tbody>
                     </table>
                 </div>
@@ -214,28 +636,3 @@
                             <tr>
                                 <th>Ordem</th>
                                 <th>Título</th>
-                                <th>Anunciante</th>
-                                <th>Frequência</th>
-                                <th>Status</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="adsTableBody">
-                            <!-- Conteúdo gerado dinamicamente -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <audio id="testAudio" style="display: none;"></audio>
-        </div>
-
-        <footer class="footer">
-            <p>© 2025 Rádio 24H Supermercado do Louro - Painel Admin</p>
-        </footer>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="admin.js"></script>
-</body>
-</html>
