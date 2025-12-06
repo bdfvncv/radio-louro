@@ -630,3 +630,184 @@ body {
         width: 100%;
     }
 }
+
+.seasonal-section {
+    background: #ffffff;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.seasonal-section h2 {
+    color: #00a86b;
+    margin-bottom: 20px;
+}
+
+.seasonal-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+    border-bottom: 2px solid #e0e0e0;
+    flex-wrap: wrap;
+}
+
+.seasonal-tab {
+    background: transparent;
+    border: none;
+    padding: 12px 24px;
+    font-size: 1.1em;
+    font-weight: bold;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+    color: #666;
+}
+
+.seasonal-tab:hover {
+    background: #f5f5f5;
+    color: #00a86b;
+}
+
+.seasonal-tab.active {
+    color: #00a86b;
+    border-bottom-color: #00a86b;
+}
+
+.seasonal-content {
+    position: relative;
+}
+
+.seasonal-panel {
+    display: none;
+}
+
+.seasonal-panel.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.seasonal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e0e0e0;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.seasonal-header h3 {
+    color: #333;
+    font-size: 1.5em;
+    margin: 0;
+}
+
+.seasonal-status {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.toggle-seasonal-btn {
+    background: #00a86b;
+    color: #ffffff;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.toggle-seasonal-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 168, 107, 0.3);
+}
+
+.toggle-seasonal-btn:active {
+    transform: translateY(0);
+}
+
+.seasonal-subsection {
+    background: #f9f9f9;
+    padding: 25px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+    border-left: 4px solid #00a86b;
+}
+
+.seasonal-subsection h4 {
+    color: #00a86b;
+    margin-bottom: 20px;
+    font-size: 1.2em;
+}
+
+.seasonal-form {
+    display: grid;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.seasonal-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.seasonal-form label {
+    font-weight: bold;
+    color: #333;
+}
+
+.seasonal-form input {
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 1em;
+}
+
+.seasonal-form input:focus {
+    outline: none;
+    border-color: #00a86b;
+}
+
+/* Responsivo para Playlists Temáticas */
+@media (max-width: 768px) {
+    .seasonal-tabs {
+        flex-direction: column;
+    }
+    
+    .seasonal-tab {
+        width: 100%;
+        text-align: left;
+    }
+    
+    .seasonal-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .seasonal-status {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .toggle-seasonal-btn {
+        width: 100%;
+    }
+}
