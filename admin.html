@@ -14,7 +14,7 @@
         </header>
 
         <!-- Login Screen -->
-        <div class="login-screen" id="loginScreen">
+        <div class="login-screen" id="loginScreen" style="display: flex;">
             <div class="login-card">
                 <h2>🔐 Acesso Restrito</h2>
                 <p>Digite a senha para acessar o painel administrativo</p>
@@ -29,23 +29,8 @@
 
         <!-- Admin Panel -->
         <div class="admin-panel" id="adminPanel" style="display: none;">
-            <div class="instructions-section">
-                <h2>📋 Instruções de Upload</h2>
-                <div class="instructions-card">
-                    <h3>Como fazer upload no Cloudinary:</h3>
-                    <ol>
-                        <li>Acesse: <a href="https://cloudinary.com/console" target="_blank">cloudinary.com/console</a></li>
-                        <li>Faça login com: <strong>Cloud Name: dygbrcrr6</strong></li>
-                        <li>Clique em "Media Library" → "Upload"</li>
-                        <li>Selecione seu arquivo MP3</li>
-                        <li>Após o upload, clique no arquivo</li>
-                        <li>Copie a URL pública (terminada em .mp3)</li>
-                        <li>Cole a URL no formulário abaixo</li>
-                    </ol>
-                </div>
-            </div>
-
-            <!-- 🎄 NOVO: PLAYLISTS TEMÁTICAS -->
+            
+            <!-- 🎄 PLAYLISTS TEMÁTICAS - NO TOPO -->
             <div class="seasonal-section">
                 <h2>🎭 Playlists Temáticas Sazonais</h2>
                 <p class="section-description">
@@ -65,7 +50,7 @@
                         <div class="seasonal-header">
                             <h3>🎄 Playlist de Natal</h3>
                             <div class="seasonal-status">
-                                <span class="status-badge" id="statusNatal">❌ Inativo</span>
+                                <span class="status-badge inactive" id="statusNatal">❌ Inativo</span>
                                 <button class="toggle-seasonal-btn" id="toggleNatal" data-category="natal">
                                     🎄 Ativar Natal
                                 </button>
@@ -78,11 +63,11 @@
                             <form class="seasonal-form" id="formMusicNatal">
                                 <div class="form-group">
                                     <label>URL do Áudio:</label>
-                                    <input type="url" class="seasonal-url" required>
+                                    <input type="url" class="seasonal-url" placeholder="https://res.cloudinary.com/..." required>
                                 </div>
                                 <div class="form-group">
                                     <label>Título:</label>
-                                    <input type="text" class="seasonal-title" required>
+                                    <input type="text" class="seasonal-title" placeholder="Ex: Noite Feliz" required>
                                 </div>
                                 <div class="form-group">
                                     <label>Ordem:</label>
@@ -100,30 +85,6 @@
                                         <tr>
                                             <th>Ordem</th>
                                             <th>Título</th>
-                                <th>Anunciante</th>
-                                <th>Frequência</th>
-                                <th>Status</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="adsTableBody">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <audio id="testAudio" style="display: none;"></audio>
-        </div>
-
-        <footer class="footer">
-            <p>© 2025 Rádio 24H Supermercado do Louro - Painel Admin</p>
-        </footer>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="admin.js"></script>
-</body>
-</html>
                                             <th>Status</th>
                                             <th>Ações</th>
                                         </tr>
@@ -139,15 +100,15 @@
                             <form class="seasonal-form" id="formAdNatal">
                                 <div class="form-group">
                                     <label>URL do Áudio:</label>
-                                    <input type="url" class="seasonal-url" required>
+                                    <input type="url" class="seasonal-url" placeholder="https://res.cloudinary.com/..." required>
                                 </div>
                                 <div class="form-group">
                                     <label>Título:</label>
-                                    <input type="text" class="seasonal-title" required>
+                                    <input type="text" class="seasonal-title" placeholder="Ex: Promoção de Natal" required>
                                 </div>
                                 <div class="form-group">
                                     <label>Anunciante:</label>
-                                    <input type="text" class="seasonal-advertiser">
+                                    <input type="text" class="seasonal-advertiser" placeholder="Ex: Lojas Exemplo">
                                 </div>
                                 <div class="form-group">
                                     <label>Frequência (a cada X músicas):</label>
@@ -186,7 +147,7 @@
                         <div class="seasonal-header">
                             <h3>🎆 Playlist de Ano-Novo</h3>
                             <div class="seasonal-status">
-                                <span class="status-badge" id="statusAnoNovo">❌ Inativo</span>
+                                <span class="status-badge inactive" id="statusAnoNovo">❌ Inativo</span>
                                 <button class="toggle-seasonal-btn" id="toggleAnoNovo" data-category="ano_novo">
                                     🎆 Ativar Ano-Novo
                                 </button>
@@ -198,11 +159,11 @@
                             <form class="seasonal-form" id="formMusicAnoNovo">
                                 <div class="form-group">
                                     <label>URL do Áudio:</label>
-                                    <input type="url" class="seasonal-url" required>
+                                    <input type="url" class="seasonal-url" placeholder="https://res.cloudinary.com/..." required>
                                 </div>
                                 <div class="form-group">
                                     <label>Título:</label>
-                                    <input type="text" class="seasonal-title" required>
+                                    <input type="text" class="seasonal-title" placeholder="Ex: Auld Lang Syne" required>
                                 </div>
                                 <div class="form-group">
                                     <label>Ordem:</label>
@@ -234,15 +195,15 @@
                             <form class="seasonal-form" id="formAdAnoNovo">
                                 <div class="form-group">
                                     <label>URL do Áudio:</label>
-                                    <input type="url" class="seasonal-url" required>
+                                    <input type="url" class="seasonal-url" placeholder="https://res.cloudinary.com/..." required>
                                 </div>
                                 <div class="form-group">
                                     <label>Título:</label>
-                                    <input type="text" class="seasonal-title" required>
+                                    <input type="text" class="seasonal-title" placeholder="Ex: Promoção de Ano-Novo" required>
                                 </div>
                                 <div class="form-group">
                                     <label>Anunciante:</label>
-                                    <input type="text" class="seasonal-advertiser">
+                                    <input type="text" class="seasonal-advertiser" placeholder="Ex: Lojas Exemplo">
                                 </div>
                                 <div class="form-group">
                                     <label>Frequência (a cada X músicas):</label>
@@ -281,7 +242,7 @@
                         <div class="seasonal-header">
                             <h3>🐰 Playlist de Páscoa</h3>
                             <div class="seasonal-status">
-                                <span class="status-badge" id="statusPascoa">❌ Inativo</span>
+                                <span class="status-badge inactive" id="statusPascoa">❌ Inativo</span>
                                 <button class="toggle-seasonal-btn" id="togglePascoa" data-category="pascoa">
                                     🐰 Ativar Páscoa
                                 </button>
@@ -293,11 +254,11 @@
                             <form class="seasonal-form" id="formMusicPascoa">
                                 <div class="form-group">
                                     <label>URL do Áudio:</label>
-                                    <input type="url" class="seasonal-url" required>
+                                    <input type="url" class="seasonal-url" placeholder="https://res.cloudinary.com/..." required>
                                 </div>
                                 <div class="form-group">
                                     <label>Título:</label>
-                                    <input type="text" class="seasonal-title" required>
+                                    <input type="text" class="seasonal-title" placeholder="Ex: Música de Páscoa" required>
                                 </div>
                                 <div class="form-group">
                                     <label>Ordem:</label>
@@ -329,15 +290,15 @@
                             <form class="seasonal-form" id="formAdPascoa">
                                 <div class="form-group">
                                     <label>URL do Áudio:</label>
-                                    <input type="url" class="seasonal-url" required>
+                                    <input type="url" class="seasonal-url" placeholder="https://res.cloudinary.com/..." required>
                                 </div>
                                 <div class="form-group">
                                     <label>Título:</label>
-                                    <input type="text" class="seasonal-title" required>
+                                    <input type="text" class="seasonal-title" placeholder="Ex: Promoção de Páscoa" required>
                                 </div>
                                 <div class="form-group">
                                     <label>Anunciante:</label>
-                                    <input type="text" class="seasonal-advertiser">
+                                    <input type="text" class="seasonal-advertiser" placeholder="Ex: Lojas Exemplo">
                                 </div>
                                 <div class="form-group">
                                     <label>Frequência (a cada X músicas):</label>
@@ -376,7 +337,7 @@
                         <div class="seasonal-header">
                             <h3>🔥 Playlist de São João</h3>
                             <div class="seasonal-status">
-                                <span class="status-badge" id="statusSaoJoao">❌ Inativo</span>
+                                <span class="status-badge inactive" id="statusSaoJoao">❌ Inativo</span>
                                 <button class="toggle-seasonal-btn" id="toggleSaoJoao" data-category="sao_joao">
                                     🔥 Ativar São João
                                 </button>
@@ -388,11 +349,11 @@
                             <form class="seasonal-form" id="formMusicSaoJoao">
                                 <div class="form-group">
                                     <label>URL do Áudio:</label>
-                                    <input type="url" class="seasonal-url" required>
+                                    <input type="url" class="seasonal-url" placeholder="https://res.cloudinary.com/..." required>
                                 </div>
                                 <div class="form-group">
                                     <label>Título:</label>
-                                    <input type="text" class="seasonal-title" required>
+                                    <input type="text" class="seasonal-title" placeholder="Ex: Forró Tradicional" required>
                                 </div>
                                 <div class="form-group">
                                     <label>Ordem:</label>
@@ -424,15 +385,15 @@
                             <form class="seasonal-form" id="formAdSaoJoao">
                                 <div class="form-group">
                                     <label>URL do Áudio:</label>
-                                    <input type="url" class="seasonal-url" required>
+                                    <input type="url" class="seasonal-url" placeholder="https://res.cloudinary.com/..." required>
                                 </div>
                                 <div class="form-group">
                                     <label>Título:</label>
-                                    <input type="text" class="seasonal-title" required>
+                                    <input type="text" class="seasonal-title" placeholder="Ex: Promoção Junina" required>
                                 </div>
                                 <div class="form-group">
                                     <label>Anunciante:</label>
-                                    <input type="text" class="seasonal-advertiser">
+                                    <input type="text" class="seasonal-advertiser" placeholder="Ex: Lojas Exemplo">
                                 </div>
                                 <div class="form-group">
                                     <label>Frequência (a cada X músicas):</label>
@@ -468,6 +429,22 @@
                 </div>
             </div>
             <!-- FIM PLAYLISTS TEMÁTICAS -->
+
+            <div class="instructions-section">
+                <h2>📋 Instruções de Upload</h2>
+                <div class="instructions-card">
+                    <h3>Como fazer upload no Cloudinary:</h3>
+                    <ol>
+                        <li>Acesse: <a href="https://cloudinary.com/console" target="_blank">cloudinary.com/console</a></li>
+                        <li>Faça login com: <strong>Cloud Name: dygbrcrr6</strong></li>
+                        <li>Clique em "Media Library" → "Upload"</li>
+                        <li>Selecione seu arquivo MP3</li>
+                        <li>Após o upload, clique no arquivo</li>
+                        <li>Copie a URL pública (terminada em .mp3)</li>
+                        <li>Cole a URL no formulário abaixo</li>
+                    </ol>
+                </div>
+            </div>
 
             <div class="editor-section">
                 <h2>✏️ Editor de Programação</h2>
@@ -636,3 +613,27 @@
                             <tr>
                                 <th>Ordem</th>
                                 <th>Título</th>
+                                <th>Anunciante</th>
+                                <th>Frequência</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <audio id="testAudio" style="display: none;"></audio>
+        </div>
+
+        <footer class="footer">
+            <p>© 2025 Rádio 24H Supermercado do Louro - Painel Admin</p>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
