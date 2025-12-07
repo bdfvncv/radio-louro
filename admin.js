@@ -54,7 +54,12 @@ let editingHour = null;
 let editingPlaylistId = null;
 let editingAdId = null;
 
-// 🎄 NOVO: Estado das playlists temáticas
+// 🆕 NOVO: Seleção em lote
+let selectedPlaylistIds = new Set();
+let selectedAdIds = new Set();
+let selectedSeasonalIds = new Set();
+
+// 🎄 Estado das playlists temáticas
 let seasonalData = {
     natal: { music: [], ads: [] },
     ano_novo: { music: [], ads: [] },
@@ -123,7 +128,210 @@ function setupEventListeners() {
 }
 
 // ==========================================
-// 🎄 PLAYLISTS TEMÁTICAS - NOVO!
+// 🆕 SELEÇÃO EM LOTE - NOVO!
+// ==========================================
+
+function togglePlaylistSelection(id) {
+    if (selectedPlaylistIds.has(id)) {
+        selectedPlaylistIds.delete(id);
+    } else {
+        selectedPlaylistIds.add(id);
+    }
+    updateBulkActionButtons('playlist');
+}
+
+function toggleAdSelection(id) {
+    if (selectedAdIds.has(id)) {
+        selectedAdIds.delete(id);
+    } else {
+        selectedAdIds.add(id);
+    }
+    updateBulkActionButtons('ads');
+}
+
+function toggleSeasonalSelection(id) {
+    if (selectedSeasonalIds.has(id)) {
+        selectedSeasonalIds.delete(id);
+    } else {
+        selectedSeasonalIds.add(id);
+    }
+    updateBulkActionButtons('seasonal');
+}
+
+function selectAllPlaylist(checked) {
+    selectedPlaylistIds.clear();
+    if (checked) {
+        backgroundPlaylist.forEach(track => {
+            selectedPlaylistIds.add(track.id);
+        });
+    }
+    renderPlaylistTable();
+    updateBulkActionButtons('playlist');
+}
+
+function selectAllAds(checked) {
+    selectedAdIds.clear();
+    if (checked) {
+        advertisements.forEach(ad => {
+            selectedAdIds.add(ad.id);
+        });
+    }
+    renderAdsTable();
+    updateBulkActionButtons('ads');
+}
+
+function selectAllSeasonal(category, type, checked) {
+    selectedSeasonalIds.clear();
+    if (checked) {
+        const items = type === 'music' ? seasonalData[category].music : seasonalData[category].ads;
+        items.forEach(item => {
+            selectedSeasonalIds.add(item.id);
+        });
+    }
+    renderAllSeasonalTables();
+    updateBulkActionButtons('seasonal');
+}
+
+function updateBulkActionButtons(section) {
+    let count = 0;
+    let enableBtn, disableBtn, countSpan;
+    
+    if (section === 'playlist') {
+        count = selectedPlaylistIds.size;
+        enableBtn = document.getElementById('bulkEnablePlaylist');
+        disableBtn = document.getElementById('bulkDisablePlaylist');
+        countSpan = document.getElementById('playlistSelectedCount');
+    } else if (section === 'ads') {
+        count = selectedAdIds.size;
+        enableBtn = document.getElementById('bulkEnableAds');
+        disableBtn = document.getElementById('bulkDisableAds');
+        countSpan = document.getElementById('adsSelectedCount');
+    } else if (section === 'seasonal') {
+        count = selectedSeasonalIds.size;
+        enableBtn = document.getElementById('bulkEnableSeasonal');
+        disableBtn = document.getElementById('bulkDisableSeasonal');
+        countSpan = document.getElementById('seasonalSelectedCount');
+    }
+    
+    if (enableBtn && disableBtn && countSpan) {
+        if (count > 0) {
+            enableBtn.disabled = false;
+            disableBtn.disabled = false;
+            countSpan.textContent = `${count} selecionado${count > 1 ? 's' : ''}`;
+            countSpan.style.display = 'inline';
+        } else {
+            enableBtn.disabled = true;
+            disableBtn.disabled = true;
+            countSpan.style.display = 'none';
+        }
+    }
+}
+
+async function bulkTogglePlaylist(enable) {
+    if (selectedPlaylistIds.size === 0) {
+        alert('Nenhuma música selecionada!');
+        return;
+    }
+    
+    const action = enable ? 'ativar' : 'desativar';
+    if (!confirm(`Deseja ${action} ${selectedPlaylistIds.size} música(s)?`)) {
+        return;
+    }
+    
+    try {
+        for (const id of selectedPlaylistIds) {
+            const { error } = await supabase
+                .from('background_playlist')
+                .update({ 
+                    enabled: enable,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', id);
+            
+            if (error) throw error;
+        }
+        
+        alert(`✅ ${selectedPlaylistIds.size} música(s) ${enable ? 'ativada(s)' : 'desativada(s)'} com sucesso!`);
+        selectedPlaylistIds.clear();
+        await loadBackgroundPlaylist();
+    } catch (error) {
+        console.error('Erro ao atualizar:', error);
+        alert('❌ Erro ao atualizar músicas: ' + error.message);
+    }
+}
+
+async function bulkToggleAds(enable) {
+    if (selectedAdIds.size === 0) {
+        alert('Nenhuma propaganda selecionada!');
+        return;
+    }
+    
+    const action = enable ? 'ativar' : 'desativar';
+    if (!confirm(`Deseja ${action} ${selectedAdIds.size} propaganda(s)?`)) {
+        return;
+    }
+    
+    try {
+        for (const id of selectedAdIds) {
+            const { error } = await supabase
+                .from('advertisements')
+                .update({ 
+                    enabled: enable,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', id);
+            
+            if (error) throw error;
+        }
+        
+        alert(`✅ ${selectedAdIds.size} propaganda(s) ${enable ? 'ativada(s)' : 'desativada(s)'} com sucesso!`);
+        selectedAdIds.clear();
+        await loadAdvertisements();
+    } catch (error) {
+        console.error('Erro ao atualizar:', error);
+        alert('❌ Erro ao atualizar propagandas: ' + error.message);
+    }
+}
+
+async function bulkToggleSeasonal(enable) {
+    if (selectedSeasonalIds.size === 0) {
+        alert('Nenhum item selecionado!');
+        return;
+    }
+    
+    const action = enable ? 'ativar' : 'desativar';
+    if (!confirm(`Deseja ${action} ${selectedSeasonalIds.size} item(ns)?`)) {
+        return;
+    }
+    
+    try {
+        for (const id of selectedSeasonalIds) {
+            const { error } = await supabase
+                .from('seasonal_playlists')
+                .update({ 
+                    enabled: enable,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', id);
+            
+            if (error) throw error;
+        }
+        
+        alert(`✅ ${selectedSeasonalIds.size} item(ns) ${enable ? 'ativado(s)' : 'desativado(s)'} com sucesso!`);
+        selectedSeasonalIds.clear();
+        await loadSeasonalData();
+    } catch (error) {
+        console.error('Erro ao atualizar:', error);
+        alert('❌ Erro ao atualizar itens: ' + error.message);
+    }
+}
+
+// ==========================================
+// FIM - SELEÇÃO EM LOTE
+// ==========================================
+
+// ==========================================
+// 🎄 PLAYLISTS TEMÁTICAS
 // ==========================================
 
 function setupSeasonalEventListeners() {
@@ -161,6 +369,7 @@ function setupSeasonalEventListeners() {
 
 function switchSeasonalTab(category) {
     currentSeasonalTab = category;
+    selectedSeasonalIds.clear();
     
     document.querySelectorAll('.seasonal-tab').forEach(tab => {
         tab.classList.remove('active');
@@ -175,6 +384,8 @@ function switchSeasonalTab(category) {
             panel.classList.add('active');
         }
     });
+    
+    updateBulkActionButtons('seasonal');
 }
 
 async function loadSeasonalData() {
@@ -350,7 +561,7 @@ function renderSeasonalTable(category, type, tableId) {
     
     if (items.length === 0) {
         const tr = document.createElement('tr');
-        const colspan = type === 'music' ? 4 : 6;
+        const colspan = type === 'music' ? 5 : 7;
         tr.innerHTML = `<td colspan="${colspan}" style="text-align: center; padding: 30px; color: #999;">Nenhum item cadastrado</td>`;
         tbody.appendChild(tr);
         return;
@@ -358,6 +569,15 @@ function renderSeasonalTable(category, type, tableId) {
     
     items.forEach(item => {
         const tr = document.createElement('tr');
+        
+        // 🆕 Checkbox
+        const tdCheck = document.createElement('td');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = selectedSeasonalIds.has(item.id);
+        checkbox.onchange = () => toggleSeasonalSelection(item.id);
+        tdCheck.appendChild(checkbox);
+        tr.appendChild(tdCheck);
         
         const tdOrder = document.createElement('td');
         tdOrder.textContent = item.play_order;
@@ -412,7 +632,177 @@ function renderSeasonalTable(category, type, tableId) {
         const btnToggle = document.createElement('button');
         btnToggle.className = 'btn-toggle';
         btnToggle.textContent = item.enabled ? '🔴 Desativar' : '🟢 Ativar';
-        btnToggle.onclick = () => toggleSeasonalItem(item.id, !item.enabled);
+        btnToggle.onclick = () => toggleAd(ad.id, !ad.enabled);
+        actionsDiv.appendChild(btnToggle);
+        
+        const btnDelete = document.createElement('button');
+        btnDelete.className = 'btn-delete';
+        btnDelete.textContent = '🗑️ Deletar';
+        btnDelete.onclick = () => deleteAd(ad.id);
+        actionsDiv.appendChild(btnDelete);
+        
+        tdActions.appendChild(actionsDiv);
+        tr.appendChild(tdActions);
+        
+        adsTableBody.appendChild(tr);
+    });
+    
+    updateBulkActionButtons('ads');
+}
+
+async function handleSaveAd(e) {
+    e.preventDefault();
+    
+    const url = adUrl.value.trim();
+    const title = adTitle.value.trim();
+    const advertiser = adAdvertiser.value.trim();
+    const frequency = parseInt(adFrequency.value);
+    const order = parseInt(adOrder.value);
+    const enabled = adEnabled.checked;
+    
+    if (!url || !title) {
+        alert('Por favor, preencha os campos obrigatórios (URL e Título)!');
+        return;
+    }
+    
+    if (frequency < 1 || frequency > 100) {
+        alert('A frequência deve estar entre 1 e 100!');
+        return;
+    }
+    
+    try {
+        if (editingAdId) {
+            const { error } = await supabase
+                .from('advertisements')
+                .update({
+                    audio_url: url,
+                    title: title,
+                    advertiser: advertiser || null,
+                    frequency: frequency,
+                    play_order: order,
+                    enabled: enabled,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', editingAdId);
+            
+            if (error) throw error;
+            alert('✅ Propaganda atualizada com sucesso!');
+        } else {
+            const { error } = await supabase
+                .from('advertisements')
+                .insert([{
+                    audio_url: url,
+                    title: title,
+                    advertiser: advertiser || null,
+                    frequency: frequency,
+                    play_order: order,
+                    enabled: enabled
+                }]);
+            
+            if (error) throw error;
+            alert('✅ Propaganda adicionada com sucesso!');
+        }
+        
+        handleClearAdForm();
+        loadAdvertisements();
+    } catch (error) {
+        console.error('Erro ao salvar:', error);
+        alert('❌ Erro ao salvar propaganda: ' + error.message);
+    }
+}
+
+function editAd(id) {
+    const ad = advertisements.find(a => a.id === id);
+    
+    if (ad) {
+        editingAdId = id;
+        adUrl.value = ad.audio_url;
+        adTitle.value = ad.title;
+        adAdvertiser.value = ad.advertiser || '';
+        adFrequency.value = ad.frequency;
+        adOrder.value = ad.play_order;
+        adEnabled.checked = ad.enabled;
+        
+        adsForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        const submitBtn = adsForm.querySelector('.submit-btn');
+        submitBtn.textContent = '💾 Atualizar Propaganda';
+        
+        adTitle.focus();
+    }
+}
+
+async function toggleAd(id, newStatus) {
+    try {
+        const { error } = await supabase
+            .from('advertisements')
+            .update({ 
+                enabled: newStatus,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', id);
+        
+        if (error) throw error;
+        loadAdvertisements();
+    } catch (error) {
+        console.error('Erro ao alternar status:', error);
+        alert('❌ Erro ao alternar status: ' + error.message);
+    }
+}
+
+async function deleteAd(id) {
+    if (!confirm('Tem certeza que deseja deletar esta propaganda?')) {
+        return;
+    }
+    
+    try {
+        const { error } = await supabase
+            .from('advertisements')
+            .delete()
+            .eq('id', id);
+        
+        if (error) throw error;
+        alert('✅ Propaganda deletada com sucesso!');
+        loadAdvertisements();
+    } catch (error) {
+        console.error('Erro ao deletar:', error);
+        alert('❌ Erro ao deletar propaganda: ' + error.message);
+    }
+}
+
+function handleTestAdAudio() {
+    const url = adUrl.value.trim();
+    
+    if (!url) {
+        alert('Por favor, insira uma URL para testar!');
+        return;
+    }
+    
+    testAudio.src = url;
+    testAudio.play()
+        .then(() => {
+            alert('▶️ Reproduzindo propaganda de teste...\nClique em OK para parar.');
+            testAudio.pause();
+            testAudio.currentTime = 0;
+        })
+        .catch(error => {
+            console.error('Erro ao testar áudio:', error);
+            alert('❌ Erro ao reproduzir áudio. Verifique se a URL está correta.');
+        });
+}
+
+function handleClearAdForm() {
+    adUrl.value = '';
+    adTitle.value = '';
+    adAdvertiser.value = '';
+    adFrequency.value = '3';
+    adOrder.value = '0';
+    adEnabled.checked = true;
+    editingAdId = null;
+    
+    const submitBtn = adsForm.querySelector('.submit-btn');
+    submitBtn.textContent = '💾 Adicionar Propaganda';
+} = () => toggleSeasonalItem(item.id, !item.enabled);
         actionsDiv.appendChild(btnToggle);
         
         const btnDelete = document.createElement('button');
@@ -681,6 +1071,7 @@ function setupRealtimeSubscription() {
         )
         .subscribe();
 }
+
 async function loadAllSchedules() {
     try {
         const { data, error } = await supabase
@@ -1007,13 +1398,44 @@ function renderPlaylistTable() {
     
     if (backgroundPlaylist.length === 0) {
         const tr = document.createElement('tr');
-        tr.innerHTML = '<td colspan="6" style="text-align: center; padding: 30px; color: #999;">Nenhuma música na playlist. Adicione músicas usando o formulário acima.</td>';
+        tr.innerHTML = '<td colspan="7" style="text-align: center; padding: 30px; color: #999;">Nenhuma música na playlist. Adicione músicas usando o formulário acima.</td>';
         playlistTableBody.appendChild(tr);
         return;
     }
     
+    // 🆕 Adicionar linha de cabeçalho com ações em lote
+    const headerRow = document.createElement('tr');
+    headerRow.style.background = '#f0f9f5';
+    headerRow.innerHTML = `
+        <td colspan="7" style="padding: 15px;">
+            <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                    <input type="checkbox" id="selectAllPlaylist" onchange="selectAllPlaylist(this.checked)" style="cursor: pointer;">
+                    <strong>Selecionar Todos</strong>
+                </label>
+                <span id="playlistSelectedCount" style="display: none; color: #00a86b; font-weight: bold;"></span>
+                <button class="submit-btn" id="bulkEnablePlaylist" onclick="bulkTogglePlaylist(true)" disabled style="padding: 8px 16px; font-size: 0.9em;">
+                    🟢 Ativar Selecionados
+                </button>
+                <button class="clear-btn" id="bulkDisablePlaylist" onclick="bulkTogglePlaylist(false)" disabled style="padding: 8px 16px; font-size: 0.9em;">
+                    🔴 Desativar Selecionados
+                </button>
+            </div>
+        </td>
+    `;
+    playlistTableBody.appendChild(headerRow);
+    
     backgroundPlaylist.forEach(track => {
         const tr = document.createElement('tr');
+        
+        // 🆕 Checkbox
+        const tdCheck = document.createElement('td');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = selectedPlaylistIds.has(track.id);
+        checkbox.onchange = () => togglePlaylistSelection(track.id);
+        tdCheck.appendChild(checkbox);
+        tr.appendChild(tdCheck);
         
         const tdOriginalOrder = document.createElement('td');
         tdOriginalOrder.textContent = track.original_order || track.play_order || 0;
@@ -1085,6 +1507,8 @@ function renderPlaylistTable() {
         
         playlistTableBody.appendChild(tr);
     });
+    
+    updateBulkActionButtons('playlist');
 }
 
 async function handleSavePlaylist(e) {
@@ -1184,7 +1608,7 @@ async function deletePlaylist(id) {
     
     try {
         const { error } = await supabase
-            .from('radio_schedule')
+            .from('background_playlist')
             .delete()
             .eq('id', id);
         
@@ -1250,13 +1674,44 @@ function renderAdsTable() {
     
     if (advertisements.length === 0) {
         const tr = document.createElement('tr');
-        tr.innerHTML = '<td colspan="6" style="text-align: center; padding: 30px; color: #999;">Nenhuma propaganda cadastrada. Adicione anúncios usando o formulário acima.</td>';
+        tr.innerHTML = '<td colspan="7" style="text-align: center; padding: 30px; color: #999;">Nenhuma propaganda cadastrada. Adicione anúncios usando o formulário acima.</td>';
         adsTableBody.appendChild(tr);
         return;
     }
     
+    // 🆕 Adicionar linha de cabeçalho com ações em lote
+    const headerRow = document.createElement('tr');
+    headerRow.style.background = '#f0f9f5';
+    headerRow.innerHTML = `
+        <td colspan="7" style="padding: 15px;">
+            <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                    <input type="checkbox" id="selectAllAds" onchange="selectAllAds(this.checked)" style="cursor: pointer;">
+                    <strong>Selecionar Todos</strong>
+                </label>
+                <span id="adsSelectedCount" style="display: none; color: #00a86b; font-weight: bold;"></span>
+                <button class="submit-btn" id="bulkEnableAds" onclick="bulkToggleAds(true)" disabled style="padding: 8px 16px; font-size: 0.9em;">
+                    🟢 Ativar Selecionados
+                </button>
+                <button class="clear-btn" id="bulkDisableAds" onclick="bulkToggleAds(false)" disabled style="padding: 8px 16px; font-size: 0.9em;">
+                    🔴 Desativar Selecionados
+                </button>
+            </div>
+        </td>
+    `;
+    adsTableBody.appendChild(headerRow);
+    
     advertisements.forEach(ad => {
         const tr = document.createElement('tr');
+        
+        // 🆕 Checkbox
+        const tdCheck = document.createElement('td');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = selectedAdIds.has(ad.id);
+        checkbox.onchange = () => toggleAdSelection(ad.id);
+        tdCheck.appendChild(checkbox);
+        tr.appendChild(tdCheck);
         
         const tdOrder = document.createElement('td');
         tdOrder.textContent = ad.play_order;
@@ -1309,172 +1764,4 @@ function renderAdsTable() {
         const btnToggle = document.createElement('button');
         btnToggle.className = 'btn-toggle';
         btnToggle.textContent = ad.enabled ? '🔴 Desativar' : '🟢 Ativar';
-        btnToggle.onclick = () => toggleAd(ad.id, !ad.enabled);
-        actionsDiv.appendChild(btnToggle);
-        
-        const btnDelete = document.createElement('button');
-        btnDelete.className = 'btn-delete';
-        btnDelete.textContent = '🗑️ Deletar';
-        btnDelete.onclick = () => deleteAd(ad.id);
-        actionsDiv.appendChild(btnDelete);
-        
-        tdActions.appendChild(actionsDiv);
-        tr.appendChild(tdActions);
-        
-        adsTableBody.appendChild(tr);
-    });
-}
-
-async function handleSaveAd(e) {
-    e.preventDefault();
-    
-    const url = adUrl.value.trim();
-    const title = adTitle.value.trim();
-    const advertiser = adAdvertiser.value.trim();
-    const frequency = parseInt(adFrequency.value);
-    const order = parseInt(adOrder.value);
-    const enabled = adEnabled.checked;
-    
-    if (!url || !title) {
-        alert('Por favor, preencha os campos obrigatórios (URL e Título)!');
-        return;
-    }
-    
-    if (frequency < 1 || frequency > 100) {
-        alert('A frequência deve estar entre 1 e 100!');
-        return;
-    }
-    
-    try {
-        if (editingAdId) {
-            const { error } = await supabase
-                .from('advertisements')
-                .update({
-                    audio_url: url,
-                    title: title,
-                    advertiser: advertiser || null,
-                    frequency: frequency,
-                    play_order: order,
-                    enabled: enabled,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', editingAdId);
-            
-            if (error) throw error;
-            alert('✅ Propaganda atualizada com sucesso!');
-        } else {
-            const { error } = await supabase
-                .from('advertisements')
-                .insert([{
-                    audio_url: url,
-                    title: title,
-                    advertiser: advertiser || null,
-                    frequency: frequency,
-                    play_order: order,
-                    enabled: enabled
-                }]);
-            
-            if (error) throw error;
-            alert('✅ Propaganda adicionada com sucesso!');
-        }
-        
-        handleClearAdForm();
-        loadAdvertisements();
-    } catch (error) {
-        console.error('Erro ao salvar:', error);
-        alert('❌ Erro ao salvar propaganda: ' + error.message);
-    }
-}
-
-function editAd(id) {
-    const ad = advertisements.find(a => a.id === id);
-    
-    if (ad) {
-        editingAdId = id;
-        adUrl.value = ad.audio_url;
-        adTitle.value = ad.title;
-        adAdvertiser.value = ad.advertiser || '';
-        adFrequency.value = ad.frequency;
-        adOrder.value = ad.play_order;
-        adEnabled.checked = ad.enabled;
-        
-        adsForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        
-        const submitBtn = adsForm.querySelector('.submit-btn');
-        submitBtn.textContent = '💾 Atualizar Propaganda';
-        
-        adTitle.focus();
-    }
-}
-
-async function toggleAd(id, newStatus) {
-    try {
-        const { error } = await supabase
-            .from('advertisements')
-            .update({ 
-                enabled: newStatus,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', id);
-        
-        if (error) throw error;
-        loadAdvertisements();
-    } catch (error) {
-        console.error('Erro ao alternar status:', error);
-        alert('❌ Erro ao alternar status: ' + error.message);
-    }
-}
-
-async function deleteAd(id) {
-    if (!confirm('Tem certeza que deseja deletar esta propaganda?')) {
-        return;
-    }
-    
-    try {
-        const { error } = await supabase
-            .from('advertisements')
-            .delete()
-            .eq('id', id);
-        
-        if (error) throw error;
-        alert('✅ Propaganda deletada com sucesso!');
-        loadAdvertisements();
-    } catch (error) {
-        console.error('Erro ao deletar:', error);
-        alert('❌ Erro ao deletar propaganda: ' + error.message);
-    }
-}
-
-function handleTestAdAudio() {
-    const url = adUrl.value.trim();
-    
-    if (!url) {
-        alert('Por favor, insira uma URL para testar!');
-        return;
-    }
-    
-    testAudio.src = url;
-    testAudio.play()
-        .then(() => {
-            alert('▶️ Reproduzindo propaganda de teste...\nClique em OK para parar.');
-            testAudio.pause();
-            testAudio.currentTime = 0;
-        })
-        .catch(error => {
-            console.error('Erro ao testar áudio:', error);
-            alert('❌ Erro ao reproduzir áudio. Verifique se a URL está correta.');
-        });
-}
-
-function handleClearAdForm() {
-    adUrl.value = '';
-    adTitle.value = '';
-    adAdvertiser.value = '';
-    adFrequency.value = '3';
-    adOrder.value = '0';
-    adEnabled.checked = true;
-    editingAdId = null;
-    
-    const submitBtn = adsForm.querySelector('.submit-btn');
-    submitBtn.textContent = '💾 Adicionar Propaganda';
-}
+        btnToggle.onclick
