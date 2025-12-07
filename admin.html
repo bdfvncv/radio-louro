@@ -83,6 +83,7 @@
                                 <table class="schedule-table">
                                     <thead>
                                         <tr>
+                                            <th style="width: 50px;">☑️</th>
                                             <th>Ordem</th>
                                             <th>Título</th>
                                             <th>Status</th>
@@ -128,6 +129,7 @@
                                 <table class="schedule-table">
                                     <thead>
                                         <tr>
+                                            <th style="width: 50px;">☑️</th>
                                             <th>Ordem</th>
                                             <th>Título</th>
                                             <th>Anunciante</th>
@@ -179,6 +181,7 @@
                                 <table class="schedule-table">
                                     <thead>
                                         <tr>
+                                            <th style="width: 50px;">☑️</th>
                                             <th>Ordem</th>
                                             <th>Título</th>
                                             <th>Status</th>
@@ -223,6 +226,7 @@
                                 <table class="schedule-table">
                                     <thead>
                                         <tr>
+                                            <th style="width: 50px;">☑️</th>
                                             <th>Ordem</th>
                                             <th>Título</th>
                                             <th>Anunciante</th>
@@ -274,6 +278,7 @@
                                 <table class="schedule-table">
                                     <thead>
                                         <tr>
+                                            <th style="width: 50px;">☑️</th>
                                             <th>Ordem</th>
                                             <th>Título</th>
                                             <th>Status</th>
@@ -318,6 +323,7 @@
                                 <table class="schedule-table">
                                     <thead>
                                         <tr>
+                                            <th style="width: 50px;">☑️</th>
                                             <th>Ordem</th>
                                             <th>Título</th>
                                             <th>Anunciante</th>
@@ -369,6 +375,7 @@
                                 <table class="schedule-table">
                                     <thead>
                                         <tr>
+                                            <th style="width: 50px;">☑️</th>
                                             <th>Ordem</th>
                                             <th>Título</th>
                                             <th>Status</th>
@@ -413,6 +420,7 @@
                                 <table class="schedule-table">
                                     <thead>
                                         <tr>
+                                            <th style="width: 50px;">☑️</th>
                                             <th>Ordem</th>
                                             <th>Título</th>
                                             <th>Anunciante</th>
@@ -542,6 +550,7 @@
                     <table class="schedule-table">
                         <thead>
                             <tr>
+                                <th style="width: 50px;">☑️</th>
                                 <th>Ordem Original</th>
                                 <th>Ordem do Dia 🎲</th>
                                 <th>Título</th>
@@ -579,61 +588,3 @@
 
                     <div class="form-group">
                         <label for="adAdvertiser">Anunciante (opcional):</label>
-                        <input type="text" id="adAdvertiser" placeholder="Ex: Nome da Empresa">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="adFrequency">Frequência (a cada quantas músicas):</label>
-                        <input type="number" id="adFrequency" value="3" min="1" max="100" required>
-                        <small>Valor 3 = toca a cada 3 músicas | Valor 10 = toca a cada 10 músicas | Máximo: 100</small>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="adOrder">Ordem de Reprodução:</label>
-                        <input type="number" id="adOrder" value="0" min="0">
-                    </div>
-
-                    <div class="form-group checkbox-group">
-                        <label>
-                            <input type="checkbox" id="adEnabled" checked>
-                            Ativo (habilitado)
-                        </label>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="submit" class="submit-btn">💾 Adicionar Propaganda</button>
-                        <button type="button" class="test-btn" id="testAdBtn">▶️ Testar</button>
-                        <button type="button" class="clear-btn" id="clearAdBtn">🗑️ Limpar</button>
-                    </div>
-                </form>
-
-                <div class="table-container">
-                    <table class="schedule-table">
-                        <thead>
-                            <tr>
-                                <th>Ordem</th>
-                                <th>Título</th>
-                                <th>Anunciante</th>
-                                <th>Frequência</th>
-                                <th>Status</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="adsTableBody">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <audio id="testAudio" style="display: none;"></audio>
-        </div>
-
-        <footer class="footer">
-            <p>© 2025 Rádio 24H Supermercado do Louro - Painel Admin</p>
-        </footer>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="admin.js"></script>
-</body>
-</html>
