@@ -30,7 +30,7 @@
         <!-- Admin Panel -->
         <div class="admin-panel" id="adminPanel" style="display: none;">
             
-            <!-- 🎄 PLAYLISTS TEMÁTICAS - NO TOPO -->
+            <!-- 🎄 PLAYLISTS TEMÁTICAS -->
             <div class="seasonal-section">
                 <h2>🎭 Playlists Temáticas Sazonais</h2>
                 <p class="section-description">
@@ -83,7 +83,8 @@
                                 <table class="schedule-table">
                                     <thead>
                                         <tr>
-                                            <th>Ordem</th>
+                                            <th>Ordem Original</th>
+                                            <th>Ordem do Dia 🎲</th>
                                             <th>Título</th>
                                             <th>Status</th>
                                             <th>Ações</th>
@@ -91,6 +92,13 @@
                                     </thead>
                                     <tbody id="tableMusicNatal"></tbody>
                                 </table>
+                            </div>
+                            
+                            <!-- 🆕 BOX DE EMBARALHAMENTO -->
+                            <div style="margin-top: 20px; padding: 15px; background: #fff3e0; border-radius: 8px; border-left: 4px solid #ff9800;">
+                                <h4 style="margin: 0 0 10px 0; color: #e65100;">🎲 Embaralhamento de Músicas de Natal</h4>
+                                <p style="margin: 0 0 10px 0; color: #555;">A ordem de reprodução é embaralhada automaticamente à meia-noite. A ordem original nunca muda.</p>
+                                <button class="test-btn shuffle-seasonal-btn" data-category="natal" data-type="music" style="margin-top: 10px; background: #ff9800;">🎲 Forçar Embaralhamento Agora</button>
                             </div>
                         </div>
 
@@ -179,7 +187,8 @@
                                 <table class="schedule-table">
                                     <thead>
                                         <tr>
-                                            <th>Ordem</th>
+                                            <th>Ordem Original</th>
+                                            <th>Ordem do Dia 🎲</th>
                                             <th>Título</th>
                                             <th>Status</th>
                                             <th>Ações</th>
@@ -187,6 +196,12 @@
                                     </thead>
                                     <tbody id="tableMusicAnoNovo"></tbody>
                                 </table>
+                            </div>
+                            
+                            <div style="margin-top: 20px; padding: 15px; background: #fff3e0; border-radius: 8px; border-left: 4px solid #ff9800;">
+                                <h4 style="margin: 0 0 10px 0; color: #e65100;">🎲 Embaralhamento de Músicas de Ano-Novo</h4>
+                                <p style="margin: 0 0 10px 0; color: #555;">A ordem de reprodução é embaralhada automaticamente à meia-noite. A ordem original nunca muda.</p>
+                                <button class="test-btn shuffle-seasonal-btn" data-category="ano_novo" data-type="music" style="margin-top: 10px; background: #ff9800;">🎲 Forçar Embaralhamento Agora</button>
                             </div>
                         </div>
 
@@ -274,7 +289,8 @@
                                 <table class="schedule-table">
                                     <thead>
                                         <tr>
-                                            <th>Ordem</th>
+                                            <th>Ordem Original</th>
+                                            <th>Ordem do Dia 🎲</th>
                                             <th>Título</th>
                                             <th>Status</th>
                                             <th>Ações</th>
@@ -282,6 +298,12 @@
                                     </thead>
                                     <tbody id="tableMusicPascoa"></tbody>
                                 </table>
+                            </div>
+                            
+                            <div style="margin-top: 20px; padding: 15px; background: #fff3e0; border-radius: 8px; border-left: 4px solid #ff9800;">
+                                <h4 style="margin: 0 0 10px 0; color: #e65100;">🎲 Embaralhamento de Músicas de Páscoa</h4>
+                                <p style="margin: 0 0 10px 0; color: #555;">A ordem de reprodução é embaralhada automaticamente à meia-noite. A ordem original nunca muda.</p>
+                                <button class="test-btn shuffle-seasonal-btn" data-category="pascoa" data-type="music" style="margin-top: 10px; background: #ff9800;">🎲 Forçar Embaralhamento Agora</button>
                             </div>
                         </div>
 
@@ -369,7 +391,8 @@
                                 <table class="schedule-table">
                                     <thead>
                                         <tr>
-                                            <th>Ordem</th>
+                                            <th>Ordem Original</th>
+                                            <th>Ordem do Dia 🎲</th>
                                             <th>Título</th>
                                             <th>Status</th>
                                             <th>Ações</th>
@@ -377,6 +400,12 @@
                                     </thead>
                                     <tbody id="tableMusicSaoJoao"></tbody>
                                 </table>
+                            </div>
+                            
+                            <div style="margin-top: 20px; padding: 15px; background: #fff3e0; border-radius: 8px; border-left: 4px solid #ff9800;">
+                                <h4 style="margin: 0 0 10px 0; color: #e65100;">🎲 Embaralhamento de Músicas de São João</h4>
+                                <p style="margin: 0 0 10px 0; color: #555;">A ordem de reprodução é embaralhada automaticamente à meia-noite. A ordem original nunca muda.</p>
+                                <button class="test-btn shuffle-seasonal-btn" data-category="sao_joao" data-type="music" style="margin-top: 10px; background: #ff9800;">🎲 Forçar Embaralhamento Agora</button>
                             </div>
                         </div>
 
@@ -428,8 +457,6 @@
                     </div>
                 </div>
             </div>
-            <!-- FIM PLAYLISTS TEMÁTICAS -->
-
             <div class="instructions-section">
                 <h2>📋 Instruções de Upload</h2>
                 <div class="instructions-card">
