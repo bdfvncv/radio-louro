@@ -98,12 +98,32 @@ async function ensureTableExists() {
 
 async function loadSeasonalData() {
     try {
-        // Buscar playlists temáticas (músicas e propagandas)
-        const { data: allSeasonalData, error } = await supabase
+        // Buscar playlists temáticas (músicas ordenadas por daily_order, propagandas por play_order)
+        const { data: musicData, error: musicError } = await supabase
             .from('seasonal_playlists')
             .select('*')
+            .eq('type', 'music')
+            .eq('enabled', true)
+            .order('daily_order', { ascending: true });
+        
+        if (musicError) {
+            console.error('Erro ao carregar músicas temáticas:', musicError);
+            return;
+        }
+        
+        const { data: adData, error: adError } = await supabase
+            .from('seasonal_playlists')
+            .select('*')
+            .eq('type', 'ad')
             .eq('enabled', true)
             .order('play_order', { ascending: true });
+        
+        if (adError) {
+            console.error('Erro ao carregar propagandas temáticas:', adError);
+            return;
+        }
+        
+        const allSeasonalData = [...musicData, ...adData];
         
         if (error) {
             console.error('Erro ao carregar dados temáticos:', error);
