@@ -54,7 +54,7 @@ let editingHour = null;
 let editingPlaylistId = null;
 let editingAdId = null;
 
-// 🎄 NOVO: Estado das playlists temáticas
+// Estado das playlists temáticas
 let seasonalData = {
     natal: { music: [], ads: [] },
     ano_novo: { music: [], ads: [] },
@@ -123,7 +123,7 @@ function setupEventListeners() {
 }
 
 // ==========================================
-// 🎄 PLAYLISTS TEMÁTICAS - NOVO!
+// 🎄 PLAYLISTS TEMÁTICAS
 // ==========================================
 
 function setupSeasonalEventListeners() {
@@ -157,6 +157,16 @@ function setupSeasonalEventListeners() {
     clearButtons.forEach(btn => {
         btn.addEventListener('click', handleSeasonalClear);
     });
+
+    // 🆕 NOVO: Botões de embaralhamento temático
+    const shuffleButtons = document.querySelectorAll('.shuffle-seasonal-btn');
+    shuffleButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const category = btn.dataset.category;
+            const type = btn.dataset.type;
+            handleSeasonalShuffle(category, type);
+        });
+    });
 }
 
 function switchSeasonalTab(category) {
@@ -183,7 +193,7 @@ async function loadSeasonalData() {
             .from('seasonal_playlists')
             .select('*')
             .eq('type', 'music')
-            .order('play_order', { ascending: true });
+            .order('original_order', { ascending: true });
         
         if (musicError) throw musicError;
         
@@ -330,6 +340,71 @@ async function toggleSeasonalPlaylist(category) {
     }
 }
 
+// 🆕 NOVO: Função de embaralhamento temático
+async function handleSeasonalShuffle(category, type) {
+    const labels = {
+        natal: 'Natal',
+        ano_novo: 'Ano-Novo',
+        pascoa: 'Páscoa',
+        sao_joao: 'São João'
+    };
+    
+    if (!confirm(`🎲 Deseja embaralhar as músicas de ${labels[category]} agora?\n\nIsso criará uma nova ordem aleatória para reprodução hoje.`)) {
+        return;
+    }
+    
+    try {
+        const { data: allTracks, error: fetchError } = await supabase
+            .from('seasonal_playlists')
+            .select('id, original_order, title')
+            .eq('category', category)
+            .eq('type', type)
+            .eq('enabled', true)
+            .order('original_order', { ascending: true });
+        
+        if (fetchError) throw fetchError;
+        
+        if (!allTracks || allTracks.length === 0) {
+            alert(`❌ Nenhuma música ativa de ${labels[category]} para embaralhar!`);
+            return;
+        }
+        
+        console.log(`🎲 Embaralhando ${allTracks.length} músicas de ${labels[category]}...`);
+        
+        const shuffledIndices = [...Array(allTracks.length).keys()];
+        for (let i = shuffledIndices.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffledIndices[i], shuffledIndices[j]] = [shuffledIndices[j], shuffledIndices[i]];
+        }
+        
+        const today = new Date().toISOString().split('T')[0];
+        
+        for (let i = 0; i < allTracks.length; i++) {
+            const track = allTracks[i];
+            const newOrder = shuffledIndices[i];
+            
+            const { error: updateError } = await supabase
+                .from('seasonal_playlists')
+                .update({
+                    daily_order: newOrder,
+                    last_shuffle_date: today
+                })
+                .eq('id', track.id);
+            
+            if (updateError) {
+                console.error('Erro ao atualizar ordem:', updateError);
+            }
+        }
+        
+        alert(`🎲 Playlist de ${labels[category]} embaralhada com sucesso!\n\n✅ Nova ordem de reprodução aplicada.`);
+        await loadSeasonalData();
+        
+    } catch (error) {
+        console.error('Erro ao embaralhar playlist temática:', error);
+        alert('❌ Erro ao embaralhar: ' + error.message);
+    }
+}
+
 function renderAllSeasonalTables() {
     const categories = ['natal', 'ano_novo', 'pascoa', 'sao_joao'];
     
@@ -350,7 +425,7 @@ function renderSeasonalTable(category, type, tableId) {
     
     if (items.length === 0) {
         const tr = document.createElement('tr');
-        const colspan = type === 'music' ? 4 : 6;
+        const colspan = type === 'music' ? 5 : 6;
         tr.innerHTML = `<td colspan="${colspan}" style="text-align: center; padding: 30px; color: #999;">Nenhum item cadastrado</td>`;
         tbody.appendChild(tr);
         return;
@@ -359,10 +434,29 @@ function renderSeasonalTable(category, type, tableId) {
     items.forEach(item => {
         const tr = document.createElement('tr');
         
-        const tdOrder = document.createElement('td');
-        tdOrder.textContent = item.play_order;
-        tdOrder.style.fontWeight = 'bold';
-        tr.appendChild(tdOrder);
+        if (type === 'music') {
+            const tdOriginalOrder = document.createElement('td');
+            tdOriginalOrder.textContent = item.original_order !== undefined ? item.original_order : (item.play_order || 0);
+            tdOriginalOrder.style.fontWeight = 'bold';
+            tdOriginalOrder.style.color = '#666';
+            tr.appendChild(tdOriginalOrder);
+            
+            const tdDailyOrder = document.createElement('td');
+            const dailyBadge = document.createElement('span');
+            dailyBadge.style.padding = '5px 12px';
+            dailyBadge.style.background = '#fff3e0';
+            dailyBadge.style.borderRadius = '15px';
+            dailyBadge.style.fontWeight = 'bold';
+            dailyBadge.style.color = '#e65100';
+            dailyBadge.textContent = `🎲 ${item.daily_order !== undefined ? item.daily_order : (item.play_order || 0)}`;
+            tdDailyOrder.appendChild(dailyBadge);
+            tr.appendChild(tdDailyOrder);
+        } else {
+            const tdOrder = document.createElement('td');
+            tdOrder.textContent = item.play_order;
+            tdOrder.style.fontWeight = 'bold';
+            tr.appendChild(tdOrder);
+        }
         
         const tdTitle = document.createElement('td');
         tdTitle.textContent = item.title;
@@ -465,6 +559,12 @@ async function handleSeasonalFormSubmit(e) {
             enabled: true
         };
         
+        if (type === 'music') {
+            itemData.original_order = order;
+            itemData.daily_order = order;
+            itemData.last_shuffle_date = new Date().toISOString().split('T')[0];
+        }
+        
         if (type === 'ad') {
             itemData.advertiser = advertiser || null;
             itemData.frequency = frequency;
@@ -504,7 +604,6 @@ async function handleSeasonalFormSubmit(e) {
         alert('❌ Erro ao salvar: ' + error.message);
     }
 }
-
 function editSeasonalItem(id, category, type) {
     const items = type === 'music' ? seasonalData[category].music : seasonalData[category].ads;
     const item = items.find(i => i.id === id);
@@ -522,7 +621,7 @@ function editSeasonalItem(id, category, type) {
     
     form.querySelector('.seasonal-url').value = item.audio_url;
     form.querySelector('.seasonal-title').value = item.title;
-    form.querySelector('.seasonal-order').value = item.play_order;
+    form.querySelector('.seasonal-order').value = type === 'music' ? (item.original_order || item.play_order) : item.play_order;
     
     if (type === 'ad') {
         form.querySelector('.seasonal-advertiser').value = item.advertiser || '';
@@ -681,6 +780,7 @@ function setupRealtimeSubscription() {
         )
         .subscribe();
 }
+
 async function loadAllSchedules() {
     try {
         const { data, error } = await supabase
@@ -1184,7 +1284,7 @@ async function deletePlaylist(id) {
     
     try {
         const { error } = await supabase
-            .from('radio_schedule')
+            .from('background_playlist')
             .delete()
             .eq('id', id);
         
