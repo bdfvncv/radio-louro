@@ -872,4 +872,4 @@ function showMessage(message, type) {
     }, 5000);
 }
 
-audioPlayer.volume = 0.7;
+audioPlayer.volume = 0.5;
