@@ -4,7 +4,6 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Elementos DOM
 const audioPlayer = document.getElementById('audioPlayer');
 const playBtn = document.getElementById('playBtn');
 const volumeSlider = document.getElementById('volumeSlider');
@@ -18,7 +17,6 @@ const previousProgram = document.getElementById('previousProgram');
 const currentHour = document.getElementById('currentHour');
 const nextProgram = document.getElementById('nextProgram');
 
-// Estado do player
 let isPlaying = false;
 let currentHourData = null;
 let allSchedules = [];
@@ -32,13 +30,11 @@ let isPlayingAd = false;
 let lastPlayedSlot = null;
 let lastKnownDate = null;
 
-// 🎄 NOVO: Estado das playlists temáticas
 let seasonalPlaylist = [];
 let seasonalAds = [];
 let activeSeasonalCategory = null;
 let isSeasonalActive = false;
 
-// Inicializar
 init();
 
 async function init() {
@@ -51,8 +47,6 @@ async function init() {
         
         await loadBackgroundPlaylist();
         await loadAdvertisements();
-        
-        // 🎄 NOVO: Carregar playlists temáticas
         await loadSeasonalData();
         
         setupEventListeners();
@@ -62,9 +56,7 @@ async function init() {
         setInterval(updateClock, 1000);
         
         setInterval(checkHourChange, 30000);
-        setInterval(checkAndShuffleIfNewDay, 10000);
-        
-        // 🎄 NOVO: Verificar playlists temáticas a cada 5 segundos
+        setInterval(checkAndShuffleIfNewDay, 60000);
         setInterval(checkSeasonalStatus, 5000);
         
         await loadCurrentHourAudio();
@@ -92,13 +84,8 @@ async function ensureTableExists() {
     }
 }
 
-// ==========================================
-// 🎄 PLAYLISTS TEMÁTICAS - NOVO!
-// ==========================================
-
 async function loadSeasonalData() {
     try {
-        // Buscar playlists temáticas (músicas ordenadas por daily_order, propagandas por play_order)
         const { data: musicData, error: musicError } = await supabase
             .from('seasonal_playlists')
             .select('*')
@@ -123,38 +110,23 @@ async function loadSeasonalData() {
             return;
         }
         
-        const allSeasonalData = [...musicData, ...adData];
-        
-        if (error) {
-            console.error('Erro ao carregar dados temáticos:', error);
-            return;
-        }
-        
-        // Verificar qual categoria está ativa
         const { data: settings, error: settingsError } = await supabase
             .from('seasonal_settings')
             .select('*')
             .eq('is_active', true)
-            .single();
+            .maybeSingle();
         
         if (settingsError && settingsError.code !== 'PGRST116') {
-            console.error('Erro ao verificar configurações temáticas:', error);
+            console.error('Erro ao verificar configurações temáticas:', settingsError);
             return;
         }
         
         if (settings && settings.category) {
-            // Há uma playlist temática ativa!
             activeSeasonalCategory = settings.category;
             isSeasonalActive = true;
             
-            // Filtrar músicas e propagandas da categoria ativa
-            seasonalPlaylist = allSeasonalData.filter(item => 
-                item.category === activeSeasonalCategory && item.type === 'music'
-            );
-            
-            seasonalAds = allSeasonalData.filter(item => 
-                item.category === activeSeasonalCategory && item.type === 'ad'
-            );
+            seasonalPlaylist = musicData.filter(item => item.category === activeSeasonalCategory);
+            seasonalAds = adData.filter(item => item.category === activeSeasonalCategory);
             
             const categoryLabels = {
                 natal: '🎄 Natal',
@@ -168,7 +140,6 @@ async function loadSeasonalData() {
             console.log(`📢 Propagandas temáticas: ${seasonalAds.length}`);
             
         } else {
-            // Nenhuma playlist temática ativa
             isSeasonalActive = false;
             activeSeasonalCategory = null;
             seasonalPlaylist = [];
@@ -188,26 +159,27 @@ async function checkSeasonalStatus() {
             .from('seasonal_settings')
             .select('*')
             .eq('is_active', true)
-            .single();
+            .maybeSingle();
+        
+        if (error && error.code !== 'PGRST116') {
+            console.error('Erro ao verificar status temático:', error);
+            return;
+        }
         
         const wasActive = isSeasonalActive;
         const previousCategory = activeSeasonalCategory;
         
         if (settings && settings.category) {
-            // Há uma categoria ativa
             const newCategory = settings.category;
             
             if (!wasActive || previousCategory !== newCategory) {
-                // Mudou de estado ou de categoria
                 console.log(`🎭 Mudança detectada! Ativando playlist temática: ${newCategory}`);
                 await loadSeasonalData();
                 
-                // Resetar índices
                 currentBackgroundIndex = 0;
                 currentAdIndex = 0;
                 tracksPlayedSinceLastAd = 0;
                 
-                // Se estava tocando música/propaganda, trocar para temática
                 if (isPlaying && !isPlayingHourCerta) {
                     playBackgroundMusic();
                 }
@@ -222,21 +194,17 @@ async function checkSeasonalStatus() {
                 showMessage(`${categoryLabels[newCategory]} ativado!`, 'success');
             }
         } else {
-            // Nenhuma categoria ativa
             if (wasActive) {
-                // Estava ativo, agora desativou
                 console.log('📻 Voltando para playlist normal...');
                 isSeasonalActive = false;
                 activeSeasonalCategory = null;
                 seasonalPlaylist = [];
                 seasonalAds = [];
                 
-                // Resetar índices
                 currentBackgroundIndex = 0;
                 currentAdIndex = 0;
                 tracksPlayedSinceLastAd = 0;
                 
-                // Se estava tocando, trocar para playlist normal
                 if (isPlaying && !isPlayingHourCerta) {
                     playBackgroundMusic();
                 }
@@ -249,14 +217,6 @@ async function checkSeasonalStatus() {
         console.error('Erro ao verificar status temático:', error);
     }
 }
-
-// ==========================================
-// FIM - PLAYLISTS TEMÁTICAS
-// ==========================================
-
-// ==========================================
-// 🎲 PROGRAMAÇÃO DINÂMICA DIÁRIA
-// ==========================================
 
 async function checkAndShuffleIfNewDay() {
     try {
@@ -282,7 +242,7 @@ async function checkAndShuffleIfNewDay() {
             .select('last_shuffle_date')
             .eq('enabled', true)
             .limit(1)
-            .single();
+            .maybeSingle();
         
         if (error && error.code !== 'PGRST116') {
             console.error('Erro ao verificar data:', error);
@@ -361,10 +321,6 @@ async function shufflePlaylistForToday() {
         console.error('❌ Erro ao embaralhar playlist:', error);
     }
 }
-
-// ==========================================
-// FIM - PROGRAMAÇÃO DINÂMICA DIÁRIA
-// ==========================================
 
 async function loadBackgroundPlaylist() {
     try {
@@ -461,7 +417,6 @@ function setupRealtimeSubscription() {
         )
         .subscribe();
     
-    // 🎄 NOVO: Subscription para playlists temáticas
     supabase
         .channel('seasonal_changes')
         .on('postgres_changes',
@@ -570,14 +525,15 @@ async function loadCurrentHourAudio() {
             .select('*')
             .eq('hour', currentHourNum)
             .eq('enabled', true)
-            .single();
+            .maybeSingle();
         
-        if (error) {
-            if (error.code === 'PGRST116') {
-                playBackgroundMusic();
-                return;
-            }
+        if (error && error.code !== 'PGRST116') {
             throw error;
+        }
+        
+        if (!data) {
+            playBackgroundMusic();
+            return;
         }
         
         currentHourData = data;
@@ -632,7 +588,6 @@ function playBackgroundMusic() {
     isPlayingHourCerta = false;
     isPlayingAd = false;
     
-    // 🎄 NOVO: Verificar se deve usar playlist temática ou normal
     const playlist = isSeasonalActive ? seasonalPlaylist : backgroundPlaylist;
     const ads = isSeasonalActive ? seasonalAds : advertisements;
     
@@ -655,7 +610,6 @@ function playBackgroundMusic() {
     if (currentTrack && currentTrack.audio_url) {
         audioPlayer.src = currentTrack.audio_url;
         
-        // 🎄 NOVO: Mostrar se é temática
         const prefix = isSeasonalActive ? '🎭 ' : '🎵 ';
         currentProgram.textContent = `${prefix}${currentTrack.title || 'Música ' + (currentBackgroundIndex + 1)}`;
         
@@ -675,7 +629,6 @@ function playBackgroundMusic() {
 }
 
 function playAdvertisement() {
-    // 🎄 NOVO: Usar propagandas temáticas ou normais
     const ads = isSeasonalActive ? seasonalAds : advertisements;
     
     if (ads.length === 0) {
@@ -692,7 +645,6 @@ function playAdvertisement() {
     if (currentAd && currentAd.audio_url) {
         audioPlayer.src = currentAd.audio_url;
         
-        // 🎄 NOVO: Mostrar se é temática
         const prefix = isSeasonalActive ? '🎭 ' : '📢 ';
         currentProgram.textContent = `${prefix}${currentAd.title}${currentAd.advertiser ? ' - ' + currentAd.advertiser : ''}`;
         
@@ -822,7 +774,6 @@ function handleAudioEnded() {
     if (isPlayingHourCerta) {
         console.log('✅ Hora certa finalizada, verificando propagandas...');
         
-        // 🎄 Usar propagandas temáticas ou normais
         const ads = isSeasonalActive ? seasonalAds : advertisements;
         
         if (ads.length > 0) {
@@ -834,7 +785,6 @@ function handleAudioEnded() {
         console.log('✅ Propaganda finalizada, voltando para playlist');
         playBackgroundMusic();
     } else {
-        // 🎄 Usar playlist temática ou normal
         const playlist = isSeasonalActive ? seasonalPlaylist : backgroundPlaylist;
         
         if (playlist.length > 0) {
