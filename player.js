@@ -1,4 +1,3 @@
-// Configuração do Supabase
 const SUPABASE_URL = 'https://dyzjsgfoaxyeyepoylvg.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5empzZ2ZvYXh5ZXllcG95bHZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1ODUzNjUsImV4cCI6MjA3NTE2MTM2NX0.PwmaMI04EhcTqUQioTRInyVKUlw3t1ap0lM5hI29s2I';
 
@@ -772,7 +771,14 @@ function handleAudioEnded() {
     console.log('🎵 Áudio finalizado');
     
     if (isPlayingHourCerta) {
-        console.log('✅ Hora certa finalizada, verificando propagandas...');
+        console.log('✅ Hora certa finalizada, avançando para próxima música...');
+        
+        const playlist = isSeasonalActive ? seasonalPlaylist : backgroundPlaylist;
+        
+        if (playlist.length > 0) {
+            currentBackgroundIndex = (currentBackgroundIndex + 1) % playlist.length;
+            console.log(`➡️ Avançando índice após hora certa: ${currentBackgroundIndex + 1}/${playlist.length}`);
+        }
         
         const ads = isSeasonalActive ? seasonalAds : advertisements;
         
