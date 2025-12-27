@@ -1,4 +1,3 @@
-// Configuração do Supabase
 const SUPABASE_URL = 'https://dyzjsgfoaxyeyepoylvg.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5empzZ2ZvYXh5ZXllcG95bHZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1ODUzNjUsImV4cCI6MjA3NTE2MTM2NX0.PwmaMI04EhcTqUQioTRInyVKUlw3t1ap0lM5hI29s2I';
 
@@ -6,7 +5,6 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const ADMIN_PASSWORD = 'senhaDev';
 
-// Elementos DOM principais
 const loginScreen = document.getElementById('loginScreen');
 const adminPanel = document.getElementById('adminPanel');
 const loginForm = document.getElementById('loginForm');
@@ -45,7 +43,6 @@ const testAdBtn = document.getElementById('testAdBtn');
 const clearAdBtn = document.getElementById('clearAdBtn');
 const adsTableBody = document.getElementById('adsTableBody');
 
-// Estado
 let isAuthenticated = false;
 let allSchedules = [];
 let backgroundPlaylist = [];
@@ -54,7 +51,6 @@ let editingHour = null;
 let editingPlaylistId = null;
 let editingAdId = null;
 
-// Estado das playlists temáticas
 let seasonalData = {
     natal: { music: [], ads: [] },
     ano_novo: { music: [], ads: [] },
@@ -65,7 +61,6 @@ let seasonalSettings = {};
 let currentSeasonalTab = 'natal';
 let editingSeasonalId = null;
 
-// Inicializar
 init();
 
 function init() {
@@ -122,10 +117,6 @@ function setupEventListeners() {
     clearAdBtn.addEventListener('click', handleClearAdForm);
 }
 
-// ==========================================
-// 🎄 PLAYLISTS TEMÁTICAS
-// ==========================================
-
 function setupSeasonalEventListeners() {
     const tabs = document.querySelectorAll('.seasonal-tab');
     tabs.forEach(tab => {
@@ -158,7 +149,6 @@ function setupSeasonalEventListeners() {
         btn.addEventListener('click', handleSeasonalClear);
     });
 
-    // 🆕 NOVO: Botões de embaralhamento temático
     const shuffleButtons = document.querySelectorAll('.shuffle-seasonal-btn');
     shuffleButtons.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -340,7 +330,6 @@ async function toggleSeasonalPlaylist(category) {
     }
 }
 
-// 🆕 NOVO: Função de embaralhamento temático
 async function handleSeasonalShuffle(category, type) {
     const labels = {
         natal: 'Natal',
@@ -604,6 +593,7 @@ async function handleSeasonalFormSubmit(e) {
         alert('❌ Erro ao salvar: ' + error.message);
     }
 }
+
 function editSeasonalItem(id, category, type) {
     const items = type === 'music' ? seasonalData[category].music : seasonalData[category].ads;
     const item = items.find(i => i.id === id);
@@ -702,10 +692,6 @@ function handleSeasonalClear(e) {
     }
     editingSeasonalId = null;
 }
-
-// ==========================================
-// FIM - PLAYLISTS TEMÁTICAS
-// ==========================================
 
 function handleLogin(e) {
     e.preventDefault();
