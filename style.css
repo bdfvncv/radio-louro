@@ -811,3 +811,87 @@ body {
         width: 100%;
     }
 }
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    position: relative;
+}
+
+.logo {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+    animation: logoFloat 3s ease-in-out infinite;
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.2));
+    transition: transform 0.3s ease;
+}
+
+.logo:hover {
+    transform: scale(1.05) rotate(2deg);
+    filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.3));
+}
+
+@keyframes logoFloat {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.header-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    text-align: center;
+}
+
+.header-text h1 {
+    margin: 0;
+}
+
+/* Ajuste do botão Logout no Admin */
+.header .logout-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .header-content {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .logo {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .header-text h1 {
+        font-size: 1.5em;
+    }
+    
+    .header .logout-btn {
+        position: static;
+        margin-top: 10px;
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .logo {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .header-text h1 {
+        font-size: 1.2em;
+    }
+}
