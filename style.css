@@ -34,30 +34,97 @@ body {
     margin-bottom: 10px;
 }
 
+/* ========================================
+   LOGO - CENTRALIZADA (MOBILE E DESKTOP)
+   ======================================== */
+
+.header-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    width: 100%;
+}
+
+.logo {
+    width: 180px;
+    height: 180px;
+    object-fit: contain;
+    animation: logoFloat 3s ease-in-out infinite;
+    filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.15));
+    transition: transform 0.3s ease;
+}
+
+.logo:hover {
+    transform: scale(1.05) rotate(2deg);
+    filter: drop-shadow(0 16px 32px rgba(0, 0, 0, 0.25));
+}
+
+@keyframes logoFloat {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-12px);
+    }
+}
+
+.header-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    text-align: center;
+    width: 100%;
+}
+
+.header-text h1 {
+    margin: 0;
+    font-size: 2em;
+    line-height: 1.2;
+}
+
 .live-indicator {
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    background: #ff4444;
+    background: linear-gradient(135deg, #ff4444 0%, #ff6b6b 100%);
     color: #ffffff;
-    padding: 8px 20px;
-    border-radius: 25px;
+    padding: 12px 30px;
+    border-radius: 50px;
     font-weight: bold;
-    font-size: 0.9em;
-    margin-top: 10px;
+    font-size: 1.1em;
+    box-shadow: 0 6px 20px rgba(255, 68, 68, 0.4);
+    animation: livePulse 2s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+    0%, 100% {
+        box-shadow: 0 6px 20px rgba(255, 68, 68, 0.4);
+    }
+    50% {
+        box-shadow: 0 6px 30px rgba(255, 68, 68, 0.6);
+    }
 }
 
 .pulse {
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
     background: #ffffff;
     border-radius: 50%;
     animation: pulse 1.5s infinite;
 }
 
 @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(1.2); }
+    0%, 100% { 
+        opacity: 1; 
+        transform: scale(1); 
+    }
+    50% { 
+        opacity: 0.6; 
+        transform: scale(1.3); 
+    }
 }
 
 /* Main Content */
@@ -272,6 +339,7 @@ body {
     border-radius: 8px;
     cursor: pointer;
     font-weight: bold;
+    z-index: 10;
 }
 
 .logout-btn:hover {
@@ -599,38 +667,6 @@ body {
     background: #c82333;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .header h1 {
-        font-size: 1.8em;
-    }
-
-    .current-time {
-        font-size: 2.5em;
-    }
-
-    .player-controls {
-        flex-direction: column;
-    }
-
-    .control-btn {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .schedule-section {
-        grid-template-columns: 1fr;
-    }
-
-    .form-actions {
-        flex-direction: column;
-    }
-
-    .form-actions button {
-        width: 100%;
-    }
-}
-
 .seasonal-section {
     background: #ffffff;
     padding: 30px;
@@ -785,8 +821,51 @@ body {
     border-color: #00a86b;
 }
 
-/* Responsivo para Playlists Temáticas */
+/* Responsivo */
 @media (max-width: 768px) {
+    .header h1 {
+        font-size: 1.8em;
+    }
+
+    .current-time {
+        font-size: 2.5em;
+    }
+
+    .player-controls {
+        flex-direction: column;
+    }
+
+    .control-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .schedule-section {
+        grid-template-columns: 1fr;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .form-actions button {
+        width: 100%;
+    }
+    
+    .logo {
+        width: 140px;
+        height: 140px;
+    }
+    
+    .header-text h1 {
+        font-size: 1.5em;
+    }
+    
+    .live-indicator {
+        padding: 10px 24px;
+        font-size: 1em;
+    }
+    
     .seasonal-tabs {
         flex-direction: column;
     }
@@ -811,87 +890,24 @@ body {
         width: 100%;
     }
 }
-.header-content {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
-    flex-wrap: wrap;
-    position: relative;
-}
-
-.logo {
-    width: 120px;
-    height: 120px;
-    object-fit: contain;
-    animation: logoFloat 3s ease-in-out infinite;
-    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.2));
-    transition: transform 0.3s ease;
-}
-
-.logo:hover {
-    transform: scale(1.05) rotate(2deg);
-    filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.3));
-}
-
-@keyframes logoFloat {
-    0%, 100% {
-        transform: translateY(0px);
-    }
-    50% {
-        transform: translateY(-10px);
-    }
-}
-
-.header-text {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    text-align: center;
-}
-
-.header-text h1 {
-    margin: 0;
-}
-
-/* Ajuste do botão Logout no Admin */
-.header .logout-btn {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-}
-
-/* Responsivo */
-@media (max-width: 768px) {
-    .header-content {
-        flex-direction: column;
-        gap: 15px;
-    }
-    
-    .logo {
-        width: 100px;
-        height: 100px;
-    }
-    
-    .header-text h1 {
-        font-size: 1.5em;
-    }
-    
-    .header .logout-btn {
-        position: static;
-        margin-top: 10px;
-        width: 100%;
-    }
-}
 
 @media (max-width: 480px) {
     .logo {
-        width: 80px;
-        height: 80px;
+        width: 120px;
+        height: 120px;
     }
     
     .header-text h1 {
-        font-size: 1.2em;
+        font-size: 1.3em;
+    }
+    
+    .live-indicator {
+        padding: 8px 20px;
+        font-size: 0.9em;
+    }
+    
+    .pulse {
+        width: 12px;
+        height: 12px;
     }
 }
