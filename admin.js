@@ -179,21 +179,15 @@ function switchSeasonalTab(category) {
 
 async function loadSeasonalData() {
     try {
-        const { data: musicData, error: musicError } = await supabase
-            .from('seasonal_playlists')
-            .select('*')
-            .eq('type', 'music')
-            .order('original_order', { ascending: true });
+        console.log('🎭 Carregando dados temáticos...');
         
-        if (musicError) throw musicError;
+        const [musicData, adData] = await Promise.all([
+            supabase.from('seasonal_playlists').select('*').eq('type', 'music').order('original_order', { ascending: true }),
+            supabase.from('seasonal_playlists').select('*').eq('type', 'ad').order('play_order', { ascending: true })
+        ]);
         
-        const { data: adData, error: adError } = await supabase
-            .from('seasonal_playlists')
-            .select('*')
-            .eq('type', 'ad')
-            .order('play_order', { ascending: true });
-        
-        if (adError) throw adError;
+        if (musicData.error) throw musicData.error;
+        if (adData.error) throw adData.error;
         
         seasonalData = {
             natal: { music: [], ads: [] },
@@ -202,19 +196,20 @@ async function loadSeasonalData() {
             sao_joao: { music: [], ads: [] }
         };
         
-        musicData.forEach(item => {
+        musicData.data.forEach(item => {
             if (seasonalData[item.category]) {
                 seasonalData[item.category].music.push(item);
             }
         });
         
-        adData.forEach(item => {
+        adData.data.forEach(item => {
             if (seasonalData[item.category]) {
                 seasonalData[item.category].ads.push(item);
             }
         });
         
         renderAllSeasonalTables();
+        console.log('✅ Dados temáticos carregados');
         
     } catch (error) {
         console.error('Erro ao carregar dados temáticos:', error);
@@ -285,17 +280,20 @@ async function toggleSeasonalPlaylist(category) {
         
         if (newStatus) {
             const categories = ['natal', 'ano_novo', 'pascoa', 'sao_joao'];
-            for (const cat of categories) {
-                if (cat !== category) {
-                    await supabase
-                        .from('seasonal_settings')
-                        .update({ 
-                            is_active: false,
-                            updated_at: new Date().toISOString()
-                        })
-                        .eq('category', cat);
-                }
-            }
+            
+            await Promise.all(
+                categories
+                    .filter(cat => cat !== category)
+                    .map(cat => 
+                        supabase
+                            .from('seasonal_settings')
+                            .update({ 
+                                is_active: false,
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('category', cat)
+                    )
+            );
         }
         
         const { error } = await supabase
@@ -368,22 +366,23 @@ async function handleSeasonalShuffle(category, type) {
         
         const today = new Date().toISOString().split('T')[0];
         
-        for (let i = 0; i < allTracks.length; i++) {
-            const track = allTracks[i];
-            const newOrder = shuffledIndices[i];
-            
-            const { error: updateError } = await supabase
-                .from('seasonal_playlists')
-                .update({
-                    daily_order: newOrder,
-                    last_shuffle_date: today
-                })
-                .eq('id', track.id);
-            
-            if (updateError) {
-                console.error('Erro ao atualizar ordem:', updateError);
-            }
-        }
+        const updates = allTracks.map((track, index) => ({
+            id: track.id,
+            daily_order: shuffledIndices[index],
+            last_shuffle_date: today
+        }));
+        
+        await Promise.all(
+            updates.map(update =>
+                supabase
+                    .from('seasonal_playlists')
+                    .update({
+                        daily_order: update.daily_order,
+                        last_shuffle_date: update.last_shuffle_date
+                    })
+                    .eq('id', update.id)
+            )
+        );
         
         alert(`🎲 Playlist de ${labels[category]} embaralhada com sucesso!\n\n✅ Nova ordem de reprodução aplicada.`);
         await loadSeasonalData();
@@ -727,13 +726,66 @@ function populateHourSelect() {
     }
 }
 
-function loadAllData() {
-    loadAllSchedules();
-    loadBackgroundPlaylist();
-    loadAdvertisements();
-    loadSeasonalData();
-    loadSeasonalSettings();
-    setupRealtimeSubscription();
+async function loadAllData() {
+    console.log('⚡ Carregando dados do admin em paralelo...');
+    const startTime = performance.now();
+    
+    try {
+        const [scheduleData, playlistData, adsData, seasonalDataResult, settingsData] = await Promise.all([
+            supabase.from('radio_schedule').select('*').order('hour', { ascending: true }),
+            supabase.from('background_playlist').select('*').order('original_order', { ascending: true }),
+            supabase.from('advertisements').select('*').order('play_order', { ascending: true }),
+            Promise.all([
+                supabase.from('seasonal_playlists').select('*').eq('type', 'music').order('original_order', { ascending: true }),
+                supabase.from('seasonal_playlists').select('*').eq('type', 'ad').order('play_order', { ascending: true })
+            ]),
+            supabase.from('seasonal_settings').select('*')
+        ]);
+        
+        allSchedules = scheduleData.data || [];
+        backgroundPlaylist = playlistData.data || [];
+        advertisements = adsData.data || [];
+        
+        const [musicData, adData] = seasonalDataResult;
+        
+        seasonalData = {
+            natal: { music: [], ads: [] },
+            ano_novo: { music: [], ads: [] },
+            pascoa: { music: [], ads: [] },
+            sao_joao: { music: [], ads: [] }
+        };
+        
+        musicData.data?.forEach(item => {
+            if (seasonalData[item.category]) {
+                seasonalData[item.category].music.push(item);
+            }
+        });
+        
+        adData.data?.forEach(item => {
+            if (seasonalData[item.category]) {
+                seasonalData[item.category].ads.push(item);
+            }
+        });
+        
+        seasonalSettings = {};
+        settingsData.data?.forEach(setting => {
+            seasonalSettings[setting.category] = setting;
+        });
+        
+        renderScheduleTable();
+        renderPlaylistTable();
+        renderAdsTable();
+        renderAllSeasonalTables();
+        updateSeasonalStatusBadges();
+        
+        const endTime = performance.now();
+        console.log(`✅ Admin carregado em ${(endTime - startTime).toFixed(0)}ms`);
+        
+        setupRealtimeSubscription();
+        
+    } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+    }
 }
 
 function setupRealtimeSubscription() {
@@ -741,9 +793,11 @@ function setupRealtimeSubscription() {
         .channel('admin_schedule_changes')
         .on('postgres_changes', 
             { event: '*', schema: 'public', table: 'radio_schedule' },
-            () => {
+            async () => {
                 console.log('Atualização detectada, recarregando...');
-                loadAllSchedules();
+                const { data } = await supabase.from('radio_schedule').select('*').order('hour', { ascending: true });
+                allSchedules = data || [];
+                renderScheduleTable();
             }
         )
         .subscribe();
@@ -765,22 +819,6 @@ function setupRealtimeSubscription() {
             }
         )
         .subscribe();
-}
-
-async function loadAllSchedules() {
-    try {
-        const { data, error } = await supabase
-            .from('radio_schedule')
-            .select('*')
-            .order('hour', { ascending: true });
-        
-        if (error) throw error;
-        
-        allSchedules = data || [];
-        renderScheduleTable();
-    } catch (error) {
-        console.error('Erro ao carregar programação:', error);
-    }
 }
 
 function renderScheduleTable() {
@@ -917,7 +955,11 @@ async function handleSaveSchedule(e) {
         }
         
         handleClearForm();
-        loadAllSchedules();
+        
+        const { data } = await supabase.from('radio_schedule').select('*').order('hour', { ascending: true });
+        allSchedules = data || [];
+        renderScheduleTable();
+        
     } catch (error) {
         console.error('Erro ao salvar:', error);
         alert('❌ Erro ao salvar programação: ' + error.message);
@@ -935,7 +977,10 @@ async function toggleSchedule(id, newStatus) {
             .eq('id', id);
         
         if (error) throw error;
-        loadAllSchedules();
+        
+        const { data } = await supabase.from('radio_schedule').select('*').order('hour', { ascending: true });
+        allSchedules = data || [];
+        renderScheduleTable();
     } catch (error) {
         console.error('Erro ao alternar status:', error);
         alert('❌ Erro ao alternar status: ' + error.message);
@@ -955,7 +1000,10 @@ async function deleteSchedule(id) {
         
         if (error) throw error;
         alert('✅ Programação deletada com sucesso!');
-        loadAllSchedules();
+        
+        const { data } = await supabase.from('radio_schedule').select('*').order('hour', { ascending: true});
+        allSchedules = data || [];
+        renderScheduleTable();
     } catch (error) {
         console.error('Erro ao deletar:', error);
         alert('❌ Erro ao deletar programação: ' + error.message);
@@ -1046,45 +1094,33 @@ async function handleForceShufflePlaylist() {
         
         const today = new Date().toISOString().split('T')[0];
         
-        for (let i = 0; i < allTracks.length; i++) {
-            const track = allTracks[i];
-            const newOrder = shuffledIndices[i];
-            
-            const { error: updateError } = await supabase
-                .from('background_playlist')
-                .update({
-                    daily_order: newOrder,
-                    last_shuffle_date: today
-                })
-                .eq('id', track.id);
-            
-            if (updateError) {
-                console.error('Erro ao atualizar ordem:', updateError);
-            }
-        }
+        const updates = allTracks.map((track, index) => ({
+            id: track.id,
+            daily_order: shuffledIndices[index],
+            last_shuffle_date: today
+        }));
+        
+        await Promise.all(
+            updates.map(update =>
+                supabase
+                    .from('background_playlist')
+                    .update({
+                        daily_order: update.daily_order,
+                        last_shuffle_date: update.last_shuffle_date
+                    })
+                    .eq('id', update.id)
+            )
+        );
         
         alert('🎲 Playlist embaralhada com sucesso!\n\n✅ Nova ordem de reprodução aplicada.');
-        loadBackgroundPlaylist();
+        
+        const { data } = await supabase.from('background_playlist').select('*').order('original_order', { ascending: true });
+        backgroundPlaylist = data || [];
+        renderPlaylistTable();
         
     } catch (error) {
         console.error('Erro ao embaralhar:', error);
         alert('❌ Erro ao embaralhar playlist: ' + error.message);
-    }
-}
-
-async function loadBackgroundPlaylist() {
-    try {
-        const { data, error } = await supabase
-            .from('background_playlist')
-            .select('*')
-            .order('original_order', { ascending: true });
-        
-        if (error) throw error;
-        
-        backgroundPlaylist = data || [];
-        renderPlaylistTable();
-    } catch (error) {
-        console.error('Erro ao carregar playlist:', error);
     }
 }
 
@@ -1219,7 +1255,11 @@ async function handleSavePlaylist(e) {
         }
         
         handleClearPlaylistForm();
-        loadBackgroundPlaylist();
+        
+        const { data } = await supabase.from('background_playlist').select('*').order('original_order', { ascending: true });
+        backgroundPlaylist = data || [];
+        renderPlaylistTable();
+        
     } catch (error) {
         console.error('Erro ao salvar:', error);
         alert('❌ Erro ao salvar música: ' + error.message);
@@ -1256,7 +1296,10 @@ async function togglePlaylist(id, newStatus) {
             .eq('id', id);
         
         if (error) throw error;
-        loadBackgroundPlaylist();
+        
+        const { data } = await supabase.from('background_playlist').select('*').order('original_order', { ascending: true });
+        backgroundPlaylist = data || [];
+        renderPlaylistTable();
     } catch (error) {
         console.error('Erro ao alternar status:', error);
         alert('❌ Erro ao alternar status: ' + error.message);
@@ -1276,7 +1319,10 @@ async function deletePlaylist(id) {
         
         if (error) throw error;
         alert('✅ Música deletada com sucesso!');
-        loadBackgroundPlaylist();
+        
+        const { data } = await supabase.from('background_playlist').select('*').order('original_order', { ascending: true });
+        backgroundPlaylist = data || [];
+        renderPlaylistTable();
     } catch (error) {
         console.error('Erro ao deletar:', error);
         alert('❌ Erro ao deletar música: ' + error.message);
@@ -1313,22 +1359,6 @@ function handleClearPlaylistForm() {
     
     const submitBtn = playlistForm.querySelector('.submit-btn');
     submitBtn.textContent = '💾 Adicionar à Playlist';
-}
-
-async function loadAdvertisements() {
-    try {
-        const { data, error } = await supabase
-            .from('advertisements')
-            .select('*')
-            .order('play_order', { ascending: true });
-        
-        if (error) throw error;
-        
-        advertisements = data || [];
-        renderAdsTable();
-    } catch (error) {
-        console.error('Erro ao carregar propagandas:', error);
-    }
 }
 
 function renderAdsTable() {
@@ -1465,7 +1495,11 @@ async function handleSaveAd(e) {
         }
         
         handleClearAdForm();
-        loadAdvertisements();
+        
+        const { data } = await supabase.from('advertisements').select('*').order('play_order', { ascending: true });
+        advertisements = data || [];
+        renderAdsTable();
+        
     } catch (error) {
         console.error('Erro ao salvar:', error);
         alert('❌ Erro ao salvar propaganda: ' + error.message);
@@ -1504,7 +1538,10 @@ async function toggleAd(id, newStatus) {
             .eq('id', id);
         
         if (error) throw error;
-        loadAdvertisements();
+        
+        const { data } = await supabase.from('advertisements').select('*').order('play_order', { ascending: true });
+        advertisements = data || [];
+        renderAdsTable();
     } catch (error) {
         console.error('Erro ao alternar status:', error);
         alert('❌ Erro ao alternar status: ' + error.message);
@@ -1524,7 +1561,10 @@ async function deleteAd(id) {
         
         if (error) throw error;
         alert('✅ Propaganda deletada com sucesso!');
-        loadAdvertisements();
+        
+        const { data } = await supabase.from('advertisements').select('*').order('play_order', { ascending: true });
+        advertisements = data || [];
+        renderAdsTable();
     } catch (error) {
         console.error('Erro ao deletar:', error);
         alert('❌ Erro ao deletar propaganda: ' + error.message);
