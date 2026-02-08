@@ -34,19 +34,18 @@ let seasonalAds = [];
 let activeSeasonalCategory = null;
 let isSeasonalActive = false;
 
+let isShuffling = false;
+
 init();
 
 async function init() {
     try {
-        await ensureTableExists();
-        await loadSchedule();
+        console.log('⚡ Iniciando sistema otimizado...');
+        const startTime = performance.now();
         
         lastKnownDate = new Date().toISOString().split('T')[0];
-        console.log(`📅 Sistema iniciado em: ${lastKnownDate}`);
         
-        await loadBackgroundPlaylist();
-        await loadAdvertisements();
-        await loadSeasonalData();
+        await loadAllDataParallel();
         
         setupEventListeners();
         setupRealtimeSubscription();
@@ -55,11 +54,18 @@ async function init() {
         setInterval(updateClock, 1000);
         
         setInterval(checkHourChange, 30000);
-        setInterval(checkAndShuffleIfNewDay, 60000);
         setInterval(checkSeasonalStatus, 5000);
         
         await loadCurrentHourAudio();
         
+        setTimeout(() => {
+            checkAndShuffleIfNewDay();
+        }, 2000);
+        
+        setInterval(checkAndShuffleIfNewDay, 300000);
+        
+        const endTime = performance.now();
+        console.log(`✅ Sistema carregado em ${(endTime - startTime).toFixed(0)}ms`);
         showMessage('Sistema carregado com sucesso!', 'success');
     } catch (error) {
         console.error('Erro ao inicializar:', error);
@@ -67,103 +73,65 @@ async function init() {
     }
 }
 
-async function ensureTableExists() {
+async function loadAllDataParallel() {
+    console.log('🚀 Carregando dados em paralelo...');
+    
     try {
-        const { data, error } = await supabase
-            .from('radio_schedule')
-            .select('hour')
-            .limit(1);
+        const [
+            scheduleData,
+            playlistData,
+            adsData,
+            seasonalMusicData,
+            seasonalAdsData,
+            seasonalSettingsData
+        ] = await Promise.all([
+            supabase.from('radio_schedule').select('*').order('hour', { ascending: true }),
+            supabase.from('background_playlist').select('*').eq('enabled', true).order('daily_order', { ascending: true }),
+            supabase.from('advertisements').select('*').eq('enabled', true).order('play_order', { ascending: true }),
+            supabase.from('seasonal_playlists').select('*').eq('type', 'music').eq('enabled', true).order('daily_order', { ascending: true }),
+            supabase.from('seasonal_playlists').select('*').eq('type', 'ad').eq('enabled', true).order('play_order', { ascending: true }),
+            supabase.from('seasonal_settings').select('*').eq('is_active', true).maybeSingle()
+        ]);
         
-        if (error && error.code === '42P01') {
-            console.warn('Tabela radio_schedule não existe. Execute o SQL de criação no Supabase.');
-            showMessage('Configure a tabela no Supabase primeiro. Veja o console.', 'info');
-        }
-    } catch (error) {
-        console.error('Erro ao verificar tabela:', error);
-    }
-}
-
-async function loadSeasonalData() {
-    try {
-        const { data: musicData, error: musicError } = await supabase
-            .from('seasonal_playlists')
-            .select('*')
-            .eq('type', 'music')
-            .eq('enabled', true)
-            .order('daily_order', { ascending: true });
+        allSchedules = scheduleData.data || [];
+        backgroundPlaylist = playlistData.data || [];
+        advertisements = adsData.data || [];
         
-        if (musicError) {
-            console.error('Erro ao carregar músicas temáticas:', musicError);
-            return;
-        }
-        
-        const { data: adData, error: adError } = await supabase
-            .from('seasonal_playlists')
-            .select('*')
-            .eq('type', 'ad')
-            .eq('enabled', true)
-            .order('play_order', { ascending: true });
-        
-        if (adError) {
-            console.error('Erro ao carregar propagandas temáticas:', adError);
-            return;
-        }
-        
-        const { data: settings, error: settingsError } = await supabase
-            .from('seasonal_settings')
-            .select('*')
-            .eq('is_active', true)
-            .maybeSingle();
-        
-        if (settingsError && settingsError.code !== 'PGRST116') {
-            console.error('Erro ao verificar configurações temáticas:', settingsError);
-            return;
-        }
-        
-        if (settings && settings.category) {
-            activeSeasonalCategory = settings.category;
+        if (seasonalSettingsData.data && seasonalSettingsData.data.category) {
+            activeSeasonalCategory = seasonalSettingsData.data.category;
             isSeasonalActive = true;
             
-            seasonalPlaylist = musicData.filter(item => item.category === activeSeasonalCategory);
-            seasonalAds = adData.filter(item => item.category === activeSeasonalCategory);
+            seasonalPlaylist = (seasonalMusicData.data || []).filter(item => 
+                item.category === activeSeasonalCategory
+            );
             
-            const categoryLabels = {
-                natal: '🎄 Natal',
-                ano_novo: '🎆 Ano-Novo',
-                pascoa: '🐰 Páscoa',
-                sao_joao: '🔥 São João'
-            };
+            seasonalAds = (seasonalAdsData.data || []).filter(item => 
+                item.category === activeSeasonalCategory
+            );
             
-            console.log(`🎭 Playlist temática ativa: ${categoryLabels[activeSeasonalCategory]}`);
-            console.log(`🎵 Músicas temáticas: ${seasonalPlaylist.length}`);
-            console.log(`📢 Propagandas temáticas: ${seasonalAds.length}`);
-            
+            console.log(`🎭 Playlist temática ativa: ${activeSeasonalCategory}`);
         } else {
             isSeasonalActive = false;
-            activeSeasonalCategory = null;
             seasonalPlaylist = [];
             seasonalAds = [];
-            console.log('📻 Modo normal: Playlist padrão ativa');
         }
         
+        updateScheduleDisplay();
+        
+        console.log(`✅ Dados carregados: ${backgroundPlaylist.length} músicas, ${advertisements.length} ads`);
+        
     } catch (error) {
-        console.error('Erro ao carregar playlists temáticas:', error);
-        isSeasonalActive = false;
+        console.error('Erro ao carregar dados:', error);
     }
 }
 
 async function checkSeasonalStatus() {
     try {
-        const { data: settings, error } = await supabase
+        const { data: settings } = await supabase
             .from('seasonal_settings')
             .select('*')
             .eq('is_active', true)
             .maybeSingle();
-        
-        if (error && error.code !== 'PGRST116') {
-            console.error('Erro ao verificar status temático:', error);
-            return;
-        }
         
         const wasActive = isSeasonalActive;
         const previousCategory = activeSeasonalCategory;
@@ -172,8 +140,17 @@ async function checkSeasonalStatus() {
             const newCategory = settings.category;
             
             if (!wasActive || previousCategory !== newCategory) {
-                console.log(`🎭 Mudança detectada! Ativando playlist temática: ${newCategory}`);
-                await loadSeasonalData();
+                console.log(`🎭 Mudança detectada! Ativando: ${newCategory}`);
+                
+                const [musicData, adData] = await Promise.all([
+                    supabase.from('seasonal_playlists').select('*').eq('type', 'music').eq('enabled', true).eq('category', newCategory).order('daily_order', { ascending: true }),
+                    supabase.from('seasonal_playlists').select('*').eq('type', 'ad').eq('enabled', true).eq('category', newCategory).order('play_order', { ascending: true })
+                ]);
+                
+                activeSeasonalCategory = newCategory;
+                isSeasonalActive = true;
+                seasonalPlaylist = musicData.data || [];
+                seasonalAds = adData.data || [];
                 
                 currentBackgroundIndex = 0;
                 currentAdIndex = 0;
@@ -183,14 +160,7 @@ async function checkSeasonalStatus() {
                     playBackgroundMusic();
                 }
                 
-                const categoryLabels = {
-                    natal: '🎄 Natal',
-                    ano_novo: '🎆 Ano-Novo',
-                    pascoa: '🐰 Páscoa',
-                    sao_joao: '🔥 São João'
-                };
-                
-                showMessage(`${categoryLabels[newCategory]} ativado!`, 'success');
+                showMessage(`Playlist temática ativada!`, 'success');
             }
         } else {
             if (wasActive) {
@@ -218,49 +188,34 @@ async function checkSeasonalStatus() {
 }
 
 async function checkAndShuffleIfNewDay() {
+    if (isShuffling) {
+        console.log('⏳ Embaralhamento já em andamento, pulando...');
+        return;
+    }
+    
     try {
         const today = new Date().toISOString().split('T')[0];
         
         if (lastKnownDate && lastKnownDate !== today) {
-            console.log(`🌅 MUDANÇA DE DIA DETECTADA!`);
-            console.log(`   Dia anterior: ${lastKnownDate}`);
-            console.log(`   Dia atual: ${today}`);
-            console.log(`🎲 Iniciando embaralhamento automático...`);
-            
-            await shufflePlaylistForToday();
-            await loadBackgroundPlaylist();
-            
+            console.log(`🌅 NOVO DIA: ${today}`);
+            await shufflePlaylistOptimized();
             lastKnownDate = today;
-            
-            showMessage('🎲 Nova programação do dia carregada!', 'success');
             return;
         }
         
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from('background_playlist')
             .select('last_shuffle_date')
             .eq('enabled', true)
             .limit(1)
             .maybeSingle();
         
-        if (error && error.code !== 'PGRST116') {
-            console.error('Erro ao verificar data:', error);
-            return;
-        }
-        
         const lastShuffleDate = data?.last_shuffle_date;
         
         if (!lastShuffleDate || lastShuffleDate !== today) {
-            console.log(`🎲 Data do banco desatualizada. Embaralhando...`);
-            console.log(`   Última data no banco: ${lastShuffleDate || 'nunca'}`);
-            console.log(`   Data atual: ${today}`);
-            
-            await shufflePlaylistForToday();
-            await loadBackgroundPlaylist();
-            
+            console.log(`🎲 Embaralhando playlist...`);
+            await shufflePlaylistOptimized();
             lastKnownDate = today;
-            
-            showMessage('🎲 Playlist embaralhada automaticamente!', 'success');
         } else {
             if (!lastKnownDate) {
                 lastKnownDate = today;
@@ -271,22 +226,25 @@ async function checkAndShuffleIfNewDay() {
     }
 }
 
-async function shufflePlaylistForToday() {
+async function shufflePlaylistOptimized() {
+    if (isShuffling) return;
+    
+    isShuffling = true;
+    
     try {
-        const { data: allTracks, error: fetchError } = await supabase
+        const { data: allTracks } = await supabase
             .from('background_playlist')
-            .select('id, original_order, title')
+            .select('id')
             .eq('enabled', true)
             .order('original_order', { ascending: true });
         
-        if (fetchError) throw fetchError;
-        
         if (!allTracks || allTracks.length === 0) {
-            console.log('⚠️ Nenhuma música ativa para embaralhar');
+            console.log('⚠️ Nenhuma música para embaralhar');
+            isShuffling = false;
             return;
         }
         
-        console.log(`🎵 Embaralhando ${allTracks.length} músicas...`);
+        console.log(`🎲 Embaralhando ${allTracks.length} músicas (otimizado)...`);
         
         const shuffledIndices = [...Array(allTracks.length).keys()];
         for (let i = shuffledIndices.length - 1; i > 0; i--) {
@@ -296,82 +254,43 @@ async function shufflePlaylistForToday() {
         
         const today = new Date().toISOString().split('T')[0];
         
-        for (let i = 0; i < allTracks.length; i++) {
-            const track = allTracks[i];
-            const newOrder = shuffledIndices[i];
+        const updates = allTracks.map((track, index) => ({
+            id: track.id,
+            daily_order: shuffledIndices[index],
+            last_shuffle_date: today
+        }));
+        
+        const batchSize = 50;
+        for (let i = 0; i < updates.length; i += batchSize) {
+            const batch = updates.slice(i, i + batchSize);
             
-            const { error: updateError } = await supabase
-                .from('background_playlist')
-                .update({
-                    daily_order: newOrder,
-                    last_shuffle_date: today
-                })
-                .eq('id', track.id);
-            
-            if (updateError) {
-                console.error('Erro ao atualizar ordem:', updateError);
-            }
+            await Promise.all(
+                batch.map(update =>
+                    supabase
+                        .from('background_playlist')
+                        .update({
+                            daily_order: update.daily_order,
+                            last_shuffle_date: update.last_shuffle_date
+                        })
+                        .eq('id', update.id)
+                )
+            );
         }
         
-        console.log('✅ Playlist embaralhada com sucesso!');
-        console.log(`📅 Data registrada: ${today}`);
-        
-    } catch (error) {
-        console.error('❌ Erro ao embaralhar playlist:', error);
-    }
-}
-
-async function loadBackgroundPlaylist() {
-    try {
-        await checkAndShuffleIfNewDay();
-        
-        const { data, error } = await supabase
+        const { data: refreshedData } = await supabase
             .from('background_playlist')
             .select('*')
             .eq('enabled', true)
             .order('daily_order', { ascending: true });
         
-        if (error) {
-            console.error('Erro ao carregar playlist de fundo:', error);
-            backgroundPlaylist = [];
-            return;
-        }
+        backgroundPlaylist = refreshedData || [];
         
-        backgroundPlaylist = data || [];
-        console.log('🎵 Playlist de fundo carregada:', backgroundPlaylist.length, 'músicas');
-        console.log('🎲 Ordem do dia aplicada!');
+        console.log('✅ Embaralhamento concluído!');
         
-        if (backgroundPlaylist.length > 0) {
-            console.log('📋 Ordem de reprodução atual:');
-            backgroundPlaylist.forEach((track, index) => {
-                console.log(`  ${index + 1}. ${track.title} (Original: ${track.original_order}, Dia: ${track.daily_order})`);
-            });
-        }
     } catch (error) {
-        console.error('Erro ao carregar playlist:', error);
-        backgroundPlaylist = [];
-    }
-}
-
-async function loadAdvertisements() {
-    try {
-        const { data, error } = await supabase
-            .from('advertisements')
-            .select('*')
-            .eq('enabled', true)
-            .order('play_order', { ascending: true });
-        
-        if (error) {
-            console.error('Erro ao carregar propagandas:', error);
-            advertisements = [];
-            return;
-        }
-        
-        advertisements = data || [];
-        console.log('📢 Propagandas carregadas:', advertisements.length, 'anúncios');
-    } catch (error) {
-        console.error('Erro ao carregar propagandas:', error);
-        advertisements = [];
+        console.error('❌ Erro ao embaralhar:', error);
+    } finally {
+        isShuffling = false;
     }
 }
 
@@ -398,9 +317,14 @@ function setupRealtimeSubscription() {
         .channel('playlist_changes')
         .on('postgres_changes',
             { event: '*', schema: 'public', table: 'background_playlist' },
-            () => {
-                console.log('🔄 Playlist atualizada, recarregando...');
-                loadBackgroundPlaylist();
+            async () => {
+                console.log('🔄 Playlist atualizada');
+                const { data } = await supabase
+                    .from('background_playlist')
+                    .select('*')
+                    .eq('enabled', true)
+                    .order('daily_order', { ascending: true });
+                backgroundPlaylist = data || [];
             }
         )
         .subscribe();
@@ -409,9 +333,14 @@ function setupRealtimeSubscription() {
         .channel('ads_changes')
         .on('postgres_changes',
             { event: '*', schema: 'public', table: 'advertisements' },
-            () => {
-                console.log('🔄 Propagandas atualizadas, recarregando...');
-                loadAdvertisements();
+            async () => {
+                console.log('🔄 Propagandas atualizadas');
+                const { data } = await supabase
+                    .from('advertisements')
+                    .select('*')
+                    .eq('enabled', true)
+                    .order('play_order', { ascending: true });
+                advertisements = data || [];
             }
         )
         .subscribe();
@@ -422,7 +351,7 @@ function setupRealtimeSubscription() {
             { event: '*', schema: 'public', table: 'seasonal_playlists' },
             () => {
                 console.log('🎭 Playlists temáticas atualizadas');
-                loadSeasonalData();
+                checkSeasonalStatus();
             }
         )
         .on('postgres_changes',
@@ -438,30 +367,20 @@ function setupRealtimeSubscription() {
 async function handleRealtimeUpdate(payload) {
     console.log('Atualização em tempo real:', payload);
     
-    await loadSchedule();
+    const { data } = await supabase
+        .from('radio_schedule')
+        .select('*')
+        .order('hour', { ascending: true });
+    
+    allSchedules = data || [];
     
     const currentHourNum = new Date().getHours();
     if (payload.new && payload.new.hour === currentHourNum) {
         showMessage('Programação atualizada! Recarregando...', 'info');
         await loadCurrentHourAudio();
     }
-}
-
-async function loadSchedule() {
-    try {
-        const { data, error } = await supabase
-            .from('radio_schedule')
-            .select('*')
-            .order('hour', { ascending: true });
-        
-        if (error) throw error;
-        
-        allSchedules = data || [];
-        updateScheduleDisplay();
-    } catch (error) {
-        console.error('Erro ao carregar programação:', error);
-        allSchedules = [];
-    }
+    
+    updateScheduleDisplay();
 }
 
 function updateScheduleDisplay() {
@@ -516,19 +435,8 @@ async function loadCurrentHourAudio() {
     const currentHourNum = new Date().getHours();
     const currentMinute = new Date().getMinutes();
     
-    await checkAndShuffleIfNewDay();
-    
     try {
-        const { data, error } = await supabase
-            .from('radio_schedule')
-            .select('*')
-            .eq('hour', currentHourNum)
-            .eq('enabled', true)
-            .maybeSingle();
-        
-        if (error && error.code !== 'PGRST116') {
-            throw error;
-        }
+        const data = allSchedules.find(s => s.hour === currentHourNum && s.enabled);
         
         if (!data) {
             playBackgroundMusic();
@@ -543,17 +451,16 @@ async function loadCurrentHourAudio() {
         const currentSlot = isHourExact ? `${currentHourNum}:00` : `${currentHourNum}:30`;
         
         if (lastPlayedSlot === currentSlot) {
-            console.log(`⏭️ Slot ${currentSlot} já foi reproduzido, pulando para playlist`);
+            console.log(`⏭️ Slot ${currentSlot} já reproduzido`);
             playBackgroundMusic();
             return;
         }
         
-        if (isHourExact && data && data.audio_url && data.audio_url.trim() !== '') {
+        if (isHourExact && data.audio_url && data.audio_url.trim() !== '') {
             isPlayingHourCerta = true;
             audioPlayer.src = data.audio_url;
             currentProgram.textContent = `🎙️ Hora Certa - ${String(currentHourNum).padStart(2, '0')}:00`;
             lastPlayedSlot = currentSlot;
-            console.log(`🎙️ Tocando Hora Certa (hora cheia): ${currentProgram.textContent}`);
             
             if (isPlaying) {
                 audioPlayer.play().catch(err => {
@@ -561,12 +468,11 @@ async function loadCurrentHourAudio() {
                     showMessage('Clique em Play para ouvir', 'info');
                 });
             }
-        } else if (isHalfHour && data && data.audio_url_half && data.audio_url_half.trim() !== '') {
+        } else if (isHalfHour && data.audio_url_half && data.audio_url_half.trim() !== '') {
             isPlayingHourCerta = true;
             audioPlayer.src = data.audio_url_half;
             currentProgram.textContent = `🎙️ Hora Certa - ${String(currentHourNum).padStart(2, '0')}:30`;
             lastPlayedSlot = currentSlot;
-            console.log(`🎙️ Tocando Hora Certa (meia hora): ${currentProgram.textContent}`);
             
             if (isPlaying) {
                 audioPlayer.play().catch(err => {
@@ -614,9 +520,6 @@ function playBackgroundMusic() {
         
         tracksPlayedSinceLastAd++;
         
-        const playlistType = isSeasonalActive ? `temática (${activeSeasonalCategory})` : 'normal';
-        console.log(`🎵 Tocando (${playlistType}): ${currentTrack.title} (${currentBackgroundIndex + 1}/${playlist.length})`);
-        
         if (isPlaying) {
             audioPlayer.play().catch(err => {
                 console.error('Erro ao reproduzir música de fundo:', err);
@@ -646,9 +549,6 @@ function playAdvertisement() {
         
         const prefix = isSeasonalActive ? '🎭 ' : '📢 ';
         currentProgram.textContent = `${prefix}${currentAd.title}${currentAd.advertiser ? ' - ' + currentAd.advertiser : ''}`;
-        
-        const adType = isSeasonalActive ? `temática (${activeSeasonalCategory})` : 'normal';
-        console.log(`📢 Tocando propaganda (${adType}): ${currentAd.title}`);
         
         if (isPlaying) {
             audioPlayer.play().catch(err => {
@@ -707,10 +607,7 @@ async function forceSync() {
     syncBtn.disabled = true;
     
     try {
-        await loadSchedule();
-        await loadBackgroundPlaylist();
-        await loadAdvertisements();
-        await loadSeasonalData();
+        await loadAllDataParallel();
         await loadCurrentHourAudio();
         showMessage('Sincronização concluída!', 'success');
     } catch (error) {
