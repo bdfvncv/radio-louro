@@ -34,10 +34,7 @@ body {
     margin-bottom: 10px;
 }
 
-/* ========================================
-   LOGO - CENTRALIZADA (MOBILE E DESKTOP)
-   ======================================== */
-
+/* Logo */
 .header-content {
     display: flex;
     flex-direction: column;
@@ -160,44 +157,180 @@ body {
     font-variant-numeric: tabular-nums;
 }
 
-/* Player Section */
+/* ========================================
+   PLAYER SECTION - MELHORIAS DE USABILIDADE
+   ======================================== */
+
 .player-section {
     background: #ffffff;
-    padding: 30px;
+    padding: 40px;
     border-radius: 15px;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    border: 3px solid transparent;
+}
+
+/* Estado: Player Tocando */
+.player-section.playing {
+    background: linear-gradient(135deg, #f0f9f5 0%, #ffffff 100%);
+    border-color: #00a86b;
+    box-shadow: 0 8px 30px rgba(0, 168, 107, 0.3);
+    animation: playerPulse 2s ease-in-out infinite;
+}
+
+@keyframes playerPulse {
+    0%, 100% {
+        box-shadow: 0 8px 30px rgba(0, 168, 107, 0.3);
+    }
+    50% {
+        box-shadow: 0 8px 40px rgba(0, 168, 107, 0.5);
+    }
+}
+
+/* NOVO: Badge de Status Grande */
+.player-status-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 20px 40px;
+    border-radius: 50px;
+    margin: 0 auto 30px;
+    max-width: 300px;
+    font-weight: bold;
+    font-size: 1.3em;
+    transition: all 0.3s ease;
+    background: #e0e0e0;
+    color: #666;
+}
+
+.player-status-badge .status-icon {
+    font-size: 1.5em;
+}
+
+/* Badge quando pausado */
+.player-status-badge.paused {
+    background: #e0e0e0;
+    color: #666;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Badge quando tocando */
+.player-status-badge.playing {
+    background: linear-gradient(135deg, #00a86b 0%, #008556 100%);
+    color: #ffffff;
+    box-shadow: 0 6px 25px rgba(0, 168, 107, 0.5);
+    animation: statusPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
 }
 
 .now-playing {
     text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: 35px;
 }
 
 .now-playing h2 {
     color: #00a86b;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
+    font-size: 1.3em;
 }
 
 .now-playing p {
-    font-size: 1.5em;
+    font-size: 1.4em;
     color: #333;
     font-weight: 500;
+    min-height: 40px;
 }
 
 .player-controls {
     display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
     align-items: center;
     margin-bottom: 20px;
+}
+
+/* NOVO: Botão Play/Pause Principal - GRANDE E DESTACADO */
+.play-btn-main {
+    background: linear-gradient(135deg, #00a86b 0%, #008556 100%);
+    color: #ffffff;
+    border: none;
+    padding: 25px 60px;
+    border-radius: 60px;
+    font-size: 1.4em;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 25px rgba(0, 168, 107, 0.4);
+    min-width: 280px;
+    justify-content: center;
+}
+
+.play-btn-main:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 35px rgba(0, 168, 107, 0.6);
+}
+
+.play-btn-main:active {
+    transform: translateY(-1px);
+}
+
+.play-btn-main .btn-icon {
+    font-size: 1.4em;
+}
+
+.play-btn-main .btn-text {
+    font-size: 1em;
+    letter-spacing: 1px;
+}
+
+/* Botão quando TOCANDO - Vermelho */
+.play-btn-main.playing {
+    background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+    box-shadow: 0 8px 25px rgba(255, 68, 68, 0.4);
+    animation: playingBtnPulse 1.5s ease-in-out infinite;
+}
+
+.play-btn-main.playing:hover {
+    background: linear-gradient(135deg, #ff5555 0%, #dd0000 100%);
+    box-shadow: 0 12px 35px rgba(255, 68, 68, 0.6);
+}
+
+@keyframes playingBtnPulse {
+    0%, 100% {
+        box-shadow: 0 8px 25px rgba(255, 68, 68, 0.4);
+    }
+    50% {
+        box-shadow: 0 8px 35px rgba(255, 68, 68, 0.6);
+    }
+}
+
+/* Controles Secundários */
+.secondary-controls {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
 }
 
 .control-btn {
     background: #00a86b;
     color: #ffffff;
     border: none;
-    padding: 15px 30px;
+    padding: 12px 24px;
     border-radius: 10px;
     font-size: 1em;
     font-weight: bold;
@@ -218,16 +351,12 @@ body {
     transform: translateY(0);
 }
 
-.control-btn.playing {
-    background: #ff4444;
-}
-
 .volume-control {
     display: flex;
     align-items: center;
     gap: 10px;
     background: #f5f5f5;
-    padding: 10px 20px;
+    padding: 12px 20px;
     border-radius: 10px;
 }
 
@@ -238,7 +367,7 @@ body {
 #volumeValue {
     font-weight: bold;
     color: #00a86b;
-    min-width: 40px;
+    min-width: 45px;
 }
 
 .sync-btn {
@@ -835,7 +964,17 @@ body {
         flex-direction: column;
     }
 
+    .secondary-controls {
+        flex-direction: column;
+        width: 100%;
+    }
+
     .control-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .volume-control {
         width: 100%;
         justify-content: center;
     }
@@ -889,6 +1028,19 @@ body {
     .toggle-seasonal-btn {
         width: 100%;
     }
+
+    /* Player mobile */
+    .play-btn-main {
+        min-width: auto;
+        width: 100%;
+        padding: 20px 40px;
+        font-size: 1.2em;
+    }
+
+    .player-status-badge {
+        max-width: 100%;
+        font-size: 1.1em;
+    }
 }
 
 @media (max-width: 480px) {
@@ -909,5 +1061,23 @@ body {
     .pulse {
         width: 12px;
         height: 12px;
+    }
+
+    .current-time {
+        font-size: 2em;
+    }
+
+    .play-btn-main {
+        padding: 18px 30px;
+        font-size: 1.1em;
+    }
+
+    .play-btn-main .btn-icon {
+        font-size: 1.2em;
+    }
+
+    .player-status-badge {
+        font-size: 1em;
+        padding: 15px 30px;
     }
 }
