@@ -16,6 +16,10 @@ const previousProgram = document.getElementById('previousProgram');
 const currentHour = document.getElementById('currentHour');
 const nextProgram = document.getElementById('nextProgram');
 
+// NOVOS elementos para melhor feedback visual
+const playerSection = document.getElementById('playerSection');
+const playerStatusBadge = document.getElementById('playerStatusBadge');
+
 let isPlaying = false;
 let currentHourData = null;
 let allSchedules = [];
@@ -465,7 +469,7 @@ async function loadCurrentHourAudio() {
             if (isPlaying) {
                 audioPlayer.play().catch(err => {
                     console.error('Erro ao reproduzir:', err);
-                    showMessage('Clique em Play para ouvir', 'info');
+                    showMessage('Clique em INICIAR RÁDIO para ouvir', 'info');
                 });
             }
         } else if (isHalfHour && data.audio_url_half && data.audio_url_half.trim() !== '') {
@@ -477,7 +481,7 @@ async function loadCurrentHourAudio() {
             if (isPlaying) {
                 audioPlayer.play().catch(err => {
                     console.error('Erro ao reproduzir:', err);
-                    showMessage('Clique em Play para ouvir', 'info');
+                    showMessage('Clique em INICIAR RÁDIO para ouvir', 'info');
                 });
             }
         } else {
@@ -571,6 +575,10 @@ function handleNoAudio() {
     }
 }
 
+// ========================================
+// FUNÇÃO MELHORADA: Toggle Play com Feedback Visual
+// ========================================
+
 function togglePlay() {
     if (!audioPlayer.src) {
         showMessage('Nenhum áudio disponível', 'error');
@@ -578,21 +586,60 @@ function togglePlay() {
     }
     
     if (isPlaying) {
+        // PAUSAR
         audioPlayer.pause();
         isPlaying = false;
-        playBtn.innerHTML = '<span class="icon">▶️</span><span class="text">Play</span>';
-        playBtn.classList.remove('playing');
+        updatePlayerVisualState(false);
+        showMessage('Rádio pausada', 'info');
     } else {
+        // TOCAR
         audioPlayer.play()
             .then(() => {
                 isPlaying = true;
-                playBtn.innerHTML = '<span class="icon">⏸️</span><span class="text">Pause</span>';
-                playBtn.classList.add('playing');
+                updatePlayerVisualState(true);
+                showMessage('Rádio iniciada!', 'success');
             })
             .catch(error => {
                 console.error('Erro ao reproduzir:', error);
                 showMessage('Erro ao reproduzir áudio. Verifique a URL.', 'error');
             });
+    }
+}
+
+// ========================================
+// NOVA FUNÇÃO: Atualizar Estado Visual do Player
+// ========================================
+
+function updatePlayerVisualState(playing) {
+    if (playing) {
+        // ESTADO: TOCANDO
+        
+        // Atualizar botão principal
+        playBtn.innerHTML = '<span class="btn-icon">⏸️</span><span class="btn-text">PAUSAR RÁDIO</span>';
+        playBtn.classList.add('playing');
+        
+        // Atualizar badge de status
+        playerStatusBadge.innerHTML = '<span class="status-icon">▶️</span><span class="status-text">TOCANDO</span>';
+        playerStatusBadge.classList.remove('paused');
+        playerStatusBadge.classList.add('playing');
+        
+        // Atualizar card do player
+        playerSection.classList.add('playing');
+        
+    } else {
+        // ESTADO: PAUSADO
+        
+        // Atualizar botão principal
+        playBtn.innerHTML = '<span class="btn-icon">▶️</span><span class="btn-text">INICIAR RÁDIO</span>';
+        playBtn.classList.remove('playing');
+        
+        // Atualizar badge de status
+        playerStatusBadge.innerHTML = '<span class="status-icon">⏸️</span><span class="status-text">PAUSADO</span>';
+        playerStatusBadge.classList.remove('playing');
+        playerStatusBadge.classList.add('paused');
+        
+        // Atualizar card do player
+        playerSection.classList.remove('playing');
     }
 }
 
