@@ -6,19 +6,11 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const audioPlayer = document.getElementById('audioPlayer');
 const playBtn = document.getElementById('playBtn');
 const volumeSlider = document.getElementById('volumeSlider');
-const volumeValue = document.getElementById('volumeValue');
 const syncBtn = document.getElementById('syncBtn');
 const currentTime = document.getElementById('currentTime');
 const countdownTimer = document.getElementById('countdownTimer');
-const currentProgram = document.getElementById('currentProgram');
-const statusMessage = document.getElementById('statusMessage');
-const previousProgram = document.getElementById('previousProgram');
-const currentHour = document.getElementById('currentHour');
-const nextProgram = document.getElementById('nextProgram');
-
-// NOVOS elementos para melhor feedback visual
-const playerSection = document.getElementById('playerSection');
-const playerStatusBadge = document.getElementById('playerStatusBadge');
+const statusText = document.getElementById('statusText');
+const trackName = document.getElementById('trackName');
 
 let isPlaying = false;
 let currentHourData = null;
@@ -44,8 +36,7 @@ init();
 
 async function init() {
     try {
-        console.log('⚡ Iniciando sistema otimizado...');
-        const startTime = performance.now();
+        console.log('⚡ Iniciando rádio...');
         
         lastKnownDate = new Date().toISOString().split('T')[0];
         
@@ -68,18 +59,14 @@ async function init() {
         
         setInterval(checkAndShuffleIfNewDay, 300000);
         
-        const endTime = performance.now();
-        console.log(`✅ Sistema carregado em ${(endTime - startTime).toFixed(0)}ms`);
-        showMessage('Sistema carregado com sucesso!', 'success');
+        console.log('✅ Rádio pronta');
+        
     } catch (error) {
         console.error('Erro ao inicializar:', error);
-        showMessage('Erro ao carregar o sistema. Verifique o console.', 'error');
     }
 }
 
 async function loadAllDataParallel() {
-    console.log('🚀 Carregando dados em paralelo...');
-    
     try {
         const [
             scheduleData,
@@ -113,16 +100,12 @@ async function loadAllDataParallel() {
                 item.category === activeSeasonalCategory
             );
             
-            console.log(`🎭 Playlist temática ativa: ${activeSeasonalCategory}`);
+            console.log(`🎭 Playlist temática: ${activeSeasonalCategory}`);
         } else {
             isSeasonalActive = false;
             seasonalPlaylist = [];
             seasonalAds = [];
         }
-        
-        updateScheduleDisplay();
-        
-        console.log(`✅ Dados carregados: ${backgroundPlaylist.length} músicas, ${advertisements.length} ads`);
         
     } catch (error) {
         console.error('Erro ao carregar dados:', error);
@@ -144,8 +127,6 @@ async function checkSeasonalStatus() {
             const newCategory = settings.category;
             
             if (!wasActive || previousCategory !== newCategory) {
-                console.log(`🎭 Mudança detectada! Ativando: ${newCategory}`);
-                
                 const [musicData, adData] = await Promise.all([
                     supabase.from('seasonal_playlists').select('*').eq('type', 'music').eq('enabled', true).eq('category', newCategory).order('daily_order', { ascending: true }),
                     supabase.from('seasonal_playlists').select('*').eq('type', 'ad').eq('enabled', true).eq('category', newCategory).order('play_order', { ascending: true })
@@ -163,12 +144,9 @@ async function checkSeasonalStatus() {
                 if (isPlaying && !isPlayingHourCerta) {
                     playBackgroundMusic();
                 }
-                
-                showMessage(`Playlist temática ativada!`, 'success');
             }
         } else {
             if (wasActive) {
-                console.log('📻 Voltando para playlist normal...');
                 isSeasonalActive = false;
                 activeSeasonalCategory = null;
                 seasonalPlaylist = [];
@@ -181,8 +159,6 @@ async function checkSeasonalStatus() {
                 if (isPlaying && !isPlayingHourCerta) {
                     playBackgroundMusic();
                 }
-                
-                showMessage('Voltando à programação normal', 'info');
             }
         }
         
@@ -192,16 +168,12 @@ async function checkSeasonalStatus() {
 }
 
 async function checkAndShuffleIfNewDay() {
-    if (isShuffling) {
-        console.log('⏳ Embaralhamento já em andamento, pulando...');
-        return;
-    }
+    if (isShuffling) return;
     
     try {
         const today = new Date().toISOString().split('T')[0];
         
         if (lastKnownDate && lastKnownDate !== today) {
-            console.log(`🌅 NOVO DIA: ${today}`);
             await shufflePlaylistOptimized();
             lastKnownDate = today;
             return;
@@ -217,7 +189,6 @@ async function checkAndShuffleIfNewDay() {
         const lastShuffleDate = data?.last_shuffle_date;
         
         if (!lastShuffleDate || lastShuffleDate !== today) {
-            console.log(`🎲 Embaralhando playlist...`);
             await shufflePlaylistOptimized();
             lastKnownDate = today;
         } else {
@@ -243,12 +214,9 @@ async function shufflePlaylistOptimized() {
             .order('original_order', { ascending: true });
         
         if (!allTracks || allTracks.length === 0) {
-            console.log('⚠️ Nenhuma música para embaralhar');
             isShuffling = false;
             return;
         }
-        
-        console.log(`🎲 Embaralhando ${allTracks.length} músicas (otimizado)...`);
         
         const shuffledIndices = [...Array(allTracks.length).keys()];
         for (let i = shuffledIndices.length - 1; i > 0; i--) {
@@ -289,10 +257,8 @@ async function shufflePlaylistOptimized() {
         
         backgroundPlaylist = refreshedData || [];
         
-        console.log('✅ Embaralhamento concluído!');
-        
     } catch (error) {
-        console.error('❌ Erro ao embaralhar:', error);
+        console.error('Erro ao embaralhar:', error);
     } finally {
         isShuffling = false;
     }
@@ -305,7 +271,6 @@ function setupEventListeners() {
     
     audioPlayer.addEventListener('ended', handleAudioEnded);
     audioPlayer.addEventListener('error', handleAudioError);
-    audioPlayer.addEventListener('canplay', handleCanPlay);
 }
 
 function setupRealtimeSubscription() {
@@ -313,7 +278,11 @@ function setupRealtimeSubscription() {
         .channel('radio_schedule_changes')
         .on('postgres_changes', 
             { event: '*', schema: 'public', table: 'radio_schedule' },
-            handleRealtimeUpdate
+            async () => {
+                const { data } = await supabase.from('radio_schedule').select('*').order('hour', { ascending: true });
+                allSchedules = data || [];
+                await loadCurrentHourAudio();
+            }
         )
         .subscribe();
     
@@ -322,12 +291,7 @@ function setupRealtimeSubscription() {
         .on('postgres_changes',
             { event: '*', schema: 'public', table: 'background_playlist' },
             async () => {
-                console.log('🔄 Playlist atualizada');
-                const { data } = await supabase
-                    .from('background_playlist')
-                    .select('*')
-                    .eq('enabled', true)
-                    .order('daily_order', { ascending: true });
+                const { data } = await supabase.from('background_playlist').select('*').eq('enabled', true).order('daily_order', { ascending: true });
                 backgroundPlaylist = data || [];
             }
         )
@@ -338,12 +302,7 @@ function setupRealtimeSubscription() {
         .on('postgres_changes',
             { event: '*', schema: 'public', table: 'advertisements' },
             async () => {
-                console.log('🔄 Propagandas atualizadas');
-                const { data } = await supabase
-                    .from('advertisements')
-                    .select('*')
-                    .eq('enabled', true)
-                    .order('play_order', { ascending: true });
+                const { data } = await supabase.from('advertisements').select('*').eq('enabled', true).order('play_order', { ascending: true });
                 advertisements = data || [];
             }
         )
@@ -353,86 +312,13 @@ function setupRealtimeSubscription() {
         .channel('seasonal_changes')
         .on('postgres_changes',
             { event: '*', schema: 'public', table: 'seasonal_playlists' },
-            () => {
-                console.log('🎭 Playlists temáticas atualizadas');
-                checkSeasonalStatus();
-            }
+            () => checkSeasonalStatus()
         )
         .on('postgres_changes',
             { event: '*', schema: 'public', table: 'seasonal_settings' },
-            () => {
-                console.log('🎭 Configurações temáticas atualizadas');
-                checkSeasonalStatus();
-            }
+            () => checkSeasonalStatus()
         )
         .subscribe();
-}
-
-async function handleRealtimeUpdate(payload) {
-    console.log('Atualização em tempo real:', payload);
-    
-    const { data } = await supabase
-        .from('radio_schedule')
-        .select('*')
-        .order('hour', { ascending: true });
-    
-    allSchedules = data || [];
-    
-    const currentHourNum = new Date().getHours();
-    if (payload.new && payload.new.hour === currentHourNum) {
-        showMessage('Programação atualizada! Recarregando...', 'info');
-        await loadCurrentHourAudio();
-    }
-    
-    updateScheduleDisplay();
-}
-
-function updateScheduleDisplay() {
-    const now = new Date();
-    const currentHourNum = now.getHours();
-    const currentMinute = now.getMinutes();
-    
-    let currentSlot, prevSlot, nextSlot;
-    
-    if (currentMinute < 30) {
-        currentSlot = { hour: currentHourNum, half: false, label: `${String(currentHourNum).padStart(2, '0')}:00` };
-        const prevHour = (currentHourNum - 1 + 24) % 24;
-        prevSlot = { hour: prevHour, half: true, label: `${String(prevHour).padStart(2, '0')}:30` };
-        nextSlot = { hour: currentHourNum, half: true, label: `${String(currentHourNum).padStart(2, '0')}:30` };
-    } else {
-        currentSlot = { hour: currentHourNum, half: true, label: `${String(currentHourNum).padStart(2, '0')}:30` };
-        prevSlot = { hour: currentHourNum, half: false, label: `${String(currentHourNum).padStart(2, '0')}:00` };
-        const nextHour = (currentHourNum + 1) % 24;
-        nextSlot = { hour: nextHour, half: false, label: `${String(nextHour).padStart(2, '0')}:00` };
-    }
-    
-    const prevData = allSchedules.find(s => s.hour === prevSlot.hour);
-    const currData = allSchedules.find(s => s.hour === currentSlot.hour);
-    const nextData = allSchedules.find(s => s.hour === nextSlot.hour);
-    
-    const prevHasAudio = prevSlot.half 
-        ? (prevData && prevData.audio_url_half && prevData.enabled)
-        : (prevData && prevData.audio_url && prevData.enabled);
-    
-    const currHasAudio = currentSlot.half
-        ? (currData && currData.audio_url_half && currData.enabled)
-        : (currData && currData.audio_url && currData.enabled);
-    
-    const nextHasAudio = nextSlot.half
-        ? (nextData && nextData.audio_url_half && nextData.enabled)
-        : (nextData && nextData.audio_url && nextData.enabled);
-    
-    previousProgram.textContent = prevHasAudio 
-        ? `${prevSlot.label} - Programado`
-        : `${prevSlot.label} - Sem programação`;
-    
-    currentHour.textContent = currHasAudio 
-        ? `${currentSlot.label} - No Ar`
-        : `${currentSlot.label} - Sem programação`;
-    
-    nextProgram.textContent = nextHasAudio 
-        ? `${nextSlot.label} - Próximo`
-        : `${nextSlot.label} - Sem programação`;
 }
 
 async function loadCurrentHourAudio() {
@@ -455,7 +341,6 @@ async function loadCurrentHourAudio() {
         const currentSlot = isHourExact ? `${currentHourNum}:00` : `${currentHourNum}:30`;
         
         if (lastPlayedSlot === currentSlot) {
-            console.log(`⏭️ Slot ${currentSlot} já reproduzido`);
             playBackgroundMusic();
             return;
         }
@@ -463,26 +348,20 @@ async function loadCurrentHourAudio() {
         if (isHourExact && data.audio_url && data.audio_url.trim() !== '') {
             isPlayingHourCerta = true;
             audioPlayer.src = data.audio_url;
-            currentProgram.textContent = `🎙️ Hora Certa - ${String(currentHourNum).padStart(2, '0')}:00`;
+            updateDisplay('Hora Certa', `${String(currentHourNum).padStart(2, '0')}:00`);
             lastPlayedSlot = currentSlot;
             
             if (isPlaying) {
-                audioPlayer.play().catch(err => {
-                    console.error('Erro ao reproduzir:', err);
-                    showMessage('Clique em INICIAR RÁDIO para ouvir', 'info');
-                });
+                audioPlayer.play().catch(err => console.error('Erro:', err));
             }
         } else if (isHalfHour && data.audio_url_half && data.audio_url_half.trim() !== '') {
             isPlayingHourCerta = true;
             audioPlayer.src = data.audio_url_half;
-            currentProgram.textContent = `🎙️ Hora Certa - ${String(currentHourNum).padStart(2, '0')}:30`;
+            updateDisplay('Hora Certa', `${String(currentHourNum).padStart(2, '0')}:30`);
             lastPlayedSlot = currentSlot;
             
             if (isPlaying) {
-                audioPlayer.play().catch(err => {
-                    console.error('Erro ao reproduzir:', err);
-                    showMessage('Clique em INICIAR RÁDIO para ouvir', 'info');
-                });
+                audioPlayer.play().catch(err => console.error('Erro:', err));
             }
         } else {
             playBackgroundMusic();
@@ -518,16 +397,12 @@ function playBackgroundMusic() {
     
     if (currentTrack && currentTrack.audio_url) {
         audioPlayer.src = currentTrack.audio_url;
-        
-        const prefix = isSeasonalActive ? '🎭 ' : '🎵 ';
-        currentProgram.textContent = `${prefix}${currentTrack.title || 'Música ' + (currentBackgroundIndex + 1)}`;
+        updateDisplay(isSeasonalActive ? '🎭 Música Temática' : 'Tocando agora', currentTrack.title || 'Música');
         
         tracksPlayedSinceLastAd++;
         
         if (isPlaying) {
-            audioPlayer.play().catch(err => {
-                console.error('Erro ao reproduzir música de fundo:', err);
-            });
+            audioPlayer.play().catch(err => console.error('Erro:', err));
         }
     } else {
         handleNoAudio();
@@ -550,14 +425,10 @@ function playAdvertisement() {
     
     if (currentAd && currentAd.audio_url) {
         audioPlayer.src = currentAd.audio_url;
-        
-        const prefix = isSeasonalActive ? '🎭 ' : '📢 ';
-        currentProgram.textContent = `${prefix}${currentAd.title}${currentAd.advertiser ? ' - ' + currentAd.advertiser : ''}`;
+        updateDisplay('📢 Propaganda', currentAd.title);
         
         if (isPlaying) {
-            audioPlayer.play().catch(err => {
-                console.error('Erro ao reproduzir propaganda:', err);
-            });
+            audioPlayer.play().catch(err => console.error('Erro:', err));
         }
         
         currentAdIndex = (currentAdIndex + 1) % ads.length;
@@ -568,99 +439,76 @@ function playAdvertisement() {
 
 function handleNoAudio() {
     audioPlayer.src = '';
-    currentProgram.textContent = 'Programação temporariamente indisponível';
-    showMessage('Nenhum áudio programado para esta hora', 'info');
-    if (isPlaying) {
-        togglePlay();
-    }
+    updateDisplay('Sem programação', 'Aguardando áudio...');
 }
 
 // ========================================
-// FUNÇÃO MELHORADA: Toggle Play com Feedback Visual
+// FUNÇÕES DE INTERFACE MINIMALISTA
 // ========================================
 
 function togglePlay() {
     if (!audioPlayer.src) {
-        showMessage('Nenhum áudio disponível', 'error');
         return;
     }
     
     if (isPlaying) {
-        // PAUSAR
         audioPlayer.pause();
         isPlaying = false;
-        updatePlayerVisualState(false);
-        showMessage('Rádio pausada', 'info');
+        updatePlayButtonState(false);
     } else {
-        // TOCAR
         audioPlayer.play()
             .then(() => {
                 isPlaying = true;
-                updatePlayerVisualState(true);
-                showMessage('Rádio iniciada!', 'success');
+                updatePlayButtonState(true);
             })
             .catch(error => {
                 console.error('Erro ao reproduzir:', error);
-                showMessage('Erro ao reproduzir áudio. Verifique a URL.', 'error');
             });
     }
 }
 
-// ========================================
-// NOVA FUNÇÃO: Atualizar Estado Visual do Player
-// ========================================
-
-function updatePlayerVisualState(playing) {
+function updatePlayButtonState(playing) {
+    const playIcon = playBtn.querySelector('.play-icon');
+    const pauseIcon = playBtn.querySelector('.pause-icon');
+    
     if (playing) {
-        // ESTADO: TOCANDO
-        
-        // Atualizar botão principal
-        playBtn.innerHTML = '<span class="btn-icon">⏸️</span><span class="btn-text">PAUSAR RÁDIO</span>';
+        // ESTADO: TOCANDO (Verde)
+        playBtn.classList.remove('paused');
         playBtn.classList.add('playing');
-        
-        // Atualizar badge de status
-        playerStatusBadge.innerHTML = '<span class="status-icon">▶️</span><span class="status-text">TOCANDO</span>';
-        playerStatusBadge.classList.remove('paused');
-        playerStatusBadge.classList.add('playing');
-        
-        // Atualizar card do player
-        playerSection.classList.add('playing');
-        
+        playIcon.style.display = 'none';
+        pauseIcon.style.display = 'block';
     } else {
-        // ESTADO: PAUSADO
-        
-        // Atualizar botão principal
-        playBtn.innerHTML = '<span class="btn-icon">▶️</span><span class="btn-text">INICIAR RÁDIO</span>';
+        // ESTADO: PARADO (Cinza)
         playBtn.classList.remove('playing');
-        
-        // Atualizar badge de status
-        playerStatusBadge.innerHTML = '<span class="status-icon">⏸️</span><span class="status-text">PAUSADO</span>';
-        playerStatusBadge.classList.remove('playing');
-        playerStatusBadge.classList.add('paused');
-        
-        // Atualizar card do player
-        playerSection.classList.remove('playing');
+        playBtn.classList.add('paused');
+        playIcon.style.display = 'block';
+        pauseIcon.style.display = 'none';
     }
+}
+
+function updateDisplay(status, track) {
+    statusText.textContent = status;
+    trackName.textContent = track;
 }
 
 function updateVolume() {
     const volume = volumeSlider.value / 100;
     audioPlayer.volume = volume;
-    volumeValue.textContent = `${volumeSlider.value}%`;
 }
 
 async function forceSync() {
-    showMessage('Sincronizando...', 'info');
     syncBtn.disabled = true;
+    syncBtn.textContent = '⏳ Sincronizando...';
     
     try {
         await loadAllDataParallel();
         await loadCurrentHourAudio();
-        showMessage('Sincronização concluída!', 'success');
+        syncBtn.textContent = '✅ Sincronizado!';
     } catch (error) {
-        showMessage('Erro na sincronização', 'error');
+        syncBtn.textContent = '❌ Erro';
     } finally {
         setTimeout(() => {
+            syncBtn.textContent = '🔄 Sincronizar';
             syncBtn.disabled = false;
         }, 2000);
     }
@@ -703,25 +551,18 @@ async function checkHourChange() {
     if (isHourChange || isHalfHourChange) {
         const newSlot = isHourChange ? `${currentHourNum}:00` : `${currentHourNum}:30`;
         if (lastPlayedSlot !== newSlot) {
-            console.log(`🕐 Mudança para novo slot: ${newSlot}`);
             lastPlayedSlot = null;
             await loadCurrentHourAudio();
-            updateScheduleDisplay();
         }
     }
 }
 
 function handleAudioEnded() {
-    console.log('🎵 Áudio finalizado');
-    
     if (isPlayingHourCerta) {
-        console.log('✅ Hora certa finalizada, avançando para próxima música...');
-        
         const playlist = isSeasonalActive ? seasonalPlaylist : backgroundPlaylist;
         
         if (playlist.length > 0) {
             currentBackgroundIndex = (currentBackgroundIndex + 1) % playlist.length;
-            console.log(`➡️ Avançando índice após hora certa: ${currentBackgroundIndex + 1}/${playlist.length}`);
         }
         
         const ads = isSeasonalActive ? seasonalAds : advertisements;
@@ -732,44 +573,27 @@ function handleAudioEnded() {
             playBackgroundMusic();
         }
     } else if (isPlayingAd) {
-        console.log('✅ Propaganda finalizada, voltando para playlist');
         playBackgroundMusic();
     } else {
         const playlist = isSeasonalActive ? seasonalPlaylist : backgroundPlaylist;
         
         if (playlist.length > 0) {
             currentBackgroundIndex = (currentBackgroundIndex + 1) % playlist.length;
-            console.log(`➡️ Avançando para próxima música: ${currentBackgroundIndex + 1}/${playlist.length}`);
             playBackgroundMusic();
         } else {
             if (audioPlayer.src) {
-                audioPlayer.play().catch(err => {
-                    console.error('Erro ao repetir:', err);
-                });
+                audioPlayer.play().catch(err => console.error('Erro:', err));
             }
         }
     }
 }
 
 function handleAudioError(event) {
-    console.error('❌ Erro no áudio:', event);
-    showMessage('Erro ao carregar áudio. Verifique a URL.', 'error');
-    if (isPlaying) {
-        togglePlay();
-    }
-}
-
-function handleCanPlay() {
-    console.log('✅ Áudio pronto para reprodução');
-}
-
-function showMessage(message, type) {
-    statusMessage.textContent = message;
-    statusMessage.className = `status-message ${type}`;
-    
-    setTimeout(() => {
-        statusMessage.className = 'status-message';
-    }, 5000);
+    console.error('Erro no áudio:', event);
+    updateDisplay('Erro', 'Falha ao carregar áudio');
 }
 
 audioPlayer.volume = 0.7;
+
+// Inicializa botão no estado parado
+updatePlayButtonState(false);
