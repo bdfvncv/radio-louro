@@ -9,454 +9,327 @@ body {
     background: linear-gradient(135deg, #00a86b 0%, #008556 100%);
     min-height: 100vh;
     color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .container {
-    max-width: 1200px;
-    margin: 0 auto;
+    max-width: 600px;
+    width: 100%;
     padding: 20px;
 }
 
-/* Header */
+/* ========================================
+   HEADER MINIMALISTA
+   ======================================== */
+
 .header {
-    background: #ffffff;
-    padding: 30px;
-    border-radius: 15px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
     text-align: center;
-    margin-bottom: 30px;
-    position: relative;
-}
-
-.header h1 {
-    color: #00a86b;
-    font-size: 2.5em;
-    margin-bottom: 10px;
-}
-
-/* Logo */
-.header-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
-    width: 100%;
+    margin-bottom: 40px;
 }
 
 .logo {
-    width: 180px;
-    height: 180px;
+    width: 120px;
+    height: 120px;
     object-fit: contain;
-    animation: logoFloat 3s ease-in-out infinite;
-    filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.15));
-    transition: transform 0.3s ease;
+    margin-bottom: 20px;
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15));
 }
 
-.logo:hover {
-    transform: scale(1.05) rotate(2deg);
-    filter: drop-shadow(0 16px 32px rgba(0, 0, 0, 0.25));
-}
-
-@keyframes logoFloat {
-    0%, 100% {
-        transform: translateY(0px);
-    }
-    50% {
-        transform: translateY(-12px);
-    }
-}
-
-.header-text {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 15px;
-    text-align: center;
-    width: 100%;
-}
-
-.header-text h1 {
-    margin: 0;
-    font-size: 2em;
-    line-height: 1.2;
-}
-
-.live-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    background: linear-gradient(135deg, #ff4444 0%, #ff6b6b 100%);
+.header h1 {
     color: #ffffff;
-    padding: 12px 30px;
-    border-radius: 50px;
-    font-weight: bold;
-    font-size: 1.1em;
-    box-shadow: 0 6px 20px rgba(255, 68, 68, 0.4);
-    animation: livePulse 2s ease-in-out infinite;
-}
-
-@keyframes livePulse {
-    0%, 100% {
-        box-shadow: 0 6px 20px rgba(255, 68, 68, 0.4);
-    }
-    50% {
-        box-shadow: 0 6px 30px rgba(255, 68, 68, 0.6);
-    }
-}
-
-.pulse {
-    width: 14px;
-    height: 14px;
-    background: #ffffff;
-    border-radius: 50%;
-    animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { 
-        opacity: 1; 
-        transform: scale(1); 
-    }
-    50% { 
-        opacity: 0.6; 
-        transform: scale(1.3); 
-    }
-}
-
-/* Main Content */
-.main-content {
-    display: grid;
-    gap: 20px;
-}
-
-.clock-section {
-    background: #ffffff;
-    padding: 30px;
-    border-radius: 15px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-    text-align: center;
-}
-
-.current-time {
-    font-size: 4em;
-    font-weight: bold;
-    color: #00a86b;
-    margin-bottom: 15px;
-    font-variant-numeric: tabular-nums;
-}
-
-.countdown {
-    font-size: 1.2em;
-    color: #666;
-}
-
-#countdownTimer {
-    color: #00a86b;
-    font-weight: bold;
-    font-variant-numeric: tabular-nums;
+    font-size: 1.8em;
+    font-weight: 600;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* ========================================
-   PLAYER SECTION - MELHORIAS DE USABILIDADE
+   PLAYER MINIMALISTA - FOCO TOTAL
    ======================================== */
 
-.player-section {
+.player-minimal {
     background: #ffffff;
-    padding: 40px;
-    border-radius: 15px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-    border: 3px solid transparent;
-}
-
-/* Estado: Player Tocando */
-.player-section.playing {
-    background: linear-gradient(135deg, #f0f9f5 0%, #ffffff 100%);
-    border-color: #00a86b;
-    box-shadow: 0 8px 30px rgba(0, 168, 107, 0.3);
-    animation: playerPulse 2s ease-in-out infinite;
-}
-
-@keyframes playerPulse {
-    0%, 100% {
-        box-shadow: 0 8px 30px rgba(0, 168, 107, 0.3);
-    }
-    50% {
-        box-shadow: 0 8px 40px rgba(0, 168, 107, 0.5);
-    }
-}
-
-/* NOVO: Badge de Status Grande */
-.player-status-badge {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    padding: 20px 40px;
-    border-radius: 50px;
-    margin: 0 auto 30px;
-    max-width: 300px;
-    font-weight: bold;
-    font-size: 1.3em;
-    transition: all 0.3s ease;
-    background: #e0e0e0;
-    color: #666;
-}
-
-.player-status-badge .status-icon {
-    font-size: 1.5em;
-}
-
-/* Badge quando pausado */
-.player-status-badge.paused {
-    background: #e0e0e0;
-    color: #666;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-}
-
-/* Badge quando tocando */
-.player-status-badge.playing {
-    background: linear-gradient(135deg, #00a86b 0%, #008556 100%);
-    color: #ffffff;
-    box-shadow: 0 6px 25px rgba(0, 168, 107, 0.5);
-    animation: statusPulse 1.5s ease-in-out infinite;
-}
-
-@keyframes statusPulse {
-    0%, 100% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.05);
-    }
-}
-
-.now-playing {
+    border-radius: 30px;
+    padding: 60px 40px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
     text-align: center;
-    margin-bottom: 35px;
 }
 
-.now-playing h2 {
-    color: #00a86b;
-    margin-bottom: 15px;
-    font-size: 1.3em;
+/* O QUE ESTÁ TOCANDO */
+.now-playing-minimal {
+    margin-bottom: 50px;
 }
 
-.now-playing p {
-    font-size: 1.4em;
-    color: #333;
+.status-text {
+    font-size: 0.95em;
+    color: #999;
+    margin-bottom: 12px;
     font-weight: 500;
-    min-height: 40px;
+    letter-spacing: 0.5px;
 }
 
-.player-controls {
+.track-name {
+    font-size: 1.8em;
+    color: #333;
+    font-weight: 600;
+    line-height: 1.3;
+    min-height: 60px;
     display: flex;
-    flex-direction: column;
-    gap: 20px;
     align-items: center;
-    margin-bottom: 20px;
+    justify-content: center;
 }
 
-/* NOVO: Botão Play/Pause Principal - GRANDE E DESTACADO */
-.play-btn-main {
+/* ========================================
+   BOTÃO CIRCULAR GIGANTE - ELEMENTO PRINCIPAL
+   ======================================== */
+
+.play-btn-circle {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    border: none;
+    background: #e0e0e0;
+    color: #999;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 40px;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.play-btn-circle:hover {
+    transform: scale(1.05);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+}
+
+.play-btn-circle:active {
+    transform: scale(0.98);
+}
+
+/* Ícones SVG */
+.play-icon,
+.pause-icon {
+    width: 50px;
+    height: 50px;
+}
+
+/* ESTADO: PARADO (Cinza) */
+.play-btn-circle.paused {
+    background: #e0e0e0;
+    color: #999;
+}
+
+/* ESTADO: TOCANDO (Verde) */
+.play-btn-circle.playing {
     background: linear-gradient(135deg, #00a86b 0%, #008556 100%);
     color: #ffffff;
-    border: none;
-    padding: 25px 60px;
-    border-radius: 60px;
-    font-size: 1.4em;
-    font-weight: bold;
-    cursor: pointer;
+    box-shadow: 0 8px 32px rgba(0, 168, 107, 0.4);
+}
+
+.play-btn-circle.playing:hover {
+    box-shadow: 0 12px 40px rgba(0, 168, 107, 0.5);
+}
+
+/* ========================================
+   CONTROLES SECUNDÁRIOS - DISCRETOS
+   ======================================== */
+
+.controls-minimal {
     display: flex;
-    align-items: center;
-    gap: 15px;
-    transition: all 0.3s ease;
-    box-shadow: 0 8px 25px rgba(0, 168, 107, 0.4);
-    min-width: 280px;
+    gap: 20px;
     justify-content: center;
-}
-
-.play-btn-main:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 35px rgba(0, 168, 107, 0.6);
-}
-
-.play-btn-main:active {
-    transform: translateY(-1px);
-}
-
-.play-btn-main .btn-icon {
-    font-size: 1.4em;
-}
-
-.play-btn-main .btn-text {
-    font-size: 1em;
-    letter-spacing: 1px;
-}
-
-/* Botão quando TOCANDO - Vermelho */
-.play-btn-main.playing {
-    background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
-    box-shadow: 0 8px 25px rgba(255, 68, 68, 0.4);
-    animation: playingBtnPulse 1.5s ease-in-out infinite;
-}
-
-.play-btn-main.playing:hover {
-    background: linear-gradient(135deg, #ff5555 0%, #dd0000 100%);
-    box-shadow: 0 12px 35px rgba(255, 68, 68, 0.6);
-}
-
-@keyframes playingBtnPulse {
-    0%, 100% {
-        box-shadow: 0 8px 25px rgba(255, 68, 68, 0.4);
-    }
-    50% {
-        box-shadow: 0 8px 35px rgba(255, 68, 68, 0.6);
-    }
-}
-
-/* Controles Secundários */
-.secondary-controls {
-    display: flex;
-    gap: 15px;
+    align-items: center;
     flex-wrap: wrap;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
 }
 
-.control-btn {
-    background: #00a86b;
-    color: #ffffff;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 10px;
-    font-size: 1em;
-    font-weight: bold;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    transition: all 0.3s ease;
-}
-
-.control-btn:hover {
-    background: #008556;
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 168, 107, 0.3);
-}
-
-.control-btn:active {
-    transform: translateY(0);
-}
-
-.volume-control {
+.volume-minimal {
     display: flex;
     align-items: center;
     gap: 10px;
     background: #f5f5f5;
-    padding: 12px 20px;
-    border-radius: 10px;
+    padding: 10px 20px;
+    border-radius: 50px;
 }
 
-.volume-control input[type="range"] {
-    width: 120px;
-}
-
-#volumeValue {
-    font-weight: bold;
-    color: #00a86b;
-    min-width: 45px;
-}
-
-.sync-btn {
-    background: #666;
-}
-
-.sync-btn:hover {
-    background: #555;
-}
-
-.status-message {
-    text-align: center;
-    padding: 15px;
-    border-radius: 8px;
-    font-weight: 500;
-    display: none;
-}
-
-.status-message.success {
-    background: #d4edda;
-    color: #155724;
-    display: block;
-}
-
-.status-message.error {
-    background: #f8d7da;
-    color: #721c24;
-    display: block;
-}
-
-.status-message.info {
-    background: #d1ecf1;
-    color: #0c5460;
-    display: block;
-}
-
-/* Schedule Section */
-.schedule-section {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 15px;
-}
-
-.schedule-card {
-    background: #ffffff;
-    padding: 25px;
-    border-radius: 15px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-    text-align: center;
-}
-
-.schedule-card.highlight {
-    background: linear-gradient(135deg, #00a86b 0%, #008556 100%);
-    color: #ffffff;
-}
-
-.schedule-card h3 {
-    margin-bottom: 10px;
+.volume-icon {
     font-size: 1.2em;
 }
 
-.schedule-card p {
-    font-size: 1.1em;
-    opacity: 0.9;
+#volumeSlider {
+    width: 100px;
+    cursor: pointer;
 }
 
-/* Footer */
-.footer {
-    background: #ffffff;
-    padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+.sync-btn-minimal {
+    background: #f5f5f5;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-size: 0.95em;
+    font-weight: 500;
+    color: #666;
+    transition: all 0.2s ease;
+}
+
+.sync-btn-minimal:hover {
+    background: #e0e0e0;
+}
+
+/* ========================================
+   INFORMAÇÕES DISCRETAS
+   ======================================== */
+
+.info-minimal {
     text-align: center;
     margin-top: 30px;
-    color: #666;
 }
 
-.footer a {
-    color: #00a86b;
+.time-minimal {
+    font-size: 2.5em;
+    font-weight: 300;
+    color: #ffffff;
+    margin-bottom: 10px;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.next-info {
+    font-size: 1em;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+}
+
+#countdownTimer {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+
+/* ========================================
+   FOOTER MINIMALISTA
+   ======================================== */
+
+.footer-minimal {
+    text-align: center;
+    margin-top: 30px;
+}
+
+.admin-link-minimal {
+    color: rgba(255, 255, 255, 0.8);
     text-decoration: none;
-    font-weight: bold;
-    margin-left: 15px;
+    font-size: 0.95em;
+    padding: 8px 16px;
+    border-radius: 20px;
+    transition: all 0.2s ease;
+    display: inline-block;
 }
 
-.footer a:hover {
-    text-decoration: underline;
+.admin-link-minimal:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
 }
 
-/* Admin Styles */
+/* ========================================
+   RESPONSIVO
+   ======================================== */
+
+@media (max-width: 768px) {
+    .container {
+        padding: 15px;
+    }
+
+    .header h1 {
+        font-size: 1.5em;
+    }
+
+    .logo {
+        width: 100px;
+        height: 100px;
+    }
+
+    .player-minimal {
+        padding: 40px 30px;
+        border-radius: 25px;
+    }
+
+    .track-name {
+        font-size: 1.5em;
+        min-height: 50px;
+    }
+
+    .play-btn-circle {
+        width: 120px;
+        height: 120px;
+    }
+
+    .play-icon,
+    .pause-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .time-minimal {
+        font-size: 2em;
+    }
+
+    .controls-minimal {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .volume-minimal,
+    .sync-btn-minimal {
+        width: 100%;
+        justify-content: center;
+    }
+
+    #volumeSlider {
+        width: 150px;
+    }
+}
+
+@media (max-width: 480px) {
+    .header h1 {
+        font-size: 1.3em;
+    }
+
+    .logo {
+        width: 80px;
+        height: 80px;
+    }
+
+    .player-minimal {
+        padding: 30px 20px;
+        border-radius: 20px;
+    }
+
+    .track-name {
+        font-size: 1.3em;
+    }
+
+    .play-btn-circle {
+        width: 100px;
+        height: 100px;
+    }
+
+    .play-icon,
+    .pause-icon {
+        width: 35px;
+        height: 35px;
+    }
+
+    .time-minimal {
+        font-size: 1.8em;
+    }
+}
+
+/* ========================================
+   ADMIN STYLES (mantidos do original)
+   ======================================== */
+
 .logout-btn {
     position: absolute;
     top: 20px;
@@ -558,12 +431,12 @@ body {
     text-decoration: underline;
 }
 
-/* Admin Panel */
 .instructions-section,
 .editor-section,
 .schedule-table-section,
 .playlist-section,
-.ads-section {
+.ads-section,
+.seasonal-section {
     background: #ffffff;
     padding: 30px;
     border-radius: 15px;
@@ -575,7 +448,8 @@ body {
 .editor-section h2,
 .schedule-table-section h2,
 .playlist-section h2,
-.ads-section h2 {
+.ads-section h2,
+.seasonal-section h2 {
     color: #00a86b;
     margin-bottom: 20px;
 }
@@ -698,7 +572,6 @@ body {
     background: #555;
 }
 
-/* Table */
 .table-container {
     overflow-x: auto;
 }
@@ -794,19 +667,6 @@ body {
 
 .schedule-table .btn-delete:hover {
     background: #c82333;
-}
-
-.seasonal-section {
-    background: #ffffff;
-    padding: 30px;
-    border-radius: 15px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
-}
-
-.seasonal-section h2 {
-    color: #00a86b;
-    margin-bottom: 20px;
 }
 
 .seasonal-tabs {
@@ -948,136 +808,4 @@ body {
 .seasonal-form input:focus {
     outline: none;
     border-color: #00a86b;
-}
-
-/* Responsivo */
-@media (max-width: 768px) {
-    .header h1 {
-        font-size: 1.8em;
-    }
-
-    .current-time {
-        font-size: 2.5em;
-    }
-
-    .player-controls {
-        flex-direction: column;
-    }
-
-    .secondary-controls {
-        flex-direction: column;
-        width: 100%;
-    }
-
-    .control-btn {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .volume-control {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .schedule-section {
-        grid-template-columns: 1fr;
-    }
-
-    .form-actions {
-        flex-direction: column;
-    }
-
-    .form-actions button {
-        width: 100%;
-    }
-    
-    .logo {
-        width: 140px;
-        height: 140px;
-    }
-    
-    .header-text h1 {
-        font-size: 1.5em;
-    }
-    
-    .live-indicator {
-        padding: 10px 24px;
-        font-size: 1em;
-    }
-    
-    .seasonal-tabs {
-        flex-direction: column;
-    }
-    
-    .seasonal-tab {
-        width: 100%;
-        text-align: left;
-    }
-    
-    .seasonal-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .seasonal-status {
-        width: 100%;
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .toggle-seasonal-btn {
-        width: 100%;
-    }
-
-    /* Player mobile */
-    .play-btn-main {
-        min-width: auto;
-        width: 100%;
-        padding: 20px 40px;
-        font-size: 1.2em;
-    }
-
-    .player-status-badge {
-        max-width: 100%;
-        font-size: 1.1em;
-    }
-}
-
-@media (max-width: 480px) {
-    .logo {
-        width: 120px;
-        height: 120px;
-    }
-    
-    .header-text h1 {
-        font-size: 1.3em;
-    }
-    
-    .live-indicator {
-        padding: 8px 20px;
-        font-size: 0.9em;
-    }
-    
-    .pulse {
-        width: 12px;
-        height: 12px;
-    }
-
-    .current-time {
-        font-size: 2em;
-    }
-
-    .play-btn-main {
-        padding: 18px 30px;
-        font-size: 1.1em;
-    }
-
-    .play-btn-main .btn-icon {
-        font-size: 1.2em;
-    }
-
-    .player-status-badge {
-        font-size: 1em;
-        padding: 15px 30px;
-    }
 }
