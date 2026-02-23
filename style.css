@@ -211,28 +211,41 @@ body {
 }
 
 /* ========================================
-   FOOTER
+   CARD 4: LINK PAINEL ADMIN (NOVO!)
    ======================================== */
 
-.footer-minimal {
+.card-link-admin {
     text-align: center;
-    margin-top: 15px;
+    padding: 15px 30px;
 }
 
-.admin-link-minimal {
-    color: rgba(255, 255, 255, 0.85);
+.admin-link-card {
+    color: #006b3f;
     text-decoration: none;
-    font-size: 0.95em;
-    padding: 8px 16px;
-    border-radius: 20px;
+    font-size: 1em;
+    font-weight: 600;
+    display: block;
     transition: all 0.2s ease;
-    display: inline-block;
-    font-weight: 500;
 }
 
-.admin-link-minimal:hover {
-    background: rgba(255, 255, 255, 0.15);
-    color: #ffffff;
+.admin-link-card:hover {
+    color: #004d2e;
+    transform: translateY(-1px);
+}
+
+/* ========================================
+   CARD 5: COPYRIGHT FOOTER (NOVO!)
+   ======================================== */
+
+.card-footer {
+    text-align: center;
+    padding: 15px 30px;
+}
+
+.copyright-text {
+    color: #666;
+    font-size: 0.85em;
+    margin: 0;
 }
 
 /* ========================================
@@ -839,6 +852,11 @@ body.admin-body .container {
         margin-bottom: 15px;
     }
 
+    .card-link-admin,
+    .card-footer {
+        padding: 12px 20px;
+    }
+
     .logo {
         width: 85px;
         height: 85px;
@@ -931,6 +949,11 @@ body.admin-body .container {
         border-radius: 15px;
     }
 
+    .card-link-admin,
+    .card-footer {
+        padding: 10px 15px;
+    }
+
     .logo {
         width: 75px;
         height: 75px;
@@ -965,5 +988,9 @@ body.admin-body .container {
     .pause-icon {
         width: 42px;
         height: 42px;
+    }
+
+    .copyright-text {
+        font-size: 0.8em;
     }
 }
