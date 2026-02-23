@@ -92,7 +92,6 @@ body {
     text-align: center;
 }
 
-/* O QUE ESTÁ TOCANDO */
 .now-playing-minimal {
     margin-bottom: 35px;
 }
@@ -116,7 +115,7 @@ body {
 }
 
 /* ========================================
-   BOTÃO CIRCULAR GIGANTE - 140px (MANTIDO)
+   BOTÃO CIRCULAR GIGANTE - 140px
    ======================================== */
 
 .play-btn-circle {
@@ -144,20 +143,17 @@ body {
     transform: scale(0.98);
 }
 
-/* Ícones SVG */
 .play-icon,
 .pause-icon {
     width: 50px;
     height: 50px;
 }
 
-/* ESTADO: PARADO (Cinza) */
 .play-btn-circle.paused {
     background: #e0e0e0;
     color: #999;
 }
 
-/* ESTADO: TOCANDO (Verde Escuro) */
 .play-btn-circle.playing {
     background: linear-gradient(135deg, #006b3f 0%, #004d2e 100%);
     color: #ffffff;
@@ -240,113 +236,49 @@ body {
 }
 
 /* ========================================
-   RESPONSIVO
+   ADMIN - BODY OVERRIDE
    ======================================== */
 
-@media (max-width: 768px) {
-    .container {
-        max-width: 100%;
-        padding: 0 15px;
-    }
-
-    .card-white {
-        padding: 25px 20px;
-        border-radius: 18px;
-        margin-bottom: 15px;
-    }
-
-    .logo {
-        width: 85px;
-        height: 85px;
-    }
-
-    .header h1 {
-        font-size: 1.3em;
-    }
-
-    .time-display {
-        font-size: 2.2em;
-    }
-
-    .countdown-display {
-        font-size: 0.95em;
-    }
-
-    .track-name {
-        font-size: 1.3em;
-        min-height: 45px;
-    }
-
-    .play-btn-circle {
-        width: 130px;
-        height: 130px;
-    }
-
-    .play-icon,
-    .pause-icon {
-        width: 45px;
-        height: 45px;
-    }
-
-    .controls-minimal {
-        flex-direction: column;
-        width: 100%;
-        gap: 12px;
-    }
-
-    .volume-minimal,
-    .sync-btn-minimal {
-        width: 100%;
-        justify-content: center;
-    }
-
-    #volumeSlider {
-        width: 120px;
-    }
+body.admin-body {
+    display: block;
+    align-items: unset;
+    justify-content: unset;
+    padding: 0;
 }
 
-@media (max-width: 480px) {
-    .card-white {
-        padding: 20px 15px;
-        border-radius: 15px;
-    }
-
-    .logo {
-        width: 75px;
-        height: 75px;
-    }
-
-    .header h1 {
-        font-size: 1.2em;
-    }
-
-    .time-display {
-        font-size: 2em;
-    }
-
-    .countdown-display {
-        font-size: 0.9em;
-    }
-
-    .track-name {
-        font-size: 1.2em;
-    }
-
-    .play-btn-circle {
-        width: 120px;
-        height: 120px;
-    }
-
-    .play-icon,
-    .pause-icon {
-        width: 42px;
-        height: 42px;
-    }
+body.admin-body .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
 }
 
 /* ========================================
-   ADMIN STYLES (mantidos do original)
+   ADMIN - HEADER
    ======================================== */
+
+.header-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    width: 100%;
+}
+
+.header-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    text-align: center;
+    width: 100%;
+}
+
+.header-text h1 {
+    margin: 0;
+    font-size: 2em;
+    line-height: 1.2;
+}
 
 .logout-btn {
     position: absolute;
@@ -356,7 +288,7 @@ body {
     color: #ffffff;
     border: none;
     padding: 10px 20px;
-    border-radius: 8px;
+    border-radius: 10px;
     cursor: pointer;
     font-weight: bold;
     z-index: 10;
@@ -365,6 +297,10 @@ body {
 .logout-btn:hover {
     background: #cc0000;
 }
+
+/* ========================================
+   ADMIN - LOGIN
+   ======================================== */
 
 .login-screen {
     display: flex;
@@ -449,6 +385,14 @@ body {
     text-decoration: underline;
 }
 
+/* ========================================
+   ADMIN - SECTIONS
+   ======================================== */
+
+.admin-panel {
+    display: none;
+}
+
 .instructions-section,
 .editor-section,
 .schedule-table-section,
@@ -515,6 +459,10 @@ body {
     color: #006b3f;
     font-weight: bold;
 }
+
+/* ========================================
+   ADMIN - FORMS
+   ======================================== */
 
 .edit-form {
     display: grid;
@@ -589,6 +537,10 @@ body {
 .clear-btn:hover {
     background: #555;
 }
+
+/* ========================================
+   ADMIN - TABLES
+   ======================================== */
 
 .table-container {
     overflow-x: auto;
@@ -686,6 +638,10 @@ body {
 .schedule-table .btn-delete:hover {
     background: #c82333;
 }
+
+/* ========================================
+   ADMIN - SEASONAL PLAYLISTS
+   ======================================== */
 
 .seasonal-tabs {
     display: flex;
@@ -826,4 +782,188 @@ body {
 .seasonal-form input:focus {
     outline: none;
     border-color: #006b3f;
+}
+
+/* ========================================
+   ADMIN - FOOTER
+   ======================================== */
+
+.footer {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    text-align: center;
+    margin-top: 30px;
+    color: #666;
+}
+
+.footer a {
+    color: #006b3f;
+    text-decoration: none;
+    font-weight: bold;
+    margin-left: 15px;
+}
+
+.footer a:hover {
+    text-decoration: underline;
+}
+
+.admin-link {
+    color: #006b3f;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.admin-link:hover {
+    text-decoration: underline;
+}
+
+/* ========================================
+   RESPONSIVO
+   ======================================== */
+
+@media (max-width: 768px) {
+    body.admin-body .container {
+        padding: 15px;
+    }
+
+    .container {
+        max-width: 100%;
+        padding: 0 15px;
+    }
+
+    .card-white {
+        padding: 25px 20px;
+        border-radius: 18px;
+        margin-bottom: 15px;
+    }
+
+    .logo {
+        width: 85px;
+        height: 85px;
+    }
+
+    .header h1 {
+        font-size: 1.3em;
+    }
+
+    .header-text h1 {
+        font-size: 1.5em;
+    }
+
+    .time-display {
+        font-size: 2.2em;
+    }
+
+    .countdown-display {
+        font-size: 0.95em;
+    }
+
+    .track-name {
+        font-size: 1.3em;
+        min-height: 45px;
+    }
+
+    .play-btn-circle {
+        width: 130px;
+        height: 130px;
+    }
+
+    .play-icon,
+    .pause-icon {
+        width: 45px;
+        height: 45px;
+    }
+
+    .controls-minimal {
+        flex-direction: column;
+        width: 100%;
+        gap: 12px;
+    }
+
+    .volume-minimal,
+    .sync-btn-minimal {
+        width: 100%;
+        justify-content: center;
+    }
+
+    #volumeSlider {
+        width: 120px;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .form-actions button {
+        width: 100%;
+    }
+
+    .seasonal-tabs {
+        flex-direction: column;
+    }
+
+    .seasonal-tab {
+        width: 100%;
+        text-align: left;
+    }
+
+    .seasonal-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .seasonal-status {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .toggle-seasonal-btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .card-white {
+        padding: 20px 15px;
+        border-radius: 15px;
+    }
+
+    .logo {
+        width: 75px;
+        height: 75px;
+    }
+
+    .header h1 {
+        font-size: 1.2em;
+    }
+
+    .header-text h1 {
+        font-size: 1.3em;
+    }
+
+    .time-display {
+        font-size: 2em;
+    }
+
+    .countdown-display {
+        font-size: 0.9em;
+    }
+
+    .track-name {
+        font-size: 1.2em;
+    }
+
+    .play-btn-circle {
+        width: 120px;
+        height: 120px;
+    }
+
+    .play-icon,
+    .pause-icon {
+        width: 42px;
+        height: 42px;
+    }
 }
