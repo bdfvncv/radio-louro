@@ -9,14 +9,27 @@
 </head>
 <body>
     <div class="container">
-        <header class="header">
-            <img src="logo.png" alt="Logo Supermercado do Louro" class="logo">
-            <h1>Rádio Supermercado do Louro</h1>
-        </header>
+        
+        <!-- CARD 1: LOGO + NOME -->
+        <div class="card-white">
+            <header class="header">
+                <img src="logo.png" alt="Logo Supermercado do Louro" class="logo">
+                <h1>Rádio Supermercado do Louro</h1>
+            </header>
+        </div>
 
-        <div class="main-content">
-            
-            <!-- PLAYER MINIMALISTA -->
+        <!-- CARD 2: RELÓGIO + COUNTDOWN -->
+        <div class="card-white">
+            <div class="time-info">
+                <div class="time-display" id="currentTime">00:00:00</div>
+                <div class="countdown-display">
+                    Próxima hora em: <span id="countdownTimer">--:--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- CARD 3: PLAYER -->
+        <div class="card-white">
             <div class="player-minimal">
                 
                 <!-- O QUE ESTÁ TOCANDO -->
@@ -35,7 +48,7 @@
                     </svg>
                 </button>
 
-                <!-- CONTROLES SECUNDÁRIOS (DISCRETOS) -->
+                <!-- CONTROLES SECUNDÁRIOS -->
                 <div class="controls-minimal">
                     <div class="volume-minimal">
                         <span class="volume-icon">🔊</span>
@@ -48,18 +61,13 @@
 
                 <audio id="audioPlayer" preload="auto"></audio>
             </div>
-
-            <!-- INFORMAÇÕES DISCRETAS -->
-            <div class="info-minimal">
-                <div class="time-minimal" id="currentTime">00:00:00</div>
-                <div class="next-info" id="nextInfo">Próxima hora em: <span id="countdownTimer">--:--</span></div>
-            </div>
-
         </div>
 
+        <!-- LINK ADMIN -->
         <footer class="footer-minimal">
-            <a href="admin.html" class="admin-link-minimal">⚙️ Admin</a>
+            <a href="admin.html" class="admin-link-minimal">⚙️ Painel Admin</a>
         </footer>
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
