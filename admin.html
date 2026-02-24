@@ -7,17 +7,21 @@
     <link rel="stylesheet" href="style.css">
     <link rel="icon" type="image/png" href="logo.png">
 </head>
-<body>
+<body class="admin-body">
     <div class="container">
-        <header class="header">
-            <div class="header-content">
-                <img src="logo.png" alt="Logo Supermercado do Louro" class="logo">
-                <div class="header-text">
-                    <h1>🔐 Painel Administrativo</h1>
+        
+        <!-- CARD BRANCO: HEADER (NOVO!) -->
+        <div class="card-white">
+            <header class="header">
+                <div class="header-content">
+                    <img src="logo.png" alt="Logo Supermercado do Louro" class="logo">
+                    <div class="header-text">
+                        <h1>🔐 Painel Administrativo</h1>
+                    </div>
                 </div>
-            </div>
-            <button class="logout-btn" id="logoutBtn" style="display: none;">Sair</button>
-        </header>
+                <button class="logout-btn" id="logoutBtn" style="display: none;">Sair</button>
+            </header>
+        </div>
 
         <!-- Login Screen -->
         <div class="login-screen" id="loginScreen" style="display: flex;">
@@ -481,7 +485,7 @@
 
             <div class="editor-section">
                 <h2>✏️ Editor de Programação</h2>
-                <p class="section-description">Configure os áudios para cada hora. Você pode definir um áudio para :00 (hora cheia) e outro para :30 (meia hora).
+                <p class="section-description">Configure os áudios para cada hora. Você pode definir um áudio para :00 (hora cheia) e outro para :30 (meia hora).</p>
                 <form id="editForm" class="edit-form">
                     <div class="form-group">
                         <label for="hourSelect">Hora (0-23):</label>
@@ -661,9 +665,11 @@
             <audio id="testAudio" style="display: none;"></audio>
         </div>
 
-        <footer class="footer">
-            <p>© 2026 Rádio 24H Supermercado do Louro - Painel Admin</p>
-        </footer>
+        <!-- CARD BRANCO: FOOTER (CORRIGIDO!) -->
+        <div class="card-white card-footer">
+            <p class="copyright-text">© 2026 Rádio 24H Supermercado do Louro</p>
+        </div>
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
