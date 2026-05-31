@@ -21,32 +21,22 @@ body {
     padding: 0 20px;
 }
 
-/* ========================================
-   CARDS BRANCOS COM CANTOS ARREDONDADOS
-   ======================================== */
-
 .card-white {
     background: #ffffff;
     border-radius: 20px;
     padding: 30px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
     margin-bottom: 20px;
 }
 
-/* ========================================
-   CARD 1: HEADER (LOGO + NOME)
-   ======================================== */
-
-.header {
-    text-align: center;
-}
+.header { text-align: center; }
 
 .logo {
     width: 100px;
     height: 100px;
     object-fit: contain;
     margin-bottom: 15px;
-    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
 }
 
 .header h1 {
@@ -56,13 +46,7 @@ body {
     line-height: 1.3;
 }
 
-/* ========================================
-   CARD 2: RELÓGIO + COUNTDOWN
-   ======================================== */
-
-.time-info {
-    text-align: center;
-}
+.time-info { text-align: center; }
 
 .time-display {
     font-size: 2.5em;
@@ -84,17 +68,9 @@ body {
     color: #006b3f;
 }
 
-/* ========================================
-   CARD 3: PLAYER
-   ======================================== */
+.player-minimal { text-align: center; }
 
-.player-minimal {
-    text-align: center;
-}
-
-.now-playing-minimal {
-    margin-bottom: 35px;
-}
+.now-playing-minimal { margin-bottom: 35px; }
 
 .status-text {
     font-size: 0.9em;
@@ -114,10 +90,6 @@ body {
     justify-content: center;
 }
 
-/* ========================================
-   BOTÃO CIRCULAR GIGANTE - 140px
-   ======================================== */
-
 .play-btn-circle {
     width: 140px;
     height: 140px;
@@ -131,42 +103,27 @@ body {
     justify-content: center;
     margin: 0 auto 30px;
     transition: all 0.3s ease;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
 }
 
 .play-btn-circle:hover {
     transform: scale(1.05);
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.18);
 }
 
-.play-btn-circle:active {
-    transform: scale(0.98);
-}
+.play-btn-circle:active { transform: scale(0.98); }
 
-.play-icon,
-.pause-icon {
-    width: 50px;
-    height: 50px;
-}
+.play-icon, .pause-icon { width: 50px; height: 50px; }
 
-.play-btn-circle.paused {
-    background: #e0e0e0;
-    color: #999;
-}
+.play-btn-circle.paused { background: #e0e0e0; color: #999; }
 
 .play-btn-circle.playing {
     background: linear-gradient(135deg, #006b3f 0%, #004d2e 100%);
     color: #ffffff;
-    box-shadow: 0 6px 24px rgba(0, 107, 63, 0.4);
+    box-shadow: 0 6px 24px rgba(0,107,63,0.4);
 }
 
-.play-btn-circle.playing:hover {
-    box-shadow: 0 8px 32px rgba(0, 107, 63, 0.5);
-}
-
-/* ========================================
-   CONTROLES SECUNDÁRIOS
-   ======================================== */
+.play-btn-circle.playing:hover { box-shadow: 0 8px 32px rgba(0,107,63,0.5); }
 
 .controls-minimal {
     display: flex;
@@ -185,14 +142,9 @@ body {
     border-radius: 50px;
 }
 
-.volume-icon {
-    font-size: 1.1em;
-}
+.volume-icon { font-size: 1.1em; }
 
-#volumeSlider {
-    width: 90px;
-    cursor: pointer;
-}
+#volumeSlider { width: 90px; cursor: pointer; }
 
 .sync-btn-minimal {
     background: #f5f5f5;
@@ -206,13 +158,7 @@ body {
     transition: all 0.2s ease;
 }
 
-.sync-btn-minimal:hover {
-    background: #e0e0e0;
-}
-
-/* ========================================
-   CARD 4: LINK PAINEL ADMIN (NOVO!)
-   ======================================== */
+.sync-btn-minimal:hover { background: #e0e0e0; }
 
 .card-link-admin {
     text-align: center;
@@ -228,14 +174,7 @@ body {
     transition: all 0.2s ease;
 }
 
-.admin-link-card:hover {
-    color: #004d2e;
-    transform: translateY(-1px);
-}
-
-/* ========================================
-   CARD 5: COPYRIGHT FOOTER (NOVO!)
-   ======================================== */
+.admin-link-card:hover { color: #004d2e; transform: translateY(-1px); }
 
 .card-footer {
     text-align: center;
@@ -248,10 +187,7 @@ body {
     margin: 0;
 }
 
-/* ========================================
-   ADMIN - BODY OVERRIDE
-   ======================================== */
-
+/* ── ADMIN BODY ── */
 body.admin-body {
     display: block;
     align-items: unset;
@@ -264,10 +200,6 @@ body.admin-body .container {
     margin: 0 auto;
     padding: 20px;
 }
-
-/* ========================================
-   ADMIN - HEADER
-   ======================================== */
 
 .header-content {
     display: flex;
@@ -287,11 +219,7 @@ body.admin-body .container {
     width: 100%;
 }
 
-.header-text h1 {
-    margin: 0;
-    font-size: 2em;
-    line-height: 1.2;
-}
+.header-text h1 { margin: 0; font-size: 2em; line-height: 1.2; }
 
 .logout-btn {
     position: absolute;
@@ -307,14 +235,9 @@ body.admin-body .container {
     z-index: 10;
 }
 
-.logout-btn:hover {
-    background: #cc0000;
-}
+.logout-btn:hover { background: #cc0000; }
 
-/* ========================================
-   ADMIN - LOGIN
-   ======================================== */
-
+/* ── LOGIN ── */
 .login-screen {
     display: flex;
     justify-content: center;
@@ -326,27 +249,16 @@ body.admin-body .container {
     background: #ffffff;
     padding: 40px;
     border-radius: 20px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
     max-width: 400px;
     width: 100%;
     text-align: center;
 }
 
-.login-card h2 {
-    color: #006b3f;
-    margin-bottom: 15px;
-}
+.login-card h2 { color: #006b3f; margin-bottom: 15px; }
+.login-card p  { color: #666; margin-bottom: 25px; }
 
-.login-card p {
-    color: #666;
-    margin-bottom: 25px;
-}
-
-#loginForm {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
+#loginForm { display: flex; flex-direction: column; gap: 15px; }
 
 #loginForm input {
     padding: 15px;
@@ -355,16 +267,13 @@ body.admin-body .container {
     font-size: 1em;
 }
 
-#loginForm input:focus {
-    outline: none;
-    border-color: #006b3f;
-}
+#loginForm input:focus { outline: none; border-color: #006b3f; }
 
 .submit-btn {
     background: #006b3f;
     color: #ffffff;
     border: none;
-    padding: 15px;
+    padding: 12px 20px;
     border-radius: 10px;
     font-size: 1em;
     font-weight: bold;
@@ -372,50 +281,30 @@ body.admin-body .container {
     transition: all 0.3s ease;
 }
 
-.submit-btn:hover {
-    background: #004d2e;
-}
+.submit-btn:hover { background: #004d2e; }
 
-.error-message {
-    color: #ff4444;
-    font-weight: bold;
-    margin-top: 10px;
-    display: none;
-}
+.error-message { color: #ff4444; font-weight: bold; margin-top: 10px; display: none; }
+.error-message.show { display: block; }
 
-.error-message.show {
-    display: block;
-}
+.back-link { display: inline-block; margin-top: 20px; color: #006b3f; text-decoration: none; }
+.back-link:hover { text-decoration: underline; }
 
-.back-link {
-    display: inline-block;
-    margin-top: 20px;
-    color: #006b3f;
-    text-decoration: none;
-}
-
-.back-link:hover {
-    text-decoration: underline;
-}
-
-/* ========================================
-   ADMIN - SECTIONS
-   ======================================== */
-
-.admin-panel {
-    display: none;
-}
+/* ── ADMIN PANEL SECTIONS ── */
+.admin-panel { display: none; }
 
 .instructions-section,
 .editor-section,
 .schedule-table-section,
 .playlist-section,
 .ads-section,
-.seasonal-section {
+.seasonal-section,
+.grades-section,
+.youtube-section,
+.queue-section {
     background: #ffffff;
     padding: 30px;
     border-radius: 20px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
     margin-bottom: 20px;
 }
 
@@ -424,19 +313,23 @@ body.admin-body .container {
 .schedule-table-section h2,
 .playlist-section h2,
 .ads-section h2,
-.seasonal-section h2 {
+.seasonal-section h2,
+.grades-section h2,
+.youtube-section h2,
+.queue-section h2 {
     color: #006b3f;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
 .section-description {
     background: #e6f4ed;
-    padding: 15px;
+    padding: 12px 16px;
     border-radius: 10px;
     border-left: 4px solid #006b3f;
     margin-bottom: 20px;
     color: #555;
     line-height: 1.6;
+    font-size: 0.9em;
 }
 
 .form-group small {
@@ -454,44 +347,17 @@ body.admin-body .container {
     border-left: 4px solid #006b3f;
 }
 
-.instructions-card h3 {
-    margin-bottom: 15px;
-    color: #333;
-}
+.instructions-card h3 { margin-bottom: 15px; color: #333; }
+.instructions-card ol { padding-left: 20px; }
+.instructions-card li { margin-bottom: 10px; line-height: 1.6; }
+.instructions-card a  { color: #006b3f; font-weight: bold; }
 
-.instructions-card ol {
-    padding-left: 20px;
-}
+/* ── FORMS ── */
+.edit-form { display: grid; gap: 16px; }
 
-.instructions-card li {
-    margin-bottom: 10px;
-    line-height: 1.6;
-}
+.form-group { display: flex; flex-direction: column; gap: 8px; }
 
-.instructions-card a {
-    color: #006b3f;
-    font-weight: bold;
-}
-
-/* ========================================
-   ADMIN - FORMS
-   ======================================== */
-
-.edit-form {
-    display: grid;
-    gap: 20px;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.form-group label {
-    font-weight: bold;
-    color: #333;
-}
+.form-group label { font-weight: bold; color: #333; font-size: 0.9em; }
 
 .form-group input,
 .form-group select {
@@ -502,74 +368,62 @@ body.admin-body .container {
 }
 
 .form-group input:focus,
-.form-group select:focus {
-    outline: none;
-    border-color: #006b3f;
-}
+.form-group select:focus { outline: none; border-color: #006b3f; }
 
-.checkbox-group {
-    flex-direction: row;
-    align-items: center;
-}
+.checkbox-group { flex-direction: row; align-items: center; }
+.checkbox-group input { width: auto; margin-right: 8px; }
 
-.checkbox-group input {
-    width: auto;
-    margin-right: 8px;
-}
-
-.form-actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-}
+.form-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
 .test-btn {
     background: #ffa500;
     color: #ffffff;
     border: none;
-    padding: 12px 24px;
+    padding: 12px 20px;
     border-radius: 10px;
     font-weight: bold;
     cursor: pointer;
+    font-size: 0.9em;
 }
 
-.test-btn:hover {
-    background: #ff8c00;
-}
+.test-btn:hover { background: #ff8c00; }
 
 .clear-btn {
     background: #666;
     color: #ffffff;
     border: none;
-    padding: 12px 24px;
+    padding: 12px 20px;
     border-radius: 10px;
     font-weight: bold;
     cursor: pointer;
+    font-size: 0.9em;
 }
 
-.clear-btn:hover {
-    background: #555;
+.clear-btn:hover { background: #555; }
+
+/* ── SHUFFLE BOX ── */
+.shuffle-box {
+    margin-top: 20px;
+    padding: 15px;
+    background: #fff3e0;
+    border-radius: 8px;
+    border-left: 4px solid #ff9800;
 }
 
-/* ========================================
-   ADMIN - TABLES
-   ======================================== */
+.shuffle-box h4 { margin: 0 0 8px 0; color: #e65100; font-size: 0.95em; }
+.shuffle-box p  { margin: 0 0 10px 0; color: #555; font-size: 0.85em; }
 
-.table-container {
-    overflow-x: auto;
-}
+/* ── TABLES ── */
+.table-container { overflow-x: auto; margin-top: 16px; }
 
-.schedule-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 15px;
-}
+.schedule-table { width: 100%; border-collapse: collapse; }
 
 .schedule-table th,
 .schedule-table td {
-    padding: 15px;
+    padding: 12px 14px;
     text-align: left;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid #eee;
+    font-size: 0.9em;
 }
 
 .schedule-table th {
@@ -578,88 +432,301 @@ body.admin-body .container {
     font-weight: bold;
 }
 
-.schedule-table tr:hover {
-    background: #f5f5f5;
-}
+.schedule-table tr:hover { background: #f9f9f9; }
 
-.schedule-table .status-badge {
+.status-badge {
     display: inline-block;
-    padding: 5px 15px;
+    padding: 4px 12px;
     border-radius: 20px;
     font-weight: bold;
-    font-size: 0.85em;
+    font-size: 0.8em;
 }
 
-.schedule-table .status-badge.active {
-    background: #d4edda;
-    color: #155724;
-}
+.status-badge.active  { background: #d4edda; color: #155724; }
+.status-badge.inactive { background: #f8d7da; color: #721c24; }
 
-.schedule-table .status-badge.inactive {
-    background: #f8d7da;
-    color: #721c24;
-}
-
-.schedule-table .audio-url {
-    max-width: 300px;
+.audio-url {
+    max-width: 250px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 0.9em;
+    font-size: 0.85em;
     color: #666;
+    display: inline-block;
 }
 
-.schedule-table .action-btns {
-    display: flex;
-    gap: 8px;
-}
+.action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
 
-.schedule-table .btn-edit,
-.schedule-table .btn-toggle,
-.schedule-table .btn-delete {
-    padding: 6px 12px;
+.btn-edit, .btn-toggle, .btn-delete {
+    padding: 5px 10px;
     border: none;
     border-radius: 6px;
     cursor: pointer;
-    font-size: 0.85em;
+    font-size: 0.8em;
     font-weight: bold;
 }
 
-.schedule-table .btn-edit {
-    background: #007bff;
-    color: #ffffff;
-}
+.btn-edit   { background: #007bff; color: #fff; }
+.btn-edit:hover { background: #0056b3; }
 
-.schedule-table .btn-edit:hover {
-    background: #0056b3;
-}
+.btn-toggle { background: #ffc107; color: #333; }
+.btn-toggle:hover { background: #e0a800; }
 
-.schedule-table .btn-toggle {
-    background: #ffc107;
-    color: #333;
-}
+.btn-delete { background: #dc3545; color: #fff; }
+.btn-delete:hover { background: #c82333; }
 
-.schedule-table .btn-toggle:hover {
-    background: #e0a800;
-}
-
-.schedule-table .btn-delete {
+/* ── FILA DE APROVAÇÃO ── */
+.queue-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: #dc3545;
-    color: #ffffff;
+    color: #fff;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+    font-weight: bold;
+    margin-left: 8px;
+    vertical-align: middle;
 }
 
-.schedule-table .btn-delete:hover {
-    background: #c82333;
+.queue-card {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 14px;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    background: #fafafa;
 }
 
-/* ========================================
-   ADMIN - SEASONAL PLAYLISTS
-   ======================================== */
+.queue-thumb {
+    width: 80px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
 
+.queue-info { flex: 1; }
+
+.queue-title   { font-size: 13px; font-weight: 600; color: #333; margin-bottom: 4px; }
+.queue-meta    { font-size: 11px; color: #666; margin-bottom: 4px; }
+.queue-source  { font-size: 11px; color: #999; }
+
+.queue-actions { min-width: 200px; }
+
+.queue-slot-select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 12px;
+}
+
+/* ── GRADES HORÁRIAS ── */
+.grades-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 0;
+}
+
+.grade-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    color: #666;
+    transition: all 0.2s ease;
+    margin-bottom: -2px;
+}
+
+.grade-tab:hover { color: #333; background: #f5f5f5; border-radius: 8px 8px 0 0; }
+
+.grade-tab.active { color: #333; font-weight: 600; }
+
+.grade-tab-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.grade-tab-count {
+    background: #eee;
+    color: #666;
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.grade-empty {
+    padding: 40px;
+    text-align: center;
+    color: #999;
+    font-size: 14px;
+}
+
+.grade-panel { animation: fadeIn 0.2s ease; }
+
+.grade-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    background: #f9f9f9;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.grade-panel-name { font-size: 15px; font-weight: 600; color: #333; }
+.grade-panel-info { font-size: 12px; color: #666; margin-top: 3px; }
+
+.grade-panel-stats { display: flex; gap: 8px; }
+
+.grade-stat {
+    font-size: 12px;
+    padding: 4px 10px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    color: #555;
+    font-weight: 500;
+}
+
+.grade-subsection {
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: 12px;
+    border-left: 4px solid #006b3f;
+    margin-bottom: 20px;
+}
+
+.grade-subsection h4 {
+    color: #006b3f;
+    margin-bottom: 16px;
+    font-size: 1em;
+}
+
+/* ── JINGLES GRID ── */
+.jingles-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.jingle-col {
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #eee;
+    overflow: hidden;
+}
+
+.jingle-col-title {
+    background: #EEEDFE;
+    color: #534AB7;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 8px 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.jingle-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-bottom: 1px solid #f0f0f0;
+    flex-wrap: wrap;
+}
+
+.jingle-row:last-child { border-bottom: none; }
+
+.jingle-row-title {
+    flex: 1;
+    font-size: 12px;
+    color: #333;
+    font-weight: 500;
+}
+
+/* ── YOUTUBE ── */
+.yt-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.yt-tab {
+    padding: 10px 20px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    color: #666;
+    transition: all 0.2s ease;
+}
+
+.yt-tab.active {
+    border-color: #006b3f;
+    background: #006b3f;
+    color: #fff;
+}
+
+.yt-preview-card {
+    margin-top: 16px;
+    padding: 16px;
+    background: #f9f9f9;
+    border-radius: 12px;
+    border: 1px solid #eee;
+}
+
+.yt-preview-card img {
+    width: 100%;
+    max-width: 200px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.yt-preview-title   { font-size: 14px; font-weight: 600; color: #333; margin-bottom: 4px; }
+.yt-preview-channel { font-size: 12px; color: #666; margin-bottom: 4px; }
+.yt-preview-duration{ font-size: 12px; color: #999; }
+
+.yt-result-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+}
+
+.yt-result-row:hover { background: #f5f5f5; }
+
+.yt-result-check { width: 18px; height: 18px; cursor: pointer; flex-shrink: 0; }
+
+/* ── SAZONAIS ── */
 .seasonal-tabs {
     display: flex;
-    gap: 10px;
-    margin-bottom: 30px;
+    gap: 6px;
+    margin-bottom: 24px;
     border-bottom: 2px solid #e0e0e0;
     flex-wrap: wrap;
 }
@@ -667,330 +734,138 @@ body.admin-body .container {
 .seasonal-tab {
     background: transparent;
     border: none;
-    padding: 12px 24px;
-    font-size: 1.05em;
+    padding: 10px 20px;
+    font-size: 1em;
     font-weight: bold;
     cursor: pointer;
     border-bottom: 3px solid transparent;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     color: #666;
+    margin-bottom: -2px;
 }
 
-.seasonal-tab:hover {
-    background: #f5f5f5;
-    color: #006b3f;
-}
+.seasonal-tab:hover { background: #f5f5f5; color: #006b3f; }
+.seasonal-tab.active { color: #006b3f; border-bottom-color: #006b3f; }
 
-.seasonal-tab.active {
-    color: #006b3f;
-    border-bottom-color: #006b3f;
-}
+.seasonal-content { position: relative; }
 
-.seasonal-content {
-    position: relative;
-}
-
-.seasonal-panel {
-    display: none;
-}
-
-.seasonal-panel.active {
-    display: block;
-    animation: fadeIn 0.3s ease;
-}
+.seasonal-panel { display: none; }
+.seasonal-panel.active { display: block; animation: fadeIn 0.3s ease; }
 
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
 .seasonal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 30px;
-    padding-bottom: 15px;
+    margin-bottom: 24px;
+    padding-bottom: 14px;
     border-bottom: 2px solid #e0e0e0;
     flex-wrap: wrap;
-    gap: 15px;
+    gap: 12px;
 }
 
-.seasonal-header h3 {
-    color: #333;
-    font-size: 1.4em;
-    margin: 0;
-}
+.seasonal-header h3 { color: #333; font-size: 1.3em; margin: 0; }
 
-.seasonal-status {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
+.seasonal-status { display: flex; align-items: center; gap: 12px; }
 
 .toggle-seasonal-btn {
     background: #006b3f;
     color: #ffffff;
     border: none;
-    padding: 12px 24px;
+    padding: 10px 20px;
     border-radius: 10px;
-    font-size: 1em;
+    font-size: 0.95em;
     font-weight: bold;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
 }
 
-.toggle-seasonal-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 107, 63, 0.3);
-}
-
-.toggle-seasonal-btn:active {
-    transform: translateY(0);
-}
+.toggle-seasonal-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,107,63,0.3); }
 
 .seasonal-subsection {
     background: #f9f9f9;
-    padding: 25px;
+    padding: 20px;
     border-radius: 12px;
-    margin-bottom: 25px;
+    margin-bottom: 20px;
     border-left: 4px solid #006b3f;
 }
 
 .seasonal-subsection h4 {
     color: #006b3f;
-    margin-bottom: 20px;
-    font-size: 1.15em;
-}
-
-.seasonal-form {
-    display: grid;
-    gap: 15px;
-    margin-bottom: 25px;
-}
-
-.seasonal-form .form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.seasonal-form label {
-    font-weight: bold;
-    color: #333;
-}
-
-.seasonal-form input {
-    padding: 12px;
-    border: 2px solid #ddd;
-    border-radius: 10px;
+    margin-bottom: 16px;
     font-size: 1em;
 }
 
-.seasonal-form input:focus {
-    outline: none;
-    border-color: #006b3f;
+.seasonal-form { display: grid; gap: 12px; margin-bottom: 16px; }
+
+.seasonal-form .form-group { display: flex; flex-direction: column; gap: 6px; }
+.seasonal-form label { font-weight: bold; color: #333; font-size: 0.9em; }
+
+.seasonal-form input,
+.seasonal-form select {
+    padding: 10px 12px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    font-size: 0.95em;
 }
 
-/* ========================================
-   ADMIN - FOOTER
-   ======================================== */
+.seasonal-form input:focus,
+.seasonal-form select:focus { outline: none; border-color: #006b3f; }
 
-.footer {
-    background: #ffffff;
-    padding: 20px;
-    border-radius: 20px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-    text-align: center;
-    margin-top: 30px;
-    color: #666;
-}
-
-.footer a {
-    color: #006b3f;
-    text-decoration: none;
-    font-weight: bold;
-    margin-left: 15px;
-}
-
-.footer a:hover {
-    text-decoration: underline;
-}
-
-.admin-link {
-    color: #006b3f;
-    text-decoration: none;
-    font-weight: bold;
-}
-
-.admin-link:hover {
-    text-decoration: underline;
-}
-
-/* ========================================
-   RESPONSIVO
-   ======================================== */
-
+/* ── RESPONSIVO ── */
 @media (max-width: 768px) {
-    body.admin-body .container {
-        padding: 15px;
-    }
+    body.admin-body .container { padding: 12px; }
 
-    .container {
-        max-width: 100%;
-        padding: 0 15px;
-    }
+    .container { max-width: 100%; padding: 0 12px; }
 
-    .card-white {
-        padding: 25px 20px;
-        border-radius: 18px;
-        margin-bottom: 15px;
-    }
+    .card-white { padding: 20px 16px; border-radius: 16px; margin-bottom: 12px; }
 
-    .card-link-admin,
-    .card-footer {
-        padding: 12px 20px;
-    }
+    .logo { width: 80px; height: 80px; }
 
-    .logo {
-        width: 85px;
-        height: 85px;
-    }
+    .header h1 { font-size: 1.2em; }
+    .header-text h1 { font-size: 1.4em; }
 
-    .header h1 {
-        font-size: 1.3em;
-    }
+    .time-display { font-size: 2em; }
 
-    .header-text h1 {
-        font-size: 1.5em;
-    }
+    .track-name { font-size: 1.2em; }
 
-    .time-display {
-        font-size: 2.2em;
-    }
+    .play-btn-circle { width: 120px; height: 120px; }
+    .play-icon, .pause-icon { width: 42px; height: 42px; }
 
-    .countdown-display {
-        font-size: 0.95em;
-    }
+    .controls-minimal { flex-direction: column; width: 100%; }
+    .volume-minimal, .sync-btn-minimal { width: 100%; justify-content: center; }
 
-    .track-name {
-        font-size: 1.3em;
-        min-height: 45px;
-    }
+    .form-actions { flex-direction: column; }
+    .form-actions button { width: 100%; }
 
-    .play-btn-circle {
-        width: 130px;
-        height: 130px;
-    }
+    .seasonal-tabs { flex-direction: column; }
+    .seasonal-tab  { width: 100%; text-align: left; }
 
-    .play-icon,
-    .pause-icon {
-        width: 45px;
-        height: 45px;
-    }
+    .seasonal-header { flex-direction: column; align-items: flex-start; }
+    .seasonal-status { width: 100%; flex-direction: column; align-items: stretch; }
+    .toggle-seasonal-btn { width: 100%; }
 
-    .controls-minimal {
-        flex-direction: column;
-        width: 100%;
-        gap: 12px;
-    }
+    .grades-tabs { flex-direction: column; }
+    .grade-tab   { width: 100%; }
 
-    .volume-minimal,
-    .sync-btn-minimal {
-        width: 100%;
-        justify-content: center;
-    }
+    .jingles-grid { grid-template-columns: 1fr; }
 
-    #volumeSlider {
-        width: 120px;
-    }
+    .queue-card { flex-direction: column; }
+    .queue-actions { width: 100%; }
 
-    .form-actions {
-        flex-direction: column;
-    }
-
-    .form-actions button {
-        width: 100%;
-    }
-
-    .seasonal-tabs {
-        flex-direction: column;
-    }
-
-    .seasonal-tab {
-        width: 100%;
-        text-align: left;
-    }
-
-    .seasonal-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .seasonal-status {
-        width: 100%;
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .toggle-seasonal-btn {
-        width: 100%;
-    }
+    .yt-tabs { flex-direction: column; }
 }
 
 @media (max-width: 480px) {
-    .card-white {
-        padding: 20px 15px;
-        border-radius: 15px;
-    }
-
-    .card-link-admin,
-    .card-footer {
-        padding: 10px 15px;
-    }
-
-    .logo {
-        width: 75px;
-        height: 75px;
-    }
-
-    .header h1 {
-        font-size: 1.2em;
-    }
-
-    .header-text h1 {
-        font-size: 1.3em;
-    }
-
-    .time-display {
-        font-size: 2em;
-    }
-
-    .countdown-display {
-        font-size: 0.9em;
-    }
-
-    .track-name {
-        font-size: 1.2em;
-    }
-
-    .play-btn-circle {
-        width: 120px;
-        height: 120px;
-    }
-
-    .play-icon,
-    .pause-icon {
-        width: 42px;
-        height: 42px;
-    }
-
-    .copyright-text {
-        font-size: 0.8em;
-    }
+    .card-white { padding: 16px 12px; border-radius: 14px; }
+    .logo { width: 70px; height: 70px; }
+    .header h1 { font-size: 1.1em; }
+    .time-display { font-size: 1.8em; }
+    .track-name { font-size: 1.1em; }
+    .play-btn-circle { width: 110px; height: 110px; }
+    .copyright-text { font-size: 0.78em; }
 }
