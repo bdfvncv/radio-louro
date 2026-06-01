@@ -8,482 +8,428 @@
     <link rel="icon" type="image/png" href="logo.png">
 </head>
 <body class="admin-body">
-    <div class="container">
+<div class="container">
 
-        <div class="card-white">
-            <header class="header">
-                <div class="header-content">
-                    <img src="logo.png" alt="Logo Supermercado do Louro" class="logo">
-                    <div class="header-text">
-                        <h1>🔐 Painel Administrativo</h1>
-                    </div>
-                </div>
-                <button class="logout-btn" id="logoutBtn" style="display: none;">Sair</button>
-            </header>
-        </div>
-
-        <div class="login-screen" id="loginScreen" style="display: flex;">
-            <div class="login-card">
-                <h2>🔐 Acesso Restrito</h2>
-                <p>Digite a senha para acessar o painel administrativo</p>
-                <form id="loginForm">
-                    <input type="password" id="passwordInput" placeholder="Digite a senha" required>
-                    <button type="submit" class="submit-btn">Entrar</button>
-                </form>
-                <p class="error-message" id="loginError"></p>
-                <a href="index.html" class="back-link">← Voltar ao Player</a>
+    <div class="card-white">
+        <header class="header">
+            <div class="header-content">
+                <img src="logo.png" alt="Logo Supermercado do Louro" class="logo">
+                <div class="header-text"><h1>🔐 Painel Administrativo</h1></div>
             </div>
-        </div>
-
-        <div class="admin-panel" id="adminPanel" style="display: none;">
-
-            <!-- ================================================
-                 FILA DE APROVAÇÃO
-                 ================================================ -->
-            <div class="queue-section" id="queueSection" style="display:none;">
-                <h2>⏳ Fila de Aprovação <span class="queue-badge" id="queueBadge">0</span></h2>
-                <p class="section-description">Músicas aguardando sua aprovação. Escolha a grade de destino e aprove ou rejeite cada uma.</p>
-                <div id="queueList"></div>
-            </div>
-
-            <!-- ================================================
-                 GRADES HORÁRIAS
-                 ================================================ -->
-            <div class="grades-section">
-                <h2>🕐 Grades Horárias</h2>
-                <p class="section-description">Gerencie as playlists de cada faixa horária. Cada grade tem suas próprias músicas e vinhetas exclusivas.</p>
-
-                <div class="grades-tabs" id="gradesTabs"></div>
-
-                <div class="grades-content" id="gradesContent">
-                    <div class="grade-empty">Carregando grades...</div>
-                </div>
-            </div>
-
-            <!-- ================================================
-                 YOUTUBE → FILA (MANUAL + AUTOMÁTICO)
-                 ================================================ -->
-            <div class="youtube-section">
-                <h2>🎬 Adicionar Músicas via YouTube</h2>
-                <p class="section-description">Cole um link do YouTube ou use o modo automático para buscar músicas em lote. Todas passam pela fila de aprovação antes de entrar na grade.</p>
-
-                <div class="yt-tabs">
-                    <button class="yt-tab active" data-tab="manual">🔗 Manual</button>
-                    <button class="yt-tab" data-tab="auto">🤖 Automático</button>
-                </div>
-
-                <div class="yt-panel active" id="ytPanelManual">
-                    <div class="edit-form">
-                        <div class="form-group">
-                            <label>Link do YouTube:</label>
-                            <input type="url" id="ytUrlManual" placeholder="https://www.youtube.com/watch?v=...">
-                        </div>
-                        <div class="form-group">
-                            <label>Grade de destino:</label>
-                            <select id="ytSlotManual">
-                                <option value="">Selecionar após ver a música</option>
-                            </select>
-                        </div>
-                        <div class="form-actions">
-                            <button class="submit-btn" id="ytPreviewBtn">🔍 Visualizar</button>
-                        </div>
-                    </div>
-                    <div id="ytPreviewResult" style="display:none;" class="yt-preview-card">
-                        <img id="ytPreviewThumb" src="" alt="">
-                        <div class="yt-preview-info">
-                            <div class="yt-preview-title" id="ytPreviewTitle"></div>
-                            <div class="yt-preview-channel" id="ytPreviewChannel"></div>
-                            <div class="yt-preview-duration" id="ytPreviewDuration"></div>
-                        </div>
-                        <div class="form-actions" style="margin-top:12px;">
-                            <button class="submit-btn" id="ytAddManualBtn">➕ Enviar para Fila</button>
-                            <button class="clear-btn" id="ytCancelManualBtn">✖ Cancelar</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="yt-panel" id="ytPanelAuto" style="display:none;">
-                    <div class="edit-form">
-                        <div class="form-group">
-                            <label>Comando de busca:</label>
-                            <input type="text" id="ytAutoQuery" placeholder='Ex: "10 sertanejo raiz para Manhã do Campo"'>
-                            <small>Digite a quantidade, gênero e a grade de destino</small>
-                        </div>
-                        <div class="form-group">
-                            <label>Grade de destino:</label>
-                            <select id="ytSlotAuto"></select>
-                        </div>
-                        <div class="form-group">
-                            <label>Quantidade:</label>
-                            <select id="ytAutoQty">
-                                <option value="5">5 músicas</option>
-                                <option value="10" selected>10 músicas</option>
-                                <option value="15">15 músicas</option>
-                                <option value="20">20 músicas</option>
-                            </select>
-                        </div>
-                        <div class="form-actions">
-                            <button class="submit-btn" id="ytAutoSearchBtn">🔍 Buscar no YouTube</button>
-                        </div>
-                    </div>
-                    <div id="ytAutoResults" style="display:none;">
-                        <h4 style="margin-bottom:12px;">Resultados encontrados — marque as que quer enviar para a fila:</h4>
-                        <div id="ytAutoResultsList"></div>
-                        <div class="form-actions" style="margin-top:16px;">
-                            <button class="submit-btn" id="ytAutoAddSelectedBtn">➕ Enviar Selecionadas para Fila</button>
-                            <button class="clear-btn" id="ytAutoClearBtn">✖ Limpar</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ================================================
-                 PLAYLISTS TEMÁTICAS SAZONAIS
-                 ================================================ -->
-            <div class="seasonal-section">
-                <h2>🎭 Playlists Temáticas Sazonais</h2>
-                <p class="section-description">Configure músicas e propagandas especiais para datas comemorativas. Quando ativa, o evento aparece em 3 blocos de 4 músicas entre 08h e 20h, sem substituir a grade horária.</p>
-
-                <div class="seasonal-tabs">
-                    <button class="seasonal-tab active" data-category="natal">🎄 Natal</button>
-                    <button class="seasonal-tab" data-category="ano_novo">🎆 Ano-Novo</button>
-                    <button class="seasonal-tab" data-category="pascoa">🐰 Páscoa</button>
-                    <button class="seasonal-tab" data-category="sao_joao">🔥 São João</button>
-                </div>
-
-                <div class="seasonal-content">
-                    <div class="seasonal-panel active" data-category="natal">
-                        <div class="seasonal-header">
-                            <h3>🎄 Playlist de Natal</h3>
-                            <div class="seasonal-status">
-                                <span class="status-badge inactive" id="statusNatal">❌ Inativo</span>
-                                <button class="toggle-seasonal-btn" id="toggleNatal" data-category="natal">🎄 Ativar Natal</button>
-                            </div>
-                        </div>
-                        <div class="seasonal-subsection">
-                            <h4>🎵 Músicas de Natal</h4>
-                            <form class="seasonal-form" id="formMusicNatal">
-                                <div class="form-group"><label>URL do Áudio:</label><input type="url" class="seasonal-url" placeholder="https://res.cloudinary.com/..." required></div>
-                                <div class="form-group"><label>Título:</label><input type="text" class="seasonal-title" placeholder="Ex: Noite Feliz" required></div>
-                                <div class="form-group"><label>Ordem:</label><input type="number" class="seasonal-order" value="0" min="0"></div>
-                                <div class="form-actions">
-                                    <button type="submit" class="submit-btn">💾 Adicionar</button>
-                                    <button type="button" class="test-btn seasonal-test">▶️ Testar</button>
-                                    <button type="button" class="clear-btn seasonal-clear">🗑️ Limpar</button>
-                                </div>
-                            </form>
-                            <div class="table-container">
-                                <table class="schedule-table"><thead><tr><th>Ordem Original</th><th>Ordem do Dia 🎲</th><th>Título</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tableMusicNatal"></tbody></table>
-                            </div>
-                            <div class="shuffle-box"><h4>🎲 Embaralhamento</h4><p>Embaralhado automaticamente à meia-noite.</p><button class="test-btn shuffle-seasonal-btn" data-category="natal" data-type="music">🎲 Forçar Agora</button></div>
-                        </div>
-                        <div class="seasonal-subsection">
-                            <h4>📢 Propagandas de Natal</h4>
-                            <form class="seasonal-form" id="formAdNatal">
-                                <div class="form-group"><label>URL do Áudio:</label><input type="url" class="seasonal-url" placeholder="https://res.cloudinary.com/..." required></div>
-                                <div class="form-group"><label>Título:</label><input type="text" class="seasonal-title" placeholder="Ex: Promoção de Natal" required></div>
-                                <div class="form-group"><label>Anunciante:</label><input type="text" class="seasonal-advertiser" placeholder="Ex: Lojas Exemplo"></div>
-                                <div class="form-group"><label>Frequência (a cada X músicas):</label><input type="number" class="seasonal-frequency" value="3" min="1" max="100"></div>
-                                <div class="form-group"><label>Ordem:</label><input type="number" class="seasonal-order" value="0" min="0"></div>
-                                <div class="form-actions">
-                                    <button type="submit" class="submit-btn">💾 Adicionar</button>
-                                    <button type="button" class="test-btn seasonal-test">▶️ Testar</button>
-                                    <button type="button" class="clear-btn seasonal-clear">🗑️ Limpar</button>
-                                </div>
-                            </form>
-                            <div class="table-container">
-                                <table class="schedule-table"><thead><tr><th>Ordem</th><th>Título</th><th>Anunciante</th><th>Frequência</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tableAdNatal"></tbody></table>
-                            </div>
-                        </div>
-                        <div class="seasonal-subsection">
-                            <h4>🎬 Vinhetas de Natal</h4>
-                            <form class="seasonal-form" id="formJingleNatal">
-                                <div class="form-group"><label>URL do Áudio:</label><input type="url" class="jingle-url" placeholder="https://res.cloudinary.com/..." required></div>
-                                <div class="form-group"><label>Título:</label><input type="text" class="jingle-title" placeholder="Ex: Vinheta Natal Abertura" required></div>
-                                <div class="form-group"><label>Posição:</label>
-                                    <select class="jingle-position">
-                                        <option value="opening">🎬 Abertura</option>
-                                        <option value="middle">🎬 Meio</option>
-                                        <option value="closing">🎬 Encerramento</option>
-                                    </select>
-                                </div>
-                                <div class="form-actions">
-                                    <button type="submit" class="submit-btn">💾 Adicionar Vinheta</button>
-                                    <button type="button" class="test-btn jingle-test">▶️ Testar</button>
-                                    <button type="button" class="clear-btn jingle-clear">🗑️ Limpar</button>
-                                </div>
-                            </form>
-                            <div class="table-container">
-                                <table class="schedule-table"><thead><tr><th>Posição</th><th>Título</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tableJingleNatal"></tbody></table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="seasonal-panel" data-category="ano_novo">
-                        <div class="seasonal-header">
-                            <h3>🎆 Playlist de Ano-Novo</h3>
-                            <div class="seasonal-status">
-                                <span class="status-badge inactive" id="statusAnoNovo">❌ Inativo</span>
-                                <button class="toggle-seasonal-btn" id="toggleAnoNovo" data-category="ano_novo">🎆 Ativar Ano-Novo</button>
-                            </div>
-                        </div>
-                        <div class="seasonal-subsection">
-                            <h4>🎵 Músicas de Ano-Novo</h4>
-                            <form class="seasonal-form" id="formMusicAnoNovo">
-                                <div class="form-group"><label>URL do Áudio:</label><input type="url" class="seasonal-url" placeholder="https://res.cloudinary.com/..." required></div>
-                                <div class="form-group"><label>Título:</label><input type="text" class="seasonal-title" placeholder="Ex: Auld Lang Syne" required></div>
-                                <div class="form-group"><label>Ordem:</label><input type="number" class="seasonal-order" value="0" min="0"></div>
-                                <div class="form-actions"><button type="submit" class="submit-btn">💾 Adicionar</button><button type="button" class="test-btn seasonal-test">▶️ Testar</button><button type="button" class="clear-btn seasonal-clear">🗑️ Limpar</button></div>
-                            </form>
-                            <div class="table-container"><table class="schedule-table"><thead><tr><th>Ordem Original</th><th>Ordem do Dia 🎲</th><th>Título</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tableMusicAnoNovo"></tbody></table></div>
-                            <div class="shuffle-box"><h4>🎲 Embaralhamento</h4><p>Embaralhado automaticamente à meia-noite.</p><button class="test-btn shuffle-seasonal-btn" data-category="ano_novo" data-type="music">🎲 Forçar Agora</button></div>
-                        </div>
-                        <div class="seasonal-subsection">
-                            <h4>📢 Propagandas de Ano-Novo</h4>
-                            <form class="seasonal-form" id="formAdAnoNovo">
-                                <div class="form-group"><label>URL do Áudio:</label><input type="url" class="seasonal-url" placeholder="https://res.cloudinary.com/..." required></div>
-                                <div class="form-group"><label>Título:</label><input type="text" class="seasonal-title" placeholder="Ex: Promoção de Ano-Novo" required></div>
-                                <div class="form-group"><label>Anunciante:</label><input type="text" class="seasonal-advertiser" placeholder="Ex: Lojas Exemplo"></div>
-                                <div class="form-group"><label>Frequência:</label><input type="number" class="seasonal-frequency" value="3" min="1" max="100"></div>
-                                <div class="form-group"><label>Ordem:</label><input type="number" class="seasonal-order" value="0" min="0"></div>
-                                <div class="form-actions"><button type="submit" class="submit-btn">💾 Adicionar</button><button type="button" class="test-btn seasonal-test">▶️ Testar</button><button type="button" class="clear-btn seasonal-clear">🗑️ Limpar</button></div>
-                            </form>
-                            <div class="table-container"><table class="schedule-table"><thead><tr><th>Ordem</th><th>Título</th><th>Anunciante</th><th>Frequência</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tableAdAnoNovo"></tbody></table></div>
-                        </div>
-                        <div class="seasonal-subsection">
-                            <h4>🎬 Vinhetas de Ano-Novo</h4>
-                            <form class="seasonal-form" id="formJingleAnoNovo">
-                                <div class="form-group"><label>URL do Áudio:</label><input type="url" class="jingle-url" placeholder="https://res.cloudinary.com/..." required></div>
-                                <div class="form-group"><label>Título:</label><input type="text" class="jingle-title" placeholder="Ex: Vinheta Ano-Novo" required></div>
-                                <div class="form-group"><label>Posição:</label><select class="jingle-position"><option value="opening">🎬 Abertura</option><option value="middle">🎬 Meio</option><option value="closing">🎬 Encerramento</option></select></div>
-                                <div class="form-actions"><button type="submit" class="submit-btn">💾 Adicionar Vinheta</button><button type="button" class="test-btn jingle-test">▶️ Testar</button><button type="button" class="clear-btn jingle-clear">🗑️ Limpar</button></div>
-                            </form>
-                            <div class="table-container"><table class="schedule-table"><thead><tr><th>Posição</th><th>Título</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tableJingleAnoNovo"></tbody></table></div>
-                        </div>
-                    </div>
-
-                    <div class="seasonal-panel" data-category="pascoa">
-                        <div class="seasonal-header">
-                            <h3>🐰 Playlist de Páscoa</h3>
-                            <div class="seasonal-status">
-                                <span class="status-badge inactive" id="statusPascoa">❌ Inativo</span>
-                                <button class="toggle-seasonal-btn" id="togglePascoa" data-category="pascoa">🐰 Ativar Páscoa</button>
-                            </div>
-                        </div>
-                        <div class="seasonal-subsection">
-                            <h4>🎵 Músicas de Páscoa</h4>
-                            <form class="seasonal-form" id="formMusicPascoa">
-                                <div class="form-group"><label>URL do Áudio:</label><input type="url" class="seasonal-url" placeholder="https://res.cloudinary.com/..." required></div>
-                                <div class="form-group"><label>Título:</label><input type="text" class="seasonal-title" placeholder="Ex: Música de Páscoa" required></div>
-                                <div class="form-group"><label>Ordem:</label><input type="number" class="seasonal-order" value="0" min="0"></div>
-                                <div class="form-actions"><button type="submit" class="submit-btn">💾 Adicionar</button><button type="button" class="test-btn seasonal-test">▶️ Testar</button><button type="button" class="clear-btn seasonal-clear">🗑️ Limpar</button></div>
-                            </form>
-                            <div class="table-container"><table class="schedule-table"><thead><tr><th>Ordem Original</th><th>Ordem do Dia 🎲</th><th>Título</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tableMusicPascoa"></tbody></table></div>
-                            <div class="shuffle-box"><h4>🎲 Embaralhamento</h4><p>Embaralhado automaticamente à meia-noite.</p><button class="test-btn shuffle-seasonal-btn" data-category="pascoa" data-type="music">🎲 Forçar Agora</button></div>
-                        </div>
-                        <div class="seasonal-subsection">
-                            <h4>📢 Propagandas de Páscoa</h4>
-                            <form class="seasonal-form" id="formAdPascoa">
-                                <div class="form-group"><label>URL do Áudio:</label><input type="url" class="seasonal-url" placeholder="https://res.cloudinary.com/..." required></div>
-                                <div class="form-group"><label>Título:</label><input type="text" class="seasonal-title" placeholder="Ex: Promoção de Páscoa" required></div>
-                                <div class="form-group"><label>Anunciante:</label><input type="text" class="seasonal-advertiser" placeholder="Ex: Lojas Exemplo"></div>
-                                <div class="form-group"><label>Frequência:</label><input type="number" class="seasonal-frequency" value="3" min="1" max="100"></div>
-                                <div class="form-group"><label>Ordem:</label><input type="number" class="seasonal-order" value="0" min="0"></div>
-                                <div class="form-actions"><button type="submit" class="submit-btn">💾 Adicionar</button><button type="button" class="test-btn seasonal-test">▶️ Testar</button><button type="button" class="clear-btn seasonal-clear">🗑️ Limpar</button></div>
-                            </form>
-                            <div class="table-container"><table class="schedule-table"><thead><tr><th>Ordem</th><th>Título</th><th>Anunciante</th><th>Frequência</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tableAdPascoa"></tbody></table></div>
-                        </div>
-                        <div class="seasonal-subsection">
-                            <h4>🎬 Vinhetas de Páscoa</h4>
-                            <form class="seasonal-form" id="formJinglePascoa">
-                                <div class="form-group"><label>URL do Áudio:</label><input type="url" class="jingle-url" placeholder="https://res.cloudinary.com/..." required></div>
-                                <div class="form-group"><label>Título:</label><input type="text" class="jingle-title" placeholder="Ex: Vinheta Páscoa" required></div>
-                                <div class="form-group"><label>Posição:</label><select class="jingle-position"><option value="opening">🎬 Abertura</option><option value="middle">🎬 Meio</option><option value="closing">🎬 Encerramento</option></select></div>
-                                <div class="form-actions"><button type="submit" class="submit-btn">💾 Adicionar Vinheta</button><button type="button" class="test-btn jingle-test">▶️ Testar</button><button type="button" class="clear-btn jingle-clear">🗑️ Limpar</button></div>
-                            </form>
-                            <div class="table-container"><table class="schedule-table"><thead><tr><th>Posição</th><th>Título</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tableJinglePascoa"></tbody></table></div>
-                        </div>
-                    </div>
-
-                    <div class="seasonal-panel" data-category="sao_joao">
-                        <div class="seasonal-header">
-                            <h3>🔥 Playlist de São João</h3>
-                            <div class="seasonal-status">
-                                <span class="status-badge inactive" id="statusSaoJoao">❌ Inativo</span>
-                                <button class="toggle-seasonal-btn" id="toggleSaoJoao" data-category="sao_joao">🔥 Ativar São João</button>
-                            </div>
-                        </div>
-                        <div class="seasonal-subsection">
-                            <h4>🎵 Músicas de São João</h4>
-                            <form class="seasonal-form" id="formMusicSaoJoao">
-                                <div class="form-group"><label>URL do Áudio:</label><input type="url" class="seasonal-url" placeholder="https://res.cloudinary.com/..." required></div>
-                                <div class="form-group"><label>Título:</label><input type="text" class="seasonal-title" placeholder="Ex: Forró Tradicional" required></div>
-                                <div class="form-group"><label>Ordem:</label><input type="number" class="seasonal-order" value="0" min="0"></div>
-                                <div class="form-actions"><button type="submit" class="submit-btn">💾 Adicionar</button><button type="button" class="test-btn seasonal-test">▶️ Testar</button><button type="button" class="clear-btn seasonal-clear">🗑️ Limpar</button></div>
-                            </form>
-                            <div class="table-container"><table class="schedule-table"><thead><tr><th>Ordem Original</th><th>Ordem do Dia 🎲</th><th>Título</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tableMusicSaoJoao"></tbody></table></div>
-                            <div class="shuffle-box"><h4>🎲 Embaralhamento</h4><p>Embaralhado automaticamente à meia-noite.</p><button class="test-btn shuffle-seasonal-btn" data-category="sao_joao" data-type="music">🎲 Forçar Agora</button></div>
-                        </div>
-                        <div class="seasonal-subsection">
-                            <h4>📢 Propagandas de São João</h4>
-                            <form class="seasonal-form" id="formAdSaoJoao">
-                                <div class="form-group"><label>URL do Áudio:</label><input type="url" class="seasonal-url" placeholder="https://res.cloudinary.com/..." required></div>
-                                <div class="form-group"><label>Título:</label><input type="text" class="seasonal-title" placeholder="Ex: Promoção Junina" required></div>
-                                <div class="form-group"><label>Anunciante:</label><input type="text" class="seasonal-advertiser" placeholder="Ex: Lojas Exemplo"></div>
-                                <div class="form-group"><label>Frequência:</label><input type="number" class="seasonal-frequency" value="3" min="1" max="100"></div>
-                                <div class="form-group"><label>Ordem:</label><input type="number" class="seasonal-order" value="0" min="0"></div>
-                                <div class="form-actions"><button type="submit" class="submit-btn">💾 Adicionar</button><button type="button" class="test-btn seasonal-test">▶️ Testar</button><button type="button" class="clear-btn seasonal-clear">🗑️ Limpar</button></div>
-                            </form>
-                            <div class="table-container"><table class="schedule-table"><thead><tr><th>Ordem</th><th>Título</th><th>Anunciante</th><th>Frequência</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tableAdSaoJoao"></tbody></table></div>
-                        </div>
-                        <div class="seasonal-subsection">
-                            <h4>🎬 Vinhetas de São João</h4>
-                            <form class="seasonal-form" id="formJingleSaoJoao">
-                                <div class="form-group"><label>URL do Áudio:</label><input type="url" class="jingle-url" placeholder="https://res.cloudinary.com/..." required></div>
-                                <div class="form-group"><label>Título:</label><input type="text" class="jingle-title" placeholder="Ex: Vinheta São João" required></div>
-                                <div class="form-group"><label>Posição:</label><select class="jingle-position"><option value="opening">🎬 Abertura</option><option value="middle">🎬 Meio</option><option value="closing">🎬 Encerramento</option></select></div>
-                                <div class="form-actions"><button type="submit" class="submit-btn">💾 Adicionar Vinheta</button><button type="button" class="test-btn jingle-test">▶️ Testar</button><button type="button" class="clear-btn jingle-clear">🗑️ Limpar</button></div>
-                            </form>
-                            <div class="table-container"><table class="schedule-table"><thead><tr><th>Posição</th><th>Título</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tableJingleSaoJoao"></tbody></table></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ================================================
-                 INSTRUÇÕES CLOUDINARY
-                 ================================================ -->
-            <div class="instructions-section">
-                <h2>📋 Instruções de Upload</h2>
-                <div class="instructions-card">
-                    <h3>Como fazer upload no Cloudinary:</h3>
-                    <ol>
-                        <li>Acesse: <a href="https://cloudinary.com/console" target="_blank">cloudinary.com/console</a></li>
-                        <li>Faça login com: <strong>Cloud Name: dygbrcrr6</strong></li>
-                        <li>Clique em "Media Library" → "Upload"</li>
-                        <li>Selecione seu arquivo MP3</li>
-                        <li>Após o upload, clique no arquivo</li>
-                        <li>Copie a URL pública (terminada em .mp3)</li>
-                        <li>Cole a URL no formulário desejado</li>
-                    </ol>
-                </div>
-            </div>
-
-            <!-- ================================================
-                 HORAS CERTAS
-                 ================================================ -->
-            <div class="editor-section">
-                <h2>✏️ Editor de Programação</h2>
-                <p class="section-description">Configure os áudios para cada hora. Você pode definir um áudio para :00 (hora cheia) e outro para :30 (meia hora).</p>
-                <form id="editForm" class="edit-form">
-                    <div class="form-group">
-                        <label for="hourSelect">Hora (0-23):</label>
-                        <select id="hourSelect" required><option value="">Selecione uma hora</option></select>
-                    </div>
-                    <div class="form-group">
-                        <label for="audioUrl">URL do Áudio (:00 - Hora Cheia):</label>
-                        <input type="url" id="audioUrl" placeholder="https://res.cloudinary.com/..." required>
-                        <small>Áudio que tocará em XX:00</small>
-                    </div>
-                    <div class="form-group">
-                        <label for="audioUrlHalf">URL do Áudio (:30 - Meia Hora) - Opcional:</label>
-                        <input type="url" id="audioUrlHalf" placeholder="https://res.cloudinary.com/...">
-                        <small>Deixe vazio para não tocar aos :30</small>
-                    </div>
-                    <div class="form-group checkbox-group">
-                        <label><input type="checkbox" id="enabledCheckbox" checked> Ativo (habilitado)</label>
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="submit-btn">💾 Salvar</button>
-                        <button type="button" class="test-btn" id="testBtn">▶️ Testar :00</button>
-                        <button type="button" class="test-btn" id="testBtnHalf">▶️ Testar :30</button>
-                        <button type="button" class="clear-btn" id="clearBtn">🗑️ Limpar</button>
-                    </div>
-                </form>
-            </div>
-
-            <div class="schedule-table-section">
-                <h2>📅 Programação Completa (24 Horas)</h2>
-                <div class="table-container">
-                    <table class="schedule-table">
-                        <thead><tr><th>Hora</th><th>Status</th><th>URL do Áudio (:00)</th><th>URL do Áudio (:30)</th><th>Ações</th></tr></thead>
-                        <tbody id="scheduleTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- ================================================
-                 PLAYLIST DE FUNDO (LEGADO)
-                 ================================================ -->
-            <div class="playlist-section">
-                <h2>🎵 Playlist de Fundo (Madrugada / Padrão)</h2>
-                <p class="section-description">Playlist usada na madrugada (20h–07h) e como fallback quando nenhuma grade horária está configurada.</p>
-                <form id="playlistForm" class="edit-form">
-                    <div class="form-group"><label for="playlistUrl">URL do Áudio:</label><input type="url" id="playlistUrl" placeholder="https://res.cloudinary.com/..." required></div>
-                    <div class="form-group"><label for="playlistTitle">Título da Música:</label><input type="text" id="playlistTitle" placeholder="Ex: Música Ambiente 1" required></div>
-                    <div class="form-group"><label for="playlistOrder">Ordem de Reprodução:</label><input type="number" id="playlistOrder" value="0" min="0"></div>
-                    <div class="form-group checkbox-group"><label><input type="checkbox" id="playlistEnabled" checked> Ativo (habilitado)</label></div>
-                    <div class="form-actions">
-                        <button type="submit" class="submit-btn">💾 Adicionar à Playlist</button>
-                        <button type="button" class="test-btn" id="testPlaylistBtn">▶️ Testar</button>
-                        <button type="button" class="clear-btn" id="clearPlaylistBtn">🗑️ Limpar</button>
-                    </div>
-                </form>
-                <div class="table-container">
-                    <table class="schedule-table">
-                        <thead><tr><th>Ordem Original</th><th>Ordem do Dia 🎲</th><th>Título</th><th>Status</th><th>URL do Áudio</th><th>Ações</th></tr></thead>
-                        <tbody id="playlistTableBody"></tbody>
-                    </table>
-                </div>
-                <div class="shuffle-box" style="border-left-color:#2196f3; background:#e3f2fd;">
-                    <h4 style="color:#1976d2;">🎲 Embaralhamento Diário</h4>
-                    <p style="color:#555;">Embaralhado automaticamente à meia-noite.</p>
-                    <button class="test-btn" id="forceShuffleBtn" style="margin-top:10px;">🎲 Forçar Agora</button>
-                </div>
-            </div>
-
-            <!-- ================================================
-                 PROPAGANDAS
-                 ================================================ -->
-            <div class="ads-section">
-                <h2>📢 Propagandas / Anúncios</h2>
-                <p class="section-description">Propagandas tocadas automaticamente entre as músicas em todas as grades.</p>
-                <form id="adsForm" class="edit-form">
-                    <div class="form-group"><label for="adUrl">URL do Áudio:</label><input type="url" id="adUrl" placeholder="https://res.cloudinary.com/..." required></div>
-                    <div class="form-group"><label for="adTitle">Título do Anúncio:</label><input type="text" id="adTitle" placeholder="Ex: Promoção do Dia" required></div>
-                    <div class="form-group"><label for="adAdvertiser">Anunciante (opcional):</label><input type="text" id="adAdvertiser" placeholder="Ex: Nome da Empresa"></div>
-                    <div class="form-group">
-                        <label for="adFrequency">Frequência (a cada quantas músicas):</label>
-                        <input type="number" id="adFrequency" value="3" min="1" max="100" required>
-                        <small>Valor 3 = toca a cada 3 músicas | Máximo: 100</small>
-                    </div>
-                    <div class="form-group"><label for="adOrder">Ordem de Reprodução:</label><input type="number" id="adOrder" value="0" min="0"></div>
-                    <div class="form-group checkbox-group"><label><input type="checkbox" id="adEnabled" checked> Ativo (habilitado)</label></div>
-                    <div class="form-actions">
-                        <button type="submit" class="submit-btn">💾 Adicionar Propaganda</button>
-                        <button type="button" class="test-btn" id="testAdBtn">▶️ Testar</button>
-                        <button type="button" class="clear-btn" id="clearAdBtn">🗑️ Limpar</button>
-                    </div>
-                </form>
-                <div class="table-container">
-                    <table class="schedule-table">
-                        <thead><tr><th>Ordem</th><th>Título</th><th>Anunciante</th><th>Frequência</th><th>Status</th><th>Ações</th></tr></thead>
-                        <tbody id="adsTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <audio id="testAudio" style="display: none;"></audio>
-
-        </div>
-
-        <div class="card-white card-footer">
-            <p class="copyright-text">© 2026 Rádio 24H Supermercado do Louro</p>
-        </div>
-
+            <button class="logout-btn" id="logoutBtn" style="display:none;">Sair</button>
+        </header>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
-    <script src="admin.js"></script>
+    <div class="login-screen" id="loginScreen" style="display:flex;">
+        <div class="login-card">
+            <h2>🔐 Acesso Restrito</h2>
+            <p>Digite a senha para acessar o painel administrativo</p>
+            <form id="loginForm">
+                <input type="password" id="passwordInput" placeholder="Digite a senha" required>
+                <button type="submit" class="submit-btn">Entrar</button>
+            </form>
+            <p class="error-message" id="loginError"></p>
+            <a href="index.html" class="back-link">← Voltar ao Player</a>
+        </div>
+    </div>
+
+    <div class="admin-panel" id="adminPanel" style="display:none;">
+
+        <!-- ══════════════════════════════════════════
+             FILA DE APROVAÇÃO
+             ══════════════════════════════════════════ -->
+        <div class="queue-section" id="queueSection" style="display:none;">
+            <h2>⏳ Fila de Aprovação <span class="queue-badge" id="queueBadge">0</span></h2>
+            <p class="section-description">Ouça a prévia antes de aprovar. A conversão MP3 só acontece após sua aprovação.</p>
+            <div id="queueList"></div>
+        </div>
+
+        <!-- ══════════════════════════════════════════
+             BUSCA DE MÚSICAS (ADMIN)
+             ══════════════════════════════════════════ -->
+        <div class="admin-search-section">
+            <h2>🔍 Buscar e Sugerir Música</h2>
+            <p class="section-description">Pesquise uma música no YouTube. No admin você pode aprovar diretamente sem passar pela fila, ou enviar para a fila de aprovação.</p>
+            <div class="suggest-search-row">
+                <input type="text" id="adminSearchInput" class="suggest-input" placeholder="Digite o nome da música ou artista...">
+                <button class="suggest-search-btn" id="adminSearchBtn">🔍 Buscar</button>
+            </div>
+            <div id="adminSearchResults" class="suggest-results" style="display:none;"></div>
+            <div class="suggest-feedback" id="adminSearchFeedback" style="display:none;"></div>
+        </div>
+
+        <!-- ══════════════════════════════════════════
+             GRADES HORÁRIAS
+             ══════════════════════════════════════════ -->
+        <div class="grades-section">
+            <h2>🕐 Grades Horárias</h2>
+            <p class="section-description">Gerencie as playlists de cada faixa horária. Cada grade tem suas próprias músicas e vinhetas exclusivas.</p>
+            <div class="grades-tabs" id="gradesTabs"></div>
+            <div class="grades-content" id="gradesContent"><div class="grade-empty">Carregando grades...</div></div>
+        </div>
+
+        <!-- ══════════════════════════════════════════
+             YOUTUBE → FILA
+             ══════════════════════════════════════════ -->
+        <div class="youtube-section">
+            <h2>🎬 Adicionar Músicas via YouTube</h2>
+            <p class="section-description">Cole um link do YouTube ou use o modo automático. Todas passam pela fila de aprovação com prévia antes de converter.</p>
+            <div class="yt-tabs">
+                <button class="yt-tab active" data-tab="manual">🔗 Manual</button>
+                <button class="yt-tab" data-tab="auto">🤖 Automático</button>
+            </div>
+            <div class="yt-panel active" id="ytPanelManual">
+                <div class="edit-form">
+                    <div class="form-group">
+                        <label>Link do YouTube:</label>
+                        <input type="url" id="ytUrlManual" placeholder="https://www.youtube.com/watch?v=...">
+                    </div>
+                    <div class="form-group">
+                        <label>Grade de destino (sugestão):</label>
+                        <select id="ytSlotManual"></select>
+                    </div>
+                    <div class="form-actions">
+                        <button class="submit-btn" id="ytPreviewBtn">🔍 Visualizar</button>
+                    </div>
+                </div>
+                <div id="ytPreviewResult" style="display:none;" class="yt-preview-card">
+                    <img id="ytPreviewThumb" src="" alt="">
+                    <div class="yt-preview-info">
+                        <div class="yt-preview-title" id="ytPreviewTitle"></div>
+                        <div class="yt-preview-channel" id="ytPreviewChannel"></div>
+                        <div class="yt-preview-duration" id="ytPreviewDuration"></div>
+                    </div>
+                    <div class="form-actions" style="margin-top:12px;">
+                        <button class="submit-btn" id="ytAddManualBtn">➕ Enviar para Fila</button>
+                        <button class="clear-btn" id="ytCancelManualBtn">✖ Cancelar</button>
+                    </div>
+                </div>
+            </div>
+            <div class="yt-panel" id="ytPanelAuto" style="display:none;">
+                <div class="edit-form">
+                    <div class="form-group">
+                        <label>Gênero / estilo:</label>
+                        <input type="text" id="ytAutoQuery" placeholder='Ex: sertanejo raiz, MPB clássica, forró...'>
+                    </div>
+                    <div class="form-group">
+                        <label>Grade de destino:</label>
+                        <select id="ytSlotAuto"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Quantidade:</label>
+                        <select id="ytAutoQty">
+                            <option value="5">5 músicas</option>
+                            <option value="10" selected>10 músicas</option>
+                            <option value="15">15 músicas</option>
+                            <option value="20">20 músicas</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button class="submit-btn" id="ytAutoSearchBtn">🔍 Buscar no YouTube</button>
+                    </div>
+                </div>
+                <div id="ytAutoResults" style="display:none;">
+                    <h4 style="margin-bottom:12px;font-size:13px;">Marque as que quer enviar para a fila:</h4>
+                    <div id="ytAutoResultsList"></div>
+                    <div class="form-actions" style="margin-top:16px;">
+                        <button class="submit-btn" id="ytAutoAddSelectedBtn">➕ Enviar Selecionadas</button>
+                        <button class="clear-btn" id="ytAutoClearBtn">✖ Limpar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════
+             LOCUTOR
+             ══════════════════════════════════════════ -->
+        <div class="locutor-section">
+            <h2>🎙️ Botão Locutor</h2>
+            <p class="section-description">Selecione uma locução, aperte o botão e a música pausa em todos os players. Ao terminar, retoma automaticamente.</p>
+
+            <div class="locutor-status-bar">
+                <div class="locutor-indicator" id="locutorIndicator"></div>
+                <div class="locutor-status-text" id="locutorStatusText">Locutor inativo — selecione uma locução abaixo</div>
+                <button class="locutor-play-btn" id="locutorPlayBtn" disabled>🎙️ Iniciar Locutor</button>
+            </div>
+
+            <div class="locutor-tracks-list" id="locutorTracksList">
+                <div style="color:#999;font-size:13px;padding:10px;">Nenhuma locução cadastrada.</div>
+            </div>
+
+            <div class="grade-subsection" style="margin-top:16px;">
+                <h4>➕ Adicionar Locução</h4>
+                <form class="edit-form" id="locutorForm">
+                    <div class="form-group">
+                        <label>Título:</label>
+                        <input type="text" id="locutorTitle" placeholder="Ex: Promoção de Segunda" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Descrição (opcional):</label>
+                        <input type="text" id="locutorDesc" placeholder="Ex: Promoção de hortifrúti">
+                    </div>
+                    <div class="form-group">
+                        <label>URL do Áudio (Cloudinary):</label>
+                        <input type="url" id="locutorUrl" placeholder="https://res.cloudinary.com/..." required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="submit-btn">💾 Salvar Locução</button>
+                        <button type="button" class="test-btn" id="locutorTestBtn">▶️ Testar</button>
+                        <button type="button" class="clear-btn" id="locutorClearBtn">🗑️ Limpar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════
+             TTS — PROMOÇÕES E NOTÍCIAS
+             ══════════════════════════════════════════ -->
+        <div class="tts-section">
+            <h2>📢 Promoções e Notícias (Voz)</h2>
+            <p class="section-description">Digite o texto e dispare com voz feminina em todos os players. Ou escolha um texto da biblioteca abaixo.</p>
+
+            <div class="tts-compose">
+                <h4>✍️ Compor novo texto</h4>
+                <div class="form-group" style="margin-bottom:10px;">
+                    <label>Título (para salvar na biblioteca):</label>
+                    <input type="text" id="ttsTitleInput" placeholder="Ex: Promoção de Quinta">
+                </div>
+                <div class="form-group" style="margin-bottom:6px;">
+                    <label>Categoria:</label>
+                    <select id="ttsCategoryInput">
+                        <option value="promocao">🏷️ Promoção</option>
+                        <option value="aviso">📣 Aviso</option>
+                        <option value="saudacao">👋 Saudação</option>
+                        <option value="encerramento">🌙 Encerramento</option>
+                        <option value="geral">📝 Geral</option>
+                    </select>
+                </div>
+                <textarea class="tts-textarea" id="ttsTextInput" placeholder="Digite aqui o texto que será lido em voz alta para os clientes..." maxlength="500"></textarea>
+                <div class="tts-char-count"><span id="ttsCharCount">0</span>/500 caracteres</div>
+
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label>Agendamento (opcional):</label>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                        <input type="time" id="ttsScheduleTime" style="padding:8px;border:2px solid #ddd;border-radius:8px;">
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                            <label style="font-weight:normal;font-size:12px;"><input type="checkbox" class="tts-day-check" value="1"> Seg</label>
+                            <label style="font-weight:normal;font-size:12px;"><input type="checkbox" class="tts-day-check" value="2"> Ter</label>
+                            <label style="font-weight:normal;font-size:12px;"><input type="checkbox" class="tts-day-check" value="3"> Qua</label>
+                            <label style="font-weight:normal;font-size:12px;"><input type="checkbox" class="tts-day-check" value="4"> Qui</label>
+                            <label style="font-weight:normal;font-size:12px;"><input type="checkbox" class="tts-day-check" value="5"> Sex</label>
+                            <label style="font-weight:normal;font-size:12px;"><input type="checkbox" class="tts-day-check" value="6"> Sáb</label>
+                            <label style="font-weight:normal;font-size:12px;"><input type="checkbox" class="tts-day-check" value="0"> Dom</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button class="tts-play-btn" id="ttsPlayNowBtn">🔊 Falar Agora</button>
+                </div>
+                <div class="form-actions" style="margin-top:8px;">
+                    <button class="submit-btn" id="ttsSaveBtn">💾 Salvar na Biblioteca</button>
+                    <button class="clear-btn" id="ttsClearBtn">🗑️ Limpar</button>
+                </div>
+            </div>
+
+            <h4 style="margin-bottom:12px;color:#333;">📚 Biblioteca de Textos</h4>
+            <div class="tts-library-grid" id="ttsLibraryGrid">
+                <div style="color:#999;font-size:13px;padding:10px;">Carregando...</div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════
+             PLAYLISTS TEMÁTICAS SAZONAIS
+             ══════════════════════════════════════════ -->
+        <div class="seasonal-section">
+            <h2>🎭 Playlists Temáticas Sazonais</h2>
+            <p class="section-description">Quando ativa, o evento aparece em 3 blocos de 4 músicas entre 08h e 20h, sem substituir a grade horária.</p>
+            <div class="seasonal-tabs">
+                <button class="seasonal-tab active" data-category="natal">🎄 Natal</button>
+                <button class="seasonal-tab" data-category="ano_novo">🎆 Ano-Novo</button>
+                <button class="seasonal-tab" data-category="pascoa">🐰 Páscoa</button>
+                <button class="seasonal-tab" data-category="sao_joao">🔥 São João</button>
+            </div>
+            <div class="seasonal-content">
+                <div class="seasonal-panel active" data-category="natal">
+                    <div class="seasonal-header">
+                        <h3>🎄 Playlist de Natal</h3>
+                        <div class="seasonal-status">
+                            <span class="status-badge inactive" id="statusNatal">❌ Inativo</span>
+                            <button class="toggle-seasonal-btn" id="toggleNatal" data-category="natal">🎄 Ativar Natal</button>
+                        </div>
+                    </div>
+                    <div class="seasonal-subsection">
+                        <h4>🎵 Músicas</h4>
+                        <form class="seasonal-form" id="formMusicNatal">
+                            <div class="form-group"><label>URL:</label><input type="url" class="seasonal-url" placeholder="https://res.cloudinary.com/..." required></div>
+                            <div class="form-group"><label>Título:</label><input type="text" class="seasonal-title" placeholder="Ex: Noite Feliz" required></div>
+                            <div class="form-group"><label>Ordem:</label><input type="number" class="seasonal-order" value="0" min="0"></div>
+                            <div class="form-actions"><button type="submit" class="submit-btn">💾 Adicionar</button><button type="button" class="test-btn seasonal-test">▶️ Testar</button><button type="button" class="clear-btn seasonal-clear">🗑️ Limpar</button></div>
+                        </form>
+                        <div class="table-container"><table class="schedule-table"><thead><tr><th><input type="checkbox" class="bulk-select-all" data-table="tableMusicNatal"></th><th>Ordem</th><th>Dia 🎲</th><th>Título</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tableMusicNatal"></tbody></table></div>
+                        <div class="shuffle-box"><h4>🎲 Embaralhamento</h4><p>Automático à meia-noite.</p><button class="test-btn shuffle-seasonal-btn" data-category="natal" data-type="music">🎲 Forçar Agora</button></div>
+                    </div>
+                    <div class="seasonal-subsection">
+                        <h4>📢 Propagandas</h4>
+                        <form class="seasonal-form" id="formAdNatal">
+                            <div class="form-group"><label>URL:</label><input type="url" class="seasonal-url" placeholder="https://res.cloudinary.com/..." required></div>
+                            <div class="form-group"><label>Título:</label><input type="text" class="seasonal-title" placeholder="Ex: Promoção de Natal" required></div>
+                            <div class="form-group"><label>Anunciante:</label><input type="text" class="seasonal-advertiser" placeholder="Ex: Lojas Exemplo"></div>
+                            <div class="form-group"><label>Frequência:</label><input type="number" class="seasonal-frequency" value="3" min="1" max="100"></div>
+                            <div class="form-group"><label>Ordem:</label><input type="number" class="seasonal-order" value="0" min="0"></div>
+                            <div class="form-actions"><button type="submit" class="submit-btn">💾 Adicionar</button><button type="button" class="test-btn seasonal-test">▶️ Testar</button><button type="button" class="clear-btn seasonal-clear">🗑️ Limpar</button></div>
+                        </form>
+                        <div class="table-container"><table class="schedule-table"><thead><tr><th>Ordem</th><th>Título</th><th>Anunciante</th><th>Frequência</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tableAdNatal"></tbody></table></div>
+                    </div>
+                    <div class="seasonal-subsection">
+                        <h4>🎬 Vinhetas</h4>
+                        <form class="seasonal-form" id="formJingleNatal">
+                            <div class="form-group"><label>URL:</label><input type="url" class="jingle-url" placeholder="https://res.cloudinary.com/..." required></div>
+                            <div class="form-group"><label>Título:</label><input type="text" class="jingle-title" placeholder="Ex: Vinheta Natal Abertura" required></div>
+                            <div class="form-group"><label>Posição:</label><select class="jingle-position"><option value="opening">🎬 Abertura</option><option value="middle">🎬 Meio</option><option value="closing">🎬 Encerramento</option></select></div>
+                            <div class="form-actions"><button type="submit" class="submit-btn">💾 Adicionar</button><button type="button" class="test-btn jingle-test">▶️ Testar</button><button type="button" class="clear-btn jingle-clear">🗑️ Limpar</button></div>
+                        </form>
+                        <div class="table-container"><table class="schedule-table"><thead><tr><th>Posição</th><th>Título</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tableJingleNatal"></tbody></table></div>
+                    </div>
+                </div>
+                <div class="seasonal-panel" data-category="ano_novo">
+                    <div class="seasonal-header"><h3>🎆 Playlist de Ano-Novo</h3><div class="seasonal-status"><span class="status-badge inactive" id="statusAnoNovo">❌ Inativo</span><button class="toggle-seasonal-btn" id="toggleAnoNovo" data-category="ano_novo">🎆 Ativar Ano-Novo</button></div></div>
+                    <div class="seasonal-subsection"><h4>🎵 Músicas</h4><form class="seasonal-form" id="formMusicAnoNovo"><div class="form-group"><label>URL:</label><input type="url" class="seasonal-url" placeholder="https://res.cloudinary.com/..." required></div><div class="form-group"><label>Título:</label><input type="text" class="seasonal-title" placeholder="Ex: Auld Lang Syne" required></div><div class="form-group"><label>Ordem:</label><input type="number" class="seasonal-order" value="0" min="0"></div><div class="form-actions"><button type="submit" class="submit-btn">💾 Adicionar</button><button type="button" class="test-btn seasonal-test">▶️ Testar</button><button type="button" class="clear-btn seasonal-clear">🗑️ Limpar</button></div></form><div class="table-container"><table class="schedule-table"><thead><tr><th><input type="checkbox" class="bulk-select-all" data-table="tableMusicAnoNovo"></th><th>Ordem</th><th>Dia 🎲</th><th>Título</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tableMusicAnoNovo"></tbody></table></div><div class="shuffle-box"><h4>🎲 Embaralhamento</h4><p>Automático à meia-noite.</p><button class="test-btn shuffle-seasonal-btn" data-category="ano_novo" data-type="music">🎲 Forçar Agora</button></div></div>
+                    <div class="seasonal-subsection"><h4>📢 Propagandas</h4><form class="seasonal-form" id="formAdAnoNovo"><div class="form-group"><label>URL:</label><input type="url" class="seasonal-url" placeholder="https://res.cloudinary.com/..." required></div><div class="form-group"><label>Título:</label><input type="text" class="seasonal-title" placeholder="Ex: Promoção de Ano-Novo" required></div><div class="form-group"><label>Anunciante:</label><input type="text" class="seasonal-advertiser" placeholder="Ex: Lojas Exemplo"></div><div class="form-group"><label>Frequência:</label><input type="number" class="seasonal-frequency" value="3" min="1" max="100"></div><div class="form-group"><label>Ordem:</label><input type="number" class="seasonal-order" value="0" min="0"></div><div class="form-actions"><button type="submit" class="submit-btn">💾 Adicionar</button><button type="button" class="test-btn seasonal-test">▶️ Testar</button><button type="button" class="clear-btn seasonal-clear">🗑️ Limpar</button></div></form><div class="table-container"><table class="schedule-table"><thead><tr><th>Ordem</th><th>Título</th><th>Anunciante</th><th>Frequência</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tableAdAnoNovo"></tbody></table></div></div>
+                    <div class="seasonal-subsection"><h4>🎬 Vinhetas</h4><form class="seasonal-form" id="formJingleAnoNovo"><div class="form-group"><label>URL:</label><input type="url" class="jingle-url" placeholder="https://res.cloudinary.com/..." required></div><div class="form-group"><label>Título:</label><input type="text" class="jingle-title" placeholder="Ex: Vinheta Ano-Novo" required></div><div class="form-group"><label>Posição:</label><select class="jingle-position"><option value="opening">🎬 Abertura</option><option value="middle">🎬 Meio</option><option value="closing">🎬 Encerramento</option></select></div><div class="form-actions"><button type="submit" class="submit-btn">💾 Adicionar</button><button type="button" class="test-btn jingle-test">▶️ Testar</button><button type="button" class="clear-btn jingle-clear">🗑️ Limpar</button></div></form><div class="table-container"><table class="schedule-table"><thead><tr><th>Posição</th><th>Título</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tableJingleAnoNovo"></tbody></table></div></div>
+                </div>
+                <div class="seasonal-panel" data-category="pascoa">
+                    <div class="seasonal-header"><h3>🐰 Playlist de Páscoa</h3><div class="seasonal-status"><span class="status-badge inactive" id="statusPascoa">❌ Inativo</span><button class="toggle-seasonal-btn" id="togglePascoa" data-category="pascoa">🐰 Ativar Páscoa</button></div></div>
+                    <div class="seasonal-subsection"><h4>🎵 Músicas</h4><form class="seasonal-form" id="formMusicPascoa"><div class="form-group"><label>URL:</label><input type="url" class="seasonal-url" placeholder="https://res.cloudinary.com/..." required></div><div class="form-group"><label>Título:</label><input type="text" class="seasonal-title" placeholder="Ex: Música de Páscoa" required></div><div class="form-group"><label>Ordem:</label><input type="number" class="seasonal-order" value="0" min="0"></div><div class="form-actions"><button type="submit" class="submit-btn">💾 Adicionar</button><button type="button" class="test-btn seasonal-test">▶️ Testar</button><button type="button" class="clear-btn seasonal-clear">🗑️ Limpar</button></div></form><div class="table-container"><table class="schedule-table"><thead><tr><th><input type="checkbox" class="bulk-select-all" data-table="tableMusicPascoa"></th><th>Ordem</th><th>Dia 🎲</th><th>Título</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tableMusicPascoa"></tbody></table></div><div class="shuffle-box"><h4>🎲 Embaralhamento</h4><p>Automático à meia-noite.</p><button class="test-btn shuffle-seasonal-btn" data-category="pascoa" data-type="music">🎲 Forçar Agora</button></div></div>
+                    <div class="seasonal-subsection"><h4>📢 Propagandas</h4><form class="seasonal-form" id="formAdPascoa"><div class="form-group"><label>URL:</label><input type="url" class="seasonal-url" placeholder="https://res.cloudinary.com/..." required></div><div class="form-group"><label>Título:</label><input type="text" class="seasonal-title" placeholder="Ex: Promoção de Páscoa" required></div><div class="form-group"><label>Anunciante:</label><input type="text" class="seasonal-advertiser" placeholder="Ex: Lojas Exemplo"></div><div class="form-group"><label>Frequência:</label><input type="number" class="seasonal-frequency" value="3" min="1" max="100"></div><div class="form-group"><label>Ordem:</label><input type="number" class="seasonal-order" value="0" min="0"></div><div class="form-actions"><button type="submit" class="submit-btn">💾 Adicionar</button><button type="button" class="test-btn seasonal-test">▶️ Testar</button><button type="button" class="clear-btn seasonal-clear">🗑️ Limpar</button></div></form><div class="table-container"><table class="schedule-table"><thead><tr><th>Ordem</th><th>Título</th><th>Anunciante</th><th>Frequência</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tableAdPascoa"></tbody></table></div></div>
+                    <div class="seasonal-subsection"><h4>🎬 Vinhetas</h4><form class="seasonal-form" id="formJinglePascoa"><div class="form-group"><label>URL:</label><input type="url" class="jingle-url" placeholder="https://res.cloudinary.com/..." required></div><div class="form-group"><label>Título:</label><input type="text" class="jingle-title" placeholder="Ex: Vinheta Páscoa" required></div><div class="form-group"><label>Posição:</label><select class="jingle-position"><option value="opening">🎬 Abertura</option><option value="middle">🎬 Meio</option><option value="closing">🎬 Encerramento</option></select></div><div class="form-actions"><button type="submit" class="submit-btn">💾 Adicionar</button><button type="button" class="test-btn jingle-test">▶️ Testar</button><button type="button" class="clear-btn jingle-clear">🗑️ Limpar</button></div></form><div class="table-container"><table class="schedule-table"><thead><tr><th>Posição</th><th>Título</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tableJinglePascoa"></tbody></table></div></div>
+                </div>
+                <div class="seasonal-panel" data-category="sao_joao">
+                    <div class="seasonal-header"><h3>🔥 Playlist de São João</h3><div class="seasonal-status"><span class="status-badge inactive" id="statusSaoJoao">❌ Inativo</span><button class="toggle-seasonal-btn" id="toggleSaoJoao" data-category="sao_joao">🔥 Ativar São João</button></div></div>
+                    <div class="seasonal-subsection"><h4>🎵 Músicas</h4><form class="seasonal-form" id="formMusicSaoJoao"><div class="form-group"><label>URL:</label><input type="url" class="seasonal-url" placeholder="https://res.cloudinary.com/..." required></div><div class="form-group"><label>Título:</label><input type="text" class="seasonal-title" placeholder="Ex: Forró Tradicional" required></div><div class="form-group"><label>Ordem:</label><input type="number" class="seasonal-order" value="0" min="0"></div><div class="form-actions"><button type="submit" class="submit-btn">💾 Adicionar</button><button type="button" class="test-btn seasonal-test">▶️ Testar</button><button type="button" class="clear-btn seasonal-clear">🗑️ Limpar</button></div></form><div class="table-container"><table class="schedule-table"><thead><tr><th><input type="checkbox" class="bulk-select-all" data-table="tableMusicSaoJoao"></th><th>Ordem</th><th>Dia 🎲</th><th>Título</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tableMusicSaoJoao"></tbody></table></div><div class="shuffle-box"><h4>🎲 Embaralhamento</h4><p>Automático à meia-noite.</p><button class="test-btn shuffle-seasonal-btn" data-category="sao_joao" data-type="music">🎲 Forçar Agora</button></div></div>
+                    <div class="seasonal-subsection"><h4>📢 Propagandas</h4><form class="seasonal-form" id="formAdSaoJoao"><div class="form-group"><label>URL:</label><input type="url" class="seasonal-url" placeholder="https://res.cloudinary.com/..." required></div><div class="form-group"><label>Título:</label><input type="text" class="seasonal-title" placeholder="Ex: Promoção Junina" required></div><div class="form-group"><label>Anunciante:</label><input type="text" class="seasonal-advertiser" placeholder="Ex: Lojas Exemplo"></div><div class="form-group"><label>Frequência:</label><input type="number" class="seasonal-frequency" value="3" min="1" max="100"></div><div class="form-group"><label>Ordem:</label><input type="number" class="seasonal-order" value="0" min="0"></div><div class="form-actions"><button type="submit" class="submit-btn">💾 Adicionar</button><button type="button" class="test-btn seasonal-test">▶️ Testar</button><button type="button" class="clear-btn seasonal-clear">🗑️ Limpar</button></div></form><div class="table-container"><table class="schedule-table"><thead><tr><th>Ordem</th><th>Título</th><th>Anunciante</th><th>Frequência</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tableAdSaoJoao"></tbody></table></div></div>
+                    <div class="seasonal-subsection"><h4>🎬 Vinhetas</h4><form class="seasonal-form" id="formJingleSaoJoao"><div class="form-group"><label>URL:</label><input type="url" class="jingle-url" placeholder="https://res.cloudinary.com/..." required></div><div class="form-group"><label>Título:</label><input type="text" class="jingle-title" placeholder="Ex: Vinheta São João" required></div><div class="form-group"><label>Posição:</label><select class="jingle-position"><option value="opening">🎬 Abertura</option><option value="middle">🎬 Meio</option><option value="closing">🎬 Encerramento</option></select></div><div class="form-actions"><button type="submit" class="submit-btn">💾 Adicionar</button><button type="button" class="test-btn jingle-test">▶️ Testar</button><button type="button" class="clear-btn jingle-clear">🗑️ Limpar</button></div></form><div class="table-container"><table class="schedule-table"><thead><tr><th>Posição</th><th>Título</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tableJingleSaoJoao"></tbody></table></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════
+             INSTRUÇÕES CLOUDINARY
+             ══════════════════════════════════════════ -->
+        <div class="instructions-section">
+            <h2>📋 Instruções de Upload</h2>
+            <div class="instructions-card">
+                <h3>Como fazer upload no Cloudinary:</h3>
+                <ol>
+                    <li>Acesse: <a href="https://cloudinary.com/console" target="_blank">cloudinary.com/console</a></li>
+                    <li>Faça login com: <strong>Cloud Name: dygbrcrr6</strong></li>
+                    <li>Clique em "Media Library" → "Upload"</li>
+                    <li>Selecione seu arquivo MP3</li>
+                    <li>Após o upload, clique no arquivo e copie a URL pública (.mp3)</li>
+                    <li>Cole a URL no formulário desejado</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════
+             HORAS CERTAS
+             ══════════════════════════════════════════ -->
+        <div class="editor-section">
+            <h2>✏️ Editor de Programação</h2>
+            <p class="section-description">Configure os áudios para cada hora (:00 e :30).</p>
+            <form id="editForm" class="edit-form">
+                <div class="form-group"><label>Hora (0-23):</label><select id="hourSelect" required><option value="">Selecione uma hora</option></select></div>
+                <div class="form-group"><label>URL do Áudio (:00):</label><input type="url" id="audioUrl" placeholder="https://res.cloudinary.com/..." required><small>Toca em XX:00</small></div>
+                <div class="form-group"><label>URL do Áudio (:30) — Opcional:</label><input type="url" id="audioUrlHalf" placeholder="https://res.cloudinary.com/..."><small>Deixe vazio para não tocar aos :30</small></div>
+                <div class="form-group checkbox-group"><label><input type="checkbox" id="enabledCheckbox" checked> Ativo</label></div>
+                <div class="form-actions">
+                    <button type="submit" class="submit-btn">💾 Salvar</button>
+                    <button type="button" class="test-btn" id="testBtn">▶️ Testar :00</button>
+                    <button type="button" class="test-btn" id="testBtnHalf">▶️ Testar :30</button>
+                    <button type="button" class="clear-btn" id="clearBtn">🗑️ Limpar</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="schedule-table-section">
+            <h2>📅 Programação Completa (24 Horas)</h2>
+            <div class="table-container">
+                <table class="schedule-table"><thead><tr><th>Hora</th><th>Status</th><th>URL (:00)</th><th>URL (:30)</th><th>Ações</th></tr></thead><tbody id="scheduleTableBody"></tbody></table>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════
+             PLAYLIST DE FUNDO
+             ══════════════════════════════════════════ -->
+        <div class="playlist-section">
+            <h2>🎵 Playlist de Fundo (Madrugada / Padrão)</h2>
+            <p class="section-description">Usada na madrugada (20h–07h) e como fallback quando nenhuma grade está configurada.</p>
+            <form id="playlistForm" class="edit-form">
+                <div class="form-group"><label>URL do Áudio:</label><input type="url" id="playlistUrl" placeholder="https://res.cloudinary.com/..." required></div>
+                <div class="form-group"><label>Título:</label><input type="text" id="playlistTitle" placeholder="Ex: Música Ambiente 1" required></div>
+                <div class="form-group"><label>Ordem:</label><input type="number" id="playlistOrder" value="0" min="0"></div>
+                <div class="form-group checkbox-group"><label><input type="checkbox" id="playlistEnabled" checked> Ativo</label></div>
+                <div class="form-actions">
+                    <button type="submit" class="submit-btn">💾 Adicionar</button>
+                    <button type="button" class="test-btn" id="testPlaylistBtn">▶️ Testar</button>
+                    <button type="button" class="clear-btn" id="clearPlaylistBtn">🗑️ Limpar</button>
+                </div>
+            </form>
+            <div class="table-container">
+                <table class="schedule-table">
+                    <thead><tr><th><input type="checkbox" class="bulk-select-all" data-table="playlistTableBody"></th><th>Ordem</th><th>Dia 🎲</th><th>Título</th><th>Status</th><th>URL</th><th>Ações</th></tr></thead>
+                    <tbody id="playlistTableBody"></tbody>
+                </table>
+            </div>
+            <div class="shuffle-box" style="border-left-color:#2196f3;background:#e3f2fd;">
+                <h4 style="color:#1976d2;">🎲 Embaralhamento Diário</h4>
+                <p style="color:#555;">Automático à meia-noite.</p>
+                <button class="test-btn" id="forceShuffleBtn" style="margin-top:10px;">🎲 Forçar Agora</button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════
+             PROPAGANDAS
+             ══════════════════════════════════════════ -->
+        <div class="ads-section">
+            <h2>📢 Propagandas / Anúncios</h2>
+            <p class="section-description">Tocadas automaticamente entre as músicas em todas as grades.</p>
+            <form id="adsForm" class="edit-form">
+                <div class="form-group"><label>URL do Áudio:</label><input type="url" id="adUrl" placeholder="https://res.cloudinary.com/..." required></div>
+                <div class="form-group"><label>Título:</label><input type="text" id="adTitle" placeholder="Ex: Promoção do Dia" required></div>
+                <div class="form-group"><label>Anunciante (opcional):</label><input type="text" id="adAdvertiser" placeholder="Ex: Nome da Empresa"></div>
+                <div class="form-group"><label>Frequência:</label><input type="number" id="adFrequency" value="3" min="1" max="100" required><small>Ex: 3 = toca a cada 3 músicas</small></div>
+                <div class="form-group"><label>Ordem:</label><input type="number" id="adOrder" value="0" min="0"></div>
+                <div class="form-group checkbox-group"><label><input type="checkbox" id="adEnabled" checked> Ativo</label></div>
+                <div class="form-actions">
+                    <button type="submit" class="submit-btn">💾 Adicionar</button>
+                    <button type="button" class="test-btn" id="testAdBtn">▶️ Testar</button>
+                    <button type="button" class="clear-btn" id="clearAdBtn">🗑️ Limpar</button>
+                </div>
+            </form>
+            <div class="table-container">
+                <table class="schedule-table"><thead><tr><th>Ordem</th><th>Título</th><th>Anunciante</th><th>Frequência</th><th>Status</th><th>Ações</th></tr></thead><tbody id="adsTableBody"></tbody></table>
+            </div>
+        </div>
+
+        <!-- Barra de seleção em massa -->
+        <div class="bulk-bar" id="bulkBar">
+            <div class="bulk-count" id="bulkCount">0 selecionadas</div>
+            <button class="bulk-btn bulk-btn-activate"   id="bulkActivateBtn">✅ Ativar</button>
+            <button class="bulk-btn bulk-btn-deactivate" id="bulkDeactivateBtn">🔴 Desativar</button>
+            <button class="bulk-btn bulk-btn-delete"     id="bulkDeleteBtn">🗑️ Deletar</button>
+            <button class="bulk-btn bulk-btn-cancel"     id="bulkCancelBtn">✖ Cancelar</button>
+        </div>
+
+        <audio id="testAudio" style="display:none;"></audio>
+    </div>
+
+    <div class="card-white card-footer">
+        <p class="copyright-text">© 2026 Rádio 24H Supermercado do Louro</p>
+    </div>
+
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+<script src="admin.js"></script>
 </body>
 </html>
