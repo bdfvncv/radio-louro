@@ -9,7 +9,7 @@
 </head>
 <body>
     <div class="container">
-        
+
         <!-- CARD 1: LOGO + NOME -->
         <div class="card-white">
             <header class="header">
@@ -31,44 +31,62 @@
         <!-- CARD 3: PLAYER -->
         <div class="card-white">
             <div class="player-minimal">
-                
-                <!-- O QUE ESTÁ TOCANDO -->
                 <div class="now-playing-minimal">
                     <p class="status-text" id="statusText">Clique no botão para iniciar</p>
                     <h2 class="track-name" id="trackName">Rádio Parada</h2>
                 </div>
-
-                <!-- BOTÃO GIGANTE PLAY/PAUSE -->
                 <button class="play-btn-circle" id="playBtn" aria-label="Play/Pause">
-                    <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M8 5v14l11-7z"/>
-                    </svg>
-                    <svg class="pause-icon" viewBox="0 0 24 24" fill="currentColor" style="display: none;">
-                        <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
-                    </svg>
+                    <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    <svg class="pause-icon" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
                 </button>
-
-                <!-- CONTROLES SECUNDÁRIOS -->
                 <div class="controls-minimal">
                     <div class="volume-minimal">
                         <span class="volume-icon">🔊</span>
                         <input type="range" id="volumeSlider" min="0" max="100" value="70">
                     </div>
-                    <button class="sync-btn-minimal" id="syncBtn">
-                        🔄 Sincronizar
-                    </button>
+                    <button class="sync-btn-minimal" id="syncBtn">🔄 Sincronizar</button>
                 </div>
-
                 <audio id="audioPlayer" preload="auto"></audio>
             </div>
         </div>
 
-        <!-- CARD 4: LINK PAINEL ADMIN (NOVO!) -->
+        <!-- CARD 4: SUGERIR MÚSICA -->
+        <div class="card-white card-suggest">
+            <div class="suggest-header">
+                <h3>🎵 Sugerir Música</h3>
+                <span class="suggest-limit-badge" id="suggestLimitBadge">0/20 hoje</span>
+            </div>
+            <p class="suggest-desc">Pesquise uma música e envie sua sugestão. O administrador irá analisar.</p>
+
+            <div class="suggest-search-row">
+                <input type="text" id="suggestSearchInput" class="suggest-input" placeholder="Digite o nome da música ou artista...">
+                <button class="suggest-search-btn" id="suggestSearchBtn">🔍 Buscar</button>
+            </div>
+
+            <div id="suggestResults" class="suggest-results" style="display:none;"></div>
+
+            <!-- Modal de nome -->
+            <div class="suggest-name-modal" id="suggestNameModal" style="display:none;">
+                <div class="suggest-name-card">
+                    <h4>Qual é o seu nome?</h4>
+                    <p>Para enviar a sugestão, informe seu nome.</p>
+                    <input type="text" id="suggestNameInput" placeholder="Seu nome" maxlength="50">
+                    <div class="suggest-name-actions">
+                        <button class="submit-btn" id="suggestConfirmBtn">✅ Enviar Sugestão</button>
+                        <button class="clear-btn" id="suggestCancelBtn">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="suggest-feedback" id="suggestFeedback" style="display:none;"></div>
+        </div>
+
+        <!-- CARD 5: LINK ADMIN -->
         <div class="card-white card-link-admin">
             <a href="admin.html" class="admin-link-card">⚙️ Painel Admin</a>
         </div>
 
-        <!-- CARD 5: COPYRIGHT (NOVO!) -->
+        <!-- CARD 6: COPYRIGHT -->
         <div class="card-white card-footer">
             <p class="copyright-text">© 2026 Rádio 24H Supermercado do Louro</p>
         </div>
