@@ -1025,3 +1025,336 @@ function setupRealtimeSubscription() {
 // ─────────────────────────────────────────────────────────────
 audioPlayer.volume = 0.7;
 updatePlayButtonState(false);
+
+// ═════════════════════════════════════════════════════════════
+// BUSCA + SUGESTÃO DE MÚSICAS
+// ═════════════════════════════════════════════════════════════
+
+const YOUTUBE_API_KEY = 'AIzaSyCcpLnZ0XHsSEx34Zvkc80FwmHiHIqS6Gs';
+const BLOCKED_TERMS   = ['funk', 'rock pesado', 'metal', 'punk', 'rap', 'trap'];
+
+let suggestPendingItem  = null;
+let suggestIdentifier   = null;
+let suggestCountToday   = 0;
+const SUGGEST_LIMIT     = 20;
+
+function initSuggest() {
+    const searchInput = document.getElementById('suggestSearchInput');
+    const searchBtn   = document.getElementById('suggestSearchBtn');
+    if (!searchInput || !searchBtn) return;
+
+    loadSuggestCount();
+
+    searchBtn.addEventListener('click', handleSuggestSearch);
+    searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleSuggestSearch(); });
+
+    document.getElementById('suggestConfirmBtn').addEventListener('click', handleSuggestConfirm);
+    document.getElementById('suggestCancelBtn').addEventListener('click', () => {
+        document.getElementById('suggestNameModal').style.display = 'none';
+        suggestPendingItem = null;
+    });
+}
+
+async function loadSuggestCount() {
+    const id    = getSuggestIdentifier();
+    const today = new Date().toISOString().split('T')[0];
+    try {
+        const { data } = await supabase
+            .from('suggestion_limits')
+            .select('count')
+            .eq('identifier', id)
+            .eq('suggestion_date', today)
+            .maybeSingle();
+        suggestCountToday = data?.count || 0;
+        updateSuggestBadge();
+    } catch (e) { console.error(e); }
+}
+
+function getSuggestIdentifier() {
+    if (suggestIdentifier) return suggestIdentifier;
+    let id = localStorage.getItem('radio_suggest_id');
+    if (!id) {
+        id = 'user_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('radio_suggest_id', id);
+    }
+    suggestIdentifier = id;
+    return id;
+}
+
+function updateSuggestBadge() {
+    const badge = document.getElementById('suggestLimitBadge');
+    if (!badge) return;
+    badge.textContent = `${suggestCountToday}/${SUGGEST_LIMIT} hoje`;
+    badge.style.background = suggestCountToday >= SUGGEST_LIMIT ? '#f8d7da' : '#d4edda';
+    badge.style.color      = suggestCountToday >= SUGGEST_LIMIT ? '#721c24' : '#155724';
+}
+
+async function handleSuggestSearch() {
+    const query = document.getElementById('suggestSearchInput').value.trim();
+    if (!query) return;
+
+    const btn = document.getElementById('suggestSearchBtn');
+    btn.textContent = '⏳'; btn.disabled = true;
+
+    const resultsEl = document.getElementById('suggestResults');
+    resultsEl.style.display = 'block';
+    resultsEl.innerHTML = '<div class="suggest-loading">Buscando...</div>';
+
+    try {
+        const url  = `https://www.googleapis.com/youtube/v3/search?q=${encodeURIComponent(query)}&type=video&videoCategoryId=10&maxResults=5&part=snippet&key=${YOUTUBE_API_KEY}`;
+        const res  = await fetch(url);
+        const data = await res.json();
+
+        if (!data.items?.length) {
+            resultsEl.innerHTML = '<div class="suggest-empty">Nenhum resultado encontrado.</div>';
+            return;
+        }
+
+        const filtered = data.items.filter(item => {
+            const t = item.snippet.title.toLowerCase();
+            return !BLOCKED_TERMS.some(b => t.includes(b));
+        });
+
+        if (!filtered.length) {
+            resultsEl.innerHTML = '<div class="suggest-empty">Nenhum resultado adequado encontrado.</div>';
+            return;
+        }
+
+        resultsEl.innerHTML = filtered.map(item => `
+            <div class="suggest-result-card">
+                <img src="${item.snippet.thumbnails?.default?.url || ''}" alt="" class="suggest-result-thumb">
+                <div class="suggest-result-info">
+                    <div class="suggest-result-title">${item.snippet.title}</div>
+                    <div class="suggest-result-channel">${item.snippet.channelTitle}</div>
+                </div>
+                <button class="suggest-btn"
+                    data-id="${item.id.videoId}"
+                    data-title="${item.snippet.title.replace(/"/g, '&quot;')}"
+                    data-channel="${item.snippet.channelTitle.replace(/"/g, '&quot;')}"
+                    data-thumb="${item.snippet.thumbnails?.default?.url || ''}">
+                    💌 Sugerir
+                </button>
+            </div>
+        `).join('');
+
+        resultsEl.querySelectorAll('.suggest-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                const b = e.currentTarget;
+                openSuggestModal({
+                    videoId: b.dataset.id,
+                    title:   b.dataset.title,
+                    channel: b.dataset.channel,
+                    thumb:   b.dataset.thumb,
+                    url:     `https://www.youtube.com/watch?v=${b.dataset.id}`
+                });
+            });
+        });
+
+    } catch (err) {
+        resultsEl.innerHTML = '<div class="suggest-empty">Erro na busca. Tente novamente.</div>';
+    } finally {
+        btn.textContent = '🔍 Buscar'; btn.disabled = false;
+    }
+}
+
+function openSuggestModal(item) {
+    if (suggestCountToday >= SUGGEST_LIMIT) {
+        showSuggestFeedback('❌ Você atingiu o limite de 20 sugestões hoje.', 'error');
+        return;
+    }
+    suggestPendingItem = item;
+    document.getElementById('suggestNameInput').value = localStorage.getItem('radio_suggest_name') || '';
+    document.getElementById('suggestNameModal').style.display = 'flex';
+    setTimeout(() => document.getElementById('suggestNameInput').focus(), 100);
+}
+
+async function handleSuggestConfirm() {
+    const name = document.getElementById('suggestNameInput').value.trim();
+    if (!name) { alert('Informe seu nome para enviar a sugestão.'); return; }
+    if (!suggestPendingItem) return;
+
+    const btn = document.getElementById('suggestConfirmBtn');
+    btn.textContent = '⏳ Enviando...'; btn.disabled = true;
+
+    try {
+        localStorage.setItem('radio_suggest_name', name);
+
+        const { error } = await supabase.from('music_queue').insert([{
+            youtube_url:       suggestPendingItem.url,
+            youtube_title:     suggestPendingItem.title,
+            youtube_channel:   suggestPendingItem.channel,
+            youtube_thumbnail: suggestPendingItem.thumb,
+            title:             suggestPendingItem.title,
+            source:            'suggestion',
+            suggested_by:      name,
+            status:            'pending',
+            conversion_status: 'pending'
+        }]);
+        if (error) throw error;
+
+        await updateSuggestLimit(name);
+
+        suggestCountToday++;
+        updateSuggestBadge();
+
+        document.getElementById('suggestNameModal').style.display = 'none';
+        document.getElementById('suggestResults').style.display   = 'none';
+        document.getElementById('suggestSearchInput').value       = '';
+        suggestPendingItem = null;
+
+        showSuggestFeedback(`✅ Sugestão de "${suggestPendingItem?.title || 'música'}" enviada! O admin irá analisar. Você tem ${SUGGEST_LIMIT - suggestCountToday} sugestões restantes hoje.`, 'success');
+
+    } catch (err) {
+        showSuggestFeedback('❌ Erro ao enviar sugestão. Tente novamente.', 'error');
+    } finally {
+        btn.textContent = '✅ Enviar Sugestão'; btn.disabled = false;
+    }
+}
+
+async function updateSuggestLimit(name) {
+    const id    = getSuggestIdentifier();
+    const today = new Date().toISOString().split('T')[0];
+    try {
+        const { data: existing } = await supabase
+            .from('suggestion_limits')
+            .select('id, count')
+            .eq('identifier', id)
+            .eq('suggestion_date', today)
+            .maybeSingle();
+
+        if (existing) {
+            await supabase.from('suggestion_limits')
+                .update({ count: existing.count + 1 })
+                .eq('id', existing.id);
+        } else {
+            await supabase.from('suggestion_limits')
+                .insert([{ identifier: id, suggestion_date: today, count: 1 }]);
+        }
+    } catch (e) { console.error(e); }
+}
+
+function showSuggestFeedback(msg, type) {
+    const el = document.getElementById('suggestFeedback');
+    if (!el) return;
+    el.textContent  = msg;
+    el.style.display = 'block';
+    el.className    = `suggest-feedback suggest-feedback-${type}`;
+    setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
+// ═════════════════════════════════════════════════════════════
+// LOCUTOR — PAUSE/RETORNO SINCRONIZADO VIA REALTIME
+// ═════════════════════════════════════════════════════════════
+
+let locutorAudio        = new Audio();
+let playerPausedByLoc   = false;
+let playerResumePos     = 0;
+
+function initLocutorListener() {
+    supabase.channel('locutor_realtime')
+        .on('postgres_changes',
+            { event: 'UPDATE', schema: 'public', table: 'locutor_state' },
+            payload => handleLocutorStateChange(payload.new)
+        )
+        .subscribe();
+}
+
+async function handleLocutorStateChange(state) {
+    if (state.is_active) {
+        // Pausa o player principal
+        if (isPlaying && audioPlayer.src) {
+            playerResumePos   = audioPlayer.currentTime;
+            playerPausedByLoc = true;
+            audioPlayer.pause();
+            updateDisplay('🎙️ Locutor', 'Ao vivo...');
+        }
+        // Busca o áudio do locutor e toca
+        if (state.track_id) {
+            try {
+                const { data } = await supabase
+                    .from('locutor_tracks')
+                    .select('audio_url, title')
+                    .eq('id', state.track_id)
+                    .single();
+                if (data) {
+                    locutorAudio.src = data.audio_url;
+                    locutorAudio.volume = audioPlayer.volume;
+                    locutorAudio.play().catch(e => console.error(e));
+                    updateDisplay('🎙️ Locutor', data.title);
+                    locutorAudio.onended = () => { /* admin controla o retorno */ };
+                }
+            } catch (e) { console.error(e); }
+        }
+    } else {
+        // Admin encerrou o locutor — retoma o player
+        locutorAudio.pause();
+        locutorAudio.src = '';
+        if (playerPausedByLoc && isPlaying) {
+            playerPausedByLoc  = false;
+            audioPlayer.currentTime = playerResumePos;
+            audioPlayer.play().catch(e => console.error(e));
+        } else if (playerPausedByLoc) {
+            playerPausedByLoc = false;
+        }
+    }
+}
+
+// ═════════════════════════════════════════════════════════════
+// TTS — OUVIR BOLETINS DISPARADOS PELO ADMIN
+// ═════════════════════════════════════════════════════════════
+
+let ttsChannel = null;
+
+function initTTSListener() {
+    ttsChannel = supabase.channel('tts_broadcast')
+        .on('broadcast', { event: 'tts_play' }, payload => {
+            handleTTSPlay(payload.payload);
+        })
+        .subscribe();
+}
+
+function handleTTSPlay(data) {
+    if (!data?.text) return;
+
+    // Pausa o player principal
+    let wasPaused = false;
+    if (isPlaying && audioPlayer.src) {
+        playerResumePos = audioPlayer.currentTime;
+        wasPaused = true;
+        audioPlayer.pause();
+        updateDisplay('📢 Promoção', data.title || 'Aviso');
+    }
+
+    const utterance = new SpeechSynthesisUtterance(data.text);
+    utterance.lang  = 'pt-BR';
+    utterance.rate  = 0.92;
+    utterance.pitch = 1.1;
+
+    // Voz feminina
+    const voices = speechSynthesis.getVoices();
+    const femVoice = voices.find(v =>
+        v.lang.startsWith('pt') && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('feminina') || v.name.includes('Google') && v.name.includes('Brasil'))
+    ) || voices.find(v => v.lang.startsWith('pt'));
+    if (femVoice) utterance.voice = femVoice;
+
+    utterance.onend = () => {
+        if (wasPaused && isPlaying) {
+            audioPlayer.currentTime = playerResumePos;
+            audioPlayer.play().catch(e => console.error(e));
+        }
+    };
+
+    speechSynthesis.speak(utterance);
+}
+
+// ═════════════════════════════════════════════════════════════
+// HOOK NO INIT — adiciona os novos módulos
+// ═════════════════════════════════════════════════════════════
+
+const _originalInit = init;
+
+document.addEventListener('DOMContentLoaded', () => {
+    initSuggest();
+    initLocutorListener();
+    initTTSListener();
+});
