@@ -4,92 +4,83 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>📻 Rádio 24H Supermercado do Louro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="icon" type="image/png" href="logo.png">
 </head>
-<body>
-    <div class="container">
+<body class="player-body">
 
-        <!-- CARD 1: LOGO + NOME -->
-        <div class="card-white">
-            <header class="header">
-                <img src="logo.png" alt="Logo Supermercado do Louro" class="logo">
-                <h1>Rádio Supermercado do Louro</h1>
-            </header>
-        </div>
+    <div class="player-bg-circle"></div>
 
-        <!-- CARD 2: RELÓGIO + COUNTDOWN -->
-        <div class="card-white">
-            <div class="time-info">
-                <div class="time-display" id="currentTime">00:00:00</div>
-                <div class="countdown-display">
-                    Próxima hora em: <span id="countdownTimer">--:--</span>
-                </div>
+    <div class="player-container">
+
+        <!-- LOGO -->
+        <div class="player-logo-wrap">
+            <img src="logo.png" alt="Supermercado do Louro" class="player-logo">
+            <div class="player-brand">
+                <span class="player-brand-name">Rádio Supermercado do Louro</span>
+                <span class="player-brand-tag live-dot">● AO VIVO</span>
             </div>
         </div>
 
-        <!-- CARD 3: PLAYER -->
-        <div class="card-white">
-            <div class="player-minimal">
-                <div class="now-playing-minimal">
-                    <p class="status-text" id="statusText">Clique no botão para iniciar</p>
-                    <h2 class="track-name" id="trackName">Rádio Parada</h2>
-                </div>
-                <button class="play-btn-circle" id="playBtn" aria-label="Play/Pause">
-                    <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                    <svg class="pause-icon" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
-                </button>
-                <div class="controls-minimal">
-                    <div class="volume-minimal">
-                        <span class="volume-icon">🔊</span>
-                        <input type="range" id="volumeSlider" min="0" max="100" value="70">
-                    </div>
-                    <button class="sync-btn-minimal" id="syncBtn">🔄 Sincronizar</button>
-                </div>
-                <audio id="audioPlayer" preload="auto"></audio>
-            </div>
+        <!-- RELÓGIO -->
+        <div class="player-clock-card">
+            <div class="player-time" id="currentTime">00:00:00</div>
+            <div class="player-countdown">Próxima hora em <strong id="countdownTimer">--:--</strong></div>
         </div>
 
-        <!-- CARD 4: SUGERIR MÚSICA -->
-        <div class="card-white card-suggest">
-            <div class="suggest-header">
+        <!-- PLAYER -->
+        <div class="player-main-card">
+            <div class="player-now-playing">
+                <p class="player-status" id="statusText">Clique para iniciar</p>
+                <h2 class="player-track" id="trackName">Rádio Parada</h2>
+            </div>
+            <button class="player-play-btn" id="playBtn" aria-label="Play/Pause">
+                <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="pause-icon" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
+            </button>
+            <div class="player-controls">
+                <div class="player-volume">
+                    <span>🔊</span>
+                    <input type="range" id="volumeSlider" min="0" max="100" value="70">
+                </div>
+                <button class="player-sync-btn" id="syncBtn">🔄 Sincronizar</button>
+            </div>
+            <audio id="audioPlayer" preload="auto"></audio>
+        </div>
+
+        <!-- SUGERIR MÚSICA -->
+        <div class="player-suggest-card">
+            <div class="player-suggest-header">
                 <h3>🎵 Sugerir Música</h3>
                 <span class="suggest-limit-badge" id="suggestLimitBadge">0/20 hoje</span>
             </div>
-            <p class="suggest-desc">Pesquise uma música e envie sua sugestão. O administrador irá analisar.</p>
-
+            <p class="player-suggest-desc">Pesquise e envie sua sugestão. O admin irá analisar.</p>
             <div class="suggest-search-row">
-                <input type="text" id="suggestSearchInput" class="suggest-input" placeholder="Digite o nome da música ou artista...">
-                <button class="suggest-search-btn" id="suggestSearchBtn">🔍 Buscar</button>
+                <input type="text" id="suggestSearchInput" class="suggest-input" placeholder="Nome da música ou artista...">
+                <button class="suggest-search-btn" id="suggestSearchBtn">🔍</button>
             </div>
-
             <div id="suggestResults" class="suggest-results" style="display:none;"></div>
-
-            <!-- Modal de nome -->
             <div class="suggest-name-modal" id="suggestNameModal" style="display:none;">
                 <div class="suggest-name-card">
                     <h4>Qual é o seu nome?</h4>
                     <p>Para enviar a sugestão, informe seu nome.</p>
                     <input type="text" id="suggestNameInput" placeholder="Seu nome" maxlength="50">
                     <div class="suggest-name-actions">
-                        <button class="submit-btn" id="suggestConfirmBtn">✅ Enviar Sugestão</button>
+                        <button class="submit-btn" id="suggestConfirmBtn">✅ Enviar</button>
                         <button class="clear-btn" id="suggestCancelBtn">Cancelar</button>
                     </div>
                 </div>
             </div>
-
             <div class="suggest-feedback" id="suggestFeedback" style="display:none;"></div>
         </div>
 
-        <!-- CARD 5: LINK ADMIN -->
-        <div class="card-white card-link-admin">
-            <a href="admin.html" class="admin-link-card">⚙️ Painel Admin</a>
-        </div>
+        <!-- ADMIN LINK -->
+        <a href="admin.html" class="player-admin-link">⚙️ Painel Admin</a>
 
-        <!-- CARD 6: COPYRIGHT -->
-        <div class="card-white card-footer">
-            <p class="copyright-text">© 2026 Rádio 24H Supermercado do Louro</p>
-        </div>
+        <!-- FOOTER -->
+        <p class="player-footer">© 2026 Rádio 24H Supermercado do Louro</p>
 
     </div>
 
