@@ -123,6 +123,7 @@ async function loadAllData() {
         await loadSeasonalJingles();
         renderAll();
         populateSlotSelects();
+        await loadGradesState();
         setupRealtimeSubscription();
         startTTSScheduleChecker();
     } catch(err){ console.error('Erro ao carregar:',err); }
@@ -239,6 +240,8 @@ function renderQueueSection() {
     const list=document.getElementById('queueList');
     const pending=musicQueue.filter(m=>m.status==='pending');
     badge.textContent=pending.length;
+    const navBadge=document.getElementById('navQueueBadge');
+    if(navBadge){ navBadge.textContent=pending.length; navBadge.style.display=pending.length>0?'inline-flex':'none'; }
     section.style.display=pending.length>0?'block':'none';
     if(!pending.length) return;
     list.innerHTML=pending.map(m=>`
@@ -1501,4 +1504,63 @@ function setupRealtimeSubscription() {
             locutorActive=payload.new.is_active; updateLocutorUI();
         })
         .subscribe();
-        }
+}
+
+// ─────────────────────────────────────────────────────────────
+// NAVEGAÇÃO POR SEÇÕES
+// ─────────────────────────────────────────────────────────────
+function goSection(name) {
+    document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const sec = document.getElementById(`section-${name}`);
+    if(sec) sec.classList.add('active');
+    const nav = document.querySelector(`.nav-item[data-section="${name}"]`);
+    if(nav) nav.classList.add('active');
+    // Fecha sidebar no mobile após navegar
+    document.getElementById('adminSidebar')?.classList.remove('open');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Navegação sidebar
+    document.querySelectorAll('.nav-item').forEach(btn => {
+        btn.addEventListener('click', () => goSection(btn.dataset.section));
+    });
+    // Toggle sidebar mobile
+    document.getElementById('sidebarToggle')?.addEventListener('click', () => {
+        document.getElementById('adminSidebar')?.classList.toggle('open');
+    });
+});
+
+// ─────────────────────────────────────────────────────────────
+// TOGGLE GRADES HORÁRIAS
+// ─────────────────────────────────────────────────────────────
+async function toggleGrades() {
+    const btn = document.getElementById('gradesToggleBtn');
+    if(!btn) return;
+    const isActive = btn.classList.contains('active');
+    const newStatus = !isActive;
+    try {
+        await supabaseAdmin.from('radio_settings')
+            .update({ grades_enabled: newStatus, updated_at: new Date().toISOString() })
+            .eq('id', 1);
+        btn.classList.toggle('active', newStatus);
+        btn.classList.toggle('inactive', !newStatus);
+        btn.textContent = newStatus ? '✅ Ativadas' : '⏸️ Desativadas';
+        alert(newStatus
+            ? '✅ Grades horárias ativadas! O player usará as playlists de cada faixa horária.'
+            : '⏸️ Grades desativadas. O player voltará para a Playlist de Fundo geral.');
+    } catch(err) { alert('❌ Erro: ' + err.message); }
+}
+
+// Carrega estado das grades ao iniciar
+async function loadGradesState() {
+    try {
+        const {data} = await supabase.from('radio_settings').select('grades_enabled').eq('id',1).single();
+        const btn = document.getElementById('gradesToggleBtn');
+        if(!btn) return;
+        const enabled = data?.grades_enabled !== false;
+        btn.classList.toggle('active', enabled);
+        btn.classList.toggle('inactive', !enabled);
+        btn.textContent = enabled ? '✅ Ativadas' : '⏸️ Desativadas';
+    } catch(err) { console.error(err); }
+}
