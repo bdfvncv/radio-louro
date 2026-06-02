@@ -1,80 +1,82 @@
-const SUPABASE_URL = 'https://dyzjsgfoaxyeyepoylvg.supabase.co';
+const SUPABASE_URL      = 'https://dyzjsgfoaxyeyepoylvg.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5empzZ2ZvYXh5ZXllcG95bHZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1ODUzNjUsImV4cCI6MjA3NTE2MTM2NX0.PwmaMI04EhcTqUQioTRInyVKUlw3t1ap0lM5hI29s2I';
+const YOUTUBE_API_KEY   = 'AIzaSyCcpLnZ0XHsSEx34Zvkc80FwmHiHIqS6Gs';
+const BLOCKED_TERMS     = ['funk','rock pesado','metal','punk','rap','trap'];
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const audioPlayer = document.getElementById('audioPlayer');
-const playBtn = document.getElementById('playBtn');
-const volumeSlider = document.getElementById('volumeSlider');
-const syncBtn = document.getElementById('syncBtn');
-const currentTime = document.getElementById('currentTime');
-const countdownTimer = document.getElementById('countdownTimer');
-const statusText = document.getElementById('statusText');
-const trackName = document.getElementById('trackName');
+// ── DOM ───────────────────────────────────────────────────────
+const audioPlayer   = document.getElementById('audioPlayer');
+const playBtn       = document.getElementById('playBtn');
+const volumeSlider  = document.getElementById('volumeSlider');
+const syncBtn       = document.getElementById('syncBtn');
+const currentTime   = document.getElementById('currentTime');
+const countdownTimer= document.getElementById('countdownTimer');
+const statusText    = document.getElementById('statusText');
+const trackName     = document.getElementById('trackName');
 
 // ── Estado geral ──────────────────────────────────────────────
-let isPlaying = false;
-let isShuffling = false;
-let lastKnownDate = null;
+let isPlaying         = false;
+let isShuffling       = false;
+let lastKnownDate     = null;
 
-// ── Dados da programação atual (playlist aleatória — legado) ──
-let allSchedules = [];
-let backgroundPlaylist = [];
-let advertisements = [];
-let currentBackgroundIndex = 0;
-let currentAdIndex = 0;
-let tracksPlayedSinceLastAd = 0;
-let isPlayingHourCerta = false;
-let isPlayingAd = false;
-let lastPlayedSlot = null;
+// ── Playlist legada (fundo / madrugada) ───────────────────────
+let allSchedules      = [];
+let backgroundPlaylist= [];
+let advertisements    = [];
+let currentBgIndex    = 0;
+let currentAdIndex    = 0;
+let tracksPlayedSinceAd = 0;
+let isPlayingHourCerta= false;
+let isPlayingAd       = false;
+let lastPlayedSlot    = null;
 
-// ── Dados sazonais (legado + v2) ──────────────────────────────
-let seasonalPlaylist = [];
-let seasonalAds = [];
-let activeSeasonalCategory = null;
-let isSeasonalActive = false;
+// ── Sazonais ──────────────────────────────────────────────────
+let seasonalPlaylist  = [];
+let seasonalAds       = [];
+let activeSeasonalCat = null;
+let isSeasonalActive  = false;
 
-// ── Grades horárias (novo) ────────────────────────────────────
-let timeSlots = [];               // faixas cadastradas
-let currentSlot = null;           // faixa ativa agora
-let slotPlaylist = [];            // músicas da faixa ativa
-let slotCurrentIndex = 0;
-let slotAdsIndex = 0;
-let slotTracksPlayedSinceAd = 0;
-let isGradeMode = false;          // true quando há grade configurada para o horário
+// ── Grades horárias ───────────────────────────────────────────
+let timeSlots         = [];
+let gradesEnabled     = true;   // controlado pelo botão no admin
+let currentSlot       = null;
+let slotPlaylist      = [];
+let slotCurrentIndex  = 0;
+let slotAdIndex       = 0;
+let slotTracksSinceAd = 0;
+let isGradeMode       = false;
+let lastSlotId        = null;
 
-// ── Vinhetas (novo) ───────────────────────────────────────────
-let jinglesOpening = [];
-let jinglesMiddle = [];
-let jinglesClosing = [];
-let jingleMiddleCount = 0;        // quantas vinhetas do meio já tocaram na grade atual
+// ── Vinhetas ──────────────────────────────────────────────────
+let jinglesOpening = [], jinglesMiddle = [], jinglesClosing = [];
 let isPlayingJingle = false;
-let jinglePhase = null;           // 'opening' | 'middle' | 'closing'
-let lastJingleOpening = null;     // evita repetição
-let lastJingleMiddle = null;
-let lastJingleClosing = null;
+let gradeOpeningDone= false;
+let gradeMiddle1Done= false;
+let gradeMiddle2Done= false;
+let gradeStartTime  = null;
+let gradeDurationMs = 0;
+let lastJingleOpening=null, lastJingleMiddle=null, lastJingleClosing=null;
 
-// ── Blocos sazonais v2 (novo) ─────────────────────────────────
-let seasonalBlocksToday = [];     // blocos agendados para hoje
-let seasonalBlockPlaying = false; // está tocando um bloco sazonal agora
-let seasonalBlockQueue = [];      // fila das 4 músicas do bloco atual
-let seasonalBlockIndex = 0;
+// ── Blocos sazonais v2 ────────────────────────────────────────
+let seasonalBlocksToday = [];
+let seasonalBlockPlaying= false;
+let seasonalBlockQueue  = [];
+let seasonalBlockIndex  = 0;
 
-// ── Controle de troca de grade ────────────────────────────────
-let slotCheckInterval = null;
-let lastSlotId = null;
-let gradeOpeningDone = false;     // vinheta de abertura já tocou nesta grade
-let gradeMiddle1Done = false;     // primeira vinheta do meio já tocou
-let gradeMiddle2Done = false;     // segunda vinheta do meio já tocou
-let gradeClosingScheduled = false;
-let gradeStartTime = null;        // quando a grade começou (timestamp)
-let gradeDurationMs = 0;          // duração total da grade em ms
+// ── Locutor / TTS ─────────────────────────────────────────────
+let locutorAudio        = new Audio();
+let playerPausedByLoc   = false;
+let playerResumePos     = 0;
+
+// ── Sugestão ──────────────────────────────────────────────────
+let suggestPendingItem  = null;
+let suggestCountToday   = 0;
+const SUGGEST_LIMIT     = 20;
 
 // ─────────────────────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────────────────────
-init();
-
 async function init() {
     try {
         lastKnownDate = new Date().toISOString().split('T')[0];
@@ -84,15 +86,18 @@ async function init() {
         updateClock();
         setInterval(updateClock, 1000);
         setInterval(checkHourChange, 30000);
-        setInterval(checkSeasonalStatus, 5000);
+        setInterval(checkSeasonalStatus, 10000);
         setInterval(checkSlotChange, 60000);
         await loadCurrentHourAudio();
         await detectAndActivateSlot();
-        setTimeout(() => { checkAndShuffleIfNewDay(); }, 2000);
+        // Verifica embaralhamento ao iniciar
+        await checkAndShuffleIfNewDay();
+        // Verifica muda de dia a cada 5 minutos
         setInterval(checkAndShuffleIfNewDay, 300000);
-    } catch (error) {
-        console.error('Erro ao inicializar:', error);
-    }
+        initSuggest();
+        initLocutorListener();
+        initTTSListener();
+    } catch(err){ console.error('Erro init:', err); }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -100,57 +105,117 @@ async function init() {
 // ─────────────────────────────────────────────────────────────
 async function loadAllData() {
     try {
-        const [
-            scheduleData, playlistData, adsData,
-            seasonalMusicData, seasonalAdsData, seasonalSettingsData,
-            timeSlotsData
-        ] = await Promise.all([
-            supabase.from('radio_schedule').select('*').order('hour', { ascending: true }),
-            supabase.from('background_playlist').select('*').eq('enabled', true).order('daily_order', { ascending: true }),
-            supabase.from('advertisements').select('*').eq('enabled', true).order('play_order', { ascending: true }),
-            supabase.from('seasonal_playlists').select('*').eq('type', 'music').eq('enabled', true).order('daily_order', { ascending: true }),
-            supabase.from('seasonal_playlists').select('*').eq('type', 'ad').eq('enabled', true).order('play_order', { ascending: true }),
-            supabase.from('seasonal_settings').select('*').eq('is_active', true).maybeSingle(),
-            supabase.from('time_slots').select('*').eq('enabled', true).order('sort_order', { ascending: true })
+        const [schRes,bgRes,adsRes,slotsRes,ssRes,smRes,saRes,settingsRes] = await Promise.all([
+            supabase.from('radio_schedule').select('*').order('hour',{ascending:true}),
+            supabase.from('background_playlist').select('*').eq('enabled',true).order('daily_order',{ascending:true}),
+            supabase.from('advertisements').select('*').eq('enabled',true).order('play_order',{ascending:true}),
+            supabase.from('time_slots').select('*').eq('enabled',true).order('sort_order',{ascending:true}),
+            supabase.from('seasonal_settings').select('*').eq('is_active',true).maybeSingle(),
+            supabase.from('seasonal_playlists').select('*').eq('type','music').eq('enabled',true).order('daily_order',{ascending:true}),
+            supabase.from('seasonal_playlists').select('*').eq('type','ad').eq('enabled',true).order('play_order',{ascending:true}),
+            supabase.from('radio_settings').select('grades_enabled').eq('id',1).maybeSingle()
         ]);
+        allSchedules       = schRes.data  || [];
+        backgroundPlaylist = bgRes.data   || [];
+        advertisements     = adsRes.data  || [];
+        timeSlots          = slotsRes.data|| [];
 
-        allSchedules    = scheduleData.data    || [];
-        backgroundPlaylist = playlistData.data || [];
-        advertisements  = adsData.data         || [];
-        timeSlots       = timeSlotsData.data   || [];
+        // grades_enabled vem da tabela radio_settings
+        gradesEnabled = settingsRes.data?.grades_enabled !== false;
 
-        if (seasonalSettingsData.data?.category) {
-            activeSeasonalCategory = seasonalSettingsData.data.category;
-            isSeasonalActive = true;
-            seasonalPlaylist = (seasonalMusicData.data || []).filter(i => i.category === activeSeasonalCategory);
-            seasonalAds      = (seasonalAdsData.data   || []).filter(i => i.category === activeSeasonalCategory);
+        if(ssRes.data?.category) {
+            activeSeasonalCat = ssRes.data.category;
+            isSeasonalActive  = true;
+            seasonalPlaylist  = (smRes.data||[]).filter(i=>i.category===activeSeasonalCat);
+            seasonalAds       = (saRes.data||[]).filter(i=>i.category===activeSeasonalCat);
         } else {
-            isSeasonalActive = false;
-            seasonalPlaylist = [];
-            seasonalAds = [];
+            isSeasonalActive=false; seasonalPlaylist=[]; seasonalAds=[];
         }
-    } catch (error) {
-        console.error('Erro ao carregar dados:', error);
-    }
+    } catch(err){ console.error('Erro loadAllData:', err); }
 }
 
 // ─────────────────────────────────────────────────────────────
-// GRADES HORÁRIAS — DETECÇÃO E ATIVAÇÃO
+// EMBARALHAMENTO — verifica mudança de dia ao iniciar e a cada 5min
 // ─────────────────────────────────────────────────────────────
+async function checkAndShuffleIfNewDay() {
+    if(isShuffling) return;
+    const today = new Date().toISOString().split('T')[0];
 
-// Retorna a faixa ativa para a hora atual, ou null se for madrugada/sem grade
-function getActiveSlotForHour(hour) {
-    if (timeSlots.length === 0) return null;
+    // Detecta mudança de dia
+    if(lastKnownDate && lastKnownDate !== today) {
+        lastKnownDate = today;
+        await shuffleAll(today);
+        return;
+    }
 
-    // Madrugada: faixa com start_hour=20 e end_hour=7 (cruza meia-noite)
-    for (const slot of timeSlots) {
-        if (slot.start_hour === 20 && slot.end_hour === 7) {
-            // Madrugada = não usa grade
-            if (hour >= 20 || hour < 7) return null;
-            continue;
+    // Ao iniciar: verifica se já foi embaralhado hoje consultando o banco
+    try {
+        const {data} = await supabase
+            .from('background_playlist')
+            .select('last_shuffle_date')
+            .eq('enabled',true)
+            .limit(1)
+            .maybeSingle();
+
+        const lastDate = data?.last_shuffle_date;
+        if(!lastDate || lastDate !== today) {
+            await shuffleAll(today);
         }
-        if (hour >= slot.start_hour && hour < slot.end_hour) {
-            return slot;
+        if(!lastKnownDate) lastKnownDate = today;
+    } catch(err){ console.error('Erro checkShuffle:', err); }
+}
+
+async function shuffleAll(today) {
+    isShuffling = true;
+    try {
+        await Promise.all([
+            shuffleTable('background_playlist', null, today),
+            ...timeSlots.map(s => shuffleTable('slot_playlists', s.id, today))
+        ]);
+        // Recarrega playlists após embaralhamento
+        const {data:bg} = await supabase.from('background_playlist').select('*').eq('enabled',true).order('daily_order',{ascending:true});
+        backgroundPlaylist = bg || [];
+        if(currentSlot) await loadSlotPlaylist(currentSlot.id);
+        // Reseta índices
+        currentBgIndex = 0; slotCurrentIndex = 0;
+        seasonalBlocksToday = [];
+        if(isSeasonalActive) await ensureSeasonalBlocksToday();
+    } catch(err){ console.error('Erro shuffleAll:', err); }
+    finally { isShuffling = false; }
+}
+
+async function shuffleTable(table, slotId, today) {
+    try {
+        let query = supabase.from(table).select('id').eq('enabled',true);
+        if(slotId !== null) query = query.eq('slot_id', slotId);
+        const {data:tracks} = await query;
+        if(!tracks?.length) return;
+        const idx = [...Array(tracks.length).keys()];
+        for(let i=idx.length-1;i>0;i--){
+            const j=Math.floor(Math.random()*(i+1));
+            [idx[i],idx[j]]=[idx[j],idx[i]];
+        }
+        const BATCH = 50;
+        for(let i=0;i<tracks.length;i+=BATCH){
+            const batch = tracks.slice(i,i+BATCH);
+            await Promise.all(batch.map((t,bi)=>
+                supabase.from(table).update({daily_order:idx[i+bi],last_shuffle_date:today}).eq('id',t.id)
+            ));
+        }
+    } catch(err){ console.error(`Erro shuffle ${table}:`, err); }
+}
+
+// ─────────────────────────────────────────────────────────────
+// GRADES HORÁRIAS
+// ─────────────────────────────────────────────────────────────
+function getActiveSlotForHour(hour) {
+    if(!gradesEnabled || !timeSlots.length) return null;
+    for(const slot of timeSlots) {
+        if(slot.name === 'Madrugada Aleatória') continue;
+        if(slot.start_hour <= slot.end_hour) {
+            if(hour >= slot.start_hour && hour < slot.end_hour) return slot;
+        } else {
+            if(hour >= slot.start_hour || hour < slot.end_hour) return slot;
         }
     }
     return null;
@@ -159,1202 +224,587 @@ function getActiveSlotForHour(hour) {
 async function detectAndActivateSlot() {
     const hour = new Date().getHours();
     const slot = getActiveSlotForHour(hour);
-
-    if (!slot) {
-        // Sem grade configurada para este horário — usa playlist legada
-        isGradeMode = false;
-        currentSlot = null;
-        lastSlotId = null;
-        return;
-    }
-
-    if (slot.id === lastSlotId) return; // mesma grade, não recarrega
-
-    isGradeMode = true;
-    currentSlot = slot;
-    lastSlotId = slot.id;
-    gradeOpeningDone = false;
-    gradeMiddle1Done = false;
-    gradeMiddle2Done = false;
-    gradeClosingScheduled = false;
-    jingleMiddleCount = 0;
-
-    // Calcula horários das vinhetas do meio
-    gradeStartTime = new Date();
-    gradeStartTime.setMinutes(0, 0, 0);
-    gradeStartTime.setHours(slot.start_hour);
-
-    const endTime = new Date(gradeStartTime);
-    endTime.setHours(slot.end_hour);
-    gradeDurationMs = endTime - gradeStartTime;
-
+    if(!slot) { isGradeMode=false; currentSlot=null; lastSlotId=null; return; }
+    if(slot.id === lastSlotId) return;
+    isGradeMode=true; currentSlot=slot; lastSlotId=slot.id;
+    gradeOpeningDone=false; gradeMiddle1Done=false; gradeMiddle2Done=false;
+    const gradeStart = new Date(); gradeStart.setMinutes(0,0,0); gradeStart.setHours(slot.start_hour);
+    const gradeEnd = new Date(gradeStart); gradeEnd.setHours(slot.end_hour);
+    gradeStartTime = gradeStart; gradeDurationMs = gradeEnd - gradeStart;
     await loadSlotPlaylist(slot.id);
     await loadSlotJingles(slot.id);
-
-    if (isSeasonalActive) {
-        await ensureSeasonalBlocksToday();
-    }
-
-    if (isPlaying && !isPlayingHourCerta) {
-        startGrade();
-    }
+    if(isSeasonalActive) await ensureSeasonalBlocksToday();
+    if(isPlaying && !isPlayingHourCerta) startGrade();
 }
 
 async function loadSlotPlaylist(slotId) {
-    try {
-        const { data } = await supabase
-            .from('slot_playlists')
-            .select('*')
-            .eq('slot_id', slotId)
-            .eq('enabled', true)
-            .order('daily_order', { ascending: true });
-
-        slotPlaylist = data || [];
-        slotCurrentIndex = 0;
-        slotAdsIndex = 0;
-        slotTracksPlayedSinceAd = 0;
-    } catch (error) {
-        console.error('Erro ao carregar playlist da grade:', error);
-        slotPlaylist = [];
-    }
+    const {data} = await supabase.from('slot_playlists').select('*').eq('slot_id',slotId).eq('enabled',true).order('daily_order',{ascending:true});
+    slotPlaylist = data || []; slotCurrentIndex=0; slotAdIndex=0; slotTracksSinceAd=0;
 }
 
 async function loadSlotJingles(slotId) {
-    try {
-        const { data } = await supabase
-            .from('jingles')
-            .select('*')
-            .eq('slot_id', slotId)
-            .eq('enabled', true);
-
-        jinglesOpening = (data || []).filter(j => j.position === 'opening');
-        jinglesMiddle  = (data || []).filter(j => j.position === 'middle');
-        jinglesClosing = (data || []).filter(j => j.position === 'closing');
-    } catch (error) {
-        console.error('Erro ao carregar vinhetas:', error);
-        jinglesOpening = [];
-        jinglesMiddle = [];
-        jinglesClosing = [];
-    }
+    const {data} = await supabase.from('jingles').select('*').eq('slot_id',slotId).eq('enabled',true);
+    jinglesOpening = (data||[]).filter(j=>j.position==='opening');
+    jinglesMiddle  = (data||[]).filter(j=>j.position==='middle');
+    jinglesClosing = (data||[]).filter(j=>j.position==='closing');
 }
 
 async function loadSeasonalJingles(category) {
-    try {
-        const { data } = await supabase
-            .from('jingles')
-            .select('*')
-            .eq('seasonal_category', category)
-            .eq('enabled', true);
-
-        return {
-            opening: (data || []).filter(j => j.position === 'opening'),
-            middle:  (data || []).filter(j => j.position === 'middle'),
-            closing: (data || []).filter(j => j.position === 'closing')
-        };
-    } catch (error) {
-        return { opening: [], middle: [], closing: [] };
-    }
+    const {data} = await supabase.from('jingles').select('*').eq('seasonal_category',category).eq('enabled',true);
+    return {
+        opening:(data||[]).filter(j=>j.position==='opening'),
+        middle: (data||[]).filter(j=>j.position==='middle'),
+        closing:(data||[]).filter(j=>j.position==='closing')
+    };
 }
 
 function checkSlotChange() {
     const hour = new Date().getHours();
     const slot = getActiveSlotForHour(hour);
-    const newId = slot ? slot.id : null;
-
-    if (newId !== lastSlotId) {
-        detectAndActivateSlot();
-    }
+    if((slot?.id||null) !== lastSlotId) detectAndActivateSlot();
 }
 
 // ─────────────────────────────────────────────────────────────
-// BLOCOS SAZONAIS V2 (08h–20h, 3 blocos de 4 músicas)
+// BLOCOS SAZONAIS
 // ─────────────────────────────────────────────────────────────
-
 async function ensureSeasonalBlocksToday() {
-    if (!isSeasonalActive || !activeSeasonalCategory) return;
-
+    if(!isSeasonalActive||!activeSeasonalCat) return;
     const today = new Date().toISOString().split('T')[0];
-
     try {
-        const { data: existing } = await supabase
-            .from('seasonal_blocks')
-            .select('*')
-            .eq('block_date', today)
-            .eq('seasonal_category', activeSeasonalCategory);
-
-        if (existing && existing.length === 3) {
-            seasonalBlocksToday = existing;
-            return;
-        }
-
-        // Gera os 3 blocos: janelas 08-12, 12-16, 16-20
-        const windows = [
-            { window_number: 1, start: 8,  end: 12 },
-            { window_number: 2, start: 12, end: 16 },
-            { window_number: 3, start: 16, end: 20 }
-        ];
-
-        const blocks = windows.map(w => ({
-            block_date: today,
-            seasonal_category: activeSeasonalCategory,
-            window_number: w.window_number,
-            scheduled_hour: Math.floor(Math.random() * (w.end - w.start)) + w.start,
-            played: false
+        const {data:existing} = await supabase.from('seasonal_blocks').select('*').eq('block_date',today).eq('seasonal_category',activeSeasonalCat);
+        if(existing?.length===3){ seasonalBlocksToday=existing; return; }
+        const windows=[{w:1,s:8,e:12},{w:2,s:12,e:16},{w:3,s:16,e:20}];
+        seasonalBlocksToday = windows.map(({w,s,e})=>({
+            block_date:today, seasonal_category:activeSeasonalCat,
+            window_number:w, scheduled_hour:Math.floor(Math.random()*(e-s))+s, played:false
         }));
-
-        // Usa service_role via RPC não disponível no player — apenas registra localmente
-        // O admin.js vai persistir os blocos; o player usa a lógica local como fallback
-        seasonalBlocksToday = blocks;
-    } catch (error) {
-        console.error('Erro ao verificar blocos sazonais:', error);
-    }
+    } catch(err){ console.error(err); }
 }
 
 function shouldPlaySeasonalBlock() {
-    if (!isSeasonalActive || seasonalBlockPlaying) return false;
-
-    const now = new Date();
-    const hour = now.getHours();
-    if (hour < 8 || hour >= 20) return false;
-
-    return seasonalBlocksToday.some(b => !b.played && b.scheduled_hour === hour);
+    if(!isSeasonalActive||seasonalBlockPlaying) return false;
+    const h = new Date().getHours();
+    if(h<8||h>=20) return false;
+    return seasonalBlocksToday.some(b=>!b.played&&b.scheduled_hour===h);
 }
 
 function getNextSeasonalBlock() {
-    const hour = new Date().getHours();
-    return seasonalBlocksToday.find(b => !b.played && b.scheduled_hour === hour) || null;
+    const h = new Date().getHours();
+    return seasonalBlocksToday.find(b=>!b.played&&b.scheduled_hour===h)||null;
 }
 
-function markBlockAsPlayed(windowNumber) {
-    const block = seasonalBlocksToday.find(b => b.window_number === windowNumber);
-    if (block) block.played = true;
-}
-
-// ─────────────────────────────────────────────────────────────
-// VINHETAS — SORTEIO SEM REPETIÇÃO
-// ─────────────────────────────────────────────────────────────
-
-function pickJingle(list, lastUsed) {
-    if (list.length === 0) return null;
-    if (list.length === 1) return list[0];
-
-    const available = list.filter(j => j.id !== lastUsed);
-    return available[Math.floor(Math.random() * available.length)];
-}
-
-function playJingle(position, onEndCallback) {
-    let jingle = null;
-
-    if (position === 'opening') {
-        jingle = pickJingle(jinglesOpening, lastJingleOpening);
-        if (jingle) lastJingleOpening = jingle.id;
-    } else if (position === 'middle') {
-        jingle = pickJingle(jinglesMiddle, lastJingleMiddle);
-        if (jingle) lastJingleMiddle = jingle.id;
-    } else if (position === 'closing') {
-        jingle = pickJingle(jinglesClosing, lastJingleClosing);
-        if (jingle) lastJingleClosing = jingle.id;
-    }
-
-    if (!jingle) {
-        if (onEndCallback) onEndCallback();
-        return;
-    }
-
-    isPlayingJingle = true;
-    jinglePhase = position;
-    isPlayingHourCerta = false;
-    isPlayingAd = false;
-
-    audioPlayer.src = jingle.audio_url;
-    updateDisplay('🎬 Vinheta', jingle.title);
-
-    audioPlayer._jingleCallback = onEndCallback;
-
-    if (isPlaying) {
-        audioPlayer.play().catch(err => console.error('Erro vinheta:', err));
-    }
+function markBlockPlayed(wn) {
+    const b=seasonalBlocksToday.find(b=>b.window_number===wn);
+    if(b) b.played=true;
 }
 
 // ─────────────────────────────────────────────────────────────
-// INÍCIO DA GRADE — SEQUÊNCIA: abertura → propaganda → músicas
+// VINHETAS
 // ─────────────────────────────────────────────────────────────
+function pickJingle(list, last) {
+    if(!list.length) return null;
+    if(list.length===1) return list[0];
+    const avail = list.filter(j=>j.id!==last);
+    return avail[Math.floor(Math.random()*avail.length)];
+}
+
+function playJingle(position, cb) {
+    let j=null, lastRef=null;
+    if(position==='opening'){ j=pickJingle(jinglesOpening,lastJingleOpening); if(j) lastJingleOpening=j.id; }
+    else if(position==='middle'){ j=pickJingle(jinglesMiddle,lastJingleMiddle); if(j) lastJingleMiddle=j.id; }
+    else if(position==='closing'){ j=pickJingle(jinglesClosing,lastJingleClosing); if(j) lastJingleClosing=j.id; }
+    if(!j){ if(cb) cb(); return; }
+    isPlayingJingle=true;
+    audioPlayer.src=j.audio_url;
+    updateDisplay('🎬 Vinheta', j.title);
+    audioPlayer._jingleCb = cb;
+    if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
+}
 
 function startGrade() {
-    if (jinglesOpening.length > 0 && !gradeOpeningDone) {
-        gradeOpeningDone = true;
-        playJingle('opening', () => {
-            playSlotAdvertisement(() => {
-                scheduleMiddleJingles();
-                playSlotMusic();
-            });
-        });
+    if(jinglesOpening.length>0 && !gradeOpeningDone) {
+        gradeOpeningDone=true;
+        playJingle('opening', ()=>{ playSlotAd(()=>{ scheduleMiddleJingles(); playSlotTrack(); }); });
     } else {
-        playSlotAdvertisement(() => {
-            scheduleMiddleJingles();
-            playSlotMusic();
-        });
+        playSlotAd(()=>{ scheduleMiddleJingles(); playSlotTrack(); });
     }
 }
 
-// Agenda as 2 vinhetas do meio distribuídas na duração da grade
 function scheduleMiddleJingles() {
-    if (jinglesMiddle.length === 0) return;
-
-    const now = Date.now();
-    const gradeStart = gradeStartTime.getTime();
-    const gradeEnd = gradeStart + gradeDurationMs;
-    const remaining = gradeEnd - now;
-
-    if (remaining <= 0) return;
-
-    // Divide o tempo restante em 3 partes — vinhetas no fim do 1º e 2º terço
-    const third = remaining / 3;
-    const time1 = Math.floor(third * 1);
-    const time2 = Math.floor(third * 2);
-
-    setTimeout(() => {
-        if (!gradeMiddle1Done && isGradeMode && isPlaying) {
-            gradeMiddle1Done = true;
-            playJingle('middle', () => { playSlotMusic(); });
-        }
-    }, time1);
-
-    setTimeout(() => {
-        if (!gradeMiddle2Done && isGradeMode && isPlaying) {
-            gradeMiddle2Done = true;
-            playJingle('middle', () => { playSlotMusic(); });
-        }
-    }, time2);
+    if(!jinglesMiddle.length) return;
+    const now=Date.now(), end=gradeStartTime.getTime()+gradeDurationMs, rem=end-now;
+    if(rem<=0) return;
+    const third=rem/3;
+    setTimeout(()=>{ if(!gradeMiddle1Done&&isGradeMode&&isPlaying){ gradeMiddle1Done=true; playJingle('middle',()=>playSlotTrack()); } }, third);
+    setTimeout(()=>{ if(!gradeMiddle2Done&&isGradeMode&&isPlaying){ gradeMiddle2Done=true; playJingle('middle',()=>playSlotTrack()); } }, third*2);
 }
 
 // ─────────────────────────────────────────────────────────────
-// REPRODUÇÃO — MODO GRADE
+// REPRODUÇÃO MODO GRADE
 // ─────────────────────────────────────────────────────────────
-
-function playSlotMusic() {
-    isPlayingJingle = false;
-    isPlayingHourCerta = false;
-    isPlayingAd = false;
-
-    // Verifica se deve tocar bloco sazonal
-    if (shouldPlaySeasonalBlock()) {
-        const block = getNextSeasonalBlock();
-        if (block) {
-            startSeasonalBlock(block);
-            return;
-        }
+function playSlotTrack() {
+    isPlayingJingle=false; isPlayingHourCerta=false; isPlayingAd=false;
+    if(shouldPlaySeasonalBlock()){ const b=getNextSeasonalBlock(); if(b){ startSeasonalBlock(b); return; } }
+    if(!slotPlaylist.length){ playBgMusic(); return; }
+    const freq=(advertisements[slotAdIndex%Math.max(advertisements.length,1)]?.frequency)||3;
+    if(advertisements.length>0 && slotTracksSinceAd>=freq){
+        playSlotAd(()=>playSlotMusicTrack()); return;
     }
-
-    if (slotPlaylist.length === 0) {
-        // Grade sem músicas ainda — cai na playlist legada
-        playBackgroundMusic();
-        return;
-    }
-
-    const freq = (advertisements[slotAdsIndex % advertisements.length]?.frequency) || 3;
-    if (advertisements.length > 0 && slotTracksPlayedSinceAd >= freq) {
-        playSlotAdvertisement(() => { playSlotMusicTrack(); });
-        return;
-    }
-
     playSlotMusicTrack();
 }
 
 function playSlotMusicTrack() {
+    if(!slotPlaylist.length){ playBgMusic(); return; }
     const track = slotPlaylist[slotCurrentIndex % slotPlaylist.length];
-    if (!track) { playBackgroundMusic(); return; }
-
+    if(!track?.audio_url){ playBgMusic(); return; }
     audioPlayer.src = track.audio_url;
-    updateDisplay(currentSlot ? `🎵 ${currentSlot.name}` : 'Tocando agora', track.title || 'Música');
-    slotTracksPlayedSinceAd++;
-
-    if (isPlaying) {
-        audioPlayer.play().catch(err => console.error('Erro música grade:', err));
-    }
+    updateDisplay(currentSlot?`🎵 ${currentSlot.name}`:'Tocando agora', track.title||'Música');
+    slotTracksSinceAd++;
+    if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
 }
 
-function playSlotAdvertisement(onEndCallback) {
-    if (advertisements.length === 0) {
-        if (onEndCallback) onEndCallback();
-        return;
-    }
-
-    isPlayingAd = true;
-    slotTracksPlayedSinceAd = 0;
-
-    const ad = advertisements[slotAdsIndex % advertisements.length];
-    slotAdsIndex++;
-
-    if (!ad) { if (onEndCallback) onEndCallback(); return; }
-
-    audioPlayer.src = ad.audio_url;
+function playSlotAd(cb) {
+    if(!advertisements.length){ if(cb) cb(); return; }
+    isPlayingAd=true; slotTracksSinceAd=0;
+    const ad = advertisements[slotAdIndex%advertisements.length];
+    slotAdIndex = (slotAdIndex+1)%Math.max(advertisements.length,1);
+    if(!ad?.audio_url){ if(cb) cb(); return; }
+    audioPlayer.src=ad.audio_url; audioPlayer._adCb=cb;
     updateDisplay('📢 Propaganda', ad.title);
-    audioPlayer._adCallback = onEndCallback;
-
-    if (isPlaying) {
-        audioPlayer.play().catch(err => console.error('Erro propaganda:', err));
-    }
+    if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
 }
 
 // ─────────────────────────────────────────────────────────────
-// BLOCOS SAZONAIS — REPRODUÇÃO DO BLOCO DE 4 MÚSICAS
+// REPRODUÇÃO MODO LEGADO (bg playlist)
 // ─────────────────────────────────────────────────────────────
-
-async function startSeasonalBlock(block) {
-    seasonalBlockPlaying = true;
-    seasonalBlockIndex = 0;
-
-    // Monta fila com 4 músicas aleatórias da playlist sazonal
-    const pool = [...seasonalPlaylist];
-    seasonalBlockQueue = [];
-    for (let i = 0; i < 4 && pool.length > 0; i++) {
-        const idx = Math.floor(Math.random() * pool.length);
-        seasonalBlockQueue.push(pool.splice(idx, 1)[0]);
-    }
-
-    if (seasonalBlockQueue.length === 0) {
-        seasonalBlockPlaying = false;
-        markBlockAsPlayed(block.window_number);
-        playSlotMusic();
-        return;
-    }
-
-    // Carrega vinhetas sazonais se existirem
-    const seasonalJingles = await loadSeasonalJingles(activeSeasonalCategory);
-
-    if (seasonalJingles.opening.length > 0) {
-        const j = seasonalJingles.opening[Math.floor(Math.random() * seasonalJingles.opening.length)];
-        audioPlayer.src = j.audio_url;
-        updateDisplay('🎭 Especial', j.title);
-        audioPlayer._seasonalBlockJingles = seasonalJingles;
-        audioPlayer._seasonalBlock = block;
-        if (isPlaying) audioPlayer.play().catch(e => console.error(e));
-    } else {
-        playSeasonalBlockTrack(block);
-    }
-}
-
-function playSeasonalBlockTrack(block) {
-    if (seasonalBlockIndex >= seasonalBlockQueue.length) {
-        // Bloco terminou
-        seasonalBlockPlaying = false;
-        markBlockAsPlayed(block.window_number);
-        audioPlayer._seasonalBlock = null;
-
-        if (audioPlayer._seasonalBlockJingles?.closing?.length > 0) {
-            const jingles = audioPlayer._seasonalBlockJingles;
-            const j = jingles.closing[Math.floor(Math.random() * jingles.closing.length)];
-            audioPlayer.src = j.audio_url;
-            updateDisplay('🎭 Especial', j.title);
-            audioPlayer._afterSeasonalBlock = true;
-            if (isPlaying) audioPlayer.play().catch(e => console.error(e));
-        } else {
-            playSlotMusic();
-        }
-        return;
-    }
-
-    const track = seasonalBlockQueue[seasonalBlockIndex];
-    seasonalBlockIndex++;
-
-    audioPlayer.src = track.audio_url;
-    updateDisplay('🎭 Especial Sazonal', track.title || 'Música Temática');
-    audioPlayer._seasonalBlock = block;
-
-    if (isPlaying) {
-        audioPlayer.play().catch(err => console.error('Erro bloco sazonal:', err));
-    }
-}
-
-// ─────────────────────────────────────────────────────────────
-// REPRODUÇÃO — MODO LEGADO (playlist aleatória)
-// ─────────────────────────────────────────────────────────────
-
-function playBackgroundMusic() {
-    isPlayingHourCerta = false;
-    isPlayingAd = false;
-    isPlayingJingle = false;
-
+function playBgMusic() {
+    isPlayingJingle=false; isPlayingHourCerta=false; isPlayingAd=false;
     const playlist = isSeasonalActive ? seasonalPlaylist : backgroundPlaylist;
+    const ads      = isSeasonalActive ? seasonalAds      : advertisements;
+    if(!playlist.length){ handleNoAudio(); return; }
+    const freq = (ads[currentAdIndex%Math.max(ads.length,1)]?.frequency)||3;
+    if(ads.length>0 && tracksPlayedSinceAd>=freq){ playLegacyAd(); return; }
+    const track = playlist[currentBgIndex%playlist.length];
+    if(!track?.audio_url){ handleNoAudio(); return; }
+    audioPlayer.src=track.audio_url;
+    updateDisplay(isSeasonalActive?'🎭 Especial':'Tocando agora', track.title||'Música');
+    tracksPlayedSinceAd++;
+    if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
+}
+
+function playLegacyAd() {
     const ads = isSeasonalActive ? seasonalAds : advertisements;
+    if(!ads.length){ playBgMusic(); return; }
+    isPlayingAd=true; tracksPlayedSinceAd=0;
+    const ad=ads[currentAdIndex%ads.length];
+    currentAdIndex=(currentAdIndex+1)%Math.max(ads.length,1);
+    if(!ad?.audio_url){ playBgMusic(); return; }
+    audioPlayer.src=ad.audio_url;
+    updateDisplay('📢 Propaganda', ad.title);
+    if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
+}
 
-    if (playlist.length === 0) { handleNoAudio(); return; }
+// ─────────────────────────────────────────────────────────────
+// BLOCOS SAZONAIS — reprodução
+// ─────────────────────────────────────────────────────────────
+async function startSeasonalBlock(block) {
+    seasonalBlockPlaying=true; seasonalBlockIndex=0;
+    const pool=[...seasonalPlaylist]; seasonalBlockQueue=[];
+    for(let i=0;i<4&&pool.length>0;i++){ const idx=Math.floor(Math.random()*pool.length); seasonalBlockQueue.push(pool.splice(idx,1)[0]); }
+    if(!seasonalBlockQueue.length){ seasonalBlockPlaying=false; markBlockPlayed(block.window_number); playSlotTrack(); return; }
+    const sj = await loadSeasonalJingles(activeSeasonalCat);
+    if(sj.opening.length>0){
+        const j=sj.opening[Math.floor(Math.random()*sj.opening.length)];
+        audioPlayer.src=j.audio_url; updateDisplay('🎭 Especial',j.title);
+        audioPlayer._seasonalBlock=block; audioPlayer._seasonalJingles=sj;
+        if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
+    } else { playSeasonalTrack(block); }
+}
 
-    const adFreq = (ads[currentAdIndex]?.frequency) || 3;
-    if (ads.length > 0 && tracksPlayedSinceLastAd >= adFreq) {
-        playAdvertisement();
+function playSeasonalTrack(block) {
+    if(seasonalBlockIndex>=seasonalBlockQueue.length){
+        seasonalBlockPlaying=false; markBlockPlayed(block.window_number);
+        audioPlayer._seasonalBlock=null;
+        const sj=audioPlayer._seasonalJingles;
+        if(sj?.closing?.length>0){
+            const j=sj.closing[Math.floor(Math.random()*sj.closing.length)];
+            audioPlayer.src=j.audio_url; updateDisplay('🎭 Especial',j.title);
+            audioPlayer._afterSeasonal=true;
+            if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
+        } else { playSlotTrack(); }
         return;
     }
-
-    const track = playlist[currentBackgroundIndex];
-    if (!track?.audio_url) { handleNoAudio(); return; }
-
-    audioPlayer.src = track.audio_url;
-    updateDisplay(isSeasonalActive ? '🎭 Música Temática' : 'Tocando agora', track.title || 'Música');
-    tracksPlayedSinceLastAd++;
-
-    if (isPlaying) {
-        audioPlayer.play().catch(err => console.error('Erro:', err));
-    }
-}
-
-function playAdvertisement() {
-    const ads = isSeasonalActive ? seasonalAds : advertisements;
-    if (ads.length === 0) { playBackgroundMusic(); return; }
-
-    isPlayingAd = true;
-    tracksPlayedSinceLastAd = 0;
-
-    const ad = ads[currentAdIndex];
-    currentAdIndex = (currentAdIndex + 1) % ads.length;
-
-    if (!ad?.audio_url) { playBackgroundMusic(); return; }
-
-    audioPlayer.src = ad.audio_url;
-    updateDisplay('📢 Propaganda', ad.title);
-
-    if (isPlaying) {
-        audioPlayer.play().catch(err => console.error('Erro:', err));
-    }
+    const track=seasonalBlockQueue[seasonalBlockIndex++];
+    audioPlayer.src=track.audio_url; audioPlayer._seasonalBlock=block;
+    updateDisplay('🎭 Especial Sazonal', track.title||'Música Temática');
+    if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
 }
 
 // ─────────────────────────────────────────────────────────────
-// HORA CERTA (:00 e :30) — inalterada
+// HORA CERTA
 // ─────────────────────────────────────────────────────────────
-
 async function loadCurrentHourAudio() {
-    const now = new Date();
-    const hour = now.getHours();
-    const minute = now.getMinutes();
-
+    const now=new Date(), hour=now.getHours(), min=now.getMinutes();
     try {
-        const data = allSchedules.find(s => s.hour === hour && s.enabled);
-        if (!data) { resumeAfterHourCerta(); return; }
-
-        const isHourExact = minute <= 2;
-        const isHalfHour = minute >= 30 && minute <= 32;
-        const currentSlotStr = isHourExact ? `${hour}:00` : `${hour}:30`;
-
-        if (lastPlayedSlot === currentSlotStr) { resumeAfterHourCerta(); return; }
-
-        if (isHourExact && data.audio_url?.trim()) {
-            isPlayingHourCerta = true;
-            audioPlayer.src = data.audio_url;
-            updateDisplay('Hora Certa', `${String(hour).padStart(2,'0')}:00`);
-            lastPlayedSlot = currentSlotStr;
-            if (isPlaying) audioPlayer.play().catch(e => console.error(e));
-        } else if (isHalfHour && data.audio_url_half?.trim()) {
-            isPlayingHourCerta = true;
-            audioPlayer.src = data.audio_url_half;
-            updateDisplay('Hora Certa', `${String(hour).padStart(2,'0')}:30`);
-            lastPlayedSlot = currentSlotStr;
-            if (isPlaying) audioPlayer.play().catch(e => console.error(e));
-        } else {
-            resumeAfterHourCerta();
-        }
-    } catch (error) {
-        console.error('Erro hora certa:', error);
-        resumeAfterHourCerta();
-    }
+        const data=allSchedules.find(s=>s.hour===hour&&s.enabled);
+        if(!data){ resumeAfterHourCerta(); return; }
+        const isExact=min<=2, isHalf=min>=30&&min<=32;
+        const slotStr=isExact?`${hour}:00`:`${hour}:30`;
+        if(lastPlayedSlot===slotStr){ resumeAfterHourCerta(); return; }
+        if(isExact&&data.audio_url?.trim()){
+            isPlayingHourCerta=true; audioPlayer.src=data.audio_url;
+            updateDisplay('Hora Certa',`${String(hour).padStart(2,'0')}:00`);
+            lastPlayedSlot=slotStr;
+            if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
+        } else if(isHalf&&data.audio_url_half?.trim()){
+            isPlayingHourCerta=true; audioPlayer.src=data.audio_url_half;
+            updateDisplay('Hora Certa',`${String(hour).padStart(2,'0')}:30`);
+            lastPlayedSlot=slotStr;
+            if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
+        } else { resumeAfterHourCerta(); }
+    } catch(err){ console.error(err); resumeAfterHourCerta(); }
 }
 
 function resumeAfterHourCerta() {
-    if (isGradeMode && slotPlaylist.length > 0) {
-        playSlotMusic();
-    } else {
-        playBackgroundMusic();
-    }
+    if(isGradeMode&&slotPlaylist.length>0) playSlotTrack();
+    else playBgMusic();
 }
 
 // ─────────────────────────────────────────────────────────────
 // HANDLE AUDIO ENDED — roteamento central
 // ─────────────────────────────────────────────────────────────
-
 function handleAudioEnded() {
-    // Vinheta terminou
-    if (isPlayingJingle) {
-        isPlayingJingle = false;
-        const cb = audioPlayer._jingleCallback;
-        audioPlayer._jingleCallback = null;
-        if (cb) { cb(); return; }
-        playSlotMusic();
+    // Vinheta de grade
+    if(isPlayingJingle){
+        isPlayingJingle=false;
+        const cb=audioPlayer._jingleCb; audioPlayer._jingleCb=null;
+        if(cb) cb(); else playSlotTrack();
         return;
     }
-
-    // Propaganda no modo grade terminou
-    if (isPlayingAd && isGradeMode) {
-        isPlayingAd = false;
-        const cb = audioPlayer._adCallback;
-        audioPlayer._adCallback = null;
-        if (cb) { cb(); return; }
-        playSlotMusicTrack();
+    // Propaganda no modo grade
+    if(isPlayingAd&&isGradeMode){
+        isPlayingAd=false;
+        const cb=audioPlayer._adCb; audioPlayer._adCb=null;
+        if(cb) cb(); else playSlotMusicTrack();
         return;
     }
-
-    // Vinheta de abertura do bloco sazonal
-    if (audioPlayer._seasonalBlock && !seasonalBlockPlaying) {
-        seasonalBlockPlaying = true;
-        playSeasonalBlockTrack(audioPlayer._seasonalBlock);
-        return;
+    // Vinheta abertura bloco sazonal
+    if(audioPlayer._seasonalBlock&&!seasonalBlockPlaying){
+        seasonalBlockPlaying=true; playSeasonalTrack(audioPlayer._seasonalBlock); return;
     }
-
     // Música do bloco sazonal
-    if (audioPlayer._seasonalBlock && seasonalBlockPlaying) {
-        playSeasonalBlockTrack(audioPlayer._seasonalBlock);
+    if(audioPlayer._seasonalBlock&&seasonalBlockPlaying){
+        playSeasonalTrack(audioPlayer._seasonalBlock); return;
+    }
+    // Encerramento bloco sazonal
+    if(audioPlayer._afterSeasonal){
+        audioPlayer._afterSeasonal=false; playSlotTrack(); return;
+    }
+    // Hora certa
+    if(isPlayingHourCerta){
+        isPlayingHourCerta=false;
+        if(isGradeMode) playSlotAd(()=>playSlotTrack());
+        else if((isSeasonalActive?seasonalAds:advertisements).length>0) playLegacyAd();
+        else playBgMusic();
         return;
     }
-
-    // Vinheta de encerramento do bloco sazonal
-    if (audioPlayer._afterSeasonalBlock) {
-        audioPlayer._afterSeasonalBlock = false;
-        playSlotMusic();
-        return;
+    // Propaganda legada
+    if(isPlayingAd&&!isGradeMode){ isPlayingAd=false; playBgMusic(); return; }
+    // Música da grade — avança índice
+    if(isGradeMode){
+        slotCurrentIndex = (slotCurrentIndex+1) % Math.max(slotPlaylist.length,1);
+        playSlotTrack(); return;
     }
-
-    // Hora certa terminou
-    if (isPlayingHourCerta) {
-        isPlayingHourCerta = false;
-        if (isGradeMode) {
-            playSlotAdvertisement(() => { playSlotMusic(); });
-        } else {
-            const ads = isSeasonalActive ? seasonalAds : advertisements;
-            if (ads.length > 0) { playAdvertisement(); }
-            else { playBackgroundMusic(); }
-        }
-        return;
-    }
-
-    // Propaganda legada terminou
-    if (isPlayingAd && !isGradeMode) {
-        isPlayingAd = false;
-        playBackgroundMusic();
-        return;
-    }
-
-    // Música do modo grade terminou
-    if (isGradeMode) {
-        slotCurrentIndex = (slotCurrentIndex + 1) % Math.max(slotPlaylist.length, 1);
-        playSlotMusic();
-        return;
-    }
-
-    // Música legada terminou
+    // Música legada — avança índice
     const playlist = isSeasonalActive ? seasonalPlaylist : backgroundPlaylist;
-    if (playlist.length > 0) {
-        currentBackgroundIndex = (currentBackgroundIndex + 1) % playlist.length;
-        playBackgroundMusic();
-    }
-}
-
-function handleNoAudio() {
-    audioPlayer.src = '';
-    updateDisplay('Sem programação', 'Aguardando áudio...');
+    currentBgIndex = (currentBgIndex+1) % Math.max(playlist.length,1);
+    playBgMusic();
 }
 
 function handleAudioError() {
-    if (isGradeMode) {
-        slotCurrentIndex = (slotCurrentIndex + 1) % Math.max(slotPlaylist.length, 1);
-        setTimeout(playSlotMusic, 1000);
-    } else {
-        updateDisplay('Erro', 'Falha ao carregar áudio');
-    }
+    console.error('Erro no áudio, avançando...');
+    if(isGradeMode){ slotCurrentIndex=(slotCurrentIndex+1)%Math.max(slotPlaylist.length,1); setTimeout(playSlotTrack,1000); }
+    else { currentBgIndex=(currentBgIndex+1)%Math.max(backgroundPlaylist.length,1); setTimeout(playBgMusic,1000); }
 }
+
+function handleNoAudio() { audioPlayer.src=''; updateDisplay('Sem programação','Aguardando áudio...'); }
 
 // ─────────────────────────────────────────────────────────────
 // SEASONAL STATUS CHECK
 // ─────────────────────────────────────────────────────────────
-
 async function checkSeasonalStatus() {
     try {
-        const { data } = await supabase
-            .from('seasonal_settings')
-            .select('*')
-            .eq('is_active', true)
-            .maybeSingle();
-
-        const wasActive = isSeasonalActive;
-        const prevCategory = activeSeasonalCategory;
-
-        if (data?.category) {
-            if (!wasActive || prevCategory !== data.category) {
-                const [musicData, adData] = await Promise.all([
-                    supabase.from('seasonal_playlists').select('*').eq('type', 'music').eq('enabled', true).eq('category', data.category).order('daily_order', { ascending: true }),
-                    supabase.from('seasonal_playlists').select('*').eq('type', 'ad').eq('enabled', true).eq('category', data.category).order('play_order', { ascending: true })
+        const {data}=await supabase.from('seasonal_settings').select('*').eq('is_active',true).maybeSingle();
+        const wasCat=activeSeasonalCat;
+        if(data?.category){
+            if(!isSeasonalActive||wasCat!==data.category){
+                const [mRes,aRes]=await Promise.all([
+                    supabase.from('seasonal_playlists').select('*').eq('type','music').eq('enabled',true).eq('category',data.category).order('daily_order',{ascending:true}),
+                    supabase.from('seasonal_playlists').select('*').eq('type','ad').eq('enabled',true).eq('category',data.category).order('play_order',{ascending:true})
                 ]);
-                activeSeasonalCategory = data.category;
-                isSeasonalActive = true;
-                seasonalPlaylist = musicData.data || [];
-                seasonalAds = adData.data || [];
-                currentBackgroundIndex = 0;
-                currentAdIndex = 0;
-                tracksPlayedSinceLastAd = 0;
+                activeSeasonalCat=data.category; isSeasonalActive=true;
+                seasonalPlaylist=mRes.data||[]; seasonalAds=aRes.data||[];
+                currentBgIndex=0; currentAdIndex=0; tracksPlayedSinceAd=0;
                 await ensureSeasonalBlocksToday();
-                if (isPlaying && !isPlayingHourCerta && !isGradeMode) playBackgroundMusic();
+                if(isPlaying&&!isPlayingHourCerta&&!isGradeMode) playBgMusic();
             }
-        } else if (wasActive) {
-            isSeasonalActive = false;
-            activeSeasonalCategory = null;
-            seasonalPlaylist = [];
-            seasonalAds = [];
-            seasonalBlocksToday = [];
-            currentBackgroundIndex = 0;
-            currentAdIndex = 0;
-            tracksPlayedSinceLastAd = 0;
-            if (isPlaying && !isPlayingHourCerta && !isGradeMode) playBackgroundMusic();
+        } else if(isSeasonalActive){
+            isSeasonalActive=false; activeSeasonalCat=null;
+            seasonalPlaylist=[]; seasonalAds=[]; seasonalBlocksToday=[];
+            currentBgIndex=0; currentAdIndex=0; tracksPlayedSinceAd=0;
+            if(isPlaying&&!isPlayingHourCerta&&!isGradeMode) playBgMusic();
         }
-    } catch (error) {
-        console.error('Erro ao verificar status sazonal:', error);
-    }
-}
-
-// ─────────────────────────────────────────────────────────────
-// EMBARALHAMENTO DIÁRIO
-// ─────────────────────────────────────────────────────────────
-
-async function checkAndShuffleIfNewDay() {
-    if (isShuffling) return;
-    try {
-        const today = new Date().toISOString().split('T')[0];
-        if (lastKnownDate && lastKnownDate !== today) {
-            await shufflePlaylistOptimized();
-            await shuffleSlotPlaylists();
-            lastKnownDate = today;
-            seasonalBlocksToday = [];
-            if (isSeasonalActive) await ensureSeasonalBlocksToday();
-            return;
-        }
-        const { data } = await supabase.from('background_playlist').select('last_shuffle_date').eq('enabled', true).limit(1).maybeSingle();
-        if (!data?.last_shuffle_date || data.last_shuffle_date !== today) {
-            await shufflePlaylistOptimized();
-            await shuffleSlotPlaylists();
-            lastKnownDate = today;
-        } else {
-            if (!lastKnownDate) lastKnownDate = today;
-        }
-    } catch (error) {
-        console.error('Erro ao verificar dia:', error);
-    }
-}
-
-async function shufflePlaylistOptimized() {
-    if (isShuffling) return;
-    isShuffling = true;
-    try {
-        const { data: tracks } = await supabase.from('background_playlist').select('id').eq('enabled', true).order('original_order', { ascending: true });
-        if (!tracks?.length) return;
-        const indices = [...Array(tracks.length).keys()];
-        for (let i = indices.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [indices[i], indices[j]] = [indices[j], indices[i]];
-        }
-        const today = new Date().toISOString().split('T')[0];
-        const batchSize = 50;
-        for (let i = 0; i < tracks.length; i += batchSize) {
-            const batch = tracks.slice(i, i + batchSize);
-            await Promise.all(batch.map((t, idx) =>
-                supabase.from('background_playlist').update({ daily_order: indices[i + idx], last_shuffle_date: today }).eq('id', t.id)
-            ));
-        }
-        const { data: refreshed } = await supabase.from('background_playlist').select('*').eq('enabled', true).order('daily_order', { ascending: true });
-        backgroundPlaylist = refreshed || [];
-    } finally {
-        isShuffling = false;
-    }
-}
-
-async function shuffleSlotPlaylists() {
-    try {
-        const today = new Date().toISOString().split('T')[0];
-        for (const slot of timeSlots) {
-            const { data: tracks } = await supabase.from('slot_playlists').select('id').eq('slot_id', slot.id).eq('enabled', true);
-            if (!tracks?.length) continue;
-            const indices = [...Array(tracks.length).keys()];
-            for (let i = indices.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [indices[i], indices[j]] = [indices[j], indices[i]];
-            }
-            await Promise.all(tracks.map((t, idx) =>
-                supabase.from('slot_playlists').update({ daily_order: indices[idx], last_shuffle_date: today }).eq('id', t.id)
-            ));
-        }
-        if (currentSlot) await loadSlotPlaylist(currentSlot.id);
-    } catch (error) {
-        console.error('Erro ao embaralhar grades:', error);
-    }
+    } catch(err){ console.error(err); }
 }
 
 // ─────────────────────────────────────────────────────────────
 // INTERFACE
 // ─────────────────────────────────────────────────────────────
-
 function setupEventListeners() {
     playBtn.addEventListener('click', togglePlay);
-    volumeSlider.addEventListener('input', updateVolume);
+    volumeSlider.addEventListener('input', ()=>{ audioPlayer.volume=volumeSlider.value/100; });
     syncBtn.addEventListener('click', forceSync);
     audioPlayer.addEventListener('ended', handleAudioEnded);
     audioPlayer.addEventListener('error', handleAudioError);
 }
 
 function togglePlay() {
-    if (!audioPlayer.src) return;
-    if (isPlaying) {
-        audioPlayer.pause();
-        isPlaying = false;
-        updatePlayButtonState(false);
+    if(!audioPlayer.src) return;
+    if(isPlaying){
+        audioPlayer.pause(); isPlaying=false; updatePlayButtonState(false);
     } else {
-        audioPlayer.play()
-            .then(() => { isPlaying = true; updatePlayButtonState(true); })
-            .catch(err => console.error('Erro ao reproduzir:', err));
+        audioPlayer.play().then(()=>{ isPlaying=true; updatePlayButtonState(true); }).catch(e=>console.error(e));
     }
 }
 
 function updatePlayButtonState(playing) {
-    const playIcon  = playBtn.querySelector('.play-icon');
-    const pauseIcon = playBtn.querySelector('.pause-icon');
-    if (playing) {
-        playBtn.classList.remove('paused'); playBtn.classList.add('playing');
-        playIcon.style.display = 'none'; pauseIcon.style.display = 'block';
-    } else {
-        playBtn.classList.remove('playing'); playBtn.classList.add('paused');
-        playIcon.style.display = 'block'; pauseIcon.style.display = 'none';
-    }
+    const pi=playBtn.querySelector('.play-icon'), pa=playBtn.querySelector('.pause-icon');
+    if(playing){ playBtn.classList.remove('paused'); playBtn.classList.add('playing'); pi.style.display='none'; pa.style.display='block'; }
+    else { playBtn.classList.remove('playing'); playBtn.classList.add('paused'); pi.style.display='block'; pa.style.display='none'; }
 }
 
-function updateDisplay(status, track) {
-    statusText.textContent = status;
-    trackName.textContent  = track;
-}
-
-function updateVolume() {
-    audioPlayer.volume = volumeSlider.value / 100;
-}
+function updateDisplay(status, track) { statusText.textContent=status; trackName.textContent=track; }
 
 async function forceSync() {
-    syncBtn.disabled = true;
-    syncBtn.textContent = '⏳ Sincronizando...';
+    syncBtn.disabled=true; syncBtn.textContent='⏳ Sincronizando...';
     try {
-        await loadAllData();
-        await detectAndActivateSlot();
-        await loadCurrentHourAudio();
-        syncBtn.textContent = '✅ Sincronizado!';
-    } catch {
-        syncBtn.textContent = '❌ Erro';
-    } finally {
-        setTimeout(() => { syncBtn.textContent = '🔄 Sincronizar'; syncBtn.disabled = false; }, 2000);
-    }
+        await loadAllData(); await detectAndActivateSlot(); await loadCurrentHourAudio();
+        syncBtn.textContent='✅ Sincronizado!';
+    } catch(e){ syncBtn.textContent='❌ Erro'; }
+    finally { setTimeout(()=>{ syncBtn.textContent='🔄 Sincronizar'; syncBtn.disabled=false; },2000); }
 }
 
 function updateClock() {
-    const now = new Date();
-    const h = String(now.getHours()).padStart(2, '0');
-    const m = String(now.getMinutes()).padStart(2, '0');
-    const s = String(now.getSeconds()).padStart(2, '0');
-    currentTime.textContent = `${h}:${m}:${s}`;
-
-    const min = now.getMinutes();
-    let next = new Date(now);
-    if (min < 30) { next.setMinutes(30, 0, 0); }
-    else { next.setHours(now.getHours() + 1, 0, 0, 0); }
-
-    const diff = next - now;
-    const ml = Math.floor(diff / 60000);
-    const sl = Math.floor((diff % 60000) / 1000);
-    countdownTimer.textContent = `${String(ml).padStart(2,'0')}:${String(sl).padStart(2,'0')}`;
+    const now=new Date();
+    const h=String(now.getHours()).padStart(2,'0'), m=String(now.getMinutes()).padStart(2,'0'), s=String(now.getSeconds()).padStart(2,'0');
+    if(currentTime) currentTime.textContent=`${h}:${m}:${s}`;
+    const min=now.getMinutes();
+    let next=new Date(now);
+    if(min<30) next.setMinutes(30,0,0); else next.setHours(now.getHours()+1,0,0,0);
+    const diff=next-now;
+    const ml=Math.floor(diff/60000), sl=Math.floor((diff%60000)/1000);
+    if(countdownTimer) countdownTimer.textContent=`${String(ml).padStart(2,'0')}:${String(sl).padStart(2,'0')}`;
 }
 
 async function checkHourChange() {
-    const now = new Date();
-    const h = now.getHours();
-    const min = now.getMinutes();
-    if (min === 0 || min === 30) {
-        const slot = `${h}:${min === 0 ? '00' : '30'}`;
-        if (lastPlayedSlot !== slot) {
-            lastPlayedSlot = null;
-            await loadCurrentHourAudio();
-        }
+    const now=new Date(), h=now.getHours(), min=now.getMinutes();
+    if(min===0||min===30){
+        const slot=`${h}:${min===0?'00':'30'}`;
+        if(lastPlayedSlot!==slot){ lastPlayedSlot=null; await loadCurrentHourAudio(); }
     }
 }
 
 // ─────────────────────────────────────────────────────────────
 // REALTIME
 // ─────────────────────────────────────────────────────────────
-
 function setupRealtimeSubscription() {
-    supabase.channel('radio_schedule_changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'radio_schedule' }, async () => {
-            const { data } = await supabase.from('radio_schedule').select('*').order('hour', { ascending: true });
-            allSchedules = data || [];
-            await loadCurrentHourAudio();
-        }).subscribe();
-
-    supabase.channel('playlist_changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'background_playlist' }, async () => {
-            const { data } = await supabase.from('background_playlist').select('*').eq('enabled', true).order('daily_order', { ascending: true });
-            backgroundPlaylist = data || [];
-        }).subscribe();
-
-    supabase.channel('ads_changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'advertisements' }, async () => {
-            const { data } = await supabase.from('advertisements').select('*').eq('enabled', true).order('play_order', { ascending: true });
-            advertisements = data || [];
-        }).subscribe();
-
-    supabase.channel('seasonal_changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'seasonal_playlists' }, () => checkSeasonalStatus())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'seasonal_settings' }, () => checkSeasonalStatus())
-        .subscribe();
-
-    supabase.channel('slot_changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'time_slots' }, async () => {
-            const { data } = await supabase.from('time_slots').select('*').eq('enabled', true).order('sort_order', { ascending: true });
-            timeSlots = data || [];
+    supabase.channel('radio_player')
+        .on('postgres_changes',{event:'*',schema:'public',table:'radio_schedule'},async()=>{
+            const {data}=await supabase.from('radio_schedule').select('*').order('hour',{ascending:true});
+            allSchedules=data||[]; await loadCurrentHourAudio();
+        })
+        .on('postgres_changes',{event:'*',schema:'public',table:'background_playlist'},async()=>{
+            const {data}=await supabase.from('background_playlist').select('*').eq('enabled',true).order('daily_order',{ascending:true});
+            backgroundPlaylist=data||[];
+        })
+        .on('postgres_changes',{event:'*',schema:'public',table:'advertisements'},async()=>{
+            const {data}=await supabase.from('advertisements').select('*').eq('enabled',true).order('play_order',{ascending:true});
+            advertisements=data||[];
+        })
+        .on('postgres_changes',{event:'*',schema:'public',table:'seasonal_playlists'},()=>checkSeasonalStatus())
+        .on('postgres_changes',{event:'*',schema:'public',table:'seasonal_settings'},()=>checkSeasonalStatus())
+        .on('postgres_changes',{event:'*',schema:'public',table:'time_slots'},async()=>{
+            const {data}=await supabase.from('time_slots').select('*').eq('enabled',true).order('sort_order',{ascending:true});
+            timeSlots=data||[]; await detectAndActivateSlot();
+        })
+        .on('postgres_changes',{event:'*',schema:'public',table:'slot_playlists'},async()=>{
+            if(currentSlot) await loadSlotPlaylist(currentSlot.id);
+        })
+        .on('postgres_changes',{event:'UPDATE',schema:'public',table:'radio_settings'},async payload=>{
+            gradesEnabled = payload.new?.grades_enabled !== false;
             await detectAndActivateSlot();
         })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'slot_playlists' }, async () => {
-            if (currentSlot) await loadSlotPlaylist(currentSlot.id);
+        .on('postgres_changes',{event:'*',schema:'public',table:'jingles'},async()=>{
+            if(currentSlot) await loadSlotJingles(currentSlot.id);
         })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'jingles' }, async () => {
-            if (currentSlot) await loadSlotJingles(currentSlot.id);
-        })
+        .on('postgres_changes',{event:'UPDATE',schema:'public',table:'locutor_state'},payload=>handleLocutorStateChange(payload.new))
         .subscribe();
 }
 
 // ─────────────────────────────────────────────────────────────
-// INIT ESTADO
+// LOCUTOR
 // ─────────────────────────────────────────────────────────────
-audioPlayer.volume = 0.7;
-updatePlayButtonState(false);
-
-// ═════════════════════════════════════════════════════════════
-// BUSCA + SUGESTÃO DE MÚSICAS
-// ═════════════════════════════════════════════════════════════
-
-const YOUTUBE_API_KEY = 'AIzaSyCcpLnZ0XHsSEx34Zvkc80FwmHiHIqS6Gs';
-const BLOCKED_TERMS   = ['funk', 'rock pesado', 'metal', 'punk', 'rap', 'trap'];
-
-let suggestPendingItem  = null;
-let suggestIdentifier   = null;
-let suggestCountToday   = 0;
-const SUGGEST_LIMIT     = 20;
-
-function initSuggest() {
-    const searchInput = document.getElementById('suggestSearchInput');
-    const searchBtn   = document.getElementById('suggestSearchBtn');
-    if (!searchInput || !searchBtn) return;
-
-    loadSuggestCount();
-
-    searchBtn.addEventListener('click', handleSuggestSearch);
-    searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleSuggestSearch(); });
-
-    document.getElementById('suggestConfirmBtn').addEventListener('click', handleSuggestConfirm);
-    document.getElementById('suggestCancelBtn').addEventListener('click', () => {
-        document.getElementById('suggestNameModal').style.display = 'none';
-        suggestPendingItem = null;
-    });
-}
-
-async function loadSuggestCount() {
-    const id    = getSuggestIdentifier();
-    const today = new Date().toISOString().split('T')[0];
-    try {
-        const { data } = await supabase
-            .from('suggestion_limits')
-            .select('count')
-            .eq('identifier', id)
-            .eq('suggestion_date', today)
-            .maybeSingle();
-        suggestCountToday = data?.count || 0;
-        updateSuggestBadge();
-    } catch (e) { console.error(e); }
-}
-
-function getSuggestIdentifier() {
-    if (suggestIdentifier) return suggestIdentifier;
-    let id = localStorage.getItem('radio_suggest_id');
-    if (!id) {
-        id = 'user_' + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem('radio_suggest_id', id);
-    }
-    suggestIdentifier = id;
-    return id;
-}
-
-function updateSuggestBadge() {
-    const badge = document.getElementById('suggestLimitBadge');
-    if (!badge) return;
-    badge.textContent = `${suggestCountToday}/${SUGGEST_LIMIT} hoje`;
-    badge.style.background = suggestCountToday >= SUGGEST_LIMIT ? '#f8d7da' : '#d4edda';
-    badge.style.color      = suggestCountToday >= SUGGEST_LIMIT ? '#721c24' : '#155724';
-}
-
-async function handleSuggestSearch() {
-    const query = document.getElementById('suggestSearchInput').value.trim();
-    if (!query) return;
-
-    const btn = document.getElementById('suggestSearchBtn');
-    btn.textContent = '⏳'; btn.disabled = true;
-
-    const resultsEl = document.getElementById('suggestResults');
-    resultsEl.style.display = 'block';
-    resultsEl.innerHTML = '<div class="suggest-loading">Buscando...</div>';
-
-    try {
-        const url  = `https://www.googleapis.com/youtube/v3/search?q=${encodeURIComponent(query)}&type=video&videoCategoryId=10&maxResults=5&part=snippet&key=${YOUTUBE_API_KEY}`;
-        const res  = await fetch(url);
-        const data = await res.json();
-
-        if (!data.items?.length) {
-            resultsEl.innerHTML = '<div class="suggest-empty">Nenhum resultado encontrado.</div>';
-            return;
-        }
-
-        const filtered = data.items.filter(item => {
-            const t = item.snippet.title.toLowerCase();
-            return !BLOCKED_TERMS.some(b => t.includes(b));
-        });
-
-        if (!filtered.length) {
-            resultsEl.innerHTML = '<div class="suggest-empty">Nenhum resultado adequado encontrado.</div>';
-            return;
-        }
-
-        resultsEl.innerHTML = filtered.map(item => `
-            <div class="suggest-result-card">
-                <img src="${item.snippet.thumbnails?.default?.url || ''}" alt="" class="suggest-result-thumb">
-                <div class="suggest-result-info">
-                    <div class="suggest-result-title">${item.snippet.title}</div>
-                    <div class="suggest-result-channel">${item.snippet.channelTitle}</div>
-                </div>
-                <button class="suggest-btn"
-                    data-id="${item.id.videoId}"
-                    data-title="${item.snippet.title.replace(/"/g, '&quot;')}"
-                    data-channel="${item.snippet.channelTitle.replace(/"/g, '&quot;')}"
-                    data-thumb="${item.snippet.thumbnails?.default?.url || ''}">
-                    💌 Sugerir
-                </button>
-            </div>
-        `).join('');
-
-        resultsEl.querySelectorAll('.suggest-btn').forEach(btn => {
-            btn.addEventListener('click', e => {
-                const b = e.currentTarget;
-                openSuggestModal({
-                    videoId: b.dataset.id,
-                    title:   b.dataset.title,
-                    channel: b.dataset.channel,
-                    thumb:   b.dataset.thumb,
-                    url:     `https://www.youtube.com/watch?v=${b.dataset.id}`
-                });
-            });
-        });
-
-    } catch (err) {
-        resultsEl.innerHTML = '<div class="suggest-empty">Erro na busca. Tente novamente.</div>';
-    } finally {
-        btn.textContent = '🔍 Buscar'; btn.disabled = false;
-    }
-}
-
-function openSuggestModal(item) {
-    if (suggestCountToday >= SUGGEST_LIMIT) {
-        showSuggestFeedback('❌ Você atingiu o limite de 20 sugestões hoje.', 'error');
-        return;
-    }
-    suggestPendingItem = item;
-    document.getElementById('suggestNameInput').value = localStorage.getItem('radio_suggest_name') || '';
-    document.getElementById('suggestNameModal').style.display = 'flex';
-    setTimeout(() => document.getElementById('suggestNameInput').focus(), 100);
-}
-
-async function handleSuggestConfirm() {
-    const name = document.getElementById('suggestNameInput').value.trim();
-    if (!name) { alert('Informe seu nome para enviar a sugestão.'); return; }
-    if (!suggestPendingItem) return;
-
-    const btn = document.getElementById('suggestConfirmBtn');
-    btn.textContent = '⏳ Enviando...'; btn.disabled = true;
-
-    try {
-        localStorage.setItem('radio_suggest_name', name);
-
-        const { error } = await supabase.from('music_queue').insert([{
-            youtube_url:       suggestPendingItem.url,
-            youtube_title:     suggestPendingItem.title,
-            youtube_channel:   suggestPendingItem.channel,
-            youtube_thumbnail: suggestPendingItem.thumb,
-            title:             suggestPendingItem.title,
-            source:            'suggestion',
-            suggested_by:      name,
-            status:            'pending',
-            conversion_status: 'pending'
-        }]);
-        if (error) throw error;
-
-        await updateSuggestLimit(name);
-
-        suggestCountToday++;
-        updateSuggestBadge();
-
-        document.getElementById('suggestNameModal').style.display = 'none';
-        document.getElementById('suggestResults').style.display   = 'none';
-        document.getElementById('suggestSearchInput').value       = '';
-        suggestPendingItem = null;
-
-        showSuggestFeedback(`✅ Sugestão de "${suggestPendingItem?.title || 'música'}" enviada! O admin irá analisar. Você tem ${SUGGEST_LIMIT - suggestCountToday} sugestões restantes hoje.`, 'success');
-
-    } catch (err) {
-        showSuggestFeedback('❌ Erro ao enviar sugestão. Tente novamente.', 'error');
-    } finally {
-        btn.textContent = '✅ Enviar Sugestão'; btn.disabled = false;
-    }
-}
-
-async function updateSuggestLimit(name) {
-    const id    = getSuggestIdentifier();
-    const today = new Date().toISOString().split('T')[0];
-    try {
-        const { data: existing } = await supabase
-            .from('suggestion_limits')
-            .select('id, count')
-            .eq('identifier', id)
-            .eq('suggestion_date', today)
-            .maybeSingle();
-
-        if (existing) {
-            await supabase.from('suggestion_limits')
-                .update({ count: existing.count + 1 })
-                .eq('id', existing.id);
-        } else {
-            await supabase.from('suggestion_limits')
-                .insert([{ identifier: id, suggestion_date: today, count: 1 }]);
-        }
-    } catch (e) { console.error(e); }
-}
-
-function showSuggestFeedback(msg, type) {
-    const el = document.getElementById('suggestFeedback');
-    if (!el) return;
-    el.textContent  = msg;
-    el.style.display = 'block';
-    el.className    = `suggest-feedback suggest-feedback-${type}`;
-    setTimeout(() => { el.style.display = 'none'; }, 5000);
-}
-
-// ═════════════════════════════════════════════════════════════
-// LOCUTOR — PAUSE/RETORNO SINCRONIZADO VIA REALTIME
-// ═════════════════════════════════════════════════════════════
-
-let locutorAudio        = new Audio();
-let playerPausedByLoc   = false;
-let playerResumePos     = 0;
-
 function initLocutorListener() {
-    supabase.channel('locutor_realtime')
-        .on('postgres_changes',
-            { event: 'UPDATE', schema: 'public', table: 'locutor_state' },
-            payload => handleLocutorStateChange(payload.new)
-        )
+    supabase.channel('locutor_player')
+        .on('postgres_changes',{event:'UPDATE',schema:'public',table:'locutor_state'},payload=>handleLocutorStateChange(payload.new))
         .subscribe();
 }
 
 async function handleLocutorStateChange(state) {
-    if (state.is_active) {
-        // Pausa o player principal
-        if (isPlaying && audioPlayer.src) {
-            playerResumePos   = audioPlayer.currentTime;
-            playerPausedByLoc = true;
-            audioPlayer.pause();
-            updateDisplay('🎙️ Locutor', 'Ao vivo...');
-        }
-        // Busca o áudio do locutor e toca
-        if (state.track_id) {
-            try {
-                const { data } = await supabase
-                    .from('locutor_tracks')
-                    .select('audio_url, title')
-                    .eq('id', state.track_id)
-                    .single();
-                if (data) {
-                    locutorAudio.src = data.audio_url;
-                    locutorAudio.volume = audioPlayer.volume;
-                    locutorAudio.play().catch(e => console.error(e));
-                    updateDisplay('🎙️ Locutor', data.title);
-                    locutorAudio.onended = () => { /* admin controla o retorno */ };
-                }
-            } catch (e) { console.error(e); }
+    if(state.is_active){
+        if(isPlaying&&audioPlayer.src){ playerResumePos=audioPlayer.currentTime; playerPausedByLoc=true; audioPlayer.pause(); updateDisplay('🎙️ Locutor','Ao vivo...'); }
+        if(state.track_id){
+            const {data}=await supabase.from('locutor_tracks').select('audio_url,title').eq('id',state.track_id).single();
+            if(data){ locutorAudio.src=data.audio_url; locutorAudio.volume=audioPlayer.volume; locutorAudio.play().catch(e=>console.error(e)); updateDisplay('🎙️ Locutor',data.title); }
         }
     } else {
-        // Admin encerrou o locutor — retoma o player
-        locutorAudio.pause();
-        locutorAudio.src = '';
-        if (playerPausedByLoc && isPlaying) {
-            playerPausedByLoc  = false;
-            audioPlayer.currentTime = playerResumePos;
-            audioPlayer.play().catch(e => console.error(e));
-        } else if (playerPausedByLoc) {
-            playerPausedByLoc = false;
-        }
+        locutorAudio.pause(); locutorAudio.src='';
+        if(playerPausedByLoc&&isPlaying){ playerPausedByLoc=false; audioPlayer.currentTime=playerResumePos; audioPlayer.play().catch(e=>console.error(e)); }
+        else { playerPausedByLoc=false; }
     }
 }
 
-// ═════════════════════════════════════════════════════════════
-// TTS — OUVIR BOLETINS DISPARADOS PELO ADMIN
-// ═════════════════════════════════════════════════════════════
-
-let ttsChannel = null;
-
+// ─────────────────────────────────────────────────────────────
+// TTS
+// ─────────────────────────────────────────────────────────────
 function initTTSListener() {
-    ttsChannel = supabase.channel('tts_broadcast')
-        .on('broadcast', { event: 'tts_play' }, payload => {
-            handleTTSPlay(payload.payload);
-        })
+    supabase.channel('tts_player')
+        .on('broadcast',{event:'tts_play'},payload=>handleTTSPlay(payload.payload))
         .subscribe();
 }
 
 function handleTTSPlay(data) {
-    if (!data?.text) return;
-
-    // Pausa o player principal
-    let wasPaused = false;
-    if (isPlaying && audioPlayer.src) {
-        playerResumePos = audioPlayer.currentTime;
-        wasPaused = true;
-        audioPlayer.pause();
-        updateDisplay('📢 Promoção', data.title || 'Aviso');
-    }
-
-    const utterance = new SpeechSynthesisUtterance(data.text);
-    utterance.lang  = 'pt-BR';
-    utterance.rate  = 0.92;
-    utterance.pitch = 1.1;
-
-    // Voz feminina
-    const voices = speechSynthesis.getVoices();
-    const femVoice = voices.find(v =>
-        v.lang.startsWith('pt') && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('feminina') || v.name.includes('Google') && v.name.includes('Brasil'))
-    ) || voices.find(v => v.lang.startsWith('pt'));
-    if (femVoice) utterance.voice = femVoice;
-
-    utterance.onend = () => {
-        if (wasPaused && isPlaying) {
-            audioPlayer.currentTime = playerResumePos;
-            audioPlayer.play().catch(e => console.error(e));
-        }
-    };
-
-    speechSynthesis.speak(utterance);
+    if(!data?.text) return;
+    let wasPaused=false;
+    if(isPlaying&&audioPlayer.src){ playerResumePos=audioPlayer.currentTime; wasPaused=true; audioPlayer.pause(); updateDisplay('📢 Aviso',data.title||'Promoção'); }
+    const utt=new SpeechSynthesisUtterance(data.text);
+    utt.lang='pt-BR'; utt.rate=0.92; utt.pitch=1.1;
+    const voices=speechSynthesis.getVoices();
+    const fem=voices.find(v=>v.lang.startsWith('pt')&&(v.name.toLowerCase().includes('female')||v.name.toLowerCase().includes('feminina')||v.name.includes('Google')))||voices.find(v=>v.lang.startsWith('pt'));
+    if(fem) utt.voice=fem;
+    utt.onend=()=>{ if(wasPaused&&isPlaying){ audioPlayer.currentTime=playerResumePos; audioPlayer.play().catch(e=>console.error(e)); } };
+    speechSynthesis.speak(utt);
 }
 
-// ═════════════════════════════════════════════════════════════
-// HOOK NO INIT — adiciona os novos módulos
-// ═════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────────────
+// SUGESTÃO DE MÚSICAS
+// ─────────────────────────────────────────────────────────────
+function initSuggest() {
+    const inp=document.getElementById('suggestSearchInput');
+    const btn=document.getElementById('suggestSearchBtn');
+    if(!inp||!btn) return;
+    loadSuggestCount();
+    btn.addEventListener('click', handleSuggestSearch);
+    inp.addEventListener('keydown', e=>{ if(e.key==='Enter') handleSuggestSearch(); });
+    document.getElementById('suggestConfirmBtn')?.addEventListener('click', handleSuggestConfirm);
+    document.getElementById('suggestCancelBtn')?.addEventListener('click',()=>{
+        document.getElementById('suggestNameModal').style.display='none';
+        suggestPendingItem=null;
+    });
+}
 
-const _originalInit = init;
+async function loadSuggestCount() {
+    const id=getSuggestId(), today=new Date().toISOString().split('T')[0];
+    try {
+        const {data}=await supabase.from('suggestion_limits').select('count').eq('identifier',id).eq('suggestion_date',today).maybeSingle();
+        suggestCountToday=data?.count||0; updateSuggestBadge();
+    } catch(e){ console.error(e); }
+}
 
-document.addEventListener('DOMContentLoaded', () => {
-    initSuggest();
-    initLocutorListener();
-    initTTSListener();
-});
+function getSuggestId() {
+    let id=localStorage.getItem('radio_suggest_id');
+    if(!id){ id='user_'+Math.random().toString(36).substr(2,9); localStorage.setItem('radio_suggest_id',id); }
+    return id;
+}
+
+function updateSuggestBadge() {
+    const b=document.getElementById('suggestLimitBadge'); if(!b) return;
+    b.textContent=`${suggestCountToday}/${SUGGEST_LIMIT} hoje`;
+    b.style.background=suggestCountToday>=SUGGEST_LIMIT?'#f8d7da':'#d4edda';
+    b.style.color=suggestCountToday>=SUGGEST_LIMIT?'#721c24':'#155724';
+}
+
+async function handleSuggestSearch() {
+    const query=document.getElementById('suggestSearchInput').value.trim(); if(!query) return;
+    const btn=document.getElementById('suggestSearchBtn'); btn.textContent='⏳'; btn.disabled=true;
+    const resultsEl=document.getElementById('suggestResults'); resultsEl.style.display='block';
+    resultsEl.innerHTML='<div class="suggest-loading">Buscando...</div>';
+    try {
+        const url=`https://www.googleapis.com/youtube/v3/search?q=${encodeURIComponent(query)}&type=video&videoCategoryId=10&maxResults=5&part=snippet&key=${YOUTUBE_API_KEY}`;
+        const res=await fetch(url); const data=await res.json();
+        if(!data.items?.length){ resultsEl.innerHTML='<div class="suggest-empty">Nenhum resultado.</div>'; return; }
+        const filtered=data.items.filter(i=>!BLOCKED_TERMS.some(b=>i.snippet.title.toLowerCase().includes(b)));
+        if(!filtered.length){ resultsEl.innerHTML='<div class="suggest-empty">Nenhum resultado adequado.</div>'; return; }
+        resultsEl.innerHTML=filtered.map(item=>`
+            <div class="suggest-result-card">
+                <img src="${item.snippet.thumbnails?.default?.url||''}" alt="" class="suggest-result-thumb">
+                <div class="suggest-result-info">
+                    <div class="suggest-result-title">${item.snippet.title}</div>
+                    <div class="suggest-result-channel">${item.snippet.channelTitle}</div>
+                </div>
+                <button class="suggest-btn" data-id="${item.id.videoId}" data-title="${item.snippet.title.replace(/"/g,'&quot;')}" data-channel="${item.snippet.channelTitle.replace(/"/g,'&quot;')}" data-thumb="${item.snippet.thumbnails?.default?.url||''}">💌 Sugerir</button>
+            </div>`).join('');
+        resultsEl.querySelectorAll('.suggest-btn').forEach(b=>{
+            b.addEventListener('click',e=>{
+                const btn=e.currentTarget;
+                openSuggestModal({videoId:btn.dataset.id,title:btn.dataset.title,channel:btn.dataset.channel,thumb:btn.dataset.thumb,url:`https://www.youtube.com/watch?v=${btn.dataset.id}`});
+            });
+        });
+    } catch(err){ resultsEl.innerHTML='<div class="suggest-empty">Erro na busca.</div>'; }
+    finally { btn.textContent='🔍 Buscar'; btn.disabled=false; }
+}
+
+function openSuggestModal(item) {
+    if(suggestCountToday>=SUGGEST_LIMIT){ showSuggestFeedback('❌ Você atingiu o limite de 20 sugestões hoje.','error'); return; }
+    suggestPendingItem=item;
+    document.getElementById('suggestNameInput').value=localStorage.getItem('radio_suggest_name')||'';
+    document.getElementById('suggestNameModal').style.display='flex';
+    setTimeout(()=>document.getElementById('suggestNameInput').focus(),100);
+}
+
+async function handleSuggestConfirm() {
+    const name=document.getElementById('suggestNameInput').value.trim();
+    if(!name){ alert('Informe seu nome.'); return; }
+    if(!suggestPendingItem) return;
+    const btn=document.getElementById('suggestConfirmBtn'); btn.textContent='⏳'; btn.disabled=true;
+    try {
+        localStorage.setItem('radio_suggest_name',name);
+        const {error}=await supabase.from('music_queue').insert([{youtube_url:suggestPendingItem.url,youtube_title:suggestPendingItem.title,youtube_channel:suggestPendingItem.channel,youtube_thumbnail:suggestPendingItem.thumb,title:suggestPendingItem.title,source:'suggestion',suggested_by:name,status:'pending',conversion_status:'pending'}]);
+        if(error) throw error;
+        const id=getSuggestId(), today=new Date().toISOString().split('T')[0];
+        const {data:ex}=await supabase.from('suggestion_limits').select('id,count').eq('identifier',id).eq('suggestion_date',today).maybeSingle();
+        if(ex) await supabase.from('suggestion_limits').update({count:ex.count+1}).eq('id',ex.id);
+        else await supabase.from('suggestion_limits').insert([{identifier:id,suggestion_date:today,count:1}]);
+        suggestCountToday++; updateSuggestBadge();
+        const title=suggestPendingItem.title; suggestPendingItem=null;
+        document.getElementById('suggestNameModal').style.display='none';
+        document.getElementById('suggestResults').style.display='none';
+        document.getElementById('suggestSearchInput').value='';
+        showSuggestFeedback(`✅ Sugestão enviada! Você tem ${SUGGEST_LIMIT-suggestCountToday} restantes hoje.`,'success');
+    } catch(err){ showSuggestFeedback('❌ Erro ao enviar. Tente novamente.','error'); }
+    finally { btn.textContent='✅ Enviar'; btn.disabled=false; }
+}
+
+function showSuggestFeedback(msg,type) {
+    const el=document.getElementById('suggestFeedback'); if(!el) return;
+    el.textContent=msg; el.style.display='block';
+    el.className=`suggest-feedback suggest-feedback-${type}`;
+    setTimeout(()=>{ el.style.display='none'; },5000);
+}
+
+// ─────────────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────────────
+audioPlayer.volume=0.7;
+updatePlayButtonState(false);
+document.addEventListener('DOMContentLoaded', init);
