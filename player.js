@@ -685,14 +685,43 @@ function initTTSListener() {
 
 function handleTTSPlay(data) {
     if(!data?.text) return;
-    let wasPaused=false;
-    if(isPlaying&&audioPlayer.src){ playerResumePos=audioPlayer.currentTime; wasPaused=true; audioPlayer.pause(); updateDisplay('📢 Aviso',data.title||'Promoção'); }
-    const utt=new SpeechSynthesisUtterance(data.text);
-    utt.lang='pt-BR'; utt.rate=0.92; utt.pitch=1.1;
-    const voices=speechSynthesis.getVoices();
-    const fem=voices.find(v=>v.lang.startsWith('pt')&&(v.name.toLowerCase().includes('female')||v.name.toLowerCase().includes('feminina')||v.name.includes('Google')))||voices.find(v=>v.lang.startsWith('pt'));
-    if(fem) utt.voice=fem;
-    utt.onend=()=>{ if(wasPaused&&isPlaying){ audioPlayer.currentTime=playerResumePos; audioPlayer.play().catch(e=>console.error(e)); } };
+    let wasPaused = false;
+    if(isPlaying && audioPlayer.src) {
+        playerResumePos = audioPlayer.currentTime;
+        wasPaused = true;
+        audioPlayer.pause();
+        updateDisplay('📢 Aviso', data.title || 'Promoção');
+    }
+
+    const voiceName = data.voice || 'Brazilian Portuguese Female';
+
+    const onEnd = () => {
+        if(wasPaused && isPlaying) {
+            audioPlayer.currentTime = playerResumePos;
+            audioPlayer.play().catch(e => console.error(e));
+        }
+    };
+
+    // ResponsiveVoice — mais natural
+    if(window.responsiveVoice && responsiveVoice.voiceSupport()) {
+        responsiveVoice.speak(data.text, voiceName, {
+            rate: 0.9, pitch: 1, volume: 1,
+            onend: onEnd
+        });
+        return;
+    }
+
+    // Fallback Web Speech API
+    if(!window.speechSynthesis) { onEnd(); return; }
+    speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(data.text);
+    utt.lang = 'pt-BR'; utt.rate = 0.88; utt.pitch = 1.05;
+    const voices = speechSynthesis.getVoices();
+    const fem = voices.find(v => v.lang.startsWith('pt') &&
+        (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('feminina'))
+    ) || voices.find(v => v.lang.startsWith('pt'));
+    if(fem) utt.voice = fem;
+    utt.onend = onEnd;
     speechSynthesis.speak(utt);
 }
 
