@@ -330,9 +330,30 @@ async function approveQueueItem(id) {
             suggested_slot_id: slotValue==='general'?null:parseInt(slotValue)
         }).eq('id',id);
 
-        const order = slotValue!=='general'
-            ? (slotPlaylists[parseInt(slotValue)]||[]).length
-            : backgroundPlaylist.length;
+        // Numeração automática — busca o maior order existente
+        let order = 0;
+        if(slotValue !== 'general') {
+            const {data:maxD} = await supabase.from('slot_playlists')
+                .select('original_order').eq('slot_id', parseInt(slotValue))
+                .order('original_order',{ascending:false}).limit(1).maybeSingle();
+            order = (maxD?.original_order ?? -1) + 1;
+
+            // Verifica duplicata na grade
+            const {data:dupD} = await supabase.from('slot_playlists')
+                .select('id,title').eq('slot_id', parseInt(slotValue)).eq('audio_url', audioUrl).maybeSingle();
+            if(dupD){ alert(`⚠️ Esta música já está na grade!
+"${dupD.title}"`); if(btn){btn.textContent='✅ Aprovar';btn.disabled=false;} return; }
+        } else {
+            const {data:maxD} = await supabase.from('background_playlist')
+                .select('original_order').order('original_order',{ascending:false}).limit(1).maybeSingle();
+            order = (maxD?.original_order ?? -1) + 1;
+
+            // Verifica duplicata na playlist geral
+            const {data:dupD} = await supabase.from('background_playlist')
+                .select('id,title').eq('audio_url', audioUrl).maybeSingle();
+            if(dupD){ alert(`⚠️ Esta música já está na playlist geral!
+"${dupD.title}"`); if(btn){btn.textContent='✅ Aprovar';btn.disabled=false;} return; }
+        }
 
         const trackTitle = item.title||item.youtube_title||'Música';
         const trackArtist = item.youtube_channel||null;
@@ -886,7 +907,7 @@ function renderGradeContent(slotId) {
                     <div class="form-group"><label>Título:</label><input type="text" id="slotTitle_${slotId}" placeholder="Ex: Terra Roxa" required></div>
                     <div class="form-group"><label>Artista:</label><input type="text" id="slotArtist_${slotId}" placeholder="Ex: Chitãozinho e Xororó"></div>
                     <div class="form-group"><label>Gênero:</label><input type="text" id="slotGenre_${slotId}" placeholder="Ex: Sertanejo raiz"></div>
-                    <div class="form-group"><label>Ordem:</label><input type="number" id="slotOrder_${slotId}" value="0" min="0"></div>
+                    <div class="form-group" style="display:none;"><label>Ordem:</label><input type="number" id="slotOrder_${slotId}" value="0" min="0"></div>
                     <div class="form-actions">
                         <button type="submit" class="submit-btn">💾 Adicionar</button>
                         <button type="button" class="test-btn" onclick="testAudioUrl(document.getElementById('slotUrl_${slotId}').value)">▶️ Testar</button>
@@ -974,11 +995,27 @@ async function handleSaveSlotTrack(e,slotId) {
     const title=document.getElementById(`slotTitle_${slotId}`).value.trim();
     const artist=document.getElementById(`slotArtist_${slotId}`).value.trim();
     const genre=document.getElementById(`slotGenre_${slotId}`).value.trim();
-    const order=parseInt(document.getElementById(`slotOrder_${slotId}`).value);
+    if(!url||!title){ alert('Preencha URL e Título!'); return; }
     try {
-        const {error}=await supabaseAdmin.from('slot_playlists').insert([{slot_id:slotId,audio_url:url,title,artist:artist||null,genre:genre||null,original_order:order,daily_order:order,enabled:true}]);
+        // Verifica duplicata
+        const {data:existing} = await supabase.from('slot_playlists')
+            .select('id,title').eq('slot_id',slotId).eq('audio_url',url).maybeSingle();
+        if(existing) { alert(`⚠️ Esta música já está na grade!
+"${existing.title}"`); return; }
+
+        // Numeração automática: busca o maior original_order e soma 1
+        const {data:maxData} = await supabase.from('slot_playlists')
+            .select('original_order').eq('slot_id',slotId)
+            .order('original_order',{ascending:false}).limit(1).maybeSingle();
+        const nextOrder = (maxData?.original_order ?? -1) + 1;
+
+        const {error}=await supabaseAdmin.from('slot_playlists').insert([{
+            slot_id:slotId, audio_url:url, title,
+            artist:artist||null, genre:genre||null,
+            original_order:nextOrder, daily_order:nextOrder, enabled:true
+        }]);
         if(error) throw error;
-        alert('✅ Música adicionada!');
+        alert(`✅ Música adicionada! Numeração: ${nextOrder}`);
         clearSlotForm(slotId);
         await refreshSlotPlaylist(slotId);
     } catch(err){ alert('❌ Erro: '+err.message); }
@@ -1018,7 +1055,8 @@ async function handleForceShuffleSlot(slotId) {
     for(let i=idx.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]];}
     const today=new Date().toISOString().split('T')[0];
     await Promise.all(tracks.map((t,i)=>supabaseAdmin.from('slot_playlists').update({daily_order:idx[i],last_shuffle_date:today}).eq('id',t.id)));
-    alert('✅ Embaralhado!'); await refreshSlotPlaylist(slotId);
+    alert('✅ Embaralhado! A nova ordem será usada a partir do próximo ciclo completo.'); 
+    await refreshSlotPlaylist(slotId);
 }
 
 async function refreshSlotPlaylist(slotId) {
@@ -1296,11 +1334,27 @@ async function handleSeasonalFormSubmit(e) {
     const advertiser=form.querySelector('.seasonal-advertiser')?.value.trim()||null;
     const frequency=parseInt(form.querySelector('.seasonal-frequency')?.value||3);
     try {
-        const payload={category,type,audio_url:url,title,play_order:order,enabled:true};
-        if(type==='music'){payload.original_order=order;payload.daily_order=order;payload.last_shuffle_date=new Date().toISOString().split('T')[0];}
+        // Numeração automática + checagem de duplicata (apenas ao inserir)
+        let nextOrder = order;
+        if(!editingSeasonalId) {
+            // Verifica duplicata
+            const {data:dup} = await supabase.from('seasonal_playlists')
+                .select('id,title').eq('audio_url',url).eq('category',category).maybeSingle();
+            if(dup){ alert(`⚠️ Esta música já está na playlist de ${category}!
+"${dup.title}"`); return; }
+
+            // Numeração automática
+            const {data:maxData} = await supabase.from('seasonal_playlists')
+                .select('play_order').eq('category',category).eq('type',type)
+                .order('play_order',{ascending:false}).limit(1).maybeSingle();
+            nextOrder = (maxData?.play_order ?? -1) + 1;
+        }
+
+        const payload={category,type,audio_url:url,title,play_order:nextOrder,enabled:true};
+        if(type==='music'){payload.original_order=nextOrder;payload.daily_order=nextOrder;}
         if(type==='ad'){payload.advertiser=advertiser;payload.frequency=frequency;}
         if(editingSeasonalId){ await supabaseAdmin.from('seasonal_playlists').update(payload).eq('id',editingSeasonalId); alert('✅ Atualizado!'); }
-        else { await supabaseAdmin.from('seasonal_playlists').insert([payload]); alert('✅ Adicionado!'); }
+        else { await supabaseAdmin.from('seasonal_playlists').insert([payload]); alert(`✅ Adicionado! Numeração: ${nextOrder}`); }
         form.reset(); form.querySelector('.seasonal-order').value='0';
         if(form.querySelector('.seasonal-frequency')) form.querySelector('.seasonal-frequency').value='3';
         editingSeasonalId=null;
@@ -1473,14 +1527,36 @@ async function handleSavePlaylist(e) {
     e.preventDefault();
     const url=document.getElementById('playlistUrl').value.trim();
     const title=document.getElementById('playlistTitle').value.trim();
-    const order=parseInt(document.getElementById('playlistOrder').value);
     const enabled=document.getElementById('playlistEnabled').checked;
     if(!url||!title){ alert('Preencha URL e Título!'); return; }
     try {
-        if(editingPlaylistId){ await supabaseAdmin.from('background_playlist').update({audio_url:url,title,play_order:order,original_order:order,enabled}).eq('id',editingPlaylistId); alert('✅ Atualizado!'); }
-        else { await supabaseAdmin.from('background_playlist').insert([{audio_url:url,title,play_order:order,original_order:order,daily_order:order,enabled}]); alert('✅ Adicionado!'); }
+        if(editingPlaylistId){
+            await supabaseAdmin.from('background_playlist')
+                .update({audio_url:url,title,enabled})
+                .eq('id',editingPlaylistId);
+            alert('✅ Atualizado!');
+        } else {
+            // Verifica duplicata
+            const {data:dup} = await supabase.from('background_playlist')
+                .select('id,title').eq('audio_url',url).maybeSingle();
+            if(dup){ alert(`⚠️ Esta música já está na playlist!
+"${dup.title}"`); return; }
+
+            // Numeração automática
+            const {data:maxData} = await supabase.from('background_playlist')
+                .select('original_order').order('original_order',{ascending:false}).limit(1).maybeSingle();
+            const nextOrder = (maxData?.original_order ?? -1) + 1;
+
+            await supabaseAdmin.from('background_playlist').insert([{
+                audio_url:url, title,
+                play_order:nextOrder, original_order:nextOrder,
+                daily_order:nextOrder, enabled
+            }]);
+            alert(`✅ Adicionado! Numeração: ${nextOrder}`);
+        }
         handleClearPlaylistForm();
-        const {data}=await supabase.from('background_playlist').select('*').order('original_order',{ascending:true}); backgroundPlaylist=data||[]; renderPlaylistTable();
+        const {data}=await supabase.from('background_playlist').select('*').order('original_order',{ascending:true});
+        backgroundPlaylist=data||[]; renderPlaylistTable();
     } catch(err){ alert('❌ Erro: '+err.message); }
 }
 
