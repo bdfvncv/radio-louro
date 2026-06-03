@@ -53,11 +53,12 @@ a:hover { text-decoration: underline; }
   min-height: 100vh;
   background: linear-gradient(150deg, var(--green) 0%, var(--green-dark) 100%);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 32px 16px;
   position: relative;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .player-bg-circle {
@@ -75,6 +76,8 @@ a:hover { text-decoration: underline; }
   display: flex;
   flex-direction: column;
   gap: 14px;
+  margin: 0 auto;
+  padding-bottom: 32px;
 }
 
 /* ── Logo ── */
@@ -385,7 +388,13 @@ a:hover { text-decoration: underline; }
   margin-left: var(--sidebar-w);
   flex: 1; padding: 24px;
   max-width: calc(100% - var(--sidebar-w));
+  min-height: 100vh;
+  overflow-y: auto;
 }
+
+/* Scroll suave para todo o site */
+html, body { overflow-x: hidden; }
+.admin-body { overflow-y: auto; }
 
 .sidebar-toggle {
   display: none;
@@ -1163,4 +1172,38 @@ a:hover { text-decoration: underline; }
   .player-track { font-size: 1.15em; }
   .welcome-grid { grid-template-columns: repeat(2,1fr); }
   .section-header h2 { font-size: 1.1em; }
+}
+
+/* ── TTS Voice selector ── */
+.tts-voice-row {
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  padding: 10px 14px;
+  background: var(--green-light);
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+  border: 1px solid var(--green-mid);
+}
+.tts-voice-label { font-size: .82em; font-weight: 600; color: var(--green); white-space: nowrap; }
+.tts-voice-select {
+  flex: 1; padding: 8px 10px;
+  border: 2px solid var(--green-mid);
+  border-radius: var(--radius-sm);
+  font-family: var(--font); font-size: .85em;
+  background: var(--white); color: var(--gray-800);
+  min-width: 0;
+}
+.tts-voice-select:focus { outline: none; border-color: var(--green); }
+.tts-voice-test {
+  background: var(--amber); color: var(--white);
+  border: none; padding: 8px 14px; border-radius: var(--radius-sm);
+  font-size: .82em; font-weight: 700; font-family: var(--font);
+  cursor: pointer; white-space: nowrap;
+  transition: background var(--transition);
+}
+.tts-voice-test:hover { background: #d97706; }
+
+/* Fix fila de aprovação sem dados */
+.queue-empty {
+  padding: 40px; text-align: center;
+  color: var(--gray-400); font-size: .9em;
 }
