@@ -235,15 +235,17 @@ function showAdminFeedback(msg, type) {
 // FILA DE APROVAÇÃO — com prévia YouTube
 // ─────────────────────────────────────────────────────────────
 function renderQueueSection() {
-    const section=document.getElementById('queueSection');
     const badge=document.getElementById('queueBadge');
     const list=document.getElementById('queueList');
+    if(!list) return;
     const pending=musicQueue.filter(m=>m.status==='pending');
-    badge.textContent=pending.length;
+    if(badge) badge.textContent=pending.length;
     const navBadge=document.getElementById('navQueueBadge');
     if(navBadge){ navBadge.textContent=pending.length; navBadge.style.display=pending.length>0?'inline-flex':'none'; }
-    section.style.display=pending.length>0?'block':'none';
-    if(!pending.length) return;
+    if(!pending.length) {
+        list.innerHTML='<div class="queue-empty">✅ Nenhuma música aguardando aprovação.</div>';
+        return;
+    }
     list.innerHTML=pending.map(m=>`
         <div class="queue-card" id="qcard_${m.id}">
             <img class="queue-thumb" src="${m.youtube_thumbnail||''}" alt="" onerror="this.style.display='none'">
@@ -301,36 +303,45 @@ async function approveQueueItem(id) {
 
     try {
         // Converte YouTube → MP3 via RapidAPI
+        // Tenta converter MP3; se falhar usa URL do YouTube como fallback provisório
         let audioUrl = item.audio_url || null;
         if(!audioUrl) {
             audioUrl = await convertYoutubeToMp3(item.youtube_url, item.youtube_title);
         }
+        // Fallback: usa URL do YouTube direto se conversão falhou
+        if(!audioUrl) {
+            audioUrl = item.youtube_url;
+        }
 
+        const convDone = audioUrl && !audioUrl.includes('youtube.com');
         await supabaseAdmin.from('music_queue').update({
-            status:'approved', conversion_status:'done', audio_url: audioUrl,
+            status:'approved',
+            conversion_status: convDone ? 'done' : 'pending',
+            audio_url: audioUrl,
             suggested_slot_id: slotValue==='general'?null:parseInt(slotValue)
         }).eq('id',id);
 
-        if(audioUrl) {
-            const order = slotValue!=='general'
-                ? (slotPlaylists[parseInt(slotValue)]||[]).length
-                : backgroundPlaylist.length;
-            if(slotValue!=='general') {
-                await supabaseAdmin.from('slot_playlists').insert([{
-                    slot_id:parseInt(slotValue), audio_url:audioUrl,
-                    title:item.title||item.youtube_title||'Música',
-                    artist:item.youtube_channel||null,
-                    original_order:order, daily_order:order, enabled:true
-                }]);
-                await refreshSlotPlaylist(parseInt(slotValue));
-            } else {
-                await supabaseAdmin.from('background_playlist').insert([{
-                    audio_url:audioUrl, title:item.title||item.youtube_title||'Música',
-                    play_order:order, original_order:order, daily_order:order, enabled:true
-                }]);
-                const {data}=await supabase.from('background_playlist').select('*').order('original_order',{ascending:true});
-                backgroundPlaylist=data||[]; renderPlaylistTable();
-            }
+        const order = slotValue!=='general'
+            ? (slotPlaylists[parseInt(slotValue)]||[]).length
+            : backgroundPlaylist.length;
+
+        const trackTitle = item.title||item.youtube_title||'Música';
+        const trackArtist = item.youtube_channel||null;
+
+        if(slotValue!=='general') {
+            await supabaseAdmin.from('slot_playlists').insert([{
+                slot_id:parseInt(slotValue), audio_url:audioUrl,
+                title:trackTitle, artist:trackArtist,
+                original_order:order, daily_order:order, enabled:true
+            }]);
+            await refreshSlotPlaylist(parseInt(slotValue));
+        } else {
+            await supabaseAdmin.from('background_playlist').insert([{
+                audio_url:audioUrl, title:trackTitle,
+                play_order:order, original_order:order, daily_order:order, enabled:true
+            }]);
+            const {data}=await supabase.from('background_playlist').select('*').order('original_order',{ascending:true});
+            backgroundPlaylist=data||[]; renderPlaylistTable();
         }
 
         musicQueue=musicQueue.filter(m=>m.id!==id);
@@ -503,6 +514,9 @@ function setupTTSListeners() {
     });
     document.getElementById('ttsPlayNowBtn')?.addEventListener('click', handleTTSPlayNow);
     document.getElementById('ttsSaveBtn')?.addEventListener('click', handleTTSSave);
+    document.getElementById('ttsVoiceTestBtn')?.addEventListener('click', ()=>{
+        speakLocally('Olá! Esta é uma demonstração da voz selecionada. Bem-vindo ao Supermercado do Louro!');
+    });
     document.getElementById('ttsClearBtn')?.addEventListener('click', ()=>{
         document.getElementById('ttsTextInput').value='';
         document.getElementById('ttsTitleInput').value='';
@@ -576,15 +590,41 @@ async function dispatchTTS(text, title) {
     speakLocally(text);
 }
 
-function speakLocally(text) {
-    if(!window.speechSynthesis) return;
+function stopTTS() {
+    if(window.responsiveVoice) responsiveVoice.cancel();
+    if(window.speechSynthesis) speechSynthesis.cancel();
+}
+
+function speakLocally(text, onEnd) {
+    const voiceSelect = document.getElementById('ttsVoiceSelect');
+    const voiceName = voiceSelect ? voiceSelect.value : 'Brazilian Portuguese Female';
+
+    // ResponsiveVoice — muito mais natural que Web Speech API
+    if(window.responsiveVoice && responsiveVoice.voiceSupport()) {
+        responsiveVoice.speak(text, voiceName, {
+            rate: 0.9,
+            pitch: 1,
+            volume: 1,
+            onend: onEnd || null
+        });
+        return;
+    }
+
+    // Fallback: Web Speech API nativa
+    if(!window.speechSynthesis) { if(onEnd) onEnd(); return; }
     speechSynthesis.cancel();
-    const utt=new SpeechSynthesisUtterance(text);
-    utt.lang='pt-BR'; utt.rate=0.92; utt.pitch=1.1;
-    const voices=speechSynthesis.getVoices();
-    const fem=voices.find(v=>v.lang.startsWith('pt')&&(v.name.toLowerCase().includes('female')||v.name.toLowerCase().includes('feminina')||v.name.includes('Google')))
-              ||voices.find(v=>v.lang.startsWith('pt'));
-    if(fem) utt.voice=fem;
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = 'pt-BR'; utt.rate = 0.88; utt.pitch = 1.05;
+    const voices = speechSynthesis.getVoices();
+    const isFem = voiceName.toLowerCase().includes('female');
+    const match = voices.find(v => v.lang.startsWith('pt') &&
+        (isFem
+            ? (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('feminina'))
+            : (v.name.toLowerCase().includes('male') && !v.name.toLowerCase().includes('female'))
+        )
+    ) || voices.find(v => v.lang.startsWith('pt'));
+    if(match) utt.voice = match;
+    if(onEnd) utt.onend = onEnd;
     speechSynthesis.speak(utt);
 }
 
@@ -956,11 +996,15 @@ async function refreshSlotJingles(slotId) {
 // YOUTUBE
 // ─────────────────────────────────────────────────────────────
 function populateSlotSelects() {
+    const slotOptions = '<option value="">Selecione a grade</option>' +
+        timeSlots.filter(s=>s.name!=='Madrugada Aleatória').map(s=>`<option value="${s.id}">${s.name}</option>`).join('') +
+        '<option value="general">📋 Playlist Geral</option>';
+
+    // Popula todos os selects de grade (manual, auto, e qualquer outro)
     ['ytSlotManual','ytSlotAuto'].forEach(id=>{
-        const el=document.getElementById(id); if(!el) return;
-        el.innerHTML='<option value="">Selecione a grade</option>'+
-            timeSlots.filter(s=>s.name!=='Madrugada Aleatória').map(s=>`<option value="${s.id}">${s.name}</option>`).join('')+
-            '<option value="general">📋 Playlist Geral</option>';
+        const el=document.getElementById(id);
+        if(!el) return;
+        el.innerHTML = slotOptions;
     });
 }
 
