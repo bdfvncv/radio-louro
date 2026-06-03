@@ -90,10 +90,8 @@ async function init() {
         setInterval(checkSlotChange, 60000);
         await loadCurrentHourAudio();
         await detectAndActivateSlot();
-        // Verifica embaralhamento ao iniciar
-        await checkAndShuffleIfNewDay();
-        // Verifica muda de dia a cada 5 minutos
-        setInterval(checkAndShuffleIfNewDay, 300000);
+        // Embaralhamento por conclusão de playlist — não precisa verificar ao iniciar
+        // Embaralhamento agora acontece ao completar a playlist — não por data
         initSuggest();
         initLocutorListener();
         initTTSListener();
@@ -137,72 +135,39 @@ async function loadAllData() {
 // ─────────────────────────────────────────────────────────────
 // EMBARALHAMENTO — verifica mudança de dia ao iniciar e a cada 5min
 // ─────────────────────────────────────────────────────────────
-async function checkAndShuffleIfNewDay() {
+// ── Embaralhamento por conclusão de playlist ──────────────────
+// Não embaralha mais por data/meia-noite.
+// O embaralhamento acontece quando a ÚLTIMA música da lista toca.
+// checkAndShuffleIfNewDay mantido vazio para não quebrar chamadas.
+async function checkAndShuffleIfNewDay() { /* desativado */ }
+
+async function shufflePlaylistAfterComplete(table, slotId) {
     if(isShuffling) return;
-    const today = new Date().toISOString().split('T')[0];
-
-    // Detecta mudança de dia
-    if(lastKnownDate && lastKnownDate !== today) {
-        lastKnownDate = today;
-        await shuffleAll(today);
-        return;
-    }
-
-    // Ao iniciar: verifica se já foi embaralhado hoje consultando o banco
-    try {
-        const {data} = await supabase
-            .from('background_playlist')
-            .select('last_shuffle_date')
-            .eq('enabled',true)
-            .limit(1)
-            .maybeSingle();
-
-        const lastDate = data?.last_shuffle_date;
-        if(!lastDate || lastDate !== today) {
-            await shuffleAll(today);
-        }
-        if(!lastKnownDate) lastKnownDate = today;
-    } catch(err){ console.error('Erro checkShuffle:', err); }
-}
-
-async function shuffleAll(today) {
     isShuffling = true;
     try {
-        await Promise.all([
-            shuffleTable('background_playlist', null, today),
-            ...timeSlots.map(s => shuffleTable('slot_playlists', s.id, today))
-        ]);
-        // Recarrega playlists após embaralhamento
-        const {data:bg} = await supabase.from('background_playlist').select('*').eq('enabled',true).order('daily_order',{ascending:true});
-        backgroundPlaylist = bg || [];
-        if(currentSlot) await loadSlotPlaylist(currentSlot.id);
-        // Reseta índices
-        currentBgIndex = 0; slotCurrentIndex = 0;
-        seasonalBlocksToday = [];
-        if(isSeasonalActive) await ensureSeasonalBlocksToday();
-    } catch(err){ console.error('Erro shuffleAll:', err); }
-    finally { isShuffling = false; }
-}
-
-async function shuffleTable(table, slotId, today) {
-    try {
-        let query = supabase.from(table).select('id').eq('enabled',true);
+        let query = supabase.from(table).select('id').eq('enabled', true);
         if(slotId !== null) query = query.eq('slot_id', slotId);
-        const {data:tracks} = await query;
-        if(!tracks?.length) return;
+        const {data: tracks} = await query;
+        if(!tracks?.length) { isShuffling = false; return; }
+
+        // Fisher-Yates shuffle
         const idx = [...Array(tracks.length).keys()];
-        for(let i=idx.length-1;i>0;i--){
-            const j=Math.floor(Math.random()*(i+1));
-            [idx[i],idx[j]]=[idx[j],idx[i]];
+        for(let i = idx.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [idx[i], idx[j]] = [idx[j], idx[i]];
         }
+
+        // Salva nova ordem no banco em batches
         const BATCH = 50;
-        for(let i=0;i<tracks.length;i+=BATCH){
-            const batch = tracks.slice(i,i+BATCH);
-            await Promise.all(batch.map((t,bi)=>
-                supabase.from(table).update({daily_order:idx[i+bi],last_shuffle_date:today}).eq('id',t.id)
+        for(let i = 0; i < tracks.length; i += BATCH) {
+            const batch = tracks.slice(i, i + BATCH);
+            await Promise.all(batch.map((t, bi) =>
+                supabase.from(table).update({ daily_order: idx[i + bi] }).eq('id', t.id)
             ));
         }
-    } catch(err){ console.error(`Erro shuffle ${table}:`, err); }
+        console.log(`🎲 Playlist embaralhada após completar: ${table} ${slotId||''}`);
+    } catch(err) { console.error('Erro shuffle:', err); }
+    finally { isShuffling = false; }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -238,8 +203,14 @@ async function detectAndActivateSlot() {
 }
 
 async function loadSlotPlaylist(slotId) {
-    const {data} = await supabase.from('slot_playlists').select('*').eq('slot_id',slotId).eq('enabled',true).order('daily_order',{ascending:true});
-    slotPlaylist = data || []; slotCurrentIndex=0; slotAdIndex=0; slotTracksSinceAd=0;
+    const {data} = await supabase
+        .from('slot_playlists').select('*')
+        .eq('slot_id', slotId).eq('enabled', true)
+        .order('daily_order', {ascending: true});
+    slotPlaylist = data || [];
+    // Não reseta índice — mantém posição atual se recarregar mid-play
+    if(slotCurrentIndex >= slotPlaylist.length) slotCurrentIndex = 0;
+    slotAdIndex = 0; slotTracksSinceAd = 0;
 }
 
 async function loadSlotJingles(slotId) {
@@ -510,14 +481,38 @@ function handleAudioEnded() {
     }
     // Propaganda legada
     if(isPlayingAd&&!isGradeMode){ isPlayingAd=false; playBgMusic(); return; }
-    // Música da grade — avança índice
+    // Música da grade — avança índice, embaralha ao completar
     if(isGradeMode){
-        slotCurrentIndex = (slotCurrentIndex+1) % Math.max(slotPlaylist.length,1);
+        const wasLast = slotCurrentIndex >= slotPlaylist.length - 1;
+        slotCurrentIndex++;
+        if(wasLast) {
+            // Chegou na última — embaralha e recomeça
+            slotCurrentIndex = 0;
+            await shufflePlaylistAfterComplete('slot_playlists', currentSlot?.id || null);
+            await loadSlotPlaylist(currentSlot?.id);
+        }
         playSlotTrack(); return;
     }
-    // Música legada — avança índice
+    // Música legada — avança índice, embaralha ao completar
     const playlist = isSeasonalActive ? seasonalPlaylist : backgroundPlaylist;
-    currentBgIndex = (currentBgIndex+1) % Math.max(playlist.length,1);
+    const wasLastBg = currentBgIndex >= playlist.length - 1;
+    currentBgIndex++;
+    if(wasLastBg) {
+        currentBgIndex = 0;
+        if(isSeasonalActive) {
+            await shufflePlaylistAfterComplete('seasonal_playlists', null);
+            // Recarrega playlist sazonal
+            const {data} = await supabase.from('seasonal_playlists')
+                .select('*').eq('type','music').eq('enabled',true)
+                .eq('category', activeSeasonalCat).order('daily_order',{ascending:true});
+            seasonalPlaylist = data || [];
+        } else {
+            await shufflePlaylistAfterComplete('background_playlist', null);
+            const {data} = await supabase.from('background_playlist')
+                .select('*').eq('enabled',true).order('daily_order',{ascending:true});
+            backgroundPlaylist = data || [];
+        }
+    }
     playBgMusic();
 }
 
