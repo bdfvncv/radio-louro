@@ -299,18 +299,27 @@ async function approveQueueItem(id) {
     if(!slotValue){ alert('Selecione a grade de destino.'); return; }
 
     const btn=document.querySelector(`#qcard_${id} .submit-btn`);
-    if(btn){ btn.textContent='⏳ Processando...'; btn.disabled=true; }
+    if(btn){ btn.textContent='🔄 Buscando instância...'; btn.disabled=true; }
+
+    const updateStatus = (msg) => { if(btn) btn.textContent=msg; };
 
     try {
         // Converte YouTube → MP3 via RapidAPI
         // Tenta converter MP3; se falhar usa URL do YouTube como fallback provisório
         let audioUrl = item.audio_url || null;
         if(!audioUrl) {
+            updateStatus('🎵 Convertendo MP3...');
             audioUrl = await convertYoutubeToMp3(item.youtube_url, item.youtube_title);
         }
-        // Fallback: usa URL do YouTube direto se conversão falhou
+        if(audioUrl && audioUrl.includes('cloudinary')) {
+            updateStatus('☁️ Upload feito!');
+        } else if(audioUrl && !audioUrl.includes('youtube')) {
+            updateStatus('✅ Convertido!');
+        }
+        // Fallback: usa URL do YouTube direto se tudo falhou
         if(!audioUrl) {
             audioUrl = item.youtube_url;
+            updateStatus('⚠️ Usando link YouTube...');
         }
 
         const convDone = audioUrl && !audioUrl.includes('youtube.com');
@@ -350,40 +359,98 @@ async function approveQueueItem(id) {
     } catch(err){ alert('❌ Erro ao aprovar: '+err.message); if(btn){btn.textContent='✅ Aprovar';btn.disabled=false;} }
 }
 
+// ─────────────────────────────────────────────────────────────
+// COBALT — busca instância ativa e converte YouTube → MP3
+// ─────────────────────────────────────────────────────────────
+async function getCobaltInstance() {
+    try {
+        const res = await fetch('https://instances.cobalt.best/instances.json', {
+            headers: { 'User-Agent': 'RadioLouro/1.0 (+https://supermercadodolouro.com.br)' }
+        });
+        const data = await res.json();
+        // Pega instâncias online, sem turnstile (auth:false), com youtube:true, score alto
+        const valid = data.filter(inst =>
+            inst.online?.api === true &&
+            inst.services?.youtube === true &&
+            inst.cors === true &&
+            inst.trust >= 1 &&
+            inst.score >= 50
+        ).sort((a, b) => b.score - a.score);
+        if (!valid.length) throw new Error('Nenhuma instância disponível');
+        return `${valid[0].protocol}://${valid[0].api}`;
+    } catch(err) {
+        console.warn('Erro ao buscar instância Cobalt:', err);
+        return null;
+    }
+}
+
 async function convertYoutubeToMp3(youtubeUrl, title) {
     try {
-        const videoId = extractVideoId(youtubeUrl);
-        if(!videoId) throw new Error('ID inválido');
-        const apiUrl = `https://youtube-mp36.p.rapidapi.com/dl?id=${videoId}`;
-        const response = await fetch(apiUrl, {
-            method:'GET',
-            headers:{
-                'X-RapidAPI-Key':'sign-up-for-free-key',
-                'X-RapidAPI-Host':'youtube-mp36.p.rapidapi.com'
-            }
+        const instance = await getCobaltInstance();
+        if (!instance) throw new Error('Sem instância Cobalt disponível');
+
+        const res = await fetch(instance, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'User-Agent': 'RadioLouro/1.0 (+https://supermercadodolouro.com.br)'
+            },
+            body: JSON.stringify({
+                url: youtubeUrl,
+                downloadMode: 'audio',
+                audioFormat: 'mp3',
+                audioBitrate: '192'
+            })
         });
-        const data = await response.json();
-        if(data.status==='ok' && data.link) {
-            const uploadRes = await uploadToCloudinary(data.link, title);
-            return uploadRes;
+
+        const data = await res.json();
+
+        if(data.status === 'tunnel' || data.status === 'redirect') {
+            // Temos o link direto do MP3 — faz upload no Cloudinary
+            const cloudUrl = await uploadToCloudinary(data.url, title);
+            return cloudUrl || data.url; // fallback: usa link do cobalt direto
         }
-        return null;
+        throw new Error(`Cobalt retornou: ${data.status}`);
     } catch(err) {
-        console.warn('Conversão MP3 falhou, usando URL YouTube como fallback:', err);
+        console.warn('Conversão MP3 falhou:', err);
         return null;
     }
 }
 
 async function uploadToCloudinary(mp3Url, title) {
     try {
+        const safeName = (title||'musica').replace(/[^a-z0-9]/gi,'_').toLowerCase().substring(0,50);
         const formData = new FormData();
         formData.append('file', mp3Url);
-        formData.append('upload_preset', 'ml_default');
+        formData.append('upload_preset', 'radio_louro_preset'); // preset unsigned no Cloudinary
         formData.append('folder', 'radio_louro');
-        formData.append('public_id', `radio_louro/${Date.now()}_${title?.replace(/[^a-z0-9]/gi,'_').toLowerCase()}`);
-        const res = await fetch(`https://api.cloudinary.com/v1_1/dygbrcrr6/video/upload`, {method:'POST', body:formData});
+        formData.append('tags', 'radio_louro');
+
+        const res = await fetch('https://api.cloudinary.com/v1_1/dygbrcrr6/video/upload', {
+            method: 'POST',
+            body: formData
+        });
         const data = await res.json();
-        return data.secure_url || null;
+        if(data.secure_url) {
+            console.log('✅ Upload Cloudinary OK:', data.secure_url);
+            return data.secure_url;
+        }
+        // Se falhou por preset, tenta com ml_default
+        if(data.error) {
+            console.warn('Tentando preset ml_default...');
+            const fd2 = new FormData();
+            fd2.append('file', mp3Url);
+            fd2.append('upload_preset', 'ml_default');
+            fd2.append('folder', 'radio_louro');
+            const res2 = await fetch('https://api.cloudinary.com/v1_1/dygbrcrr6/video/upload', {
+                method: 'POST', body: fd2
+            });
+            const data2 = await res2.json();
+            if(data2.secure_url) return data2.secure_url;
+        }
+        console.warn('Cloudinary sem secure_url:', data);
+        return null;
     } catch(err) {
         console.error('Upload Cloudinary falhou:', err);
         return null;
