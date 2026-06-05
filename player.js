@@ -483,12 +483,19 @@ async function handleAudioEnded() {
     if(audioPlayer._afterSeasonal){
         audioPlayer._afterSeasonal=false; playSlotTrack(); return;
     }
-    // Hora certa
+    // Hora certa — avança para PRÓXIMA música, nunca volta para a mesma
     if(isPlayingHourCerta){
         isPlayingHourCerta=false;
-        if(isGradeMode) playSlotAd(()=>playSlotTrack());
-        else if((isSeasonalActive?seasonalAds:advertisements).length>0) playLegacyAd();
-        else playBgMusic();
+        // Avança índice antes de tocar
+        if(isGradeMode){
+            slotCurrentIndex = (slotCurrentIndex + 1) % Math.max(slotPlaylist.length, 1);
+            playSlotAd(()=>playSlotTrack());
+        } else {
+            const playlist = isSeasonalActive ? seasonalPlaylist : backgroundPlaylist;
+            currentBgIndex = (currentBgIndex + 1) % Math.max(playlist.length, 1);
+            if((isSeasonalActive?seasonalAds:advertisements).length>0) playLegacyAd();
+            else playBgMusic();
+        }
         return;
     }
     // Propaganda legada
