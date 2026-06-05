@@ -456,7 +456,7 @@ function resumeAfterHourCerta() {
 // ─────────────────────────────────────────────────────────────
 // HANDLE AUDIO ENDED — roteamento central
 // ─────────────────────────────────────────────────────────────
-function handleAudioEnded() {
+async function handleAudioEnded() {
     // Vinheta de grade
     if(isPlayingJingle){
         isPlayingJingle=false;
