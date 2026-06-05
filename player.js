@@ -5,15 +5,9 @@ const BLOCKED_TERMS     = ['funk','rock pesado','metal','punk','rap','trap'];
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ── DOM ───────────────────────────────────────────────────────
-const audioPlayer   = document.getElementById('audioPlayer');
-const playBtn       = document.getElementById('playBtn');
-const volumeSlider  = document.getElementById('volumeSlider');
-const syncBtn       = document.getElementById('syncBtn');
-const currentTime   = document.getElementById('currentTime');
-const countdownTimer= document.getElementById('countdownTimer');
-const statusText    = document.getElementById('statusText');
-const trackName     = document.getElementById('trackName');
+// ── DOM — declaradas aqui, atribuídas no init ────────────────
+let audioPlayer, playBtn, volumeSlider, syncBtn;
+let currentTime, countdownTimer, statusText, trackName;
 
 // ── Estado geral ──────────────────────────────────────────────
 let isPlaying         = false;
@@ -79,6 +73,24 @@ const SUGGEST_LIMIT     = 20;
 // ─────────────────────────────────────────────────────────────
 async function init() {
     try {
+        // Atribui elementos do DOM aqui — garantido que existem
+        audioPlayer   = document.getElementById('audioPlayer');
+        playBtn       = document.getElementById('playBtn');
+        volumeSlider  = document.getElementById('volumeSlider');
+        syncBtn       = document.getElementById('syncBtn');
+        currentTime   = document.getElementById('currentTime');
+        countdownTimer= document.getElementById('countdownTimer');
+        statusText    = document.getElementById('statusText');
+        trackName     = document.getElementById('trackName');
+
+        if(!audioPlayer || !playBtn) {
+            console.error('Elementos DOM não encontrados — verifique o index.html');
+            return;
+        }
+
+        audioPlayer.volume = 0.7;
+        updatePlayButtonState(false);
+
         lastKnownDate = new Date().toISOString().split('T')[0];
         await loadAllData();
         setupEventListeners();
@@ -573,12 +585,16 @@ function togglePlay() {
 }
 
 function updatePlayButtonState(playing) {
+    if(!playBtn) return;
     const pi=playBtn.querySelector('.play-icon'), pa=playBtn.querySelector('.pause-icon');
-    if(playing){ playBtn.classList.remove('paused'); playBtn.classList.add('playing'); pi.style.display='none'; pa.style.display='block'; }
-    else { playBtn.classList.remove('playing'); playBtn.classList.add('paused'); pi.style.display='block'; pa.style.display='none'; }
+    if(playing){ playBtn.classList.remove('paused'); playBtn.classList.add('playing'); if(pi) pi.style.display='none'; if(pa) pa.style.display='block'; }
+    else { playBtn.classList.remove('playing'); playBtn.classList.add('paused'); if(pi) pi.style.display='block'; if(pa) pa.style.display='none'; }
 }
 
-function updateDisplay(status, track) { statusText.textContent=status; trackName.textContent=track; }
+function updateDisplay(status, track) { 
+    if(statusText) statusText.textContent=status; 
+    if(trackName) trackName.textContent=track; 
+}
 
 async function forceSync() {
     syncBtn.disabled=true; syncBtn.textContent='⏳ Sincronizando...';
@@ -593,6 +609,7 @@ function updateClock() {
     const now=new Date();
     const h=String(now.getHours()).padStart(2,'0'), m=String(now.getMinutes()).padStart(2,'0'), s=String(now.getSeconds()).padStart(2,'0');
     if(currentTime) currentTime.textContent=`${h}:${m}:${s}`;
+    if(!countdownTimer) return;
     const min=now.getMinutes();
     let next=new Date(now);
     if(min<30) next.setMinutes(30,0,0); else next.setHours(now.getHours()+1,0,0,0);
@@ -827,8 +844,11 @@ function showSuggestFeedback(msg,type) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// INIT
+// BOOTSTRAP — garante que DOM existe antes de inicializar
 // ─────────────────────────────────────────────────────────────
-audioPlayer.volume=0.7;
-updatePlayButtonState(false);
-document.addEventListener('DOMContentLoaded', init);
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    // DOM já pronto (script carregado após o HTML)
+    init();
+}
