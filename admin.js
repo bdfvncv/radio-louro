@@ -260,11 +260,21 @@ function renderQueueSection() {
                 <div class="form-group" style="margin-bottom:8px;">
                     <label style="font-size:11px;">Grade de destino:</label>
                     <select class="queue-slot-select" id="qslot_${m.id}">
-                        <option value="">Selecione a grade</option>
+                        <option value="">Selecione o destino</option>
+                        <optgroup label="🕐 Grades Horárias">
                         ${timeSlots.filter(s=>s.name!=='Madrugada Aleatória').map(s=>
-                            `<option value="${s.id}" ${m.suggested_slot_id===s.id?'selected':''}>${s.name}</option>`
+                            `<option value="slot_${s.id}" ${m.suggested_slot_id===s.id?'selected':''}>${s.name}</option>`
                         ).join('')}
-                        <option value="general">📋 Playlist Geral</option>
+                        </optgroup>
+                        <optgroup label="🎭 Playlists Sazonais">
+                        <option value="seasonal_natal">🎄 Natal</option>
+                        <option value="seasonal_ano_novo">🎆 Ano-Novo</option>
+                        <option value="seasonal_pascoa">🐰 Páscoa</option>
+                        <option value="seasonal_sao_joao">🔥 São João</option>
+                        </optgroup>
+                        <optgroup label="🎵 Outros">
+                        <option value="general">📋 Playlist Geral (Madrugada)</option>
+                        </optgroup>
                     </select>
                 </div>
                 <div style="display:flex;gap:8px;">
@@ -296,7 +306,14 @@ async function approveQueueItem(id) {
     const item=musicQueue.find(m=>m.id===id);
     if(!item) return;
     const slotValue=document.getElementById(`qslot_${id}`)?.value;
-    if(!slotValue){ alert('Selecione a grade de destino.'); return; }
+    if(!slotValue){ alert('Selecione o destino antes de aprovar.'); return; }
+    
+    // Parseia o tipo de destino
+    const isSeasonal = slotValue.startsWith('seasonal_');
+    const isSlot     = slotValue.startsWith('slot_');
+    const isGeneral  = slotValue === 'general';
+    const slotId     = isSlot     ? parseInt(slotValue.replace('slot_',''))     : null;
+    const seasonalCat= isSeasonal ? slotValue.replace('seasonal_','')           : null;
 
     const btn=document.querySelector(`#qcard_${id} .submit-btn`);
     if(btn){ btn.textContent='🔄 Buscando instância...'; btn.disabled=true; }
@@ -355,20 +372,37 @@ async function approveQueueItem(id) {
 "${dupD.title}"`); if(btn){btn.textContent='✅ Aprovar';btn.disabled=false;} return; }
         }
 
-        const trackTitle = item.title||item.youtube_title||'Música';
+        const trackTitle  = item.title||item.youtube_title||'Música';
         const trackArtist = item.youtube_channel||null;
 
-        if(slotValue!=='general') {
+        if(isSlot) {
             await supabaseAdmin.from('slot_playlists').insert([{
-                slot_id:parseInt(slotValue), audio_url:audioUrl,
-                title:trackTitle, artist:trackArtist,
-                original_order:order, daily_order:order, enabled:true
+                slot_id: slotId, audio_url: audioUrl,
+                title: trackTitle, artist: trackArtist,
+                original_order: order, daily_order: order, enabled: true
             }]);
-            await refreshSlotPlaylist(parseInt(slotValue));
+            await refreshSlotPlaylist(slotId);
+        } else if(isSeasonal) {
+            await supabaseAdmin.from('seasonal_playlists').insert([{
+                category: seasonalCat, type: 'music',
+                audio_url: audioUrl, title: trackTitle,
+                play_order: order, original_order: order,
+                daily_order: order, enabled: true
+            }]);
+            // Recarrega dados sazonais
+            const [mRes,aRes] = await Promise.all([
+                supabase.from('seasonal_playlists').select('*').eq('type','music').order('original_order',{ascending:true}),
+                supabase.from('seasonal_playlists').select('*').eq('type','ad').order('play_order',{ascending:true})
+            ]);
+            seasonalData={natal:{music:[],ads:[]},ano_novo:{music:[],ads:[]},pascoa:{music:[],ads:[]},sao_joao:{music:[],ads:[]}};
+            (mRes.data||[]).forEach(i=>{if(seasonalData[i.category])seasonalData[i.category].music.push(i);});
+            (aRes.data||[]).forEach(i=>{if(seasonalData[i.category])seasonalData[i.category].ads.push(i);});
+            renderAllSeasonalTables();
+            alert(`✅ Música adicionada à playlist de ${seasonalCat.replace('_',' ')}!`);
         } else {
             await supabaseAdmin.from('background_playlist').insert([{
-                audio_url:audioUrl, title:trackTitle,
-                play_order:order, original_order:order, daily_order:order, enabled:true
+                audio_url: audioUrl, title: trackTitle,
+                play_order: order, original_order: order, daily_order: order, enabled: true
             }]);
             const {data}=await supabase.from('background_playlist').select('*').order('original_order',{ascending:true});
             backgroundPlaylist=data||[]; renderPlaylistTable();
@@ -1101,11 +1135,23 @@ async function refreshSlotJingles(slotId) {
 // YOUTUBE
 // ─────────────────────────────────────────────────────────────
 function populateSlotSelects() {
-    const slotOptions = '<option value="">Selecione a grade</option>' +
-        timeSlots.filter(s=>s.name!=='Madrugada Aleatória').map(s=>`<option value="${s.id}">${s.name}</option>`).join('') +
-        '<option value="general">📋 Playlist Geral</option>';
+    const slotOptions = 
+        '<option value="">Selecione o destino</option>' +
+        '<optgroup label="🕐 Grades Horárias">' +
+        timeSlots.filter(s=>s.name!=='Madrugada Aleatória').map(s=>
+            `<option value="slot_${s.id}">${s.name}</option>`
+        ).join('') +
+        '</optgroup>' +
+        '<optgroup label="🎭 Playlists Sazonais">' +
+        '<option value="seasonal_natal">🎄 Natal</option>' +
+        '<option value="seasonal_ano_novo">🎆 Ano-Novo</option>' +
+        '<option value="seasonal_pascoa">🐰 Páscoa</option>' +
+        '<option value="seasonal_sao_joao">🔥 São João</option>' +
+        '</optgroup>' +
+        '<optgroup label="🎵 Outros">' +
+        '<option value="general">📋 Playlist Geral (Madrugada)</option>' +
+        '</optgroup>';
 
-    // Popula todos os selects de grade (manual, auto, e qualquer outro)
     ['ytSlotManual','ytSlotAuto'].forEach(id=>{
         const el=document.getElementById(id);
         if(!el) return;
