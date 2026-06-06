@@ -14,6 +14,23 @@ let isPlaying         = false;
 let isShuffling       = false;
 let lastKnownDate     = null;
 
+// ── Estado persistente ────────────────────────────────────────
+let stateSaveInterval = null;
+const STATE_SAVE_MS   = 10000; // salva a cada 10 segundos
+
+// ── Analytics ────────────────────────────────────────────────
+let currentTrackInfo  = null; // {title, artist, audio_url, source_table, source_id, slot_id, slot_name}
+
+// ── Emergência ───────────────────────────────────────────────
+let emergencyActive   = false;
+let emergencyInterval = null;
+let emergencyAudio    = new Audio();
+
+// ── Locutor ao vivo ───────────────────────────────────────────
+let liveLocutorStream  = null;
+let liveLocutorContext = null;
+let liveLocutorSource  = null;
+
 // ── Playlist legada (fundo / madrugada) ───────────────────────
 let allSchedules      = [];
 let backgroundPlaylist= [];
@@ -102,6 +119,15 @@ async function init() {
         setInterval(checkSlotChange, 60000);
         await loadCurrentHourAudio();
         await detectAndActivateSlot();
+
+        // Restaura última música tocada (queda de energia/internet)
+        await restorePlaybackState();
+        // Inicia salvamento periódico do estado
+        startSaveStateInterval();
+        // Inicia listener de emergência
+        initEmergencyListener();
+        // Inicia listener de locutor ao vivo
+        initLiveLocutorListener();
         // Embaralhamento por conclusão de playlist — não precisa verificar ao iniciar
         // Embaralhamento agora acontece ao completar a playlist — não por data
         initSuggest();
@@ -248,6 +274,58 @@ function checkSlotChange() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// ESTADO PERSISTENTE — salva e restaura posição da playlist
+// ─────────────────────────────────────────────────────────────
+function startStateSaving() {
+    if(stateSaveInterval) clearInterval(stateSaveInterval);
+    stateSaveInterval = setInterval(savePlayerState, STATE_SAVE_MS);
+}
+
+async function savePlayerState() {
+    try {
+        const state = {
+            current_index : isGradeMode ? slotCurrentIndex : currentBgIndex,
+            slot_id       : currentSlot?.id || null,
+            is_grade_mode : isGradeMode,
+            current_table : isGradeMode ? 'slot_playlists' : (isSeasonalActive ? 'seasonal_playlists' : 'background_playlist'),
+            current_id    : isGradeMode
+                ? (slotPlaylist[slotCurrentIndex]?.id || null)
+                : (isSeasonalActive ? (seasonalPlaylist[currentBgIndex]?.id || null) : (backgroundPlaylist[currentBgIndex]?.id || null)),
+            updated_at    : new Date().toISOString()
+        };
+        await supabase.from('player_state').update(state).eq('id', 1);
+    } catch(err) { /* silencioso */ }
+}
+
+async function restorePlayerState() {
+    try {
+        const {data} = await supabase.from('player_state').select('*').eq('id',1).single();
+        if(!data) return;
+        if(data.is_grade_mode && data.slot_id && slotPlaylist.length > 0) {
+            slotCurrentIndex = Math.min(data.current_index || 0, Math.max(slotPlaylist.length - 1, 0));
+            console.log(`▶️ Retomando grade na música ${slotCurrentIndex + 1}/${slotPlaylist.length}`);
+        } else if(!data.is_grade_mode && backgroundPlaylist.length > 0) {
+            currentBgIndex = Math.min(data.current_index || 0, Math.max(backgroundPlaylist.length - 1, 0));
+            console.log(`▶️ Retomando playlist na música ${currentBgIndex + 1}/${backgroundPlaylist.length}`);
+        }
+    } catch(err) { /* sem estado salvo — começa do início */ }
+}
+
+// ─────────────────────────────────────────────────────────────
+// ANALYTICS — registra cada música tocada
+// ─────────────────────────────────────────────────────────────
+async function logTrackPlay(title, artist, audioUrl, sourceTable, sourceId, slotId, slotName) {
+    try {
+        currentTrackInfo = {title, artist, audio_url: audioUrl, source_table: sourceTable, source_id: sourceId, slot_id: slotId, slot_name: slotName};
+        await supabase.from('play_log').insert([{
+            title, artist, audio_url: audioUrl,
+            source_table: sourceTable, source_id: sourceId,
+            slot_id: slotId, slot_name: slotName
+        }]);
+    } catch(err) { /* silencioso */ }
+}
+
+// ─────────────────────────────────────────────────────────────
 // BLOCOS SAZONAIS
 // ─────────────────────────────────────────────────────────────
 async function ensureSeasonalBlocksToday() {
@@ -343,6 +421,8 @@ function playSlotMusicTrack() {
     audioPlayer.src = track.audio_url;
     updateDisplay(currentSlot?`🎵 ${currentSlot.name}`:'Tocando agora', track.title||'Música');
     slotTracksSinceAd++;
+    // Log analytics
+    logAnalytics(track, 'slot_playlists', currentSlot?.id, currentSlot?.name);
     if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
 }
 
@@ -372,6 +452,8 @@ function playBgMusic() {
     audioPlayer.src=track.audio_url;
     updateDisplay(isSeasonalActive?'🎭 Especial':'Tocando agora', track.title||'Música');
     tracksPlayedSinceAd++;
+    // Log analytics
+    logAnalytics(track, isSeasonalActive?'seasonal_playlists':'background_playlist', null, isSeasonalActive?activeSeasonalCat:'Fundo');
     if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
 }
 
@@ -671,7 +753,80 @@ function setupRealtimeSubscription() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// LOCUTOR
+// EMERGÊNCIA
+// ─────────────────────────────────────────────────────────────
+function initEmergencyListener() {
+    supabase.channel('emergency_player')
+        .on('postgres_changes', {event:'UPDATE', schema:'public', table:'emergency_alert'},
+            payload => handleEmergencyChange(payload.new))
+        .subscribe();
+}
+
+function handleEmergencyChange(state) {
+    if(state.is_active && !emergencyActive) {
+        emergencyActive = true;
+        // Pausa tudo
+        if(isPlaying) { audioPlayer.pause(); }
+        if(window.responsiveVoice) responsiveVoice.cancel();
+        updateDisplay('🚨 ALERTA', 'Mensagem de emergência');
+        playEmergencyAlert(state);
+        // Repete em loop pelo intervalo configurado
+        emergencyInterval = setInterval(() => playEmergencyAlert(state), (state.repeat_interval_sec || 60) * 1000);
+    } else if(!state.is_active && emergencyActive) {
+        emergencyActive = false;
+        clearInterval(emergencyInterval);
+        emergencyInterval = null;
+        emergencyAudio.pause(); emergencyAudio.src = '';
+        if(window.responsiveVoice) responsiveVoice.cancel();
+        // Retoma a rádio
+        if(isPlaying) {
+            if(isGradeMode) playSlotTrack();
+            else playBgMusic();
+        }
+    }
+}
+
+function playEmergencyAlert(state) {
+    if(state.mode === 'audio' && state.audio_url) {
+        emergencyAudio.src = state.audio_url;
+        emergencyAudio.play().catch(e => console.error(e));
+    } else if(state.tts_text) {
+        const voice = 'Brazilian Portuguese Female';
+        if(window.responsiveVoice) {
+            responsiveVoice.speak(state.tts_text, voice, { rate: 0.85, volume: 1 });
+        } else if(window.speechSynthesis) {
+            const utt = new SpeechSynthesisUtterance(state.tts_text);
+            utt.lang = 'pt-BR'; utt.rate = 0.85;
+            speechSynthesis.speak(utt);
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// LOCUTOR AO VIVO (MICROFONE)
+// ─────────────────────────────────────────────────────────────
+function initLiveLocutorListener() {
+    supabase.channel('live_locutor_player')
+        .on('broadcast', {event:'live_locutor_start'}, () => handleLiveLocutorStart())
+        .on('broadcast', {event:'live_locutor_stop'},  () => handleLiveLocutorStop())
+        .subscribe();
+}
+
+async function handleLiveLocutorStart() {
+    if(isPlaying) { playerResumePos = audioPlayer.currentTime; playerPausedByLoc = true; audioPlayer.pause(); }
+    updateDisplay('🎙️ Locutor Ao Vivo', 'Transmitindo...');
+}
+
+function handleLiveLocutorStop() {
+    if(playerPausedByLoc && isPlaying) {
+        playerPausedByLoc = false;
+        audioPlayer.currentTime = playerResumePos;
+        audioPlayer.play().catch(e => console.error(e));
+    } else { playerPausedByLoc = false; }
+}
+
+// ─────────────────────────────────────────────────────────────
+// LOCUTOR (PRÉ-GRAVADO)
 // ─────────────────────────────────────────────────────────────
 function initLocutorListener() {
     supabase.channel('locutor_player')
@@ -799,9 +954,35 @@ async function handleSuggestSearch() {
                 <div class="suggest-result-info">
                     <div class="suggest-result-title">${item.snippet.title}</div>
                     <div class="suggest-result-channel">${item.snippet.channelTitle}</div>
+                    <iframe id="preview_${item.id.videoId}" class="suggest-preview-frame" src="" allowfullscreen allow="autoplay" style="display:none;width:100%;aspect-ratio:16/9;border:none;border-radius:8px;margin-top:6px;"></iframe>
                 </div>
-                <button class="suggest-btn" data-id="${item.id.videoId}" data-title="${item.snippet.title.replace(/"/g,'&quot;')}" data-channel="${item.snippet.channelTitle.replace(/"/g,'&quot;')}" data-thumb="${item.snippet.thumbnails?.default?.url||''}">💌 Sugerir</button>
+                <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
+                    <button class="suggest-preview-btn" data-id="${item.id.videoId}">▶️ Prévia</button>
+                    <button class="suggest-btn" data-id="${item.id.videoId}" data-title="${item.snippet.title.replace(/"/g,'&quot;')}" data-channel="${item.snippet.channelTitle.replace(/"/g,'&quot;')}" data-thumb="${item.snippet.thumbnails?.default?.url||''}">💌 Sugerir</button>
+                </div>
             </div>`).join('');
+
+        // Listeners para prévia
+        resultsEl.querySelectorAll('.suggest-preview-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                const vid = e.currentTarget.dataset.id;
+                const frame = document.getElementById(`preview_${vid}`);
+                if(!frame) return;
+                if(frame.style.display === 'none') {
+                    // Fecha outras prévias abertas
+                    resultsEl.querySelectorAll('.suggest-preview-frame').forEach(f => {
+                        f.src = ''; f.style.display = 'none';
+                    });
+                    resultsEl.querySelectorAll('.suggest-preview-btn').forEach(b => b.textContent = '▶️ Prévia');
+                    frame.src = `https://www.youtube.com/embed/${vid}?autoplay=1`;
+                    frame.style.display = 'block';
+                    e.currentTarget.textContent = '⏹ Fechar';
+                } else {
+                    frame.src = ''; frame.style.display = 'none';
+                    e.currentTarget.textContent = '▶️ Prévia';
+                }
+            });
+        });
         resultsEl.querySelectorAll('.suggest-btn').forEach(b=>{
             b.addEventListener('click',e=>{
                 const btn=e.currentTarget;
@@ -850,6 +1031,197 @@ function showSuggestFeedback(msg,type) {
     setTimeout(()=>{ el.style.display='none'; },5000);
 }
 
+
+// ─────────────────────────────────────────────────────────────
+// ESTADO DE REPRODUÇÃO — salva e restaura após queda
+// ─────────────────────────────────────────────────────────────
+let saveStateInterval = null;
+
+async function savePlaybackState() {
+    try {
+        const table = isGradeMode ? 'slot_playlists' : (isSeasonalActive ? 'seasonal_playlists' : 'background_playlist');
+        const index = isGradeMode ? slotCurrentIndex : currentBgIndex;
+        const track = isGradeMode
+            ? slotPlaylist[slotCurrentIndex % Math.max(slotPlaylist.length,1)]
+            : (isSeasonalActive ? seasonalPlaylist : backgroundPlaylist)[currentBgIndex % Math.max((isSeasonalActive ? seasonalPlaylist : backgroundPlaylist).length,1)];
+
+        await supabase.from('playback_state').update({
+            track_id:     track?.id       || null,
+            track_table:  table,
+            slot_id:      currentSlot?.id || null,
+            track_title:  track?.title    || null,
+            audio_url:    track?.audio_url|| null,
+            playlist_index: index,
+            updated_at:   new Date().toISOString()
+        }).eq('id', 1);
+    } catch(err) { /* silencioso */ }
+}
+
+async function restorePlaybackState() {
+    try {
+        const { data } = await supabase
+            .from('playback_state')
+            .select('*')
+            .eq('id', 1)
+            .maybeSingle();
+
+        if(!data || !data.audio_url) return false;
+
+        // Restaura índice da playlist
+        if(data.track_table === 'slot_playlists' && data.slot_id) {
+            // Encontra o slot correto
+            const slot = timeSlots.find(s => s.id === data.slot_id);
+            if(slot) {
+                currentSlot = slot; lastSlotId = slot.id; isGradeMode = true;
+                await loadSlotPlaylist(slot.id);
+                await loadSlotJingles(slot.id);
+                // Encontra o índice da música salva
+                const idx = slotPlaylist.findIndex(t => t.id === data.track_id);
+                slotCurrentIndex = idx >= 0 ? idx : (data.playlist_index || 0);
+                return true;
+            }
+        } else if(data.track_table === 'background_playlist') {
+            isGradeMode = false;
+            const idx = backgroundPlaylist.findIndex(t => t.id === data.track_id);
+            currentBgIndex = idx >= 0 ? idx : (data.playlist_index || 0);
+            return true;
+        }
+        return false;
+    } catch(err) { return false; }
+}
+
+function startSaveStateInterval() {
+    if(saveStateInterval) clearInterval(saveStateInterval);
+    // Salva estado a cada 30 segundos enquanto tocando
+    saveStateInterval = setInterval(() => {
+        if(isPlaying && !isPlayingHourCerta && !isPlayingJingle && !isPlayingAd) {
+            savePlaybackState();
+        }
+    }, 30000);
+}
+
+// ─────────────────────────────────────────────────────────────
+// ANALYTICS — registra cada música tocada
+// ─────────────────────────────────────────────────────────────
+async function logAnalytics(track, table, slotId, slotName) {
+    try {
+        const now = new Date();
+        await supabase.from('play_analytics').insert([{
+            track_id:    track?.id    || null,
+            track_title: track?.title || 'Desconhecida',
+            track_table: table,
+            slot_id:     slotId  || null,
+            slot_name:   slotName|| null,
+            day_of_week: now.getDay(),
+            hour_of_day: now.getHours()
+        }]);
+    } catch(err) { /* silencioso */ }
+}
+
+// ─────────────────────────────────────────────────────────────
+// EMERGÊNCIA — listener em tempo real
+// ─────────────────────────────────────────────────────────────
+let emergencyActive   = false;
+let emergencyInterval = null;
+let playerPausedByEmergency = false;
+
+function initEmergencyListener() {
+    supabase.channel('emergency_player')
+        .on('postgres_changes', { event:'UPDATE', schema:'public', table:'emergency_state' },
+            payload => handleEmergencyChange(payload.new))
+        .subscribe();
+}
+
+async function handleEmergencyChange(state) {
+    if(state.is_active && !emergencyActive) {
+        emergencyActive = true;
+        // Pausa player principal
+        if(isPlaying && audioPlayer.src) {
+            audioPlayer.pause();
+            playerPausedByEmergency = true;
+        }
+        updateDisplay('🚨 ALERTA', state.message || 'Atenção!');
+        playEmergencyAlert(state);
+    } else if(!state.is_active && emergencyActive) {
+        emergencyActive = false;
+        if(emergencyInterval) { clearInterval(emergencyInterval); emergencyInterval = null; }
+        if(window.responsiveVoice) responsiveVoice.cancel();
+        if(emergencyAudio) { emergencyAudio.pause(); emergencyAudio.src = ''; }
+        if(playerPausedByEmergency && isPlaying) {
+            playerPausedByEmergency = false;
+            audioPlayer.play().catch(e => console.error(e));
+        } else { playerPausedByEmergency = false; }
+    }
+}
+
+let emergencyAudio = new Audio();
+
+function playEmergencyAlert(state) {
+    const doPlay = () => {
+        if(!emergencyActive) return;
+        if(state.use_tts !== false && state.message) {
+            if(window.responsiveVoice && responsiveVoice.voiceSupport()) {
+                responsiveVoice.speak(state.message, state.voice || 'Brazilian Portuguese Female', {
+                    rate: 0.85, pitch: 1, volume: 1,
+                    onend: () => { if(emergencyActive) setTimeout(doPlay, 2000); }
+                });
+            }
+        } else if(state.audio_url) {
+            emergencyAudio.src = state.audio_url;
+            emergencyAudio.play().catch(e => console.error(e));
+            emergencyAudio.onended = () => { if(emergencyActive) setTimeout(doPlay, 1000); };
+        }
+    };
+    doPlay();
+}
+
+// ─────────────────────────────────────────────────────────────
+// LOCUTOR AO VIVO — microfone em tempo real via WebRTC
+// ─────────────────────────────────────────────────────────────
+let liveLocutorChannel = null;
+
+function initLiveLocutorListener() {
+    liveLocutorChannel = supabase.channel('live_locutor_player')
+        .on('broadcast', { event: 'live_audio_chunk' }, payload => {
+            handleLiveAudioChunk(payload.payload);
+        })
+        .on('broadcast', { event: 'live_locutor_start' }, () => {
+            if(isPlaying && audioPlayer.src) {
+                audioPlayer.pause();
+                playerPausedByLoc = true;
+                playerResumePos = audioPlayer.currentTime;
+                updateDisplay('🎙️ Ao Vivo', 'Locutor transmitindo...');
+            }
+        })
+        .on('broadcast', { event: 'live_locutor_stop' }, () => {
+            if(playerPausedByLoc && isPlaying) {
+                playerPausedByLoc = false;
+                audioPlayer.currentTime = playerResumePos;
+                audioPlayer.play().catch(e => console.error(e));
+            } else { playerPausedByLoc = false; }
+        })
+        .subscribe();
+}
+
+let liveAudioQueue  = [];
+let liveAudioCtx    = null;
+let liveIsPlaying   = false;
+
+function handleLiveAudioChunk(payload) {
+    if(!payload?.chunk) return;
+    try {
+        if(!liveAudioCtx) liveAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const binary = atob(payload.chunk);
+        const bytes  = new Uint8Array(binary.length);
+        for(let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+        liveAudioCtx.decodeAudioData(bytes.buffer, buf => {
+            const src = liveAudioCtx.createBufferSource();
+            src.buffer = buf;
+            src.connect(liveAudioCtx.destination);
+            src.start(0);
+        });
+    } catch(err) { /* chunk inválido */ }
+}
 // ─────────────────────────────────────────────────────────────
 // BOOTSTRAP — garante que DOM existe antes de inicializar
 // ─────────────────────────────────────────────────────────────
