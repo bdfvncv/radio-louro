@@ -46,7 +46,11 @@
             <button class="nav-item" data-section="schedule">⏰ Horas Certas</button>
             <button class="nav-item" data-section="playlist">🎵 Playlist de Fundo</button>
             <button class="nav-item" data-section="ads">📢 Propagandas</button>
+            <button class="nav-item" data-section="analytics">📊 Analytics</button>
+            <button class="nav-item" data-section="emergency">🚨 Emergência</button>
             <button class="nav-item" data-section="upload">☁️ Upload Cloudinary</button>
+            <button class="nav-item" data-section="analytics">📊 Analytics</button>
+            <button class="nav-item" data-section="emergency">🚨 Emergência</button>
         </div>
 
         <button class="sidebar-logout" id="logoutBtn">← Sair</button>
@@ -102,6 +106,22 @@
                 <div class="welcome-card" onclick="goSection('ads')">
                     <div class="wc-icon">📢</div>
                     <div class="wc-label">Propagandas</div>
+                </div>
+                <div class="welcome-card" onclick="goSection('analytics')">
+                    <div class="wc-icon">📊</div>
+                    <div class="wc-label">Analytics</div>
+                </div>
+                <div class="welcome-card" onclick="goSection('emergency')">
+                    <div class="wc-icon">🚨</div>
+                    <div class="wc-label">Emergência</div>
+                </div>
+                <div class="welcome-card" onclick="goSection('analytics')">
+                    <div class="wc-icon">📊</div>
+                    <div class="wc-label">Analytics</div>
+                </div>
+                <div class="welcome-card" onclick="goSection('emergency')">
+                    <div class="wc-icon">🚨</div>
+                    <div class="wc-label">Emergência</div>
                 </div>
             </div>
         </section>
@@ -217,6 +237,18 @@
                         </div>
                     </form>
                 </div>
+            </div>
+
+            <!-- Locutor ao vivo -->
+            <div class="admin-card">
+                <h3 class="card-title">🎙️ Locutor Ao Vivo (Microfone)</h3>
+                <p class="section-desc">Fale diretamente pelo microfone do seu dispositivo. O áudio vai em tempo real para todos os players abertos.</p>
+                <div class="locutor-status-bar">
+                    <div class="locutor-indicator" id="liveLocutorIndicator"></div>
+                    <div class="locutor-status-text" id="liveLocutorStatus">Inativo</div>
+                    <button class="locutor-play-btn" id="liveLocutorBtn">🎙️ Iniciar ao vivo</button>
+                </div>
+                <div class="section-desc" style="margin-top:8px;margin-bottom:0;">⚠️ O navegador pedirá permissão para acessar o microfone. Funciona melhor no Chrome/Edge. Certifique-se que o microfone está conectado antes de iniciar.</div>
             </div>
 
             <!-- TTS -->
@@ -373,6 +405,136 @@
                 </form>
             </div>
             <div class="admin-card"><div class="table-container"><table class="data-table"><thead><tr><th>Ordem</th><th>Título</th><th>Anunciante</th><th>Frequência</th><th>Status</th><th>Ações</th></tr></thead><tbody id="adsTableBody"></tbody></table></div></div>
+        </section>
+
+        <!-- ── ANALYTICS ── -->
+        <section class="admin-section" id="section-analytics">
+            <div class="section-header">
+                <h2>📊 Analytics de Reprodução</h2>
+                <button class="submit-btn" onclick="loadAnalytics()" style="padding:8px 16px;font-size:13px;">🔄 Atualizar</button>
+            </div>
+            <p class="section-desc">Acompanhe o que está tocando mais, os horários de pico e a distribuição por grade. Dados dos últimos 30 dias.</p>
+            <div id="analyticsContent">
+                <div class="grade-empty">Clique em "Atualizar" para carregar os dados.</div>
+            </div>
+        </section>
+
+        <!-- ── EMERGÊNCIA ── -->
+        <section class="admin-section" id="section-emergency">
+            <div class="section-header"><h2>🚨 Alerta de Emergência</h2></div>
+            <p class="section-desc">Dispara um alerta imediato em todos os players. A música pausa e o alerta toca em loop até você encerrar.</p>
+
+            <div class="admin-card">
+                <div class="emergency-status-bar">
+                    <div class="locutor-indicator" id="emergencyIndicator"></div>
+                    <div class="locutor-status-text" id="emergencyStatusText">Alerta inativo</div>
+                    <button class="emergency-btn" id="emergencyBtn" onclick="toggleEmergency()">🚨 Disparar Alerta</button>
+                </div>
+            </div>
+
+            <div class="admin-card">
+                <h3 class="card-title">⚙️ Configurar Alerta</h3>
+
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label>Tipo de alerta:</label>
+                    <div style="display:flex;gap:12px;margin-top:6px;flex-wrap:wrap;">
+                        <label style="font-weight:normal;font-size:13px;display:flex;align-items:center;gap:6px;">
+                            <input type="radio" name="emergencyType" id="emergencyUseTTS" value="tts" checked onchange="document.getElementById('emergencyTTSGroup').style.display='block';document.getElementById('emergencyAudioGroup').style.display='none';">
+                            🗣️ Voz (TTS)
+                        </label>
+                        <label style="font-weight:normal;font-size:13px;display:flex;align-items:center;gap:6px;">
+                            <input type="radio" name="emergencyType" id="emergencyUseAudio" value="audio" onchange="document.getElementById('emergencyTTSGroup').style.display='none';document.getElementById('emergencyAudioGroup').style.display='block';">
+                            🎵 Áudio pré-gravado
+                        </label>
+                    </div>
+                </div>
+
+                <div id="emergencyTTSGroup">
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label>Mensagem de emergência:</label>
+                        <textarea id="emergencyMessage" class="tts-textarea" placeholder="Ex: Atenção clientes, por favor se dirijam às saídas com calma." maxlength="300" style="min-height:70px;"></textarea>
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label>Voz:</label>
+                        <select id="emergencyVoice" class="tts-voice-select" style="width:100%;">
+                            <option value="Brazilian Portuguese Female">Feminina (Português BR)</option>
+                            <option value="Brazilian Portuguese Male">Masculina (Português BR)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="emergencyAudioGroup" style="display:none;">
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label>URL do áudio (Cloudinary):</label>
+                        <input type="url" id="emergencyAudioUrl" class="suggest-input" placeholder="https://res.cloudinary.com/...">
+                    </div>
+                </div>
+
+                <div class="admin-subcard" style="background:#fff5f5;border-color:#fecaca;">
+                    <p style="font-size:12px;color:#991b1b;line-height:1.6;">⚠️ <strong>Atenção:</strong> Ao disparar, TODOS os players pausam imediatamente e o alerta toca em loop. Só encerre quando a situação estiver resolvida.</p>
+                </div>
+            </div>
+
+            <!-- Mensagens pré-configuradas -->
+            <div class="admin-card">
+                <h3 class="card-title">📋 Mensagens Rápidas</h3>
+                <div class="emergency-presets">
+                    <button class="emergency-preset-btn" onclick="setEmergencyMessage('Atenção clientes! Por favor, se dirijam às saídas com calma e tranquilidade. Obrigado.')">🚪 Evacuação</button>
+                    <button class="emergency-preset-btn" onclick="setEmergencyMessage('Atenção! Solicitamos que todos os clientes permaneçam em seus locais por alguns instantes. Agradecemos a compreensão.')">⏸️ Permaneçam</button>
+                    <button class="emergency-preset-btn" onclick="setEmergencyMessage('Atenção! O Supermercado do Louro estará encerrando suas atividades em 15 minutos. Por favor, finalizem suas compras.')">🔒 Fechamento</button>
+                    <button class="emergency-preset-btn" onclick="setEmergencyMessage('Atenção clientes! Há uma criança perdida na loja. Se encontrar, por favor leve ao caixa central. Obrigado.')">👶 Criança perdida</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── ANALYTICS ── -->
+        <section class="admin-section" id="section-analytics">
+            <div class="section-header"><h2>📊 Analytics de Reprodução</h2></div>
+            <p class="section-desc">Histórico de músicas tocadas, mais reproduzidas e atividade por grade horária.</p>
+            <div class="admin-card">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <h3 class="card-title" style="margin:0;">Relatório de reproduções</h3>
+                    <button class="submit-btn" onclick="loadAnalytics()">🔄 Atualizar</button>
+                </div>
+                <div id="analyticsContainer"><div class="grade-empty">Clique em Atualizar para carregar.</div></div>
+            </div>
+        </section>
+
+        <!-- ── EMERGÊNCIA ── -->
+        <section class="admin-section" id="section-emergency">
+            <div class="section-header"><h2>🚨 Alerta de Emergência</h2></div>
+            <p class="section-desc">Ativa um alerta que interrompe a rádio em todos os players simultaneamente e repete em loop até ser desativado.</p>
+            <div class="admin-card">
+                <div id="emergencyBar" style="display:none;background:#dc3545;color:#fff;padding:12px 16px;border-radius:10px;margin-bottom:16px;display:none;align-items:center;gap:10px;">
+                    <span style="font-size:20px;animation:blink 1s infinite;">🚨</span>
+                    <span style="font-weight:700;">ALERTA DE EMERGÊNCIA ATIVO — tocando em todos os players</span>
+                </div>
+                <div class="edit-form">
+                    <div class="form-group">
+                        <label>Tipo de alerta:</label>
+                        <select id="emergencyMode">
+                            <option value="tts">🗣️ Texto em Voz (TTS)</option>
+                            <option value="audio">🔊 Áudio Pré-gravado</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="emergencyTtsRow">
+                        <label>Texto do alerta:</label>
+                        <textarea style="padding:10px;border:2px solid #ddd;border-radius:8px;font-family:inherit;font-size:.9em;min-height:80px;resize:vertical;" id="emergencyTtsText" placeholder="Ex: Atenção clientes! Por favor se dirijam às saídas com calma. Obrigado."></textarea>
+                    </div>
+                    <div class="form-group" id="emergencyAudioRow" style="display:none;">
+                        <label>URL do áudio de emergência:</label>
+                        <input type="url" id="emergencyAudioUrl" placeholder="https://res.cloudinary.com/...">
+                    </div>
+                    <div class="form-group">
+                        <label>Repetir a cada (segundos):</label>
+                        <input type="number" id="emergencyInterval" value="60" min="15" max="300">
+                        <small>Mínimo 15s, máximo 300s (5 minutos)</small>
+                    </div>
+                    <div class="form-actions">
+                        <button class="submit-btn" id="emergencyBtn" style="background:#dc3545;font-size:1em;padding:14px 24px;">🚨 Ativar Alerta de Emergência</button>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <!-- ── UPLOAD CLOUDINARY ── -->
