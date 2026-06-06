@@ -124,6 +124,7 @@ async function loadAllData() {
         renderAll();
         populateSlotSelects();
         await loadGradesState();
+        await loadEmergencyState();
         setupRealtimeSubscription();
         startTTSScheduleChecker();
     } catch(err){ console.error('Erro ao carregar:',err); }
@@ -1016,11 +1017,15 @@ function renderSlotPlaylistTable(slotId) {
             <td style="color:#666;">${t.artist||'-'}</td>
             <td><span class="status-badge ${t.enabled?'active':'inactive'}">${t.enabled?'✅ Ativo':'❌ Inativo'}</span></td>
             <td><div class="action-btns">
-                <button class="btn-edit" onclick="editSlotTrack(${t.id},${slotId})">✏️</button>
-                <button class="btn-toggle" onclick="toggleSlotTrack(${t.id},${!t.enabled},${slotId})">${t.enabled?'🔴':'🟢'}</button>
-                <button class="btn-delete" onclick="deleteSlotTrack(${t.id},${slotId})">🗑️</button>
+                <button class="btn-edit slot-edit-btn" data-id="${t.id}" data-slot="${slotId}">✏️</button>
+                <button class="btn-toggle slot-toggle-btn" data-id="${t.id}" data-enabled="${t.enabled}" data-slot="${slotId}">${t.enabled?'🔴':'🟢'}</button>
+                <button class="btn-delete slot-delete-btn" data-id="${t.id}" data-slot="${slotId}">🗑️</button>
             </div></td>
         </tr>`).join('');
+    // Delegação de eventos para os botões da tabela
+    tbody.querySelectorAll('.slot-edit-btn').forEach(b=>b.addEventListener('click',()=>editSlotTrack(parseInt(b.dataset.id),parseInt(b.dataset.slot))));
+    tbody.querySelectorAll('.slot-toggle-btn').forEach(b=>b.addEventListener('click',()=>toggleSlotTrack(parseInt(b.dataset.id),b.dataset.enabled!=='true',parseInt(b.dataset.slot))));
+    tbody.querySelectorAll('.slot-delete-btn').forEach(b=>b.addEventListener('click',()=>deleteSlotTrack(parseInt(b.dataset.id),parseInt(b.dataset.slot))));
 }
 
 async function handleSaveSlotTrack(e,slotId) {
@@ -1318,11 +1323,14 @@ function renderSeasonalTable(category,type,tableId) {
             ${type==='ad'?`<td>${item.advertiser||'-'}</td><td><span style="padding:3px 8px;background:#e3f2fd;border-radius:10px;font-size:11px;font-weight:bold;color:#1976d2;">A cada ${item.frequency}</span></td>`:''}
             <td><span class="status-badge ${item.enabled?'active':'inactive'}">${item.enabled?'✅ Ativo':'❌ Inativo'}</span></td>
             <td><div class="action-btns">
-                <button class="btn-edit" onclick="editSeasonalItem(${item.id},'${category}','${type}')">✏️</button>
-                <button class="btn-toggle" onclick="toggleSeasonalItem(${item.id},${!item.enabled})">${item.enabled?'🔴':'🟢'}</button>
-                <button class="btn-delete" onclick="deleteSeasonalItem(${item.id})">🗑️</button>
+                <button class="btn-edit seas-edit-btn" data-id="${item.id}" data-cat="${category}" data-type="${type}">✏️</button>
+                <button class="btn-toggle seas-toggle-btn" data-id="${item.id}" data-enabled="${item.enabled}">${item.enabled?'🔴':'🟢'}</button>
+                <button class="btn-delete seas-delete-btn" data-id="${item.id}">🗑️</button>
             </div></td>
         </tr>`).join('');
+    tbody.querySelectorAll('.seas-edit-btn').forEach(b=>b.addEventListener('click',()=>editSeasonalItem(parseInt(b.dataset.id),b.dataset.cat,b.dataset.type)));
+    tbody.querySelectorAll('.seas-toggle-btn').forEach(b=>b.addEventListener('click',()=>toggleSeasonalItem(parseInt(b.dataset.id),b.dataset.enabled!=='true')));
+    tbody.querySelectorAll('.seas-delete-btn').forEach(b=>b.addEventListener('click',()=>deleteSeasonalItem(parseInt(b.dataset.id))));
 }
 
 function renderSeasonalJinglesTables() {
@@ -1498,9 +1506,12 @@ function renderScheduleTable() {
             <td><span class="audio-url" title="${s?.audio_url||''}">${s?.audio_url||'Nenhuma URL (:00)'}</span></td>
             <td><span class="audio-url" style="color:${s?.audio_url_half?'#333':'#999'}" title="${s?.audio_url_half||''}">${s?.audio_url_half||'Nenhuma URL (:30)'}</span></td>
             <td><div class="action-btns">
-                <button class="btn-edit" onclick="editSchedule(${hour})">✏️ Editar</button>
-                ${s?`<button class="btn-toggle" onclick="toggleSchedule(${s.id},${!s.enabled})">${s.enabled?'🔴 Desativar':'🟢 Ativar'}</button><button class="btn-delete" onclick="deleteSchedule(${s.id})">🗑️ Deletar</button>`:''}
+                <button class="btn-edit sch-edit-btn" data-hour="${hour}">✏️ Editar</button>
+                ${s?`<button class="btn-toggle sch-toggle-btn" data-id="${s.id}" data-enabled="${s.enabled}">${s.enabled?'🔴 Desativar':'🟢 Ativar'}</button><button class="btn-delete sch-delete-btn" data-id="${s.id}">🗑️ Deletar</button>`:''}
             </div></td>`;
+        tr.querySelector('.sch-edit-btn')?.addEventListener('click',e=>editSchedule(parseInt(e.currentTarget.dataset.hour)));
+        tr.querySelector('.sch-toggle-btn')?.addEventListener('click',e=>toggleSchedule(parseInt(e.currentTarget.dataset.id),e.currentTarget.dataset.enabled!=='true'));
+        tr.querySelector('.sch-delete-btn')?.addEventListener('click',e=>deleteSchedule(parseInt(e.currentTarget.dataset.id)));
         tbody.appendChild(tr);
     }
 }
@@ -1562,11 +1573,14 @@ function renderPlaylistTable() {
             <td><span class="status-badge ${t.enabled?'active':'inactive'}">${t.enabled?'✅ Ativo':'❌ Inativo'}</span></td>
             <td><span class="audio-url" title="${t.audio_url}">${t.audio_url}</span></td>
             <td><div class="action-btns">
-                <button class="btn-edit" onclick="editPlaylist(${t.id})">✏️</button>
-                <button class="btn-toggle" onclick="togglePlaylist(${t.id},${!t.enabled})">${t.enabled?'🔴':'🟢'}</button>
-                <button class="btn-delete" onclick="deletePlaylist(${t.id})">🗑️</button>
+                <button class="btn-edit pl-edit-btn" data-id="${t.id}">✏️</button>
+                <button class="btn-toggle pl-toggle-btn" data-id="${t.id}" data-enabled="${t.enabled}">${t.enabled?'🔴':'🟢'}</button>
+                <button class="btn-delete pl-delete-btn" data-id="${t.id}">🗑️</button>
             </div></td>
         </tr>`).join('');
+    tbody.querySelectorAll('.pl-edit-btn').forEach(b=>b.addEventListener('click',()=>editPlaylist(parseInt(b.dataset.id))));
+    tbody.querySelectorAll('.pl-toggle-btn').forEach(b=>b.addEventListener('click',()=>togglePlaylist(parseInt(b.dataset.id),b.dataset.enabled!=='true')));
+    tbody.querySelectorAll('.pl-delete-btn').forEach(b=>b.addEventListener('click',()=>deletePlaylist(parseInt(b.dataset.id))));
 }
 
 async function handleSavePlaylist(e) {
@@ -1660,11 +1674,14 @@ function renderAdsTable() {
             <td><span style="padding:3px 8px;background:#e3f2fd;border-radius:10px;font-size:11px;font-weight:bold;color:#1976d2;">A cada ${ad.frequency}</span></td>
             <td><span class="status-badge ${ad.enabled?'active':'inactive'}">${ad.enabled?'✅ Ativo':'❌ Inativo'}</span></td>
             <td><div class="action-btns">
-                <button class="btn-edit" onclick="editAd(${ad.id})">✏️</button>
-                <button class="btn-toggle" onclick="toggleAd(${ad.id},${!ad.enabled})">${ad.enabled?'🔴':'🟢'}</button>
-                <button class="btn-delete" onclick="deleteAd(${ad.id})">🗑️</button>
+                <button class="btn-edit ad-edit-btn" data-id="${ad.id}">✏️</button>
+                <button class="btn-toggle ad-toggle-btn" data-id="${ad.id}" data-enabled="${ad.enabled}">${ad.enabled?'🔴':'🟢'}</button>
+                <button class="btn-delete ad-delete-btn" data-id="${ad.id}">🗑️</button>
             </div></td>
         </tr>`).join('');
+    tbody.querySelectorAll('.ad-edit-btn').forEach(b=>b.addEventListener('click',()=>editAd(parseInt(b.dataset.id))));
+    tbody.querySelectorAll('.ad-toggle-btn').forEach(b=>b.addEventListener('click',()=>toggleAd(parseInt(b.dataset.id),b.dataset.enabled!=='true')));
+    tbody.querySelectorAll('.ad-delete-btn').forEach(b=>b.addEventListener('click',()=>deleteAd(parseInt(b.dataset.id))));
 }
 
 async function handleSaveAd(e) {
@@ -1714,6 +1731,280 @@ function handleClearAdForm() {
     document.getElementById('adsForm').querySelector('.submit-btn').textContent='💾 Adicionar Propaganda';
 }
 
+
+// ─────────────────────────────────────────────────────────────
+// ALERTA DE EMERGÊNCIA
+// ─────────────────────────────────────────────────────────────
+let emergencyActive = false;
+
+async function loadEmergencyState() {
+    try {
+        const {data} = await supabase.from('emergency_alert').select('*').eq('id',1).single();
+        if(!data) return;
+        emergencyActive = data.is_active;
+        updateEmergencyUI(data);
+    } catch(err) { console.error(err); }
+}
+
+function updateEmergencyUI(state) {
+    const btn = document.getElementById('emergencyBtn');
+    const bar = document.getElementById('emergencyBar');
+    if(!btn || !bar) return;
+    if(state?.is_active) {
+        btn.textContent = '⏹️ Desativar Emergência';
+        btn.style.background = '#555';
+        bar.style.display = 'flex';
+    } else {
+        btn.textContent = '🚨 Ativar Alerta de Emergência';
+        btn.style.background = '#dc3545';
+        bar.style.display = 'none';
+    }
+}
+
+async function toggleEmergency() {
+    const newActive = !emergencyActive;
+    const ttsText = document.getElementById('emergencyTtsText')?.value.trim();
+    const audioUrl = document.getElementById('emergencyAudioUrl')?.value.trim();
+    const mode = document.getElementById('emergencyMode')?.value || 'tts';
+    const interval = parseInt(document.getElementById('emergencyInterval')?.value || 60);
+
+    if(newActive) {
+        if(mode === 'tts' && !ttsText) { alert('Digite o texto do alerta.'); return; }
+        if(mode === 'audio' && !audioUrl) { alert('Cole a URL do áudio de emergência.'); return; }
+        if(!confirm('⚠️ Isso irá interromper a rádio em TODOS os players. Confirma?')) return;
+    }
+
+    try {
+        await supabaseAdmin.from('emergency_alert').update({
+            is_active: newActive,
+            mode,
+            tts_text: ttsText || null,
+            audio_url: audioUrl || null,
+            repeat_interval_sec: interval,
+            activated_at: newActive ? new Date().toISOString() : null,
+            updated_at: new Date().toISOString()
+        }).eq('id', 1);
+        emergencyActive = newActive;
+        updateEmergencyUI({is_active: newActive});
+        if(!newActive) alert('✅ Alerta de emergência desativado. Rádio retomando.');
+    } catch(err) { alert('❌ Erro: ' + err.message); }
+}
+
+function setupEmergencyListeners() {
+    document.getElementById('emergencyBtn')?.addEventListener('click', toggleEmergency);
+    document.getElementById('emergencyMode')?.addEventListener('change', e => {
+        const isTTS = e.target.value === 'tts';
+        document.getElementById('emergencyTtsRow').style.display = isTTS ? 'flex' : 'none';
+        document.getElementById('emergencyAudioRow').style.display = isTTS ? 'none' : 'flex';
+    });
+    // Realtime para atualizar UI
+    supabase.channel('emergency_admin')
+        .on('postgres_changes', {event:'UPDATE', schema:'public', table:'emergency_alert'},
+            payload => { emergencyActive = payload.new.is_active; updateEmergencyUI(payload.new); })
+        .subscribe();
+}
+
+// ─────────────────────────────────────────────────────────────
+// ANALYTICS
+// ─────────────────────────────────────────────────────────────
+async function loadAnalytics() {
+    const container = document.getElementById('analyticsContainer');
+    if(!container) return;
+    container.innerHTML = '<div class="grade-empty">Carregando analytics...</div>';
+    try {
+        // Total de reproduções
+        const {count: totalCount} = await supabase.from('play_log').select('*', {count:'exact', head:true});
+
+        // Músicas mais tocadas (top 10)
+        const {data: topTracks} = await supabase
+            .from('play_log').select('title, artist, slot_name')
+            .not('title','is',null)
+            .order('played_at', {ascending:false})
+            .limit(500);
+
+        // Conta frequência
+        const freq = {};
+        (topTracks||[]).forEach(t => {
+            const key = t.title;
+            if(!freq[key]) freq[key] = {title:t.title, artist:t.artist, slot:t.slot_name, count:0};
+            freq[key].count++;
+        });
+        const sorted = Object.values(freq).sort((a,b) => b.count - a.count).slice(0,10);
+
+        // Reproduções por grade
+        const {data: bySlot} = await supabase
+            .from('play_log').select('slot_name')
+            .not('slot_name','is',null)
+            .order('played_at', {ascending:false})
+            .limit(1000);
+
+        const slotFreq = {};
+        (bySlot||[]).forEach(r => {
+            slotFreq[r.slot_name] = (slotFreq[r.slot_name]||0) + 1;
+        });
+        const slotSorted = Object.entries(slotFreq).sort((a,b)=>b[1]-a[1]);
+
+        // Últimas 10 reproduções
+        const {data: recent} = await supabase
+            .from('play_log').select('*')
+            .order('played_at', {ascending:false})
+            .limit(10);
+
+        container.innerHTML = `
+            <div class="analytics-summary">
+                <div class="analytics-stat"><div class="as-num">${totalCount||0}</div><div class="as-label">Reproduções totais</div></div>
+                <div class="analytics-stat"><div class="as-num">${sorted.length}</div><div class="as-label">Músicas únicas</div></div>
+                <div class="analytics-stat"><div class="as-num">${slotSorted.length}</div><div class="as-label">Grades ativas</div></div>
+            </div>
+
+            <h4 style="margin:20px 0 10px;color:#333;">🏆 Músicas mais tocadas</h4>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead><tr><th>#</th><th>Título</th><th>Artista</th><th>Grade</th><th>Reproduções</th></tr></thead>
+                    <tbody>
+                        ${sorted.map((t,i)=>`
+                        <tr>
+                            <td style="font-weight:700;color:#006b3f;">${i+1}</td>
+                            <td style="font-weight:500;">${t.title||'-'}</td>
+                            <td style="color:#666;">${t.artist||'-'}</td>
+                            <td style="color:#666;">${t.slot||'-'}</td>
+                            <td><span style="padding:3px 10px;background:#e6f4ed;border-radius:10px;font-weight:700;color:#006b3f;">${t.count}×</span></td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>
+
+            <h4 style="margin:20px 0 10px;color:#333;">🕐 Reproduções por grade</h4>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead><tr><th>Grade</th><th>Reproduções</th></tr></thead>
+                    <tbody>
+                        ${slotSorted.map(([slot,count])=>`
+                        <tr>
+                            <td style="font-weight:500;">${slot}</td>
+                            <td><span style="padding:3px 10px;background:#e3f2fd;border-radius:10px;font-weight:700;color:#1976d2;">${count}×</span></td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>
+
+            <h4 style="margin:20px 0 10px;color:#333;">🕐 Últimas reproduções</h4>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead><tr><th>Título</th><th>Grade</th><th>Horário</th></tr></thead>
+                    <tbody>
+                        ${(recent||[]).map(r=>`
+                        <tr>
+                            <td style="font-weight:500;">${r.title||'-'}</td>
+                            <td style="color:#666;">${r.slot_name||'-'}</td>
+                            <td style="color:#999;font-size:11px;">${new Date(r.played_at).toLocaleString('pt-BR')}</td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="margin-top:12px;">
+                <button class="clear-btn" onclick="clearAnalytics()">🗑️ Limpar histórico</button>
+            </div>
+        `;
+    } catch(err) {
+        container.innerHTML = `<div class="grade-empty">Erro ao carregar analytics: ${err.message}</div>`;
+    }
+}
+
+async function clearAnalytics() {
+    if(!confirm('Deletar todo o histórico de reproduções?')) return;
+    await supabaseAdmin.from('play_log').delete().neq('id', 0);
+    loadAnalytics();
+}
+
+// ─────────────────────────────────────────────────────────────
+// LOCUTOR AO VIVO (MICROFONE)
+// ─────────────────────────────────────────────────────────────
+let liveStream = null;
+let livePeerChannel = null;
+let liveActive = false;
+
+async function toggleLiveLocutor() {
+    const btn = document.getElementById('liveLocutorBtn');
+    if(!btn) return;
+
+    if(liveActive) {
+        stopLiveLocutor();
+        return;
+    }
+
+    try {
+        // Solicita acesso ao microfone
+        liveStream = await navigator.mediaDevices.getUserMedia({audio:true, video:false});
+        liveActive = true;
+        btn.textContent = '⏹️ Encerrar ao vivo';
+        btn.classList.add('active');
+        document.getElementById('liveLocutorStatus').textContent = '🔴 Transmitindo ao vivo...';
+
+        // Notifica players para pausar
+        await supabase.channel('live_locutor_player').send({
+            type:'broadcast', event:'live_locutor_start', payload:{}
+        });
+
+        // Usa Web Audio API para transmitir via chunks de áudio
+        const audioCtx = new AudioContext();
+        const source = audioCtx.createMediaStreamSource(liveStream);
+        const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+
+        source.connect(processor);
+        processor.connect(audioCtx.destination);
+
+        processor.onaudioprocess = async (e) => {
+            if(!liveActive) return;
+            // Transmite dados de áudio via broadcast (chunks Float32Array → base64)
+            const inputData = e.inputBuffer.getChannelData(0);
+            const buffer = new Float32Array(inputData).buffer;
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            bytes.forEach(b => binary += String.fromCharCode(b));
+            const base64 = btoa(binary);
+            await supabase.channel('live_locutor_audio').send({
+                type:'broadcast', event:'audio_chunk',
+                payload:{ data: base64, sampleRate: audioCtx.sampleRate }
+            });
+        };
+
+        // Salva referências para parar depois
+        liveStream._audioCtx = audioCtx;
+        liveStream._processor = processor;
+        liveStream._source = source;
+
+    } catch(err) {
+        alert('❌ Erro ao acessar microfone: ' + err.message);
+        liveActive = false;
+    }
+}
+
+async function stopLiveLocutor() {
+    liveActive = false;
+    const btn = document.getElementById('liveLocutorBtn');
+    if(btn) { btn.textContent = '🎙️ Iniciar ao vivo'; btn.classList.remove('active'); }
+    const statusEl = document.getElementById('liveLocutorStatus');
+    if(statusEl) statusEl.textContent = 'Inativo';
+
+    if(liveStream) {
+        liveStream._processor?.disconnect();
+        liveStream._source?.disconnect();
+        liveStream._audioCtx?.close();
+        liveStream.getTracks().forEach(t => t.stop());
+        liveStream = null;
+    }
+
+    // Notifica players para retomar
+    await supabase.channel('live_locutor_player').send({
+        type:'broadcast', event:'live_locutor_stop', payload:{}
+    });
+}
+
+function setupLiveLocutorListeners() {
+    document.getElementById('liveLocutorBtn')?.addEventListener('click', toggleLiveLocutor);
+}
 // ─────────────────────────────────────────────────────────────
 // UTILITÁRIOS
 // ─────────────────────────────────────────────────────────────
@@ -1797,3 +2088,311 @@ async function loadGradesState() {
         btn.textContent = enabled ? '✅ Ativadas' : '⏸️ Desativadas';
     } catch(err) { console.error(err); }
 }
+
+// ─────────────────────────────────────────────────────────────
+// FUNÇÕES GLOBAIS — acessíveis via onclick no HTML gerado
+// ─────────────────────────────────────────────────────────────
+window.editSlotTrack      = editSlotTrack;
+window.toggleSlotTrack    = toggleSlotTrack;
+window.deleteSlotTrack    = deleteSlotTrack;
+window.clearSlotForm      = clearSlotForm;
+window.handleForceShuffleSlot = handleForceShuffleSlot;
+window.editPlaylist       = editPlaylist;
+window.togglePlaylist     = togglePlaylist;
+window.deletePlaylist     = deletePlaylist;
+window.editAd             = editAd;
+window.toggleAd           = toggleAd;
+window.deleteAd           = deleteAd;
+window.editSeasonalItem   = editSeasonalItem;
+window.toggleSeasonalItem = toggleSeasonalItem;
+window.deleteSeasonalItem = deleteSeasonalItem;
+window.toggleJingle       = toggleJingle;
+window.deleteJingle       = deleteJingle;
+window.clearJingleForm    = clearJingleForm;
+window.toggleSeasonalJingle = toggleSeasonalJingle;
+window.deleteSeasonalJingle = deleteSeasonalJingle;
+window.testAudioUrl       = testAudioUrl;
+window.approveQueueItem   = approveQueueItem;
+window.rejectQueueItem    = rejectQueueItem;
+window.toggleYTPreview    = toggleYTPreview;
+window.selectLocutorTrack = selectLocutorTrack;
+window.deleteLocutorTrack = deleteLocutorTrack;
+window.loadTTSText        = loadTTSText;
+window.playTTSFromLib     = playTTSFromLib;
+window.deleteTTSItem      = deleteTTSItem;
+window.goSection          = goSection;
+window.toggleGrades       = toggleGrades;
+
+// ─────────────────────────────────────────────────────────────
+// ANALYTICS
+// ─────────────────────────────────────────────────────────────
+async function loadAnalytics() {
+    try {
+        // Top 10 músicas mais tocadas (últimos 30 dias)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const { data: topTracks } = await supabase
+            .from('play_analytics')
+            .select('track_title, track_table, slot_name')
+            .gte('played_at', thirtyDaysAgo.toISOString())
+            .order('played_at', { ascending: false });
+
+        if(!topTracks) return;
+
+        // Conta reproduções por música
+        const trackCount = {};
+        topTracks.forEach(t => {
+            const key = t.track_title;
+            trackCount[key] = (trackCount[key]||0) + 1;
+        });
+
+        // Top 10
+        const top10 = Object.entries(trackCount)
+            .sort((a,b) => b[1]-a[1])
+            .slice(0, 10);
+
+        // Total reproduções
+        const total = topTracks.length;
+
+        // Por hora do dia
+        const { data: byHour } = await supabase
+            .from('play_analytics')
+            .select('hour_of_day')
+            .gte('played_at', thirtyDaysAgo.toISOString());
+
+        const hourCount = Array(24).fill(0);
+        (byHour||[]).forEach(r => { hourCount[r.hour_of_day]++; });
+        const peakHour = hourCount.indexOf(Math.max(...hourCount));
+
+        // Por grade
+        const gradeCount = {};
+        topTracks.forEach(t => {
+            if(t.slot_name) gradeCount[t.slot_name] = (gradeCount[t.slot_name]||0) + 1;
+        });
+
+        renderAnalytics(top10, total, hourCount, peakHour, gradeCount);
+    } catch(err) { console.error('Erro analytics:', err); }
+}
+
+function renderAnalytics(top10, total, hourCount, peakHour, gradeCount) {
+    const el = document.getElementById('analyticsContent');
+    if(!el) return;
+
+    const maxHour = Math.max(...hourCount);
+    const days = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+    el.innerHTML = `
+        <div class="analytics-grid">
+            <div class="analytics-card analytics-card-wide">
+                <div class="analytics-title">🎵 Top 10 Músicas (últimos 30 dias)</div>
+                <div class="analytics-list">
+                    ${top10.map(([title, count], i) => `
+                        <div class="analytics-row">
+                            <span class="analytics-rank">#${i+1}</span>
+                            <span class="analytics-name">${title}</span>
+                            <span class="analytics-count">${count}×</span>
+                            <div class="analytics-bar-wrap">
+                                <div class="analytics-bar" style="width:${Math.round((count/top10[0][1])*100)}%"></div>
+                            </div>
+                        </div>`).join('')}
+                    ${top10.length === 0 ? '<div style="color:#999;padding:20px;text-align:center;">Nenhum dado ainda</div>' : ''}
+                </div>
+            </div>
+            <div class="analytics-card">
+                <div class="analytics-title">⏰ Atividade por Hora</div>
+                <div class="analytics-hours">
+                    ${hourCount.map((c,h) => `
+                        <div class="analytics-hour-col" title="${h}h: ${c} reproduções">
+                            <div class="analytics-hour-bar" style="height:${maxHour>0?Math.round((c/maxHour)*60):0}px"></div>
+                            <div class="analytics-hour-label">${h}</div>
+                        </div>`).join('')}
+                </div>
+                <div class="analytics-peak">Horário de pico: ${String(peakHour).padStart(2,'0')}h</div>
+            </div>
+            <div class="analytics-card">
+                <div class="analytics-title">🕐 Por Grade Horária</div>
+                <div class="analytics-list">
+                    ${Object.entries(gradeCount).sort((a,b)=>b[1]-a[1]).map(([grade, count]) => `
+                        <div class="analytics-row">
+                            <span class="analytics-name">${grade}</span>
+                            <span class="analytics-count">${count}×</span>
+                        </div>`).join('')}
+                    ${Object.keys(gradeCount).length===0?'<div style="color:#999;padding:10px;">Nenhum dado</div>':''}
+                </div>
+            </div>
+            <div class="analytics-card">
+                <div class="analytics-title">📊 Resumo</div>
+                <div class="analytics-summary">
+                    <div class="analytics-stat">
+                        <div class="analytics-stat-num">${total}</div>
+                        <div class="analytics-stat-label">Reproduções (30 dias)</div>
+                    </div>
+                    <div class="analytics-stat">
+                        <div class="analytics-stat-num">${Math.round(total/30)}</div>
+                        <div class="analytics-stat-label">Média por dia</div>
+                    </div>
+                    <div class="analytics-stat">
+                        <div class="analytics-stat-num">${top10.length}</div>
+                        <div class="analytics-stat-label">Músicas distintas</div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+}
+
+window.loadAnalytics = loadAnalytics;
+
+// ─────────────────────────────────────────────────────────────
+// ALERTA DE EMERGÊNCIA
+// ─────────────────────────────────────────────────────────────
+let emergencyActive = false;
+
+async function loadEmergencyState() {
+    try {
+        const { data } = await supabase.from('emergency_state').select('*').eq('id',1).single();
+        emergencyActive = data?.is_active || false;
+        renderEmergencyUI(data);
+    } catch(err) { console.error(err); }
+}
+
+function renderEmergencyUI(state) {
+    const btn = document.getElementById('emergencyBtn');
+    const ind = document.getElementById('emergencyIndicator');
+    const txt = document.getElementById('emergencyStatusText');
+    if(!btn) return;
+    if(state?.is_active) {
+        btn.textContent = '⏹️ Encerrar Alerta';
+        btn.classList.add('active');
+        if(ind) ind.classList.add('active');
+        if(txt) txt.textContent = '🚨 ALERTA ATIVO — todos os players estão em modo de emergência';
+    } else {
+        btn.textContent = '🚨 Disparar Alerta';
+        btn.classList.remove('active');
+        if(ind) ind.classList.remove('active');
+        if(txt) txt.textContent = 'Alerta inativo';
+    }
+}
+
+async function toggleEmergency() {
+    const newStatus = !emergencyActive;
+    const message   = document.getElementById('emergencyMessage')?.value.trim();
+    const audioUrl  = document.getElementById('emergencyAudioUrl')?.value.trim();
+    const useTTS    = document.getElementById('emergencyUseTTS')?.checked !== false;
+    const voice     = document.getElementById('emergencyVoice')?.value || 'Brazilian Portuguese Female';
+
+    if(newStatus && !message && !audioUrl) {
+        alert('Preencha a mensagem de texto ou a URL do áudio de emergência.'); return;
+    }
+
+    try {
+        await supabaseAdmin.from('emergency_state').update({
+            is_active:    newStatus,
+            message:      message  || null,
+            audio_url:    audioUrl || null,
+            use_tts:      useTTS,
+            voice:        voice,
+            activated_at: newStatus ? new Date().toISOString() : null,
+            updated_at:   new Date().toISOString()
+        }).eq('id', 1);
+
+        emergencyActive = newStatus;
+        renderEmergencyUI({ is_active: newStatus });
+    } catch(err) { alert('❌ Erro: ' + err.message); }
+}
+
+window.toggleEmergency  = toggleEmergency;
+window.loadEmergencyState = loadEmergencyState;
+
+// ─────────────────────────────────────────────────────────────
+// LOCUTOR AO VIVO — microfone em tempo real
+// ─────────────────────────────────────────────────────────────
+let liveStream      = null;
+let liveProcessor   = null;
+let liveAudioCtx    = null;
+let liveActive      = false;
+let liveBroadcastCh = null;
+
+async function startLiveLocutor() {
+    if(liveActive) { stopLiveLocutor(); return; }
+    try {
+        liveStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        liveAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const source = liveAudioCtx.createMediaStreamSource(liveStream);
+        liveProcessor = liveAudioCtx.createScriptProcessor(4096, 1, 1);
+
+        liveBroadcastCh = supabase.channel('live_locutor_admin');
+        await liveBroadcastCh.subscribe();
+
+        // Avisa players para pausar
+        await liveBroadcastCh.send({ type:'broadcast', event:'live_locutor_start', payload:{} });
+
+        liveProcessor.onaudioprocess = async (e) => {
+            if(!liveActive) return;
+            const inputData  = e.inputBuffer.getChannelData(0);
+            const outputData = e.outputBuffer.getChannelData(0);
+            outputData.set(inputData);
+            // Converte para base64 e envia
+            const buf    = new ArrayBuffer(inputData.length * 2);
+            const view   = new DataView(buf);
+            for(let i=0;i<inputData.length;i++) view.setInt16(i*2, Math.max(-1,Math.min(1,inputData[i]))*0x7FFF, true);
+            const bytes  = new Uint8Array(buf);
+            let binary   = '';
+            for(let i=0;i<bytes.length;i++) binary += String.fromCharCode(bytes[i]);
+            const chunk  = btoa(binary);
+            await liveBroadcastCh.send({ type:'broadcast', event:'live_audio_chunk', payload:{ chunk } });
+        };
+
+        source.connect(liveProcessor);
+        liveProcessor.connect(liveAudioCtx.destination);
+        liveActive = true;
+        updateLiveLocutorUI(true);
+    } catch(err) {
+        alert('❌ Não foi possível acessar o microfone: ' + err.message);
+    }
+}
+
+async function stopLiveLocutor() {
+    liveActive = false;
+    if(liveProcessor) { liveProcessor.disconnect(); liveProcessor = null; }
+    if(liveAudioCtx)  { await liveAudioCtx.close(); liveAudioCtx = null; }
+    if(liveStream)    { liveStream.getTracks().forEach(t => t.stop()); liveStream = null; }
+    if(liveBroadcastCh) {
+        await liveBroadcastCh.send({ type:'broadcast', event:'live_locutor_stop', payload:{} });
+        supabase.removeChannel(liveBroadcastCh);
+        liveBroadcastCh = null;
+    }
+    updateLiveLocutorUI(false);
+}
+
+function updateLiveLocutorUI(active) {
+    const btn = document.getElementById('liveLocutorBtn');
+    const ind = document.getElementById('liveLocutorIndicator');
+    const txt = document.getElementById('liveLocutorStatus');
+    if(!btn) return;
+    if(active) {
+        btn.textContent = '⏹️ Parar Transmissão';
+        btn.classList.add('active');
+        if(ind) ind.classList.add('active');
+        if(txt) txt.textContent = '🔴 Transmitindo ao vivo...';
+    } else {
+        btn.textContent = '🎙️ Iniciar ao Vivo';
+        btn.classList.remove('active');
+        if(ind) ind.classList.remove('active');
+        if(txt) txt.textContent = 'Microfone inativo';
+    }
+}
+
+window.startLiveLocutor = startLiveLocutor;
+
+window.setEmergencyMessage = function(msg) {
+    const el = document.getElementById('emergencyMessage');
+    if(el) { el.value = msg; }
+    // Garante que TTS está selecionado
+    const ttsRadio = document.getElementById('emergencyUseTTS');
+    if(ttsRadio) {
+        ttsRadio.checked = true;
+        document.getElementById('emergencyTTSGroup').style.display = 'block';
+        document.getElementById('emergencyAudioGroup').style.display = 'none';
+    }
+};
