@@ -14,22 +14,19 @@ let isPlaying         = false;
 let isShuffling       = false;
 let lastKnownDate     = null;
 
-// ── Estado persistente ────────────────────────────────────────
-let stateSaveInterval = null;
-const STATE_SAVE_MS   = 10000; // salva a cada 10 segundos
-
 // ── Analytics ────────────────────────────────────────────────
-let currentTrackInfo  = null; // {title, artist, audio_url, source_table, source_id, slot_id, slot_name}
+let currentTrackInfo  = null;
 
 // ── Emergência ───────────────────────────────────────────────
-let emergencyActive   = false;
-let emergencyInterval = null;
-let emergencyAudio    = new Audio();
+let emergencyActive         = false;
+let emergencyInterval       = null;
+let emergencyAudioEl        = new Audio();
+let playerPausedByEmergency = false;
 
 // ── Locutor ao vivo ───────────────────────────────────────────
-let liveLocutorStream  = null;
-let liveLocutorContext = null;
-let liveLocutorSource  = null;
+let liveLocutorChannel = null;
+let liveAudioQueue     = [];
+let liveAudioCtx       = null;
 
 // ── Playlist legada (fundo / madrugada) ───────────────────────
 let allSchedules      = [];
@@ -50,7 +47,7 @@ let isSeasonalActive  = false;
 
 // ── Grades horárias ───────────────────────────────────────────
 let timeSlots         = [];
-let gradesEnabled     = true;   // controlado pelo botão no admin
+let gradesEnabled     = true;
 let currentSlot       = null;
 let slotPlaylist      = [];
 let slotCurrentIndex  = 0;
@@ -69,7 +66,7 @@ let gradeStartTime  = null;
 let gradeDurationMs = 0;
 let lastJingleOpening=null, lastJingleMiddle=null, lastJingleClosing=null;
 
-// ── Blocos sazonais v2 ────────────────────────────────────────
+// ── Blocos sazonais ───────────────────────────────────────────
 let seasonalBlocksToday = [];
 let seasonalBlockPlaying= false;
 let seasonalBlockQueue  = [];
@@ -85,12 +82,14 @@ let suggestPendingItem  = null;
 let suggestCountToday   = 0;
 const SUGGEST_LIMIT     = 20;
 
+// ── Estado persistente ────────────────────────────────────────
+let saveStateInterval = null;
+
 // ─────────────────────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────────────────────
 async function init() {
     try {
-        // Atribui elementos do DOM aqui — garantido que existem
         audioPlayer   = document.getElementById('audioPlayer');
         playBtn       = document.getElementById('playBtn');
         volumeSlider  = document.getElementById('volumeSlider');
@@ -119,17 +118,10 @@ async function init() {
         setInterval(checkSlotChange, 60000);
         await loadCurrentHourAudio();
         await detectAndActivateSlot();
-
-        // Restaura última música tocada (queda de energia/internet)
         await restorePlaybackState();
-        // Inicia salvamento periódico do estado
         startSaveStateInterval();
-        // Inicia listener de emergência
         initEmergencyListener();
-        // Inicia listener de locutor ao vivo
         initLiveLocutorListener();
-        // Embaralhamento por conclusão de playlist — não precisa verificar ao iniciar
-        // Embaralhamento agora acontece ao completar a playlist — não por data
         initSuggest();
         initLocutorListener();
         initTTSListener();
@@ -155,8 +147,6 @@ async function loadAllData() {
         backgroundPlaylist = bgRes.data   || [];
         advertisements     = adsRes.data  || [];
         timeSlots          = slotsRes.data|| [];
-
-        // grades_enabled vem da tabela radio_settings
         gradesEnabled = settingsRes.data?.grades_enabled !== false;
 
         if(ssRes.data?.category) {
@@ -171,13 +161,9 @@ async function loadAllData() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// EMBARALHAMENTO — verifica mudança de dia ao iniciar e a cada 5min
+// EMBARALHAMENTO
 // ─────────────────────────────────────────────────────────────
-// ── Embaralhamento por conclusão de playlist ──────────────────
-// Não embaralha mais por data/meia-noite.
-// O embaralhamento acontece quando a ÚLTIMA música da lista toca.
-// checkAndShuffleIfNewDay mantido vazio para não quebrar chamadas.
-async function checkAndShuffleIfNewDay() { /* desativado */ }
+async function checkAndShuffleIfNewDay() { /* desativado — embaralha ao completar */ }
 
 async function shufflePlaylistAfterComplete(table, slotId) {
     if(isShuffling) return;
@@ -188,14 +174,12 @@ async function shufflePlaylistAfterComplete(table, slotId) {
         const {data: tracks} = await query;
         if(!tracks?.length) { isShuffling = false; return; }
 
-        // Fisher-Yates shuffle
         const idx = [...Array(tracks.length).keys()];
         for(let i = idx.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [idx[i], idx[j]] = [idx[j], idx[i]];
         }
 
-        // Salva nova ordem no banco em batches
         const BATCH = 50;
         for(let i = 0; i < tracks.length; i += BATCH) {
             const batch = tracks.slice(i, i + BATCH);
@@ -203,7 +187,6 @@ async function shufflePlaylistAfterComplete(table, slotId) {
                 supabase.from(table).update({ daily_order: idx[i + bi] }).eq('id', t.id)
             ));
         }
-        console.log(`🎲 Playlist embaralhada após completar: ${table} ${slotId||''}`);
     } catch(err) { console.error('Erro shuffle:', err); }
     finally { isShuffling = false; }
 }
@@ -246,7 +229,6 @@ async function loadSlotPlaylist(slotId) {
         .eq('slot_id', slotId).eq('enabled', true)
         .order('daily_order', {ascending: true});
     slotPlaylist = data || [];
-    // Não reseta índice — mantém posição atual se recarregar mid-play
     if(slotCurrentIndex >= slotPlaylist.length) slotCurrentIndex = 0;
     slotAdIndex = 0; slotTracksSinceAd = 0;
 }
@@ -274,53 +256,80 @@ function checkSlotChange() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// ESTADO PERSISTENTE — salva e restaura posição da playlist
+// ESTADO PERSISTENTE
 // ─────────────────────────────────────────────────────────────
-function startStateSaving() {
-    if(stateSaveInterval) clearInterval(stateSaveInterval);
-    stateSaveInterval = setInterval(savePlayerState, STATE_SAVE_MS);
-}
-
-async function savePlayerState() {
+async function savePlaybackState() {
     try {
-        const state = {
-            current_index : isGradeMode ? slotCurrentIndex : currentBgIndex,
-            slot_id       : currentSlot?.id || null,
-            is_grade_mode : isGradeMode,
-            current_table : isGradeMode ? 'slot_playlists' : (isSeasonalActive ? 'seasonal_playlists' : 'background_playlist'),
-            current_id    : isGradeMode
-                ? (slotPlaylist[slotCurrentIndex]?.id || null)
-                : (isSeasonalActive ? (seasonalPlaylist[currentBgIndex]?.id || null) : (backgroundPlaylist[currentBgIndex]?.id || null)),
-            updated_at    : new Date().toISOString()
-        };
-        await supabase.from('player_state').update(state).eq('id', 1);
+        const table = isGradeMode ? 'slot_playlists' : (isSeasonalActive ? 'seasonal_playlists' : 'background_playlist');
+        const index = isGradeMode ? slotCurrentIndex : currentBgIndex;
+        const playlist = isGradeMode ? slotPlaylist : (isSeasonalActive ? seasonalPlaylist : backgroundPlaylist);
+        const track = playlist[index % Math.max(playlist.length,1)];
+
+        await supabase.from('playback_state').update({
+            track_id:     track?.id       || null,
+            track_table:  table,
+            slot_id:      currentSlot?.id || null,
+            track_title:  track?.title    || null,
+            audio_url:    track?.audio_url|| null,
+            playlist_index: index,
+            updated_at:   new Date().toISOString()
+        }).eq('id', 1);
     } catch(err) { /* silencioso */ }
 }
 
-async function restorePlayerState() {
+async function restorePlaybackState() {
     try {
-        const {data} = await supabase.from('player_state').select('*').eq('id',1).single();
-        if(!data) return;
-        if(data.is_grade_mode && data.slot_id && slotPlaylist.length > 0) {
-            slotCurrentIndex = Math.min(data.current_index || 0, Math.max(slotPlaylist.length - 1, 0));
-            console.log(`▶️ Retomando grade na música ${slotCurrentIndex + 1}/${slotPlaylist.length}`);
-        } else if(!data.is_grade_mode && backgroundPlaylist.length > 0) {
-            currentBgIndex = Math.min(data.current_index || 0, Math.max(backgroundPlaylist.length - 1, 0));
-            console.log(`▶️ Retomando playlist na música ${currentBgIndex + 1}/${backgroundPlaylist.length}`);
+        const { data } = await supabase
+            .from('playback_state')
+            .select('*')
+            .eq('id', 1)
+            .maybeSingle();
+
+        if(!data || !data.audio_url) return false;
+
+        if(data.track_table === 'slot_playlists' && data.slot_id) {
+            const slot = timeSlots.find(s => s.id === data.slot_id);
+            if(slot) {
+                currentSlot = slot; lastSlotId = slot.id; isGradeMode = true;
+                await loadSlotPlaylist(slot.id);
+                await loadSlotJingles(slot.id);
+                const idx = slotPlaylist.findIndex(t => t.id === data.track_id);
+                slotCurrentIndex = idx >= 0 ? idx : (data.playlist_index || 0);
+                return true;
+            }
+        } else if(data.track_table === 'background_playlist') {
+            isGradeMode = false;
+            const idx = backgroundPlaylist.findIndex(t => t.id === data.track_id);
+            currentBgIndex = idx >= 0 ? idx : (data.playlist_index || 0);
+            return true;
         }
-    } catch(err) { /* sem estado salvo — começa do início */ }
+        return false;
+    } catch(err) { return false; }
+}
+
+function startSaveStateInterval() {
+    if(saveStateInterval) clearInterval(saveStateInterval);
+    saveStateInterval = setInterval(() => {
+        if(isPlaying && !isPlayingHourCerta && !isPlayingJingle && !isPlayingAd) {
+            savePlaybackState();
+        }
+    }, 30000);
 }
 
 // ─────────────────────────────────────────────────────────────
-// ANALYTICS — registra cada música tocada
+// ANALYTICS
 // ─────────────────────────────────────────────────────────────
-async function logTrackPlay(title, artist, audioUrl, sourceTable, sourceId, slotId, slotName) {
+async function logAnalytics(track, table, slotId, slotName) {
     try {
-        currentTrackInfo = {title, artist, audio_url: audioUrl, source_table: sourceTable, source_id: sourceId, slot_id: slotId, slot_name: slotName};
-        await supabase.from('play_log').insert([{
-            title, artist, audio_url: audioUrl,
-            source_table: sourceTable, source_id: sourceId,
-            slot_id: slotId, slot_name: slotName
+        const now = new Date();
+        await supabase.from('play_analytics').insert([{
+            track_id:    track?.id    || null,
+            track_title: track?.title || 'Desconhecida',
+            track_table: table,
+            slot_id:     slotId  || null,
+            slot_name:   slotName|| null,
+            day_of_week: now.getDay(),
+            hour_of_day: now.getHours()
         }]);
     } catch(err) { /* silencioso */ }
 }
@@ -370,7 +379,7 @@ function pickJingle(list, last) {
 }
 
 function playJingle(position, cb) {
-    let j=null, lastRef=null;
+    let j=null;
     if(position==='opening'){ j=pickJingle(jinglesOpening,lastJingleOpening); if(j) lastJingleOpening=j.id; }
     else if(position==='middle'){ j=pickJingle(jinglesMiddle,lastJingleMiddle); if(j) lastJingleMiddle=j.id; }
     else if(position==='closing'){ j=pickJingle(jinglesClosing,lastJingleClosing); if(j) lastJingleClosing=j.id; }
@@ -421,7 +430,6 @@ function playSlotMusicTrack() {
     audioPlayer.src = track.audio_url;
     updateDisplay(currentSlot?`🎵 ${currentSlot.name}`:'Tocando agora', track.title||'Música');
     slotTracksSinceAd++;
-    // Log analytics
     logAnalytics(track, 'slot_playlists', currentSlot?.id, currentSlot?.name);
     if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
 }
@@ -452,7 +460,6 @@ function playBgMusic() {
     audioPlayer.src=track.audio_url;
     updateDisplay(isSeasonalActive?'🎭 Especial':'Tocando agora', track.title||'Música');
     tracksPlayedSinceAd++;
-    // Log analytics
     logAnalytics(track, isSeasonalActive?'seasonal_playlists':'background_playlist', null, isSeasonalActive?activeSeasonalCat:'Fundo');
     if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
 }
@@ -536,7 +543,7 @@ function resumeAfterHourCerta() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// HANDLE AUDIO ENDED — roteamento central
+// HANDLE AUDIO ENDED
 // ─────────────────────────────────────────────────────────────
 async function handleAudioEnded() {
     // Vinheta de grade
@@ -565,10 +572,9 @@ async function handleAudioEnded() {
     if(audioPlayer._afterSeasonal){
         audioPlayer._afterSeasonal=false; playSlotTrack(); return;
     }
-    // Hora certa — avança para PRÓXIMA música, nunca volta para a mesma
+    // Hora certa
     if(isPlayingHourCerta){
         isPlayingHourCerta=false;
-        // Avança índice antes de tocar
         if(isGradeMode){
             slotCurrentIndex = (slotCurrentIndex + 1) % Math.max(slotPlaylist.length, 1);
             playSlotAd(()=>playSlotTrack());
@@ -582,19 +588,18 @@ async function handleAudioEnded() {
     }
     // Propaganda legada
     if(isPlayingAd&&!isGradeMode){ isPlayingAd=false; playBgMusic(); return; }
-    // Música da grade — avança índice, embaralha ao completar
+    // Música da grade
     if(isGradeMode){
         const wasLast = slotCurrentIndex >= slotPlaylist.length - 1;
         slotCurrentIndex++;
         if(wasLast) {
-            // Chegou na última — embaralha e recomeça
             slotCurrentIndex = 0;
             await shufflePlaylistAfterComplete('slot_playlists', currentSlot?.id || null);
             await loadSlotPlaylist(currentSlot?.id);
         }
         playSlotTrack(); return;
     }
-    // Música legada — avança índice, embaralha ao completar
+    // Música legada
     const playlist = isSeasonalActive ? seasonalPlaylist : backgroundPlaylist;
     const wasLastBg = currentBgIndex >= playlist.length - 1;
     currentBgIndex++;
@@ -602,7 +607,6 @@ async function handleAudioEnded() {
         currentBgIndex = 0;
         if(isSeasonalActive) {
             await shufflePlaylistAfterComplete('seasonal_playlists', null);
-            // Recarrega playlist sazonal
             const {data} = await supabase.from('seasonal_playlists')
                 .select('*').eq('type','music').eq('enabled',true)
                 .eq('category', activeSeasonalCat).order('daily_order',{ascending:true});
@@ -665,10 +669,14 @@ function setupEventListeners() {
 }
 
 function togglePlay() {
-    if(!audioPlayer.src) return;
     if(isPlaying){
         audioPlayer.pause(); isPlaying=false; updatePlayButtonState(false);
     } else {
+        // Se não tem src ainda, começa a música correta
+        if(!audioPlayer.src || audioPlayer.src === window.location.href) {
+            if(isGradeMode && slotPlaylist.length) playSlotTrack();
+            else playBgMusic();
+        }
         audioPlayer.play().then(()=>{ isPlaying=true; updatePlayButtonState(true); }).catch(e=>console.error(e));
     }
 }
@@ -757,72 +765,91 @@ function setupRealtimeSubscription() {
 // ─────────────────────────────────────────────────────────────
 function initEmergencyListener() {
     supabase.channel('emergency_player')
-        .on('postgres_changes', {event:'UPDATE', schema:'public', table:'emergency_alert'},
+        .on('postgres_changes', {event:'UPDATE', schema:'public', table:'emergency_state'},
             payload => handleEmergencyChange(payload.new))
         .subscribe();
 }
 
-function handleEmergencyChange(state) {
+async function handleEmergencyChange(state) {
     if(state.is_active && !emergencyActive) {
         emergencyActive = true;
-        // Pausa tudo
-        if(isPlaying) { audioPlayer.pause(); }
-        if(window.responsiveVoice) responsiveVoice.cancel();
-        updateDisplay('🚨 ALERTA', 'Mensagem de emergência');
+        if(isPlaying && audioPlayer.src) {
+            audioPlayer.pause();
+            playerPausedByEmergency = true;
+        }
+        updateDisplay('🚨 ALERTA', state.message || 'Atenção!');
         playEmergencyAlert(state);
-        // Repete em loop pelo intervalo configurado
-        emergencyInterval = setInterval(() => playEmergencyAlert(state), (state.repeat_interval_sec || 60) * 1000);
     } else if(!state.is_active && emergencyActive) {
         emergencyActive = false;
-        clearInterval(emergencyInterval);
-        emergencyInterval = null;
-        emergencyAudio.pause(); emergencyAudio.src = '';
+        if(emergencyInterval) { clearInterval(emergencyInterval); emergencyInterval = null; }
         if(window.responsiveVoice) responsiveVoice.cancel();
-        // Retoma a rádio
-        if(isPlaying) {
-            if(isGradeMode) playSlotTrack();
-            else playBgMusic();
-        }
+        if(emergencyAudioEl) { emergencyAudioEl.pause(); emergencyAudioEl.src = ''; }
+        if(playerPausedByEmergency && isPlaying) {
+            playerPausedByEmergency = false;
+            audioPlayer.play().catch(e => console.error(e));
+        } else { playerPausedByEmergency = false; }
     }
 }
 
 function playEmergencyAlert(state) {
-    if(state.mode === 'audio' && state.audio_url) {
-        emergencyAudio.src = state.audio_url;
-        emergencyAudio.play().catch(e => console.error(e));
-    } else if(state.tts_text) {
-        const voice = 'Brazilian Portuguese Female';
-        if(window.responsiveVoice) {
-            responsiveVoice.speak(state.tts_text, voice, { rate: 0.85, volume: 1 });
-        } else if(window.speechSynthesis) {
-            const utt = new SpeechSynthesisUtterance(state.tts_text);
-            utt.lang = 'pt-BR'; utt.rate = 0.85;
-            speechSynthesis.speak(utt);
+    const doPlay = () => {
+        if(!emergencyActive) return;
+        if(state.use_tts !== false && state.message) {
+            if(window.responsiveVoice && responsiveVoice.voiceSupport()) {
+                responsiveVoice.speak(state.message, state.voice || 'Brazilian Portuguese Female', {
+                    rate: 0.85, pitch: 1, volume: 1,
+                    onend: () => { if(emergencyActive) setTimeout(doPlay, 2000); }
+                });
+            }
+        } else if(state.audio_url) {
+            emergencyAudioEl.src = state.audio_url;
+            emergencyAudioEl.play().catch(e => console.error(e));
+            emergencyAudioEl.onended = () => { if(emergencyActive) setTimeout(doPlay, 1000); };
         }
-    }
+    };
+    doPlay();
 }
 
 // ─────────────────────────────────────────────────────────────
 // LOCUTOR AO VIVO (MICROFONE)
 // ─────────────────────────────────────────────────────────────
 function initLiveLocutorListener() {
-    supabase.channel('live_locutor_player')
-        .on('broadcast', {event:'live_locutor_start'}, () => handleLiveLocutorStart())
-        .on('broadcast', {event:'live_locutor_stop'},  () => handleLiveLocutorStop())
+    liveLocutorChannel = supabase.channel('live_locutor_player')
+        .on('broadcast', { event: 'live_audio_chunk' }, payload => {
+            handleLiveAudioChunk(payload.payload);
+        })
+        .on('broadcast', { event: 'live_locutor_start' }, () => {
+            if(isPlaying && audioPlayer.src) {
+                audioPlayer.pause();
+                playerPausedByLoc = true;
+                playerResumePos = audioPlayer.currentTime;
+                updateDisplay('🎙️ Ao Vivo', 'Locutor transmitindo...');
+            }
+        })
+        .on('broadcast', { event: 'live_locutor_stop' }, () => {
+            if(playerPausedByLoc && isPlaying) {
+                playerPausedByLoc = false;
+                audioPlayer.currentTime = playerResumePos;
+                audioPlayer.play().catch(e => console.error(e));
+            } else { playerPausedByLoc = false; }
+        })
         .subscribe();
 }
 
-async function handleLiveLocutorStart() {
-    if(isPlaying) { playerResumePos = audioPlayer.currentTime; playerPausedByLoc = true; audioPlayer.pause(); }
-    updateDisplay('🎙️ Locutor Ao Vivo', 'Transmitindo...');
-}
-
-function handleLiveLocutorStop() {
-    if(playerPausedByLoc && isPlaying) {
-        playerPausedByLoc = false;
-        audioPlayer.currentTime = playerResumePos;
-        audioPlayer.play().catch(e => console.error(e));
-    } else { playerPausedByLoc = false; }
+function handleLiveAudioChunk(payload) {
+    if(!payload?.chunk) return;
+    try {
+        if(!liveAudioCtx) liveAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const binary = atob(payload.chunk);
+        const bytes  = new Uint8Array(binary.length);
+        for(let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+        liveAudioCtx.decodeAudioData(bytes.buffer, buf => {
+            const src = liveAudioCtx.createBufferSource();
+            src.buffer = buf;
+            src.connect(liveAudioCtx.destination);
+            src.start(0);
+        });
+    } catch(err) { /* chunk inválido */ }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -876,7 +903,6 @@ function handleTTSPlay(data) {
         }
     };
 
-    // ResponsiveVoice — mais natural
     if(window.responsiveVoice && responsiveVoice.voiceSupport()) {
         responsiveVoice.speak(data.text, voiceName, {
             rate: 0.9, pitch: 1, volume: 1,
@@ -885,7 +911,6 @@ function handleTTSPlay(data) {
         return;
     }
 
-    // Fallback Web Speech API
     if(!window.speechSynthesis) { onEnd(); return; }
     speechSynthesis.cancel();
     const utt = new SpeechSynthesisUtterance(data.text);
@@ -962,14 +987,12 @@ async function handleSuggestSearch() {
                 </div>
             </div>`).join('');
 
-        // Listeners para prévia
         resultsEl.querySelectorAll('.suggest-preview-btn').forEach(btn => {
             btn.addEventListener('click', e => {
                 const vid = e.currentTarget.dataset.id;
                 const frame = document.getElementById(`preview_${vid}`);
                 if(!frame) return;
                 if(frame.style.display === 'none') {
-                    // Fecha outras prévias abertas
                     resultsEl.querySelectorAll('.suggest-preview-frame').forEach(f => {
                         f.src = ''; f.style.display = 'none';
                     });
@@ -1031,202 +1054,11 @@ function showSuggestFeedback(msg,type) {
     setTimeout(()=>{ el.style.display='none'; },5000);
 }
 
-
 // ─────────────────────────────────────────────────────────────
-// ESTADO DE REPRODUÇÃO — salva e restaura após queda
-// ─────────────────────────────────────────────────────────────
-let saveStateInterval = null;
-
-async function savePlaybackState() {
-    try {
-        const table = isGradeMode ? 'slot_playlists' : (isSeasonalActive ? 'seasonal_playlists' : 'background_playlist');
-        const index = isGradeMode ? slotCurrentIndex : currentBgIndex;
-        const track = isGradeMode
-            ? slotPlaylist[slotCurrentIndex % Math.max(slotPlaylist.length,1)]
-            : (isSeasonalActive ? seasonalPlaylist : backgroundPlaylist)[currentBgIndex % Math.max((isSeasonalActive ? seasonalPlaylist : backgroundPlaylist).length,1)];
-
-        await supabase.from('playback_state').update({
-            track_id:     track?.id       || null,
-            track_table:  table,
-            slot_id:      currentSlot?.id || null,
-            track_title:  track?.title    || null,
-            audio_url:    track?.audio_url|| null,
-            playlist_index: index,
-            updated_at:   new Date().toISOString()
-        }).eq('id', 1);
-    } catch(err) { /* silencioso */ }
-}
-
-async function restorePlaybackState() {
-    try {
-        const { data } = await supabase
-            .from('playback_state')
-            .select('*')
-            .eq('id', 1)
-            .maybeSingle();
-
-        if(!data || !data.audio_url) return false;
-
-        // Restaura índice da playlist
-        if(data.track_table === 'slot_playlists' && data.slot_id) {
-            // Encontra o slot correto
-            const slot = timeSlots.find(s => s.id === data.slot_id);
-            if(slot) {
-                currentSlot = slot; lastSlotId = slot.id; isGradeMode = true;
-                await loadSlotPlaylist(slot.id);
-                await loadSlotJingles(slot.id);
-                // Encontra o índice da música salva
-                const idx = slotPlaylist.findIndex(t => t.id === data.track_id);
-                slotCurrentIndex = idx >= 0 ? idx : (data.playlist_index || 0);
-                return true;
-            }
-        } else if(data.track_table === 'background_playlist') {
-            isGradeMode = false;
-            const idx = backgroundPlaylist.findIndex(t => t.id === data.track_id);
-            currentBgIndex = idx >= 0 ? idx : (data.playlist_index || 0);
-            return true;
-        }
-        return false;
-    } catch(err) { return false; }
-}
-
-function startSaveStateInterval() {
-    if(saveStateInterval) clearInterval(saveStateInterval);
-    // Salva estado a cada 30 segundos enquanto tocando
-    saveStateInterval = setInterval(() => {
-        if(isPlaying && !isPlayingHourCerta && !isPlayingJingle && !isPlayingAd) {
-            savePlaybackState();
-        }
-    }, 30000);
-}
-
-// ─────────────────────────────────────────────────────────────
-// ANALYTICS — registra cada música tocada
-// ─────────────────────────────────────────────────────────────
-async function logAnalytics(track, table, slotId, slotName) {
-    try {
-        const now = new Date();
-        await supabase.from('play_analytics').insert([{
-            track_id:    track?.id    || null,
-            track_title: track?.title || 'Desconhecida',
-            track_table: table,
-            slot_id:     slotId  || null,
-            slot_name:   slotName|| null,
-            day_of_week: now.getDay(),
-            hour_of_day: now.getHours()
-        }]);
-    } catch(err) { /* silencioso */ }
-}
-
-// ─────────────────────────────────────────────────────────────
-// EMERGÊNCIA — listener em tempo real
-// ─────────────────────────────────────────────────────────────
-let emergencyInterval = null;
-let playerPausedByEmergency = false;
-
-function initEmergencyListener() {
-    supabase.channel('emergency_player')
-        .on('postgres_changes', { event:'UPDATE', schema:'public', table:'emergency_state' },
-            payload => handleEmergencyChange(payload.new))
-        .subscribe();
-}
-
-async function handleEmergencyChange(state) {
-    if(state.is_active && !emergencyActive) {
-        emergencyActive = true;
-        // Pausa player principal
-        if(isPlaying && audioPlayer.src) {
-            audioPlayer.pause();
-            playerPausedByEmergency = true;
-        }
-        updateDisplay('🚨 ALERTA', state.message || 'Atenção!');
-        playEmergencyAlert(state);
-    } else if(!state.is_active && emergencyActive) {
-        emergencyActive = false;
-        if(emergencyInterval) { clearInterval(emergencyInterval); emergencyInterval = null; }
-        if(window.responsiveVoice) responsiveVoice.cancel();
-        if(emergencyAudio) { emergencyAudio.pause(); emergencyAudio.src = ''; }
-        if(playerPausedByEmergency && isPlaying) {
-            playerPausedByEmergency = false;
-            audioPlayer.play().catch(e => console.error(e));
-        } else { playerPausedByEmergency = false; }
-    }
-}
-
-let emergencyAudio = new Audio();
-
-function playEmergencyAlert(state) {
-    const doPlay = () => {
-        if(!emergencyActive) return;
-        if(state.use_tts !== false && state.message) {
-            if(window.responsiveVoice && responsiveVoice.voiceSupport()) {
-                responsiveVoice.speak(state.message, state.voice || 'Brazilian Portuguese Female', {
-                    rate: 0.85, pitch: 1, volume: 1,
-                    onend: () => { if(emergencyActive) setTimeout(doPlay, 2000); }
-                });
-            }
-        } else if(state.audio_url) {
-            emergencyAudio.src = state.audio_url;
-            emergencyAudio.play().catch(e => console.error(e));
-            emergencyAudio.onended = () => { if(emergencyActive) setTimeout(doPlay, 1000); };
-        }
-    };
-    doPlay();
-}
-
-// ─────────────────────────────────────────────────────────────
-// LOCUTOR AO VIVO — microfone em tempo real via WebRTC
-// ─────────────────────────────────────────────────────────────
-let liveLocutorChannel = null;
-
-function initLiveLocutorListener() {
-    liveLocutorChannel = supabase.channel('live_locutor_player')
-        .on('broadcast', { event: 'live_audio_chunk' }, payload => {
-            handleLiveAudioChunk(payload.payload);
-        })
-        .on('broadcast', { event: 'live_locutor_start' }, () => {
-            if(isPlaying && audioPlayer.src) {
-                audioPlayer.pause();
-                playerPausedByLoc = true;
-                playerResumePos = audioPlayer.currentTime;
-                updateDisplay('🎙️ Ao Vivo', 'Locutor transmitindo...');
-            }
-        })
-        .on('broadcast', { event: 'live_locutor_stop' }, () => {
-            if(playerPausedByLoc && isPlaying) {
-                playerPausedByLoc = false;
-                audioPlayer.currentTime = playerResumePos;
-                audioPlayer.play().catch(e => console.error(e));
-            } else { playerPausedByLoc = false; }
-        })
-        .subscribe();
-}
-
-let liveAudioQueue  = [];
-let liveAudioCtx    = null;
-let liveIsPlaying   = false;
-
-function handleLiveAudioChunk(payload) {
-    if(!payload?.chunk) return;
-    try {
-        if(!liveAudioCtx) liveAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const binary = atob(payload.chunk);
-        const bytes  = new Uint8Array(binary.length);
-        for(let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
-        liveAudioCtx.decodeAudioData(bytes.buffer, buf => {
-            const src = liveAudioCtx.createBufferSource();
-            src.buffer = buf;
-            src.connect(liveAudioCtx.destination);
-            src.start(0);
-        });
-    } catch(err) { /* chunk inválido */ }
-}
-// ─────────────────────────────────────────────────────────────
-// BOOTSTRAP — garante que DOM existe antes de inicializar
+// BOOTSTRAP
 // ─────────────────────────────────────────────────────────────
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {
-    // DOM já pronto (script carregado após o HTML)
     init();
 }
