@@ -2,89 +2,138 @@ const SUPABASE_URL      = 'https://dyzjsgfoaxyeyepoylvg.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5empzZ2ZvYXh5ZXllcG95bHZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1ODUzNjUsImV4cCI6MjA3NTE2MTM2NX0.PwmaMI04EhcTqUQioTRInyVKUlw3t1ap0lM5hI29s2I';
 const YOUTUBE_API_KEY   = 'AIzaSyCcpLnZ0XHsSEx34Zvkc80FwmHiHIqS6Gs';
 const BLOCKED_TERMS     = ['funk','rock pesado','metal','punk','rap','trap'];
-const MAX_SUGGESTIONS   = 20;
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ── Estado do player ──────────────────────────────────────────
-let backgroundPlaylist  = [];
-let advertisements      = [];
-let scheduleData        = [];
-let timeSlots           = [];
-let slotPlaylists       = {};
-let slotJingles         = {};
-let seasonalData        = { natal:{music:[],ads:[]}, ano_novo:{music:[],ads:[]}, pascoa:{music:[],ads:[]}, sao_joao:{music:[],ads:[]} };
-let seasonalSettings    = {};
-let seasonalJingles     = { natal:[], ano_novo:[], pascoa:[], sao_joao:[] };
+// ── DOM — declaradas aqui, atribuídas no init ────────────────
+let audioPlayer, playBtn, volumeSlider, syncBtn;
+let currentTime, countdownTimer, statusText, trackName;
 
-let currentPlaylist     = [];
-let currentIndex        = 0;
-let currentTable        = 'background_playlist';
-let currentSlotId       = null;
-let isGradeMode         = false;
-let isPlaying           = false;
-let musicCount          = 0;
-let adIndex             = 0;
-let lastPlayedHour      = -1;
-let lastPlayedHalf      = false;
-let lastScheduleCheck   = 0;
-let gradesEnabled       = true;
+// ── Estado geral ──────────────────────────────────────────────
+let isPlaying         = false;
+let isShuffling       = false;
+let lastKnownDate     = null;
 
-// ── Jingles de grade ──────────────────────────────────────────
-let openingJinglePlayed = false;
-let closingScheduled    = false;
-let middleJinglesPlayed = 0;
-let lastJingleId        = null;
-let slotStartTime       = null;
-let slotEndTime         = null;
+// ── Estado persistente ────────────────────────────────────────
+let stateSaveInterval = null;
+const STATE_SAVE_MS   = 10000; // salva a cada 10 segundos
 
-// ── Emergência ────────────────────────────────────────────────
-let emergencyActive     = false;
-let emergencyAudio      = null;
-let emergencyInterval   = null;
+// ── Analytics ────────────────────────────────────────────────
+let currentTrackInfo  = null; // {title, artist, audio_url, source_table, source_id, slot_id, slot_name}
+
+// ── Emergência ───────────────────────────────────────────────
+let emergencyActive   = false;
+let emergencyInterval = null;
+let emergencyAudio    = new Audio();
 
 // ── Locutor ao vivo ───────────────────────────────────────────
-let liveLocutorActive   = false;
-let liveAudioCtx        = null;
-let liveSourceNode      = null;
+let liveLocutorStream  = null;
+let liveLocutorContext = null;
+let liveLocutorSource  = null;
 
-// ── Sugestões ─────────────────────────────────────────────────
-let deviceId            = null;
-let suggestionCount     = 0;
-let suggestResults      = [];
-let suggestSelectedId   = null;
+// ── Playlist legada (fundo / madrugada) ───────────────────────
+let allSchedules      = [];
+let backgroundPlaylist= [];
+let advertisements    = [];
+let currentBgIndex    = 0;
+let currentAdIndex    = 0;
+let tracksPlayedSinceAd = 0;
+let isPlayingHourCerta= false;
+let isPlayingAd       = false;
+let lastPlayedSlot    = null;
 
-// ── DOM ───────────────────────────────────────────────────────
-let audio, playBtn, trackTitle, trackArtist, trackStatus,
-    volumeSlider, progressBar, currentTimeEl, durationEl,
-    liveIndicator, liveText;
+// ── Sazonais ──────────────────────────────────────────────────
+let seasonalPlaylist  = [];
+let seasonalAds       = [];
+let activeSeasonalCat = null;
+let isSeasonalActive  = false;
+
+// ── Grades horárias ───────────────────────────────────────────
+let timeSlots         = [];
+let gradesEnabled     = true;   // controlado pelo botão no admin
+let currentSlot       = null;
+let slotPlaylist      = [];
+let slotCurrentIndex  = 0;
+let slotAdIndex       = 0;
+let slotTracksSinceAd = 0;
+let isGradeMode       = false;
+let lastSlotId        = null;
+
+// ── Vinhetas ──────────────────────────────────────────────────
+let jinglesOpening = [], jinglesMiddle = [], jinglesClosing = [];
+let isPlayingJingle = false;
+let gradeOpeningDone= false;
+let gradeMiddle1Done= false;
+let gradeMiddle2Done= false;
+let gradeStartTime  = null;
+let gradeDurationMs = 0;
+let lastJingleOpening=null, lastJingleMiddle=null, lastJingleClosing=null;
+
+// ── Blocos sazonais v2 ────────────────────────────────────────
+let seasonalBlocksToday = [];
+let seasonalBlockPlaying= false;
+let seasonalBlockQueue  = [];
+let seasonalBlockIndex  = 0;
+
+// ── Locutor / TTS ─────────────────────────────────────────────
+let locutorAudio        = new Audio();
+let playerPausedByLoc   = false;
+let playerResumePos     = 0;
+
+// ── Sugestão ──────────────────────────────────────────────────
+let suggestPendingItem  = null;
+let suggestCountToday   = 0;
+const SUGGEST_LIMIT     = 20;
 
 // ─────────────────────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', init);
-
 async function init() {
-    audio         = document.getElementById('audioPlayer');
-    playBtn       = document.getElementById('playBtn');
-    trackTitle    = document.getElementById('trackTitle');
-    trackArtist   = document.getElementById('trackArtist');
-    trackStatus   = document.getElementById('trackStatus');
-    volumeSlider  = document.getElementById('volumeSlider');
-    progressBar   = document.getElementById('progressBar');
-    currentTimeEl = document.getElementById('currentTime');
-    durationEl    = document.getElementById('duration');
-    liveIndicator = document.getElementById('liveIndicator');
-    liveText      = document.getElementById('liveText');
+    try {
+        // Atribui elementos do DOM aqui — garantido que existem
+        audioPlayer   = document.getElementById('audioPlayer');
+        playBtn       = document.getElementById('playBtn');
+        volumeSlider  = document.getElementById('volumeSlider');
+        syncBtn       = document.getElementById('syncBtn');
+        currentTime   = document.getElementById('currentTime');
+        countdownTimer= document.getElementById('countdownTimer');
+        statusText    = document.getElementById('statusText');
+        trackName     = document.getElementById('trackName');
 
-    setupAudioListeners();
-    setupUIListeners();
-    setupSuggestionListeners();
+        if(!audioPlayer || !playBtn) {
+            console.error('Elementos DOM não encontrados — verifique o index.html');
+            return;
+        }
 
-    deviceId = getDeviceId();
-    await loadSuggestionCount();
-    await loadAllData();
-    setupRealtimeSubscription();
+        audioPlayer.volume = 0.7;
+        updatePlayButtonState(false);
+
+        lastKnownDate = new Date().toISOString().split('T')[0];
+        await loadAllData();
+        setupEventListeners();
+        setupRealtimeSubscription();
+        updateClock();
+        setInterval(updateClock, 1000);
+        setInterval(checkHourChange, 30000);
+        setInterval(checkSeasonalStatus, 10000);
+        setInterval(checkSlotChange, 60000);
+        await loadCurrentHourAudio();
+        await detectAndActivateSlot();
+
+        // Restaura última música tocada (queda de energia/internet)
+        await restorePlaybackState();
+        // Inicia salvamento periódico do estado
+        startSaveStateInterval();
+        // Inicia listener de emergência
+        initEmergencyListener();
+        // Inicia listener de locutor ao vivo
+        initLiveLocutorListener();
+        // Embaralhamento por conclusão de playlist — não precisa verificar ao iniciar
+        // Embaralhamento agora acontece ao completar a playlist — não por data
+        initSuggest();
+        initLocutorListener();
+        initTTSListener();
+    } catch(err){ console.error('Erro init:', err); }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -92,764 +141,1092 @@ async function init() {
 // ─────────────────────────────────────────────────────────────
 async function loadAllData() {
     try {
-        const [schRes, plRes, adsRes, slotsRes, smRes, saRes, ssRes, setRes] = await Promise.all([
-            supabase.from('radio_schedule').select('*').order('hour', {ascending:true}),
-            supabase.from('background_playlist').select('*').order('daily_order', {ascending:true}),
-            supabase.from('advertisements').select('*').eq('enabled',true).order('play_order', {ascending:true}),
-            supabase.from('time_slots').select('*').eq('enabled',true).order('sort_order', {ascending:true}),
-            supabase.from('seasonal_playlists').select('*').eq('type','music').order('daily_order', {ascending:true}),
-            supabase.from('seasonal_playlists').select('*').eq('type','ad').order('play_order', {ascending:true}),
-            supabase.from('seasonal_settings').select('*'),
-            supabase.from('radio_settings').select('*').eq('id',1).single()
+        const [schRes,bgRes,adsRes,slotsRes,ssRes,smRes,saRes,settingsRes] = await Promise.all([
+            supabase.from('radio_schedule').select('*').order('hour',{ascending:true}),
+            supabase.from('background_playlist').select('*').eq('enabled',true).order('daily_order',{ascending:true}),
+            supabase.from('advertisements').select('*').eq('enabled',true).order('play_order',{ascending:true}),
+            supabase.from('time_slots').select('*').eq('enabled',true).order('sort_order',{ascending:true}),
+            supabase.from('seasonal_settings').select('*').eq('is_active',true).maybeSingle(),
+            supabase.from('seasonal_playlists').select('*').eq('type','music').eq('enabled',true).order('daily_order',{ascending:true}),
+            supabase.from('seasonal_playlists').select('*').eq('type','ad').eq('enabled',true).order('play_order',{ascending:true}),
+            supabase.from('radio_settings').select('grades_enabled').eq('id',1).maybeSingle()
         ]);
+        allSchedules       = schRes.data  || [];
+        backgroundPlaylist = bgRes.data   || [];
+        advertisements     = adsRes.data  || [];
+        timeSlots          = slotsRes.data|| [];
 
-        scheduleData     = schRes.data  || [];
-        backgroundPlaylist = plRes.data || [];
-        advertisements   = adsRes.data  || [];
-        timeSlots        = slotsRes.data|| [];
-        gradesEnabled    = setRes.data?.grades_enabled !== false;
+        // grades_enabled vem da tabela radio_settings
+        gradesEnabled = settingsRes.data?.grades_enabled !== false;
 
-        seasonalData = { natal:{music:[],ads:[]}, ano_novo:{music:[],ads:[]}, pascoa:{music:[],ads:[]}, sao_joao:{music:[],ads:[]} };
-        (smRes.data||[]).forEach(i => { if(seasonalData[i.category]) seasonalData[i.category].music.push(i); });
-        (saRes.data||[]).forEach(i => { if(seasonalData[i.category]) seasonalData[i.category].ads.push(i);  });
-        seasonalSettings = {};
-        (ssRes.data||[]).forEach(s => { seasonalSettings[s.category] = s; });
-
-        await loadSlotData();
-        await loadSeasonalJingles();
-        await checkEmergencyState();
-        await restorePlayerState();
-
-        if(!isPlaying) startPlayback();
-        startScheduleChecker();
-    } catch(err) {
-        console.error('Erro ao carregar dados:', err);
-        showError('Erro ao carregar playlist. Tentando novamente em 30s...');
-        setTimeout(loadAllData, 30000);
-    }
-}
-
-async function loadSlotData() {
-    if(!timeSlots.length) return;
-    const [plRes, jRes] = await Promise.all([
-        supabase.from('slot_playlists').select('*').eq('enabled',true).order('daily_order', {ascending:true}),
-        supabase.from('jingles').select('*').eq('enabled',true).not('slot_id','is',null)
-    ]);
-    slotPlaylists = {}; slotJingles = {};
-    timeSlots.forEach(s => { slotPlaylists[s.id] = []; slotJingles[s.id] = []; });
-    (plRes.data||[]).forEach(t => { if(slotPlaylists[t.slot_id]) slotPlaylists[t.slot_id].push(t); });
-    (jRes.data||[]).forEach(j => { if(slotJingles[j.slot_id])   slotJingles[j.slot_id].push(j);   });
-}
-
-async function loadSeasonalJingles() {
-    const {data} = await supabase.from('jingles').select('*').eq('enabled',true).not('seasonal_category','is',null);
-    seasonalJingles = { natal:[], ano_novo:[], pascoa:[], sao_joao:[] };
-    (data||[]).forEach(j => { if(seasonalJingles[j.seasonal_category]) seasonalJingles[j.seasonal_category].push(j); });
+        if(ssRes.data?.category) {
+            activeSeasonalCat = ssRes.data.category;
+            isSeasonalActive  = true;
+            seasonalPlaylist  = (smRes.data||[]).filter(i=>i.category===activeSeasonalCat);
+            seasonalAds       = (saRes.data||[]).filter(i=>i.category===activeSeasonalCat);
+        } else {
+            isSeasonalActive=false; seasonalPlaylist=[]; seasonalAds=[];
+        }
+    } catch(err){ console.error('Erro loadAllData:', err); }
 }
 
 // ─────────────────────────────────────────────────────────────
-// ESTADO DO PLAYER
+// EMBARALHAMENTO — verifica mudança de dia ao iniciar e a cada 5min
 // ─────────────────────────────────────────────────────────────
-async function restorePlayerState() {
+// ── Embaralhamento por conclusão de playlist ──────────────────
+// Não embaralha mais por data/meia-noite.
+// O embaralhamento acontece quando a ÚLTIMA música da lista toca.
+// checkAndShuffleIfNewDay mantido vazio para não quebrar chamadas.
+async function checkAndShuffleIfNewDay() { /* desativado */ }
+
+async function shufflePlaylistAfterComplete(table, slotId) {
+    if(isShuffling) return;
+    isShuffling = true;
     try {
-        const {data} = await supabase.from('player_state').select('*').eq('id',1).single();
-        if(!data) return;
-        currentTable  = data.current_table  || 'background_playlist';
-        currentIndex  = data.current_index  || 0;
-        currentSlotId = data.slot_id        || null;
-        isGradeMode   = data.is_grade_mode  || false;
-    } catch(err) { /* sem estado salvo — começa do zero */ }
+        let query = supabase.from(table).select('id').eq('enabled', true);
+        if(slotId !== null) query = query.eq('slot_id', slotId);
+        const {data: tracks} = await query;
+        if(!tracks?.length) { isShuffling = false; return; }
+
+        // Fisher-Yates shuffle
+        const idx = [...Array(tracks.length).keys()];
+        for(let i = idx.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [idx[i], idx[j]] = [idx[j], idx[i]];
+        }
+
+        // Salva nova ordem no banco em batches
+        const BATCH = 50;
+        for(let i = 0; i < tracks.length; i += BATCH) {
+            const batch = tracks.slice(i, i + BATCH);
+            await Promise.all(batch.map((t, bi) =>
+                supabase.from(table).update({ daily_order: idx[i + bi] }).eq('id', t.id)
+            ));
+        }
+        console.log(`🎲 Playlist embaralhada após completar: ${table} ${slotId||''}`);
+    } catch(err) { console.error('Erro shuffle:', err); }
+    finally { isShuffling = false; }
+}
+
+// ─────────────────────────────────────────────────────────────
+// GRADES HORÁRIAS
+// ─────────────────────────────────────────────────────────────
+function getActiveSlotForHour(hour) {
+    if(!gradesEnabled || !timeSlots.length) return null;
+    for(const slot of timeSlots) {
+        if(slot.name === 'Madrugada Aleatória') continue;
+        if(slot.start_hour <= slot.end_hour) {
+            if(hour >= slot.start_hour && hour < slot.end_hour) return slot;
+        } else {
+            if(hour >= slot.start_hour || hour < slot.end_hour) return slot;
+        }
+    }
+    return null;
+}
+
+async function detectAndActivateSlot() {
+    const hour = new Date().getHours();
+    const slot = getActiveSlotForHour(hour);
+    if(!slot) { isGradeMode=false; currentSlot=null; lastSlotId=null; return; }
+    if(slot.id === lastSlotId) return;
+    isGradeMode=true; currentSlot=slot; lastSlotId=slot.id;
+    gradeOpeningDone=false; gradeMiddle1Done=false; gradeMiddle2Done=false;
+    const gradeStart = new Date(); gradeStart.setMinutes(0,0,0); gradeStart.setHours(slot.start_hour);
+    const gradeEnd = new Date(gradeStart); gradeEnd.setHours(slot.end_hour);
+    gradeStartTime = gradeStart; gradeDurationMs = gradeEnd - gradeStart;
+    await loadSlotPlaylist(slot.id);
+    await loadSlotJingles(slot.id);
+    if(isSeasonalActive) await ensureSeasonalBlocksToday();
+    if(isPlaying && !isPlayingHourCerta) startGrade();
+}
+
+async function loadSlotPlaylist(slotId) {
+    const {data} = await supabase
+        .from('slot_playlists').select('*')
+        .eq('slot_id', slotId).eq('enabled', true)
+        .order('daily_order', {ascending: true});
+    slotPlaylist = data || [];
+    // Não reseta índice — mantém posição atual se recarregar mid-play
+    if(slotCurrentIndex >= slotPlaylist.length) slotCurrentIndex = 0;
+    slotAdIndex = 0; slotTracksSinceAd = 0;
+}
+
+async function loadSlotJingles(slotId) {
+    const {data} = await supabase.from('jingles').select('*').eq('slot_id',slotId).eq('enabled',true);
+    jinglesOpening = (data||[]).filter(j=>j.position==='opening');
+    jinglesMiddle  = (data||[]).filter(j=>j.position==='middle');
+    jinglesClosing = (data||[]).filter(j=>j.position==='closing');
+}
+
+async function loadSeasonalJingles(category) {
+    const {data} = await supabase.from('jingles').select('*').eq('seasonal_category',category).eq('enabled',true);
+    return {
+        opening:(data||[]).filter(j=>j.position==='opening'),
+        middle: (data||[]).filter(j=>j.position==='middle'),
+        closing:(data||[]).filter(j=>j.position==='closing')
+    };
+}
+
+function checkSlotChange() {
+    const hour = new Date().getHours();
+    const slot = getActiveSlotForHour(hour);
+    if((slot?.id||null) !== lastSlotId) detectAndActivateSlot();
+}
+
+// ─────────────────────────────────────────────────────────────
+// ESTADO PERSISTENTE — salva e restaura posição da playlist
+// ─────────────────────────────────────────────────────────────
+function startStateSaving() {
+    if(stateSaveInterval) clearInterval(stateSaveInterval);
+    stateSaveInterval = setInterval(savePlayerState, STATE_SAVE_MS);
 }
 
 async function savePlayerState() {
     try {
-        await supabase.from('player_state').upsert([{
-            id: 1,
-            current_table: currentTable,
-            current_index: currentIndex,
-            slot_id:       currentSlotId,
-            is_grade_mode: isGradeMode,
-            updated_at:    new Date().toISOString()
+        const state = {
+            current_index : isGradeMode ? slotCurrentIndex : currentBgIndex,
+            slot_id       : currentSlot?.id || null,
+            is_grade_mode : isGradeMode,
+            current_table : isGradeMode ? 'slot_playlists' : (isSeasonalActive ? 'seasonal_playlists' : 'background_playlist'),
+            current_id    : isGradeMode
+                ? (slotPlaylist[slotCurrentIndex]?.id || null)
+                : (isSeasonalActive ? (seasonalPlaylist[currentBgIndex]?.id || null) : (backgroundPlaylist[currentBgIndex]?.id || null)),
+            updated_at    : new Date().toISOString()
+        };
+        await supabase.from('player_state').update(state).eq('id', 1);
+    } catch(err) { /* silencioso */ }
+}
+
+async function restorePlayerState() {
+    try {
+        const {data} = await supabase.from('player_state').select('*').eq('id',1).single();
+        if(!data) return;
+        if(data.is_grade_mode && data.slot_id && slotPlaylist.length > 0) {
+            slotCurrentIndex = Math.min(data.current_index || 0, Math.max(slotPlaylist.length - 1, 0));
+            console.log(`▶️ Retomando grade na música ${slotCurrentIndex + 1}/${slotPlaylist.length}`);
+        } else if(!data.is_grade_mode && backgroundPlaylist.length > 0) {
+            currentBgIndex = Math.min(data.current_index || 0, Math.max(backgroundPlaylist.length - 1, 0));
+            console.log(`▶️ Retomando playlist na música ${currentBgIndex + 1}/${backgroundPlaylist.length}`);
+        }
+    } catch(err) { /* sem estado salvo — começa do início */ }
+}
+
+// ─────────────────────────────────────────────────────────────
+// ANALYTICS — registra cada música tocada
+// ─────────────────────────────────────────────────────────────
+async function logTrackPlay(title, artist, audioUrl, sourceTable, sourceId, slotId, slotName) {
+    try {
+        currentTrackInfo = {title, artist, audio_url: audioUrl, source_table: sourceTable, source_id: sourceId, slot_id: slotId, slot_name: slotName};
+        await supabase.from('play_log').insert([{
+            title, artist, audio_url: audioUrl,
+            source_table: sourceTable, source_id: sourceId,
+            slot_id: slotId, slot_name: slotName
         }]);
     } catch(err) { /* silencioso */ }
 }
 
 // ─────────────────────────────────────────────────────────────
-// INÍCIO DA REPRODUÇÃO
+// BLOCOS SAZONAIS
 // ─────────────────────────────────────────────────────────────
-function startPlayback() {
-    const activeSeasonal = getActiveSeasonal();
+async function ensureSeasonalBlocksToday() {
+    if(!isSeasonalActive||!activeSeasonalCat) return;
+    const today = new Date().toISOString().split('T')[0];
+    try {
+        const {data:existing} = await supabase.from('seasonal_blocks').select('*').eq('block_date',today).eq('seasonal_category',activeSeasonalCat);
+        if(existing?.length===3){ seasonalBlocksToday=existing; return; }
+        const windows=[{w:1,s:8,e:12},{w:2,s:12,e:16},{w:3,s:16,e:20}];
+        seasonalBlocksToday = windows.map(({w,s,e})=>({
+            block_date:today, seasonal_category:activeSeasonalCat,
+            window_number:w, scheduled_hour:Math.floor(Math.random()*(e-s))+s, played:false
+        }));
+    } catch(err){ console.error(err); }
+}
 
-    if(activeSeasonal) {
-        startSeasonalMode(activeSeasonal);
+function shouldPlaySeasonalBlock() {
+    if(!isSeasonalActive||seasonalBlockPlaying) return false;
+    const h = new Date().getHours();
+    if(h<8||h>=20) return false;
+    return seasonalBlocksToday.some(b=>!b.played&&b.scheduled_hour===h);
+}
+
+function getNextSeasonalBlock() {
+    const h = new Date().getHours();
+    return seasonalBlocksToday.find(b=>!b.played&&b.scheduled_hour===h)||null;
+}
+
+function markBlockPlayed(wn) {
+    const b=seasonalBlocksToday.find(b=>b.window_number===wn);
+    if(b) b.played=true;
+}
+
+// ─────────────────────────────────────────────────────────────
+// VINHETAS
+// ─────────────────────────────────────────────────────────────
+function pickJingle(list, last) {
+    if(!list.length) return null;
+    if(list.length===1) return list[0];
+    const avail = list.filter(j=>j.id!==last);
+    return avail[Math.floor(Math.random()*avail.length)];
+}
+
+function playJingle(position, cb) {
+    let j=null, lastRef=null;
+    if(position==='opening'){ j=pickJingle(jinglesOpening,lastJingleOpening); if(j) lastJingleOpening=j.id; }
+    else if(position==='middle'){ j=pickJingle(jinglesMiddle,lastJingleMiddle); if(j) lastJingleMiddle=j.id; }
+    else if(position==='closing'){ j=pickJingle(jinglesClosing,lastJingleClosing); if(j) lastJingleClosing=j.id; }
+    if(!j){ if(cb) cb(); return; }
+    isPlayingJingle=true;
+    audioPlayer.src=j.audio_url;
+    updateDisplay('🎬 Vinheta', j.title);
+    audioPlayer._jingleCb = cb;
+    if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
+}
+
+function startGrade() {
+    if(jinglesOpening.length>0 && !gradeOpeningDone) {
+        gradeOpeningDone=true;
+        playJingle('opening', ()=>{ playSlotAd(()=>{ scheduleMiddleJingles(); playSlotTrack(); }); });
+    } else {
+        playSlotAd(()=>{ scheduleMiddleJingles(); playSlotTrack(); });
+    }
+}
+
+function scheduleMiddleJingles() {
+    if(!jinglesMiddle.length) return;
+    const now=Date.now(), end=gradeStartTime.getTime()+gradeDurationMs, rem=end-now;
+    if(rem<=0) return;
+    const third=rem/3;
+    setTimeout(()=>{ if(!gradeMiddle1Done&&isGradeMode&&isPlaying){ gradeMiddle1Done=true; playJingle('middle',()=>playSlotTrack()); } }, third);
+    setTimeout(()=>{ if(!gradeMiddle2Done&&isGradeMode&&isPlaying){ gradeMiddle2Done=true; playJingle('middle',()=>playSlotTrack()); } }, third*2);
+}
+
+// ─────────────────────────────────────────────────────────────
+// REPRODUÇÃO MODO GRADE
+// ─────────────────────────────────────────────────────────────
+function playSlotTrack() {
+    isPlayingJingle=false; isPlayingHourCerta=false; isPlayingAd=false;
+    if(shouldPlaySeasonalBlock()){ const b=getNextSeasonalBlock(); if(b){ startSeasonalBlock(b); return; } }
+    if(!slotPlaylist.length){ playBgMusic(); return; }
+    const freq=(advertisements[slotAdIndex%Math.max(advertisements.length,1)]?.frequency)||3;
+    if(advertisements.length>0 && slotTracksSinceAd>=freq){
+        playSlotAd(()=>playSlotMusicTrack()); return;
+    }
+    playSlotMusicTrack();
+}
+
+function playSlotMusicTrack() {
+    if(!slotPlaylist.length){ playBgMusic(); return; }
+    const track = slotPlaylist[slotCurrentIndex % slotPlaylist.length];
+    if(!track?.audio_url){ playBgMusic(); return; }
+    audioPlayer.src = track.audio_url;
+    updateDisplay(currentSlot?`🎵 ${currentSlot.name}`:'Tocando agora', track.title||'Música');
+    slotTracksSinceAd++;
+    // Log analytics
+    logAnalytics(track, 'slot_playlists', currentSlot?.id, currentSlot?.name);
+    if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
+}
+
+function playSlotAd(cb) {
+    if(!advertisements.length){ if(cb) cb(); return; }
+    isPlayingAd=true; slotTracksSinceAd=0;
+    const ad = advertisements[slotAdIndex%advertisements.length];
+    slotAdIndex = (slotAdIndex+1)%Math.max(advertisements.length,1);
+    if(!ad?.audio_url){ if(cb) cb(); return; }
+    audioPlayer.src=ad.audio_url; audioPlayer._adCb=cb;
+    updateDisplay('📢 Propaganda', ad.title);
+    if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
+}
+
+// ─────────────────────────────────────────────────────────────
+// REPRODUÇÃO MODO LEGADO (bg playlist)
+// ─────────────────────────────────────────────────────────────
+function playBgMusic() {
+    isPlayingJingle=false; isPlayingHourCerta=false; isPlayingAd=false;
+    const playlist = isSeasonalActive ? seasonalPlaylist : backgroundPlaylist;
+    const ads      = isSeasonalActive ? seasonalAds      : advertisements;
+    if(!playlist.length){ handleNoAudio(); return; }
+    const freq = (ads[currentAdIndex%Math.max(ads.length,1)]?.frequency)||3;
+    if(ads.length>0 && tracksPlayedSinceAd>=freq){ playLegacyAd(); return; }
+    const track = playlist[currentBgIndex%playlist.length];
+    if(!track?.audio_url){ handleNoAudio(); return; }
+    audioPlayer.src=track.audio_url;
+    updateDisplay(isSeasonalActive?'🎭 Especial':'Tocando agora', track.title||'Música');
+    tracksPlayedSinceAd++;
+    // Log analytics
+    logAnalytics(track, isSeasonalActive?'seasonal_playlists':'background_playlist', null, isSeasonalActive?activeSeasonalCat:'Fundo');
+    if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
+}
+
+function playLegacyAd() {
+    const ads = isSeasonalActive ? seasonalAds : advertisements;
+    if(!ads.length){ playBgMusic(); return; }
+    isPlayingAd=true; tracksPlayedSinceAd=0;
+    const ad=ads[currentAdIndex%ads.length];
+    currentAdIndex=(currentAdIndex+1)%Math.max(ads.length,1);
+    if(!ad?.audio_url){ playBgMusic(); return; }
+    audioPlayer.src=ad.audio_url;
+    updateDisplay('📢 Propaganda', ad.title);
+    if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
+}
+
+// ─────────────────────────────────────────────────────────────
+// BLOCOS SAZONAIS — reprodução
+// ─────────────────────────────────────────────────────────────
+async function startSeasonalBlock(block) {
+    seasonalBlockPlaying=true; seasonalBlockIndex=0;
+    const pool=[...seasonalPlaylist]; seasonalBlockQueue=[];
+    for(let i=0;i<4&&pool.length>0;i++){ const idx=Math.floor(Math.random()*pool.length); seasonalBlockQueue.push(pool.splice(idx,1)[0]); }
+    if(!seasonalBlockQueue.length){ seasonalBlockPlaying=false; markBlockPlayed(block.window_number); playSlotTrack(); return; }
+    const sj = await loadSeasonalJingles(activeSeasonalCat);
+    if(sj.opening.length>0){
+        const j=sj.opening[Math.floor(Math.random()*sj.opening.length)];
+        audioPlayer.src=j.audio_url; updateDisplay('🎭 Especial',j.title);
+        audioPlayer._seasonalBlock=block; audioPlayer._seasonalJingles=sj;
+        if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
+    } else { playSeasonalTrack(block); }
+}
+
+function playSeasonalTrack(block) {
+    if(seasonalBlockIndex>=seasonalBlockQueue.length){
+        seasonalBlockPlaying=false; markBlockPlayed(block.window_number);
+        audioPlayer._seasonalBlock=null;
+        const sj=audioPlayer._seasonalJingles;
+        if(sj?.closing?.length>0){
+            const j=sj.closing[Math.floor(Math.random()*sj.closing.length)];
+            audioPlayer.src=j.audio_url; updateDisplay('🎭 Especial',j.title);
+            audioPlayer._afterSeasonal=true;
+            if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
+        } else { playSlotTrack(); }
         return;
     }
-
-    if(gradesEnabled) {
-        const slot = getCurrentSlot();
-        if(slot && slotPlaylists[slot.id]?.length) {
-            startSlotMode(slot);
-            return;
-        }
-    }
-
-    startBackgroundMode();
-}
-
-function getActiveSeasonal() {
-    return Object.keys(seasonalSettings).find(cat => seasonalSettings[cat]?.is_active && seasonalData[cat]?.music?.length);
-}
-
-function getCurrentSlot() {
-    const hour = new Date().getHours();
-    return timeSlots.find(s => {
-        if(s.start_hour < s.end_hour) return hour >= s.start_hour && hour < s.end_hour;
-        return hour >= s.start_hour || hour < s.end_hour; // atravessa meia-noite
-    }) || null;
+    const track=seasonalBlockQueue[seasonalBlockIndex++];
+    audioPlayer.src=track.audio_url; audioPlayer._seasonalBlock=block;
+    updateDisplay('🎭 Especial Sazonal', track.title||'Música Temática');
+    if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
 }
 
 // ─────────────────────────────────────────────────────────────
-// MODOS DE PLAYBACK
+// HORA CERTA
 // ─────────────────────────────────────────────────────────────
-function startBackgroundMode() {
-    isGradeMode   = false;
-    currentSlotId = null;
-    currentTable  = 'background_playlist';
-    currentPlaylist = backgroundPlaylist.filter(t => t.enabled !== false);
-    if(!currentPlaylist.length) { showError('Playlist vazia.'); return; }
-    if(currentIndex >= currentPlaylist.length) currentIndex = 0;
-    playCurrentTrack();
+async function loadCurrentHourAudio() {
+    const now=new Date(), hour=now.getHours(), min=now.getMinutes();
+    try {
+        const data=allSchedules.find(s=>s.hour===hour&&s.enabled);
+        if(!data){ resumeAfterHourCerta(); return; }
+        const isExact=min<=2, isHalf=min>=30&&min<=32;
+        const slotStr=isExact?`${hour}:00`:`${hour}:30`;
+        if(lastPlayedSlot===slotStr){ resumeAfterHourCerta(); return; }
+        if(isExact&&data.audio_url?.trim()){
+            isPlayingHourCerta=true; audioPlayer.src=data.audio_url;
+            updateDisplay('Hora Certa',`${String(hour).padStart(2,'0')}:00`);
+            lastPlayedSlot=slotStr;
+            if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
+        } else if(isHalf&&data.audio_url_half?.trim()){
+            isPlayingHourCerta=true; audioPlayer.src=data.audio_url_half;
+            updateDisplay('Hora Certa',`${String(hour).padStart(2,'0')}:30`);
+            lastPlayedSlot=slotStr;
+            if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
+        } else { resumeAfterHourCerta(); }
+    } catch(err){ console.error(err); resumeAfterHourCerta(); }
 }
 
-function startSlotMode(slot) {
-    isGradeMode      = true;
-    currentSlotId    = slot.id;
-    currentTable     = 'slot_playlists';
-    currentPlaylist  = slotPlaylists[slot.id] || [];
-    openingJinglePlayed = false;
-    closingScheduled    = false;
-    middleJinglesPlayed = 0;
-    slotStartTime       = slot.start_hour;
-    slotEndTime         = slot.end_hour;
-    if(!currentPlaylist.length) { startBackgroundMode(); return; }
-    if(currentIndex >= currentPlaylist.length) currentIndex = 0;
-
-    // Vinheta de abertura
-    const opening = (slotJingles[slot.id] || []).filter(j => j.position === 'opening' && j.enabled);
-    if(opening.length) {
-        const jingle = pickJingle(opening);
-        playJingle(jingle, () => { openingJinglePlayed = true; playCurrentTrack(); });
-        return;
-    }
-    openingJinglePlayed = true;
-    playCurrentTrack();
-}
-
-function startSeasonalMode(category) {
-    isGradeMode   = false;
-    currentSlotId = null;
-    currentTable  = 'seasonal_playlists';
-    currentPlaylist = seasonalData[category].music.filter(t => t.enabled !== false);
-    if(!currentPlaylist.length) { startBackgroundMode(); return; }
-    if(currentIndex >= currentPlaylist.length) currentIndex = 0;
-    playCurrentTrack();
+function resumeAfterHourCerta() {
+    if(isGradeMode&&slotPlaylist.length>0) playSlotTrack();
+    else playBgMusic();
 }
 
 // ─────────────────────────────────────────────────────────────
-// REPRODUÇÃO DE FAIXA
-// ─────────────────────────────────────────────────────────────
-function playCurrentTrack() {
-    if(!currentPlaylist.length) return;
-    const track = currentPlaylist[currentIndex];
-    if(!track) { advanceTrack(); return; }
-
-    audio.src = track.audio_url;
-    audio.load();
-    audio.play().catch(err => {
-        console.warn('Autoplay bloqueado:', err);
-        updateUI(track, false);
-    });
-
-    updateUI(track, true);
-    logPlay(track);
-    savePlayerState();
-}
-
-function playJingle(jingle, onEnd) {
-    const jAudio = new Audio(jingle.audio_url);
-    lastJingleId  = jingle.id;
-    jAudio.volume = audio.volume;
-    jAudio.play().catch(() => { if(onEnd) onEnd(); });
-    jAudio.onended = onEnd || null;
-    updateStatusText('🎬 Vinheta');
-}
-
-function pickJingle(list) {
-    const filtered = list.filter(j => j.id !== lastJingleId);
-    const pool = filtered.length ? filtered : list;
-    return pool[Math.floor(Math.random() * pool.length)];
-}
-
-// ─────────────────────────────────────────────────────────────
-// FIM DE FAIXA
+// HANDLE AUDIO ENDED — roteamento central
 // ─────────────────────────────────────────────────────────────
 async function handleAudioEnded() {
-    musicCount++;
-
-    // Propaganda?
-    const shouldPlayAd = checkAdTrigger();
-    if(shouldPlayAd) {
-        const ad = getNextAd();
-        if(ad) { await playAd(ad); return; }
-    }
-
-    // Vinheta de meio (grade)?
-    if(isGradeMode && currentSlotId) {
-        const midPoint = Math.floor(currentPlaylist.length / 2);
-        if(musicCount === midPoint && middleJinglesPlayed < 2) {
-            const midJingles = (slotJingles[currentSlotId] || []).filter(j => j.position === 'middle' && j.enabled);
-            if(midJingles.length) {
-                const jingle = pickJingle(midJingles);
-                middleJinglesPlayed++;
-                playJingle(jingle, () => { advanceTrack(); playCurrentTrack(); });
-                return;
-            }
-        }
-    }
-
-    advanceTrack();
-    playCurrentTrack();
-}
-
-function advanceTrack() {
-    currentIndex++;
-    if(currentIndex >= currentPlaylist.length) {
-        currentIndex = 0;
-        handlePlaylistComplete();
-    }
-}
-
-async function handlePlaylistComplete() {
-    // Vinheta de encerramento (grade)?
-    if(isGradeMode && currentSlotId && !closingScheduled) {
-        const closing = (slotJingles[currentSlotId] || []).filter(j => j.position === 'closing' && j.enabled);
-        if(closing.length) {
-            closingScheduled = true;
-            const jingle = pickJingle(closing);
-            playJingle(jingle, () => { shuffleAndRestart(); });
-            return;
-        }
-    }
-    shuffleAndRestart();
-}
-
-async function shuffleAndRestart() {
-    await shuffleCurrentPlaylist();
-    currentIndex        = 0;
-    openingJinglePlayed = false;
-    closingScheduled    = false;
-    middleJinglesPlayed = 0;
-    musicCount          = 0;
-    playCurrentTrack();
-}
-
-async function shuffleCurrentPlaylist() {
-    try {
-        let table, filter;
-        if(currentTable === 'slot_playlists')     { table='slot_playlists';     filter={slot_id: currentSlotId}; }
-        else if(currentTable === 'seasonal_playlists') { table='seasonal_playlists'; filter={category: getActiveSeasonal(), type:'music'}; }
-        else                                       { table='background_playlist'; filter=null; }
-
-        let query = supabase.from(table).select('id').eq('enabled',true);
-        if(filter) Object.entries(filter).forEach(([k,v]) => { query = query.eq(k,v); });
-        const {data:tracks} = await query;
-        if(!tracks?.length) return;
-
-        const idx = [...Array(tracks.length).keys()];
-        for(let i = idx.length-1; i > 0; i--) {
-            const j = Math.floor(Math.random()*(i+1));
-            [idx[i], idx[j]] = [idx[j], idx[i]];
-        }
-        const today = new Date().toISOString().split('T')[0];
-        await Promise.all(tracks.map((t,i) =>
-            supabase.from(table).update({daily_order: idx[i], last_shuffle_date: today}).eq('id', t.id)
-        ));
-
-        // Recarrega playlist embaralhada
-        let freshQuery = supabase.from(table).select('*').eq('enabled',true).order('daily_order',{ascending:true});
-        if(filter) Object.entries(filter).forEach(([k,v]) => { freshQuery = freshQuery.eq(k,v); });
-        const {data:fresh} = await freshQuery;
-        currentPlaylist = fresh || [];
-        if(currentTable === 'background_playlist') backgroundPlaylist = currentPlaylist;
-        else if(currentTable === 'slot_playlists' && currentSlotId) slotPlaylists[currentSlotId] = currentPlaylist;
-    } catch(err) { console.error('Erro ao embaralhar:', err); }
-}
-
-// ─────────────────────────────────────────────────────────────
-// PROPAGANDAS
-// ─────────────────────────────────────────────────────────────
-function checkAdTrigger() {
-    if(!advertisements.length) return false;
-    const ad = advertisements[adIndex % advertisements.length];
-    return musicCount > 0 && musicCount % (ad?.frequency || 3) === 0;
-}
-
-function getNextAd() {
-    if(!advertisements.length) return null;
-    const ad = advertisements[adIndex % advertisements.length];
-    adIndex++;
-    return ad;
-}
-
-async function playAd(ad) {
-    updateStatusText(`📢 ${ad.title || 'Propaganda'}`);
-    const adAudio = new Audio(ad.audio_url);
-    adAudio.volume = audio.volume;
-    adAudio.play().catch(() => { advanceTrack(); playCurrentTrack(); });
-    adAudio.onended = () => { advanceTrack(); playCurrentTrack(); };
-}
-
-// ─────────────────────────────────────────────────────────────
-// CHECAGEM DE HORA CERTA
-// ─────────────────────────────────────────────────────────────
-function startScheduleChecker() {
-    setInterval(checkSchedule, 15000);
-    checkSchedule();
-}
-
-async function checkSchedule() {
-    const now  = new Date();
-    const hour = now.getHours();
-    const min  = now.getMinutes();
-    const sec  = now.getSeconds();
-
-    // Só dispara nos primeiros 30s de cada marcação
-    const isOnHour   = min === 0  && sec < 30;
-    const isOnHalf   = min === 30 && sec < 30;
-    if(!isOnHour && !isOnHalf) return;
-
-    const key = `${hour}-${isOnHalf?'half':'hour'}`;
-    if(lastScheduleCheck === key) return;
-
-    const entry = scheduleData.find(s => s.hour === hour && s.enabled);
-    if(!entry) return;
-
-    const url = isOnHalf ? entry.audio_url_half : entry.audio_url;
-    if(!url) return;
-
-    lastScheduleCheck = key;
-    await playScheduledAudio(url, hour);
-}
-
-async function playScheduledAudio(url, hour) {
-    const schAudio = new Audio(url);
-    schAudio.volume = audio.volume;
-    audio.pause();
-    updateStatusText(`🕐 ${String(hour).padStart(2,'0')}:00`);
-    await schAudio.play().catch(() => {});
-    schAudio.onended = () => {
-        advanceTrack();
-        playCurrentTrack();
-    };
-}
-
-// ─────────────────────────────────────────────────────────────
-// EMERGÊNCIA
-// ─────────────────────────────────────────────────────────────
-async function checkEmergencyState() {
-    try {
-        // Tenta emergency_state primeiro
-        let data, err;
-        ({ data, error:err } = await supabase.from('emergency_state').select('*').eq('id',1).single());
-        if(err) {
-            // Fallback: emergency_alert
-            ({ data } = await supabase.from('emergency_alert').select('*').eq('id',1).single());
-        }
-        if(data?.is_active) activateEmergency(data);
-        else                deactivateEmergency();
-    } catch(e) { /* sem tabela de emergência */ }
-}
-
-function activateEmergency(state) {
-    if(emergencyActive) return;
-    emergencyActive = true;
-    audio.pause();
-
-    const repeat = () => {
-        if(!emergencyActive) return;
-        if(state.audio_url) {
-            emergencyAudio = new Audio(state.audio_url);
-            emergencyAudio.volume = audio.volume;
-            emergencyAudio.play().catch(() => {});
-            emergencyAudio.onended = () => {
-                emergencyInterval = setTimeout(repeat, (state.repeat_interval || 60) * 1000);
-            };
-        } else if(state.message || state.tts_text) {
-            speakTTS(state.message || state.tts_text, () => {
-                emergencyInterval = setTimeout(repeat, (state.repeat_interval || 60) * 1000);
-            });
-        }
-    };
-
-    repeat();
-    updateStatusText('🚨 ALERTA DE EMERGÊNCIA');
-    if(liveIndicator) { liveIndicator.style.display = 'flex'; }
-    if(liveText) liveText.textContent = '🚨 EMERGÊNCIA';
-}
-
-function deactivateEmergency() {
-    if(!emergencyActive) return;
-    emergencyActive = false;
-    if(emergencyInterval) { clearTimeout(emergencyInterval); emergencyInterval = null; }
-    if(emergencyAudio)    { emergencyAudio.pause(); emergencyAudio = null; }
-    if(liveIndicator) liveIndicator.style.display = 'none';
-    if(liveText) liveText.textContent = '🔴 AO VIVO';
-    playCurrentTrack();
-}
-
-// ─────────────────────────────────────────────────────────────
-// TTS
-// ─────────────────────────────────────────────────────────────
-function speakTTS(text, onEnd) {
-    if(!text) { if(onEnd) onEnd(); return; }
-    if(window.responsiveVoice && responsiveVoice.voiceSupport()) {
-        responsiveVoice.speak(text, 'Brazilian Portuguese Female', { rate:0.9, pitch:1, volume:1, onend: onEnd || null });
+    // Vinheta de grade
+    if(isPlayingJingle){
+        isPlayingJingle=false;
+        const cb=audioPlayer._jingleCb; audioPlayer._jingleCb=null;
+        if(cb) cb(); else playSlotTrack();
         return;
     }
-    if(!window.speechSynthesis) { if(onEnd) onEnd(); return; }
-    speechSynthesis.cancel();
-    const utt = new SpeechSynthesisUtterance(text);
-    utt.lang  = 'pt-BR'; utt.rate = 0.88; utt.pitch = 1.05;
-    const voices = speechSynthesis.getVoices();
-    const match  = voices.find(v => v.lang.startsWith('pt'));
-    if(match) utt.voice = match;
-    if(onEnd) utt.onend = onEnd;
-    speechSynthesis.speak(utt);
+    // Propaganda no modo grade
+    if(isPlayingAd&&isGradeMode){
+        isPlayingAd=false;
+        const cb=audioPlayer._adCb; audioPlayer._adCb=null;
+        if(cb) cb(); else playSlotMusicTrack();
+        return;
+    }
+    // Vinheta abertura bloco sazonal
+    if(audioPlayer._seasonalBlock&&!seasonalBlockPlaying){
+        seasonalBlockPlaying=true; playSeasonalTrack(audioPlayer._seasonalBlock); return;
+    }
+    // Música do bloco sazonal
+    if(audioPlayer._seasonalBlock&&seasonalBlockPlaying){
+        playSeasonalTrack(audioPlayer._seasonalBlock); return;
+    }
+    // Encerramento bloco sazonal
+    if(audioPlayer._afterSeasonal){
+        audioPlayer._afterSeasonal=false; playSlotTrack(); return;
+    }
+    // Hora certa — avança para PRÓXIMA música, nunca volta para a mesma
+    if(isPlayingHourCerta){
+        isPlayingHourCerta=false;
+        // Avança índice antes de tocar
+        if(isGradeMode){
+            slotCurrentIndex = (slotCurrentIndex + 1) % Math.max(slotPlaylist.length, 1);
+            playSlotAd(()=>playSlotTrack());
+        } else {
+            const playlist = isSeasonalActive ? seasonalPlaylist : backgroundPlaylist;
+            currentBgIndex = (currentBgIndex + 1) % Math.max(playlist.length, 1);
+            if((isSeasonalActive?seasonalAds:advertisements).length>0) playLegacyAd();
+            else playBgMusic();
+        }
+        return;
+    }
+    // Propaganda legada
+    if(isPlayingAd&&!isGradeMode){ isPlayingAd=false; playBgMusic(); return; }
+    // Música da grade — avança índice, embaralha ao completar
+    if(isGradeMode){
+        const wasLast = slotCurrentIndex >= slotPlaylist.length - 1;
+        slotCurrentIndex++;
+        if(wasLast) {
+            // Chegou na última — embaralha e recomeça
+            slotCurrentIndex = 0;
+            await shufflePlaylistAfterComplete('slot_playlists', currentSlot?.id || null);
+            await loadSlotPlaylist(currentSlot?.id);
+        }
+        playSlotTrack(); return;
+    }
+    // Música legada — avança índice, embaralha ao completar
+    const playlist = isSeasonalActive ? seasonalPlaylist : backgroundPlaylist;
+    const wasLastBg = currentBgIndex >= playlist.length - 1;
+    currentBgIndex++;
+    if(wasLastBg) {
+        currentBgIndex = 0;
+        if(isSeasonalActive) {
+            await shufflePlaylistAfterComplete('seasonal_playlists', null);
+            // Recarrega playlist sazonal
+            const {data} = await supabase.from('seasonal_playlists')
+                .select('*').eq('type','music').eq('enabled',true)
+                .eq('category', activeSeasonalCat).order('daily_order',{ascending:true});
+            seasonalPlaylist = data || [];
+        } else {
+            await shufflePlaylistAfterComplete('background_playlist', null);
+            const {data} = await supabase.from('background_playlist')
+                .select('*').eq('enabled',true).order('daily_order',{ascending:true});
+            backgroundPlaylist = data || [];
+        }
+    }
+    playBgMusic();
+}
+
+function handleAudioError() {
+    console.error('Erro no áudio, avançando...');
+    if(isGradeMode){ slotCurrentIndex=(slotCurrentIndex+1)%Math.max(slotPlaylist.length,1); setTimeout(playSlotTrack,1000); }
+    else { currentBgIndex=(currentBgIndex+1)%Math.max(backgroundPlaylist.length,1); setTimeout(playBgMusic,1000); }
+}
+
+function handleNoAudio() { audioPlayer.src=''; updateDisplay('Sem programação','Aguardando áudio...'); }
+
+// ─────────────────────────────────────────────────────────────
+// SEASONAL STATUS CHECK
+// ─────────────────────────────────────────────────────────────
+async function checkSeasonalStatus() {
+    try {
+        const {data}=await supabase.from('seasonal_settings').select('*').eq('is_active',true).maybeSingle();
+        const wasCat=activeSeasonalCat;
+        if(data?.category){
+            if(!isSeasonalActive||wasCat!==data.category){
+                const [mRes,aRes]=await Promise.all([
+                    supabase.from('seasonal_playlists').select('*').eq('type','music').eq('enabled',true).eq('category',data.category).order('daily_order',{ascending:true}),
+                    supabase.from('seasonal_playlists').select('*').eq('type','ad').eq('enabled',true).eq('category',data.category).order('play_order',{ascending:true})
+                ]);
+                activeSeasonalCat=data.category; isSeasonalActive=true;
+                seasonalPlaylist=mRes.data||[]; seasonalAds=aRes.data||[];
+                currentBgIndex=0; currentAdIndex=0; tracksPlayedSinceAd=0;
+                await ensureSeasonalBlocksToday();
+                if(isPlaying&&!isPlayingHourCerta&&!isGradeMode) playBgMusic();
+            }
+        } else if(isSeasonalActive){
+            isSeasonalActive=false; activeSeasonalCat=null;
+            seasonalPlaylist=[]; seasonalAds=[]; seasonalBlocksToday=[];
+            currentBgIndex=0; currentAdIndex=0; tracksPlayedSinceAd=0;
+            if(isPlaying&&!isPlayingHourCerta&&!isGradeMode) playBgMusic();
+        }
+    } catch(err){ console.error(err); }
+}
+
+// ─────────────────────────────────────────────────────────────
+// INTERFACE
+// ─────────────────────────────────────────────────────────────
+function setupEventListeners() {
+    playBtn.addEventListener('click', togglePlay);
+    volumeSlider.addEventListener('input', ()=>{ audioPlayer.volume=volumeSlider.value/100; });
+    syncBtn.addEventListener('click', forceSync);
+    audioPlayer.addEventListener('ended', handleAudioEnded);
+    audioPlayer.addEventListener('error', handleAudioError);
+}
+
+function togglePlay() {
+    if(!audioPlayer.src) return;
+    if(isPlaying){
+        audioPlayer.pause(); isPlaying=false; updatePlayButtonState(false);
+    } else {
+        audioPlayer.play().then(()=>{ isPlaying=true; updatePlayButtonState(true); }).catch(e=>console.error(e));
+    }
+}
+
+function updatePlayButtonState(playing) {
+    if(!playBtn) return;
+    const pi=playBtn.querySelector('.play-icon'), pa=playBtn.querySelector('.pause-icon');
+    if(playing){ playBtn.classList.remove('paused'); playBtn.classList.add('playing'); if(pi) pi.style.display='none'; if(pa) pa.style.display='block'; }
+    else { playBtn.classList.remove('playing'); playBtn.classList.add('paused'); if(pi) pi.style.display='block'; if(pa) pa.style.display='none'; }
+}
+
+function updateDisplay(status, track) { 
+    if(statusText) statusText.textContent=status; 
+    if(trackName) trackName.textContent=track; 
+}
+
+async function forceSync() {
+    syncBtn.disabled=true; syncBtn.textContent='⏳ Sincronizando...';
+    try {
+        await loadAllData(); await detectAndActivateSlot(); await loadCurrentHourAudio();
+        syncBtn.textContent='✅ Sincronizado!';
+    } catch(e){ syncBtn.textContent='❌ Erro'; }
+    finally { setTimeout(()=>{ syncBtn.textContent='🔄 Sincronizar'; syncBtn.disabled=false; },2000); }
+}
+
+function updateClock() {
+    const now=new Date();
+    const h=String(now.getHours()).padStart(2,'0'), m=String(now.getMinutes()).padStart(2,'0'), s=String(now.getSeconds()).padStart(2,'0');
+    if(currentTime) currentTime.textContent=`${h}:${m}:${s}`;
+    if(!countdownTimer) return;
+    const min=now.getMinutes();
+    let next=new Date(now);
+    if(min<30) next.setMinutes(30,0,0); else next.setHours(now.getHours()+1,0,0,0);
+    const diff=next-now;
+    const ml=Math.floor(diff/60000), sl=Math.floor((diff%60000)/1000);
+    if(countdownTimer) countdownTimer.textContent=`${String(ml).padStart(2,'0')}:${String(sl).padStart(2,'0')}`;
+}
+
+async function checkHourChange() {
+    const now=new Date(), h=now.getHours(), min=now.getMinutes();
+    if(min===0||min===30){
+        const slot=`${h}:${min===0?'00':'30'}`;
+        if(lastPlayedSlot!==slot){ lastPlayedSlot=null; await loadCurrentHourAudio(); }
+    }
 }
 
 // ─────────────────────────────────────────────────────────────
 // REALTIME
 // ─────────────────────────────────────────────────────────────
 function setupRealtimeSubscription() {
-    // Locutor pré-gravado
-    supabase.channel('locutor_player')
-        .on('postgres_changes', {event:'UPDATE', schema:'public', table:'locutor_state'}, payload => {
-            if(payload.new.is_active) {
-                audio.pause(); isPlaying = false;
-                updatePlayBtn(false);
-                updateStatusText('🎙️ Locutor ao vivo');
-                if(liveIndicator) liveIndicator.style.display = 'flex';
-            } else {
-                if(liveIndicator) liveIndicator.style.display = 'none';
-                advanceTrack(); playCurrentTrack();
-            }
-        }).subscribe();
-
-    // Emergência
-    supabase.channel('emergency_player')
-        .on('postgres_changes', {event:'UPDATE', schema:'public', table:'emergency_state'},
-            payload => { payload.new.is_active ? activateEmergency(payload.new) : deactivateEmergency(); })
-        .on('postgres_changes', {event:'UPDATE', schema:'public', table:'emergency_alert'},
-            payload => { payload.new.is_active ? activateEmergency(payload.new) : deactivateEmergency(); })
+    supabase.channel('radio_player')
+        .on('postgres_changes',{event:'*',schema:'public',table:'radio_schedule'},async()=>{
+            const {data}=await supabase.from('radio_schedule').select('*').order('hour',{ascending:true});
+            allSchedules=data||[]; await loadCurrentHourAudio();
+        })
+        .on('postgres_changes',{event:'*',schema:'public',table:'background_playlist'},async()=>{
+            const {data}=await supabase.from('background_playlist').select('*').eq('enabled',true).order('daily_order',{ascending:true});
+            backgroundPlaylist=data||[];
+        })
+        .on('postgres_changes',{event:'*',schema:'public',table:'advertisements'},async()=>{
+            const {data}=await supabase.from('advertisements').select('*').eq('enabled',true).order('play_order',{ascending:true});
+            advertisements=data||[];
+        })
+        .on('postgres_changes',{event:'*',schema:'public',table:'seasonal_playlists'},()=>checkSeasonalStatus())
+        .on('postgres_changes',{event:'*',schema:'public',table:'seasonal_settings'},()=>checkSeasonalStatus())
+        .on('postgres_changes',{event:'*',schema:'public',table:'time_slots'},async()=>{
+            const {data}=await supabase.from('time_slots').select('*').eq('enabled',true).order('sort_order',{ascending:true});
+            timeSlots=data||[]; await detectAndActivateSlot();
+        })
+        .on('postgres_changes',{event:'*',schema:'public',table:'slot_playlists'},async()=>{
+            if(currentSlot) await loadSlotPlaylist(currentSlot.id);
+        })
+        .on('postgres_changes',{event:'UPDATE',schema:'public',table:'radio_settings'},async payload=>{
+            gradesEnabled = payload.new?.grades_enabled !== false;
+            await detectAndActivateSlot();
+        })
+        .on('postgres_changes',{event:'*',schema:'public',table:'jingles'},async()=>{
+            if(currentSlot) await loadSlotJingles(currentSlot.id);
+        })
+        .on('postgres_changes',{event:'UPDATE',schema:'public',table:'locutor_state'},payload=>handleLocutorStateChange(payload.new))
         .subscribe();
+}
 
-    // TTS broadcast
-    supabase.channel('tts_broadcast')
-        .on('broadcast', {event:'tts_play'}, ({payload}) => {
-            audio.pause(); isPlaying = false; updatePlayBtn(false);
-            updateStatusText(`📢 ${payload.title || 'Aviso'}`);
-            speakTTS(payload.text, () => { advanceTrack(); playCurrentTrack(); });
-        }).subscribe();
+// ─────────────────────────────────────────────────────────────
+// EMERGÊNCIA
+// ─────────────────────────────────────────────────────────────
+function initEmergencyListener() {
+    supabase.channel('emergency_player')
+        .on('postgres_changes', {event:'UPDATE', schema:'public', table:'emergency_alert'},
+            payload => handleEmergencyChange(payload.new))
+        .subscribe();
+}
 
-    // Locutor ao vivo (microfone)
+function handleEmergencyChange(state) {
+    if(state.is_active && !emergencyActive) {
+        emergencyActive = true;
+        // Pausa tudo
+        if(isPlaying) { audioPlayer.pause(); }
+        if(window.responsiveVoice) responsiveVoice.cancel();
+        updateDisplay('🚨 ALERTA', 'Mensagem de emergência');
+        playEmergencyAlert(state);
+        // Repete em loop pelo intervalo configurado
+        emergencyInterval = setInterval(() => playEmergencyAlert(state), (state.repeat_interval_sec || 60) * 1000);
+    } else if(!state.is_active && emergencyActive) {
+        emergencyActive = false;
+        clearInterval(emergencyInterval);
+        emergencyInterval = null;
+        emergencyAudio.pause(); emergencyAudio.src = '';
+        if(window.responsiveVoice) responsiveVoice.cancel();
+        // Retoma a rádio
+        if(isPlaying) {
+            if(isGradeMode) playSlotTrack();
+            else playBgMusic();
+        }
+    }
+}
+
+function playEmergencyAlert(state) {
+    if(state.mode === 'audio' && state.audio_url) {
+        emergencyAudio.src = state.audio_url;
+        emergencyAudio.play().catch(e => console.error(e));
+    } else if(state.tts_text) {
+        const voice = 'Brazilian Portuguese Female';
+        if(window.responsiveVoice) {
+            responsiveVoice.speak(state.tts_text, voice, { rate: 0.85, volume: 1 });
+        } else if(window.speechSynthesis) {
+            const utt = new SpeechSynthesisUtterance(state.tts_text);
+            utt.lang = 'pt-BR'; utt.rate = 0.85;
+            speechSynthesis.speak(utt);
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// LOCUTOR AO VIVO (MICROFONE)
+// ─────────────────────────────────────────────────────────────
+function initLiveLocutorListener() {
     supabase.channel('live_locutor_player')
-        .on('broadcast', {event:'live_locutor_start'}, () => {
-            liveLocutorActive = true;
-            audio.pause(); isPlaying = false; updatePlayBtn(false);
-            updateStatusText('🎙️ Locutor ao vivo');
-            if(liveIndicator) liveIndicator.style.display = 'flex';
-            startLiveAudioReceiver();
-        })
-        .on('broadcast', {event:'live_locutor_stop'}, () => {
-            liveLocutorActive = false;
-            stopLiveAudioReceiver();
-            if(liveIndicator) liveIndicator.style.display = 'none';
-            advanceTrack(); playCurrentTrack();
-        })
-        .on('broadcast', {event:'live_audio_chunk'}, ({payload}) => {
-            if(!liveLocutorActive) return;
-            receiveLiveChunk(payload.chunk);
-        }).subscribe();
+        .on('broadcast', {event:'live_locutor_start'}, () => handleLiveLocutorStart())
+        .on('broadcast', {event:'live_locutor_stop'},  () => handleLiveLocutorStop())
+        .subscribe();
+}
 
-    // Mudança de settings (grades ativadas/desativadas)
-    supabase.channel('settings_player')
-        .on('postgres_changes', {event:'UPDATE', schema:'public', table:'radio_settings'}, payload => {
-            gradesEnabled = payload.new.grades_enabled !== false;
-        }).subscribe();
+async function handleLiveLocutorStart() {
+    if(isPlaying) { playerResumePos = audioPlayer.currentTime; playerPausedByLoc = true; audioPlayer.pause(); }
+    updateDisplay('🎙️ Locutor Ao Vivo', 'Transmitindo...');
+}
 
-    // Mudança de sazonais
-    supabase.channel('seasonal_player')
-        .on('postgres_changes', {event:'UPDATE', schema:'public', table:'seasonal_settings'}, async() => {
-            const {data} = await supabase.from('seasonal_settings').select('*');
-            seasonalSettings = {};
-            (data||[]).forEach(s => { seasonalSettings[s.category] = s; });
-            const newSeasonal = getActiveSeasonal();
-            if(newSeasonal && currentTable !== 'seasonal_playlists') {
-                currentIndex = 0; startSeasonalMode(newSeasonal);
-            } else if(!newSeasonal && currentTable === 'seasonal_playlists') {
-                currentIndex = 0; startPlayback();
-            }
-        }).subscribe();
+function handleLiveLocutorStop() {
+    if(playerPausedByLoc && isPlaying) {
+        playerPausedByLoc = false;
+        audioPlayer.currentTime = playerResumePos;
+        audioPlayer.play().catch(e => console.error(e));
+    } else { playerPausedByLoc = false; }
 }
 
 // ─────────────────────────────────────────────────────────────
-// LOCUTOR AO VIVO — receptor de áudio
+// LOCUTOR (PRÉ-GRAVADO)
 // ─────────────────────────────────────────────────────────────
-function startLiveAudioReceiver() {
-    try {
-        liveAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    } catch(e) { console.warn('AudioContext não disponível:', e); }
+function initLocutorListener() {
+    supabase.channel('locutor_player')
+        .on('postgres_changes',{event:'UPDATE',schema:'public',table:'locutor_state'},payload=>handleLocutorStateChange(payload.new))
+        .subscribe();
 }
 
-function receiveLiveChunk(base64Chunk) {
-    if(!liveAudioCtx || !base64Chunk) return;
-    try {
-        const binary = atob(base64Chunk);
-        const bytes  = new Uint8Array(binary.length);
-        for(let i=0; i<binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        const int16  = new Int16Array(bytes.buffer);
-        const float32= new Float32Array(int16.length);
-        for(let i=0; i<int16.length; i++) float32[i] = int16[i] / 0x7FFF;
-        const buffer = liveAudioCtx.createBuffer(1, float32.length, 44100);
-        buffer.copyToChannel(float32, 0);
-        const source = liveAudioCtx.createBufferSource();
-        source.buffer  = buffer;
-        source.connect(liveAudioCtx.destination);
-        source.start();
-    } catch(e) { /* chunk inválido */ }
-}
-
-function stopLiveAudioReceiver() {
-    if(liveAudioCtx) {
-        liveAudioCtx.close().catch(()=>{});
-        liveAudioCtx = null;
+async function handleLocutorStateChange(state) {
+    if(state.is_active){
+        if(isPlaying&&audioPlayer.src){ playerResumePos=audioPlayer.currentTime; playerPausedByLoc=true; audioPlayer.pause(); updateDisplay('🎙️ Locutor','Ao vivo...'); }
+        if(state.track_id){
+            const {data}=await supabase.from('locutor_tracks').select('audio_url,title').eq('id',state.track_id).single();
+            if(data){ locutorAudio.src=data.audio_url; locutorAudio.volume=audioPlayer.volume; locutorAudio.play().catch(e=>console.error(e)); updateDisplay('🎙️ Locutor',data.title); }
+        }
+    } else {
+        locutorAudio.pause(); locutorAudio.src='';
+        if(playerPausedByLoc&&isPlaying){ playerPausedByLoc=false; audioPlayer.currentTime=playerResumePos; audioPlayer.play().catch(e=>console.error(e)); }
+        else { playerPausedByLoc=false; }
     }
 }
 
 // ─────────────────────────────────────────────────────────────
-// PLAY LOG
+// TTS
 // ─────────────────────────────────────────────────────────────
-async function logPlay(track) {
-    try {
-        const slot = currentSlotId ? timeSlots.find(s => s.id === currentSlotId) : null;
-        await supabase.from('play_analytics').insert([{
-            track_id:     track.id,
-            track_title:  track.title || 'Sem título',
-            track_table:  currentTable,
-            slot_id:      currentSlotId || null,
-            slot_name:    slot?.name || null,
-            hour_of_day:  new Date().getHours(),
-            played_at:    new Date().toISOString()
-        }]);
-    } catch(err) {
-        // Fallback para play_log
-        try {
-            await supabase.from('play_log').insert([{
-                track_id:    track.id,
-                track_title: track.title || 'Sem título',
-                played_at:   new Date().toISOString()
-            }]);
-        } catch(e) { /* silencioso */ }
+function initTTSListener() {
+    supabase.channel('tts_player')
+        .on('broadcast',{event:'tts_play'},payload=>handleTTSPlay(payload.payload))
+        .subscribe();
+}
+
+function handleTTSPlay(data) {
+    if(!data?.text) return;
+    let wasPaused = false;
+    if(isPlaying && audioPlayer.src) {
+        playerResumePos = audioPlayer.currentTime;
+        wasPaused = true;
+        audioPlayer.pause();
+        updateDisplay('📢 Aviso', data.title || 'Promoção');
     }
-}
 
-// ─────────────────────────────────────────────────────────────
-// INTERFACE
-// ─────────────────────────────────────────────────────────────
-function setupAudioListeners() {
-    audio.addEventListener('ended',        handleAudioEnded);
-    audio.addEventListener('timeupdate',   updateProgress);
-    audio.addEventListener('loadedmetadata', () => { if(durationEl) durationEl.textContent = formatTime(audio.duration); });
-    audio.addEventListener('play',  () => { isPlaying = true;  updatePlayBtn(true);  });
-    audio.addEventListener('pause', () => { isPlaying = false; updatePlayBtn(false); });
-    audio.addEventListener('error', () => { console.warn('Erro de áudio, avançando...'); setTimeout(() => { advanceTrack(); playCurrentTrack(); }, 2000); });
-    audio.addEventListener('waiting', () => updateStatusText('⏳ Carregando...'));
-    audio.addEventListener('canplay',  () => updateStatusText(isPlaying ? '▶️ Tocando' : '⏸️ Pausado'));
-}
+    const voiceName = data.voice || 'Brazilian Portuguese Female';
 
-function setupUIListeners() {
-    playBtn?.addEventListener('click', togglePlay);
-    volumeSlider?.addEventListener('input', () => { audio.volume = volumeSlider.value / 100; });
-    progressBar?.addEventListener('click', e => {
-        if(!audio.duration) return;
-        const rect = progressBar.getBoundingClientRect();
-        audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
-    });
-    audio.volume = (volumeSlider?.value ?? 80) / 100;
-}
+    const onEnd = () => {
+        if(wasPaused && isPlaying) {
+            audioPlayer.currentTime = playerResumePos;
+            audioPlayer.play().catch(e => console.error(e));
+        }
+    };
 
-function togglePlay() {
-    if(isPlaying) { audio.pause(); }
-    else {
-        if(!audio.src || audio.src === window.location.href) startPlayback();
-        else audio.play().catch(() => startPlayback());
+    // ResponsiveVoice — mais natural
+    if(window.responsiveVoice && responsiveVoice.voiceSupport()) {
+        responsiveVoice.speak(data.text, voiceName, {
+            rate: 0.9, pitch: 1, volume: 1,
+            onend: onEnd
+        });
+        return;
     }
-}
 
-function updateUI(track, playing) {
-    if(trackTitle)  trackTitle.textContent  = track.title  || 'Sem título';
-    if(trackArtist) trackArtist.textContent = track.artist || '';
-    updateStatusText(playing ? '▶️ Tocando' : '⏸️ Pausado');
-    updatePlayBtn(playing);
-    document.title = `🎵 ${track.title || 'Rádio Louro'}`;
-}
-
-function updateStatusText(text) {
-    if(trackStatus) trackStatus.textContent = text;
-}
-
-function updatePlayBtn(playing) {
-    if(!playBtn) return;
-    playBtn.textContent = playing ? '⏸' : '▶';
-    playBtn.classList.toggle('playing', playing);
-}
-
-function updateProgress() {
-    if(!audio.duration) return;
-    const pct = (audio.currentTime / audio.duration) * 100;
-    const fill = document.getElementById('progressFill');
-    if(fill) fill.style.width = pct + '%';
-    if(currentTimeEl) currentTimeEl.textContent = formatTime(audio.currentTime);
-}
-
-function formatTime(secs) {
-    if(!secs || isNaN(secs)) return '0:00';
-    const m = Math.floor(secs / 60);
-    const s = Math.floor(secs % 60);
-    return `${m}:${String(s).padStart(2,'0')}`;
-}
-
-function showError(msg) {
-    updateStatusText('❌ ' + msg);
-    if(trackTitle) trackTitle.textContent = msg;
+    // Fallback Web Speech API
+    if(!window.speechSynthesis) { onEnd(); return; }
+    speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(data.text);
+    utt.lang = 'pt-BR'; utt.rate = 0.88; utt.pitch = 1.05;
+    const voices = speechSynthesis.getVoices();
+    const fem = voices.find(v => v.lang.startsWith('pt') &&
+        (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('feminina'))
+    ) || voices.find(v => v.lang.startsWith('pt'));
+    if(fem) utt.voice = fem;
+    utt.onend = onEnd;
+    speechSynthesis.speak(utt);
 }
 
 // ─────────────────────────────────────────────────────────────
 // SUGESTÃO DE MÚSICAS
 // ─────────────────────────────────────────────────────────────
-function getDeviceId() {
-    let id = localStorage.getItem('radio_device_id');
-    if(!id) { id = 'dev_' + Math.random().toString(36).slice(2) + Date.now(); localStorage.setItem('radio_device_id', id); }
+function initSuggest() {
+    const inp=document.getElementById('suggestSearchInput');
+    const btn=document.getElementById('suggestSearchBtn');
+    if(!inp||!btn) return;
+    loadSuggestCount();
+    btn.addEventListener('click', handleSuggestSearch);
+    inp.addEventListener('keydown', e=>{ if(e.key==='Enter') handleSuggestSearch(); });
+    document.getElementById('suggestConfirmBtn')?.addEventListener('click', handleSuggestConfirm);
+    document.getElementById('suggestCancelBtn')?.addEventListener('click',()=>{
+        document.getElementById('suggestNameModal').style.display='none';
+        suggestPendingItem=null;
+    });
+}
+
+async function loadSuggestCount() {
+    const id=getSuggestId(), today=new Date().toISOString().split('T')[0];
+    try {
+        const {data}=await supabase.from('suggestion_limits').select('count').eq('identifier',id).eq('suggestion_date',today).maybeSingle();
+        suggestCountToday=data?.count||0; updateSuggestBadge();
+    } catch(e){ console.error(e); }
+}
+
+function getSuggestId() {
+    let id=localStorage.getItem('radio_suggest_id');
+    if(!id){ id='user_'+Math.random().toString(36).substr(2,9); localStorage.setItem('radio_suggest_id',id); }
     return id;
 }
 
-async function loadSuggestionCount() {
-    const today = new Date().toISOString().split('T')[0];
-    const {data} = await supabase.from('suggestion_limits').select('count').eq('identifier', deviceId).eq('suggestion_date', today).single();
-    suggestionCount = data?.count || 0;
-    updateSuggestionCounter();
-}
-
-function updateSuggestionCounter() {
-    const el = document.getElementById('suggestCounter');
-    if(el) el.textContent = `${MAX_SUGGESTIONS - suggestionCount} sugestões restantes hoje`;
-}
-
-function setupSuggestionListeners() {
-    const input  = document.getElementById('suggestInput');
-    const btn    = document.getElementById('suggestSearchBtn');
-    const addBtn = document.getElementById('suggestAddBtn');
-    if(!input || !btn) return;
-
-    btn.addEventListener('click', handleSuggestSearch);
-    input.addEventListener('keydown', e => { if(e.key === 'Enter') handleSuggestSearch(); });
-    addBtn?.addEventListener('click', handleSuggestAdd);
+function updateSuggestBadge() {
+    const b=document.getElementById('suggestLimitBadge'); if(!b) return;
+    b.textContent=`${suggestCountToday}/${SUGGEST_LIMIT} hoje`;
+    b.style.background=suggestCountToday>=SUGGEST_LIMIT?'#f8d7da':'#d4edda';
+    b.style.color=suggestCountToday>=SUGGEST_LIMIT?'#721c24':'#155724';
 }
 
 async function handleSuggestSearch() {
-    const query = document.getElementById('suggestInput')?.value.trim();
-    if(!query) return;
-    const btn = document.getElementById('suggestSearchBtn');
-    const res = document.getElementById('suggestResults');
-    if(!btn || !res) return;
-    btn.textContent = '⏳'; btn.disabled = true;
-    res.style.display = 'block';
-    res.innerHTML = '<div class="suggest-loading">Buscando...</div>';
-
+    const query=document.getElementById('suggestSearchInput').value.trim(); if(!query) return;
+    const btn=document.getElementById('suggestSearchBtn'); btn.textContent='⏳'; btn.disabled=true;
+    const resultsEl=document.getElementById('suggestResults'); resultsEl.style.display='block';
+    resultsEl.innerHTML='<div class="suggest-loading">Buscando...</div>';
     try {
-        const url = `https://www.googleapis.com/youtube/v3/search?q=${encodeURIComponent(query)}&type=video&videoCategoryId=10&maxResults=5&part=snippet&key=${YOUTUBE_API_KEY}`;
-        const data = await (await fetch(url)).json();
-        if(!data.items?.length) { res.innerHTML = '<div class="suggest-empty">Nenhum resultado.</div>'; return; }
-        const filtered = data.items.filter(i => !BLOCKED_TERMS.some(b => i.snippet.title.toLowerCase().includes(b)));
-        suggestResults = filtered;
-        res.innerHTML = filtered.map((item, i) => `
-            <div class="suggest-result-card ${suggestSelectedId===i?'selected':''}" data-idx="${i}">
+        const url=`https://www.googleapis.com/youtube/v3/search?q=${encodeURIComponent(query)}&type=video&videoCategoryId=10&maxResults=5&part=snippet&key=${YOUTUBE_API_KEY}`;
+        const res=await fetch(url); const data=await res.json();
+        if(!data.items?.length){ resultsEl.innerHTML='<div class="suggest-empty">Nenhum resultado.</div>'; return; }
+        const filtered=data.items.filter(i=>!BLOCKED_TERMS.some(b=>i.snippet.title.toLowerCase().includes(b)));
+        if(!filtered.length){ resultsEl.innerHTML='<div class="suggest-empty">Nenhum resultado adequado.</div>'; return; }
+        resultsEl.innerHTML=filtered.map(item=>`
+            <div class="suggest-result-card">
                 <img src="${item.snippet.thumbnails?.default?.url||''}" alt="" class="suggest-result-thumb">
                 <div class="suggest-result-info">
                     <div class="suggest-result-title">${item.snippet.title}</div>
                     <div class="suggest-result-channel">${item.snippet.channelTitle}</div>
+                    <iframe id="preview_${item.id.videoId}" class="suggest-preview-frame" src="" allowfullscreen allow="autoplay" style="display:none;width:100%;aspect-ratio:16/9;border:none;border-radius:8px;margin-top:6px;"></iframe>
                 </div>
-                <button class="suggest-preview-btn" onclick="toggleSuggestPreview(${i},'${item.id.videoId}')">▶️</button>
-            </div>
-            <iframe id="suggestFrame_${i}" class="suggest-yt-embed" src="" allowfullscreen allow="autoplay"></iframe>`).join('');
-        res.querySelectorAll('.suggest-result-card').forEach(card => {
-            card.addEventListener('click', () => {
-                suggestSelectedId = parseInt(card.dataset.idx);
-                res.querySelectorAll('.suggest-result-card').forEach(c => c.classList.remove('selected'));
-                card.classList.add('selected');
-                document.getElementById('suggestAddBtn').disabled = false;
+                <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
+                    <button class="suggest-preview-btn" data-id="${item.id.videoId}">▶️ Prévia</button>
+                    <button class="suggest-btn" data-id="${item.id.videoId}" data-title="${item.snippet.title.replace(/"/g,'&quot;')}" data-channel="${item.snippet.channelTitle.replace(/"/g,'&quot;')}" data-thumb="${item.snippet.thumbnails?.default?.url||''}">💌 Sugerir</button>
+                </div>
+            </div>`).join('');
+
+        // Listeners para prévia
+        resultsEl.querySelectorAll('.suggest-preview-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                const vid = e.currentTarget.dataset.id;
+                const frame = document.getElementById(`preview_${vid}`);
+                if(!frame) return;
+                if(frame.style.display === 'none') {
+                    // Fecha outras prévias abertas
+                    resultsEl.querySelectorAll('.suggest-preview-frame').forEach(f => {
+                        f.src = ''; f.style.display = 'none';
+                    });
+                    resultsEl.querySelectorAll('.suggest-preview-btn').forEach(b => b.textContent = '▶️ Prévia');
+                    frame.src = `https://www.youtube.com/embed/${vid}?autoplay=1`;
+                    frame.style.display = 'block';
+                    e.currentTarget.textContent = '⏹ Fechar';
+                } else {
+                    frame.src = ''; frame.style.display = 'none';
+                    e.currentTarget.textContent = '▶️ Prévia';
+                }
             });
         });
-    } catch(err) { res.innerHTML = '<div class="suggest-empty">Erro na busca.</div>'; }
-    finally { btn.textContent = '🔍 Buscar'; btn.disabled = false; }
+        resultsEl.querySelectorAll('.suggest-btn').forEach(b=>{
+            b.addEventListener('click',e=>{
+                const btn=e.currentTarget;
+                openSuggestModal({videoId:btn.dataset.id,title:btn.dataset.title,channel:btn.dataset.channel,thumb:btn.dataset.thumb,url:`https://www.youtube.com/watch?v=${btn.dataset.id}`});
+            });
+        });
+    } catch(err){ resultsEl.innerHTML='<div class="suggest-empty">Erro na busca.</div>'; }
+    finally { btn.textContent='🔍 Buscar'; btn.disabled=false; }
 }
 
-window.toggleSuggestPreview = function(idx, videoId) {
-    const frame = document.getElementById(`suggestFrame_${idx}`);
-    if(!frame) return;
-    if(frame.style.display === 'block') { frame.src = ''; frame.style.display = 'none'; }
-    else { frame.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`; frame.style.display = 'block'; }
-};
+function openSuggestModal(item) {
+    if(suggestCountToday>=SUGGEST_LIMIT){ showSuggestFeedback('❌ Você atingiu o limite de 20 sugestões hoje.','error'); return; }
+    suggestPendingItem=item;
+    document.getElementById('suggestNameInput').value=localStorage.getItem('radio_suggest_name')||'';
+    document.getElementById('suggestNameModal').style.display='flex';
+    setTimeout(()=>document.getElementById('suggestNameInput').focus(),100);
+}
 
-async function handleSuggestAdd() {
-    if(suggestSelectedId === null || !suggestResults[suggestSelectedId]) return;
-    if(suggestionCount >= MAX_SUGGESTIONS) { alert(`Limite de ${MAX_SUGGESTIONS} sugestões por dia atingido.`); return; }
-
-    const item    = suggestResults[suggestSelectedId];
-    const videoId = item.id.videoId;
-    const title   = item.snippet.title;
-    const channel = item.snippet.channelTitle;
-    const thumb   = item.snippet.thumbnails?.default?.url || '';
-
-    const name = prompt('Seu nome (opcional):') || 'Funcionário';
-
+async function handleSuggestConfirm() {
+    const name=document.getElementById('suggestNameInput').value.trim();
+    if(!name){ alert('Informe seu nome.'); return; }
+    if(!suggestPendingItem) return;
+    const btn=document.getElementById('suggestConfirmBtn'); btn.textContent='⏳'; btn.disabled=true;
     try {
-        await supabase.from('music_queue').insert([{
-            youtube_url:       `https://www.youtube.com/watch?v=${videoId}`,
-            youtube_title:     title,
-            youtube_channel:   channel,
-            youtube_thumbnail: thumb,
-            title:             title,
-            source:            'suggestion',
-            suggested_by:      name,
-            status:            'pending',
-            conversion_status: 'pending'
+        localStorage.setItem('radio_suggest_name',name);
+        const {error}=await supabase.from('music_queue').insert([{youtube_url:suggestPendingItem.url,youtube_title:suggestPendingItem.title,youtube_channel:suggestPendingItem.channel,youtube_thumbnail:suggestPendingItem.thumb,title:suggestPendingItem.title,source:'suggestion',suggested_by:name,status:'pending',conversion_status:'pending'}]);
+        if(error) throw error;
+        const id=getSuggestId(), today=new Date().toISOString().split('T')[0];
+        const {data:ex}=await supabase.from('suggestion_limits').select('id,count').eq('identifier',id).eq('suggestion_date',today).maybeSingle();
+        if(ex) await supabase.from('suggestion_limits').update({count:ex.count+1}).eq('id',ex.id);
+        else await supabase.from('suggestion_limits').insert([{identifier:id,suggestion_date:today,count:1}]);
+        suggestCountToday++; updateSuggestBadge();
+        const title=suggestPendingItem.title; suggestPendingItem=null;
+        document.getElementById('suggestNameModal').style.display='none';
+        document.getElementById('suggestResults').style.display='none';
+        document.getElementById('suggestSearchInput').value='';
+        showSuggestFeedback(`✅ Sugestão enviada! Você tem ${SUGGEST_LIMIT-suggestCountToday} restantes hoje.`,'success');
+    } catch(err){ showSuggestFeedback('❌ Erro ao enviar. Tente novamente.','error'); }
+    finally { btn.textContent='✅ Enviar'; btn.disabled=false; }
+}
+
+function showSuggestFeedback(msg,type) {
+    const el=document.getElementById('suggestFeedback'); if(!el) return;
+    el.textContent=msg; el.style.display='block';
+    el.className=`suggest-feedback suggest-feedback-${type}`;
+    setTimeout(()=>{ el.style.display='none'; },5000);
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// ESTADO DE REPRODUÇÃO — salva e restaura após queda
+// ─────────────────────────────────────────────────────────────
+let saveStateInterval = null;
+
+async function savePlaybackState() {
+    try {
+        const table = isGradeMode ? 'slot_playlists' : (isSeasonalActive ? 'seasonal_playlists' : 'background_playlist');
+        const index = isGradeMode ? slotCurrentIndex : currentBgIndex;
+        const track = isGradeMode
+            ? slotPlaylist[slotCurrentIndex % Math.max(slotPlaylist.length,1)]
+            : (isSeasonalActive ? seasonalPlaylist : backgroundPlaylist)[currentBgIndex % Math.max((isSeasonalActive ? seasonalPlaylist : backgroundPlaylist).length,1)];
+
+        await supabase.from('playback_state').update({
+            track_id:     track?.id       || null,
+            track_table:  table,
+            slot_id:      currentSlot?.id || null,
+            track_title:  track?.title    || null,
+            audio_url:    track?.audio_url|| null,
+            playlist_index: index,
+            updated_at:   new Date().toISOString()
+        }).eq('id', 1);
+    } catch(err) { /* silencioso */ }
+}
+
+async function restorePlaybackState() {
+    try {
+        const { data } = await supabase
+            .from('playback_state')
+            .select('*')
+            .eq('id', 1)
+            .maybeSingle();
+
+        if(!data || !data.audio_url) return false;
+
+        // Restaura índice da playlist
+        if(data.track_table === 'slot_playlists' && data.slot_id) {
+            // Encontra o slot correto
+            const slot = timeSlots.find(s => s.id === data.slot_id);
+            if(slot) {
+                currentSlot = slot; lastSlotId = slot.id; isGradeMode = true;
+                await loadSlotPlaylist(slot.id);
+                await loadSlotJingles(slot.id);
+                // Encontra o índice da música salva
+                const idx = slotPlaylist.findIndex(t => t.id === data.track_id);
+                slotCurrentIndex = idx >= 0 ? idx : (data.playlist_index || 0);
+                return true;
+            }
+        } else if(data.track_table === 'background_playlist') {
+            isGradeMode = false;
+            const idx = backgroundPlaylist.findIndex(t => t.id === data.track_id);
+            currentBgIndex = idx >= 0 ? idx : (data.playlist_index || 0);
+            return true;
+        }
+        return false;
+    } catch(err) { return false; }
+}
+
+function startSaveStateInterval() {
+    if(saveStateInterval) clearInterval(saveStateInterval);
+    // Salva estado a cada 30 segundos enquanto tocando
+    saveStateInterval = setInterval(() => {
+        if(isPlaying && !isPlayingHourCerta && !isPlayingJingle && !isPlayingAd) {
+            savePlaybackState();
+        }
+    }, 30000);
+}
+
+// ─────────────────────────────────────────────────────────────
+// ANALYTICS — registra cada música tocada
+// ─────────────────────────────────────────────────────────────
+async function logAnalytics(track, table, slotId, slotName) {
+    try {
+        const now = new Date();
+        await supabase.from('play_analytics').insert([{
+            track_id:    track?.id    || null,
+            track_title: track?.title || 'Desconhecida',
+            track_table: table,
+            slot_id:     slotId  || null,
+            slot_name:   slotName|| null,
+            day_of_week: now.getDay(),
+            hour_of_day: now.getHours()
         }]);
+    } catch(err) { /* silencioso */ }
+}
 
-        const today = new Date().toISOString().split('T')[0];
-        await supabase.from('suggestion_limits').upsert([{
-            identifier:       deviceId,
-            suggestion_date:  today,
-            count:            suggestionCount + 1
-        }], { onConflict: 'identifier,suggestion_date' });
+// ─────────────────────────────────────────────────────────────
+// EMERGÊNCIA — listener em tempo real
+// ─────────────────────────────────────────────────────────────
+let emergencyInterval = null;
+let playerPausedByEmergency = false;
 
-        suggestionCount++;
-        updateSuggestionCounter();
-        alert('✅ Sugestão enviada! O admin irá aprová-la em breve.');
+function initEmergencyListener() {
+    supabase.channel('emergency_player')
+        .on('postgres_changes', { event:'UPDATE', schema:'public', table:'emergency_state' },
+            payload => handleEmergencyChange(payload.new))
+        .subscribe();
+}
 
-        document.getElementById('suggestInput').value = '';
-        document.getElementById('suggestResults').style.display = 'none';
-        document.getElementById('suggestAddBtn').disabled = true;
-        suggestSelectedId = null;
-    } catch(err) { alert('❌ Erro ao enviar sugestão: ' + err.message); }
+async function handleEmergencyChange(state) {
+    if(state.is_active && !emergencyActive) {
+        emergencyActive = true;
+        // Pausa player principal
+        if(isPlaying && audioPlayer.src) {
+            audioPlayer.pause();
+            playerPausedByEmergency = true;
+        }
+        updateDisplay('🚨 ALERTA', state.message || 'Atenção!');
+        playEmergencyAlert(state);
+    } else if(!state.is_active && emergencyActive) {
+        emergencyActive = false;
+        if(emergencyInterval) { clearInterval(emergencyInterval); emergencyInterval = null; }
+        if(window.responsiveVoice) responsiveVoice.cancel();
+        if(emergencyAudio) { emergencyAudio.pause(); emergencyAudio.src = ''; }
+        if(playerPausedByEmergency && isPlaying) {
+            playerPausedByEmergency = false;
+            audioPlayer.play().catch(e => console.error(e));
+        } else { playerPausedByEmergency = false; }
+    }
+}
+
+let emergencyAudio = new Audio();
+
+function playEmergencyAlert(state) {
+    const doPlay = () => {
+        if(!emergencyActive) return;
+        if(state.use_tts !== false && state.message) {
+            if(window.responsiveVoice && responsiveVoice.voiceSupport()) {
+                responsiveVoice.speak(state.message, state.voice || 'Brazilian Portuguese Female', {
+                    rate: 0.85, pitch: 1, volume: 1,
+                    onend: () => { if(emergencyActive) setTimeout(doPlay, 2000); }
+                });
+            }
+        } else if(state.audio_url) {
+            emergencyAudio.src = state.audio_url;
+            emergencyAudio.play().catch(e => console.error(e));
+            emergencyAudio.onended = () => { if(emergencyActive) setTimeout(doPlay, 1000); };
+        }
+    };
+    doPlay();
+}
+
+// ─────────────────────────────────────────────────────────────
+// LOCUTOR AO VIVO — microfone em tempo real via WebRTC
+// ─────────────────────────────────────────────────────────────
+let liveLocutorChannel = null;
+
+function initLiveLocutorListener() {
+    liveLocutorChannel = supabase.channel('live_locutor_player')
+        .on('broadcast', { event: 'live_audio_chunk' }, payload => {
+            handleLiveAudioChunk(payload.payload);
+        })
+        .on('broadcast', { event: 'live_locutor_start' }, () => {
+            if(isPlaying && audioPlayer.src) {
+                audioPlayer.pause();
+                playerPausedByLoc = true;
+                playerResumePos = audioPlayer.currentTime;
+                updateDisplay('🎙️ Ao Vivo', 'Locutor transmitindo...');
+            }
+        })
+        .on('broadcast', { event: 'live_locutor_stop' }, () => {
+            if(playerPausedByLoc && isPlaying) {
+                playerPausedByLoc = false;
+                audioPlayer.currentTime = playerResumePos;
+                audioPlayer.play().catch(e => console.error(e));
+            } else { playerPausedByLoc = false; }
+        })
+        .subscribe();
+}
+
+let liveAudioQueue  = [];
+let liveAudioCtx    = null;
+let liveIsPlaying   = false;
+
+function handleLiveAudioChunk(payload) {
+    if(!payload?.chunk) return;
+    try {
+        if(!liveAudioCtx) liveAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const binary = atob(payload.chunk);
+        const bytes  = new Uint8Array(binary.length);
+        for(let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+        liveAudioCtx.decodeAudioData(bytes.buffer, buf => {
+            const src = liveAudioCtx.createBufferSource();
+            src.buffer = buf;
+            src.connect(liveAudioCtx.destination);
+            src.start(0);
+        });
+    } catch(err) { /* chunk inválido */ }
+}
+// ─────────────────────────────────────────────────────────────
+// BOOTSTRAP — garante que DOM existe antes de inicializar
+// ─────────────────────────────────────────────────────────────
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    // DOM já pronto (script carregado após o HTML)
+    init();
 }
