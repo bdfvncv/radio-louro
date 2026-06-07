@@ -1121,7 +1121,6 @@ async function logAnalytics(track, table, slotId, slotName) {
 // ─────────────────────────────────────────────────────────────
 // EMERGÊNCIA — listener em tempo real
 // ─────────────────────────────────────────────────────────────
-let emergencyActive   = false;
 let emergencyInterval = null;
 let playerPausedByEmergency = false;
 
