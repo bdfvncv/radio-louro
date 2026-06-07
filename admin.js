@@ -2438,4 +2438,4 @@ window.setEmergencyMessage = function(msg) {
         document.getElementById('emergencyTTSGroup').style.display = 'block';
         document.getElementById('emergencyAudioGroup').style.display = 'none';
     }
-};
+}
