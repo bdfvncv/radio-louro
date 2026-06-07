@@ -2246,7 +2246,6 @@ window.loadAnalytics = loadAnalytics;
 // ─────────────────────────────────────────────────────────────
 // ALERTA DE EMERGÊNCIA
 // ─────────────────────────────────────────────────────────────
-let emergencyActive = false;
 
 async function loadEmergencyState() {
     try {
