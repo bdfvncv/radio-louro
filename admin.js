@@ -22,6 +22,16 @@ let ytManualData=null;
 let bulkSelectedIds=[], bulkTableName=null, bulkTableType=null;
 let ttsCheckInterval=null;
 
+// ── Emergência ────────────────────────────────────────────────
+let emergencyActive = false;
+
+// ── Locutor ao vivo ───────────────────────────────────────────
+let liveStream      = null;
+let liveProcessor   = null;
+let liveAudioCtx    = null;
+let liveActive      = false;
+let liveBroadcastCh = null;
+
 // ── DOM ───────────────────────────────────────────────────────
 const loginScreen  = document.getElementById('loginScreen');
 const adminPanel   = document.getElementById('adminPanel');
@@ -43,6 +53,8 @@ function init() {
     setupTTSListeners();
     setupBulkListeners();
     setupAdminSearchListeners();
+    setupLiveLocutorListeners();
+    setupEmergencyListeners();
 }
 
 function checkAuth() {
@@ -308,69 +320,51 @@ async function approveQueueItem(id) {
     if(!item) return;
     const slotValue=document.getElementById(`qslot_${id}`)?.value;
     if(!slotValue){ alert('Selecione o destino antes de aprovar.'); return; }
-    
-    // Parseia o tipo de destino
+
     const isSeasonal = slotValue.startsWith('seasonal_');
     const isSlot     = slotValue.startsWith('slot_');
     const isGeneral  = slotValue === 'general';
-    const slotId     = isSlot     ? parseInt(slotValue.replace('slot_',''))     : null;
-    const seasonalCat= isSeasonal ? slotValue.replace('seasonal_','')           : null;
+    const slotId     = isSlot     ? parseInt(slotValue.replace('slot_',''))  : null;
+    const seasonalCat= isSeasonal ? slotValue.replace('seasonal_','')        : null;
 
     const btn=document.querySelector(`#qcard_${id} .submit-btn`);
     if(btn){ btn.textContent='🔄 Buscando instância...'; btn.disabled=true; }
-
     const updateStatus = (msg) => { if(btn) btn.textContent=msg; };
 
     try {
-        // Converte YouTube → MP3 via RapidAPI
-        // Tenta converter MP3; se falhar usa URL do YouTube como fallback provisório
         let audioUrl = item.audio_url || null;
         if(!audioUrl) {
             updateStatus('🎵 Convertendo MP3...');
             audioUrl = await convertYoutubeToMp3(item.youtube_url, item.youtube_title);
         }
-        if(audioUrl && audioUrl.includes('cloudinary')) {
-            updateStatus('☁️ Upload feito!');
-        } else if(audioUrl && !audioUrl.includes('youtube')) {
-            updateStatus('✅ Convertido!');
-        }
-        // Fallback: usa URL do YouTube direto se tudo falhou
-        if(!audioUrl) {
-            audioUrl = item.youtube_url;
-            updateStatus('⚠️ Usando link YouTube...');
-        }
+        if(audioUrl && audioUrl.includes('cloudinary')) updateStatus('☁️ Upload feito!');
+        else if(audioUrl && !audioUrl.includes('youtube')) updateStatus('✅ Convertido!');
+        if(!audioUrl) { audioUrl = item.youtube_url; updateStatus('⚠️ Usando link YouTube...'); }
 
         const convDone = audioUrl && !audioUrl.includes('youtube.com');
         await supabaseAdmin.from('music_queue').update({
             status:'approved',
             conversion_status: convDone ? 'done' : 'pending',
             audio_url: audioUrl,
-            suggested_slot_id: slotValue==='general'?null:parseInt(slotValue)
+            suggested_slot_id: isGeneral ? null : (isSlot ? slotId : null)
         }).eq('id',id);
 
-        // Numeração automática — busca o maior order existente
         let order = 0;
-        if(slotValue !== 'general') {
+        if(isSlot) {
             const {data:maxD} = await supabase.from('slot_playlists')
-                .select('original_order').eq('slot_id', parseInt(slotValue))
+                .select('original_order').eq('slot_id', slotId)
                 .order('original_order',{ascending:false}).limit(1).maybeSingle();
             order = (maxD?.original_order ?? -1) + 1;
-
-            // Verifica duplicata na grade
             const {data:dupD} = await supabase.from('slot_playlists')
-                .select('id,title').eq('slot_id', parseInt(slotValue)).eq('audio_url', audioUrl).maybeSingle();
-            if(dupD){ alert(`⚠️ Esta música já está na grade!
-"${dupD.title}"`); if(btn){btn.textContent='✅ Aprovar';btn.disabled=false;} return; }
-        } else {
+                .select('id,title').eq('slot_id', slotId).eq('audio_url', audioUrl).maybeSingle();
+            if(dupD){ alert(`⚠️ Esta música já está na grade!\n"${dupD.title}"`); if(btn){btn.textContent='✅ Aprovar';btn.disabled=false;} return; }
+        } else if(isGeneral) {
             const {data:maxD} = await supabase.from('background_playlist')
                 .select('original_order').order('original_order',{ascending:false}).limit(1).maybeSingle();
             order = (maxD?.original_order ?? -1) + 1;
-
-            // Verifica duplicata na playlist geral
             const {data:dupD} = await supabase.from('background_playlist')
                 .select('id,title').eq('audio_url', audioUrl).maybeSingle();
-            if(dupD){ alert(`⚠️ Esta música já está na playlist geral!
-"${dupD.title}"`); if(btn){btn.textContent='✅ Aprovar';btn.disabled=false;} return; }
+            if(dupD){ alert(`⚠️ Esta música já está na playlist geral!\n"${dupD.title}"`); if(btn){btn.textContent='✅ Aprovar';btn.disabled=false;} return; }
         }
 
         const trackTitle  = item.title||item.youtube_title||'Música';
@@ -384,13 +378,16 @@ async function approveQueueItem(id) {
             }]);
             await refreshSlotPlaylist(slotId);
         } else if(isSeasonal) {
+            const {data:maxD} = await supabase.from('seasonal_playlists')
+                .select('original_order').eq('category', seasonalCat).eq('type','music')
+                .order('original_order',{ascending:false}).limit(1).maybeSingle();
+            order = (maxD?.original_order ?? -1) + 1;
             await supabaseAdmin.from('seasonal_playlists').insert([{
                 category: seasonalCat, type: 'music',
                 audio_url: audioUrl, title: trackTitle,
                 play_order: order, original_order: order,
                 daily_order: order, enabled: true
             }]);
-            // Recarrega dados sazonais
             const [mRes,aRes] = await Promise.all([
                 supabase.from('seasonal_playlists').select('*').eq('type','music').order('original_order',{ascending:true}),
                 supabase.from('seasonal_playlists').select('*').eq('type','ad').order('play_order',{ascending:true})
@@ -416,7 +413,7 @@ async function approveQueueItem(id) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// COBALT — busca instância ativa e converte YouTube → MP3
+// COBALT — converte YouTube → MP3
 // ─────────────────────────────────────────────────────────────
 async function getCobaltInstance() {
     try {
@@ -424,7 +421,6 @@ async function getCobaltInstance() {
             headers: { 'User-Agent': 'RadioLouro/1.0 (+https://supermercadodolouro.com.br)' }
         });
         const data = await res.json();
-        // Pega instâncias online, sem turnstile (auth:false), com youtube:true, score alto
         const valid = data.filter(inst =>
             inst.online?.api === true &&
             inst.services?.youtube === true &&
@@ -444,73 +440,39 @@ async function convertYoutubeToMp3(youtubeUrl, title) {
     try {
         const instance = await getCobaltInstance();
         if (!instance) throw new Error('Sem instância Cobalt disponível');
-
         const res = await fetch(instance, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'User-Agent': 'RadioLouro/1.0 (+https://supermercadodolouro.com.br)'
-            },
-            body: JSON.stringify({
-                url: youtubeUrl,
-                downloadMode: 'audio',
-                audioFormat: 'mp3',
-                audioBitrate: '192'
-            })
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'User-Agent': 'RadioLouro/1.0' },
+            body: JSON.stringify({ url: youtubeUrl, downloadMode: 'audio', audioFormat: 'mp3', audioBitrate: '192' })
         });
-
         const data = await res.json();
-
         if(data.status === 'tunnel' || data.status === 'redirect') {
-            // Temos o link direto do MP3 — faz upload no Cloudinary
             const cloudUrl = await uploadToCloudinary(data.url, title);
-            return cloudUrl || data.url; // fallback: usa link do cobalt direto
+            return cloudUrl || data.url;
         }
         throw new Error(`Cobalt retornou: ${data.status}`);
-    } catch(err) {
-        console.warn('Conversão MP3 falhou:', err);
-        return null;
-    }
+    } catch(err) { console.warn('Conversão MP3 falhou:', err); return null; }
 }
 
 async function uploadToCloudinary(mp3Url, title) {
     try {
-        const safeName = (title||'musica').replace(/[^a-z0-9]/gi,'_').toLowerCase().substring(0,50);
         const formData = new FormData();
         formData.append('file', mp3Url);
-        formData.append('upload_preset', 'radio_louro_preset'); // preset unsigned no Cloudinary
+        formData.append('upload_preset', 'radio_louro_preset');
         formData.append('folder', 'radio_louro');
         formData.append('tags', 'radio_louro');
-
-        const res = await fetch('https://api.cloudinary.com/v1_1/dygbrcrr6/video/upload', {
-            method: 'POST',
-            body: formData
-        });
+        const res = await fetch('https://api.cloudinary.com/v1_1/dygbrcrr6/video/upload', { method: 'POST', body: formData });
         const data = await res.json();
-        if(data.secure_url) {
-            console.log('✅ Upload Cloudinary OK:', data.secure_url);
-            return data.secure_url;
-        }
-        // Se falhou por preset, tenta com ml_default
+        if(data.secure_url) return data.secure_url;
         if(data.error) {
-            console.warn('Tentando preset ml_default...');
             const fd2 = new FormData();
-            fd2.append('file', mp3Url);
-            fd2.append('upload_preset', 'ml_default');
-            fd2.append('folder', 'radio_louro');
-            const res2 = await fetch('https://api.cloudinary.com/v1_1/dygbrcrr6/video/upload', {
-                method: 'POST', body: fd2
-            });
+            fd2.append('file', mp3Url); fd2.append('upload_preset', 'ml_default'); fd2.append('folder', 'radio_louro');
+            const res2 = await fetch('https://api.cloudinary.com/v1_1/dygbrcrr6/video/upload', { method: 'POST', body: fd2 });
             const data2 = await res2.json();
             if(data2.secure_url) return data2.secure_url;
         }
-        console.warn('Cloudinary sem secure_url:', data);
         return null;
-    } catch(err) {
-        console.error('Upload Cloudinary falhou:', err);
-        return null;
-    }
+    } catch(err) { console.error('Upload Cloudinary falhou:', err); return null; }
 }
 
 async function rejectQueueItem(id) {
@@ -628,6 +590,80 @@ async function deleteLocutorTrack(id) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// LOCUTOR AO VIVO — microfone em tempo real
+// ─────────────────────────────────────────────────────────────
+function setupLiveLocutorListeners() {
+    document.getElementById('liveLocutorBtn')?.addEventListener('click', startLiveLocutor);
+}
+
+async function startLiveLocutor() {
+    if(liveActive) { stopLiveLocutor(); return; }
+    try {
+        liveStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        liveAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const source = liveAudioCtx.createMediaStreamSource(liveStream);
+        liveProcessor = liveAudioCtx.createScriptProcessor(4096, 1, 1);
+
+        liveBroadcastCh = supabase.channel('live_locutor_admin');
+        await liveBroadcastCh.subscribe();
+        await liveBroadcastCh.send({ type:'broadcast', event:'live_locutor_start', payload:{} });
+
+        liveProcessor.onaudioprocess = async (e) => {
+            if(!liveActive) return;
+            const inputData  = e.inputBuffer.getChannelData(0);
+            const outputData = e.outputBuffer.getChannelData(0);
+            outputData.set(inputData);
+            const buf  = new ArrayBuffer(inputData.length * 2);
+            const view = new DataView(buf);
+            for(let i=0;i<inputData.length;i++) view.setInt16(i*2, Math.max(-1,Math.min(1,inputData[i]))*0x7FFF, true);
+            const bytes = new Uint8Array(buf);
+            let binary = '';
+            for(let i=0;i<bytes.length;i++) binary += String.fromCharCode(bytes[i]);
+            const chunk = btoa(binary);
+            await liveBroadcastCh.send({ type:'broadcast', event:'live_audio_chunk', payload:{ chunk } });
+        };
+
+        source.connect(liveProcessor);
+        liveProcessor.connect(liveAudioCtx.destination);
+        liveActive = true;
+        updateLiveLocutorUI(true);
+    } catch(err) {
+        alert('❌ Não foi possível acessar o microfone: ' + err.message);
+    }
+}
+
+async function stopLiveLocutor() {
+    liveActive = false;
+    if(liveProcessor) { liveProcessor.disconnect(); liveProcessor = null; }
+    if(liveAudioCtx)  { await liveAudioCtx.close(); liveAudioCtx = null; }
+    if(liveStream)    { liveStream.getTracks().forEach(t => t.stop()); liveStream = null; }
+    if(liveBroadcastCh) {
+        await liveBroadcastCh.send({ type:'broadcast', event:'live_locutor_stop', payload:{} });
+        supabase.removeChannel(liveBroadcastCh);
+        liveBroadcastCh = null;
+    }
+    updateLiveLocutorUI(false);
+}
+
+function updateLiveLocutorUI(active) {
+    const btn = document.getElementById('liveLocutorBtn');
+    const ind = document.getElementById('liveLocutorIndicator');
+    const txt = document.getElementById('liveLocutorStatus');
+    if(!btn) return;
+    if(active) {
+        btn.textContent = '⏹️ Parar Transmissão';
+        btn.classList.add('active');
+        if(ind) ind.classList.add('active');
+        if(txt) txt.textContent = '🔴 Transmitindo ao vivo...';
+    } else {
+        btn.textContent = '🎙️ Iniciar ao vivo';
+        btn.classList.remove('active');
+        if(ind) ind.classList.remove('active');
+        if(txt) txt.textContent = 'Inativo';
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
 // TTS
 // ─────────────────────────────────────────────────────────────
 function setupTTSListeners() {
@@ -713,41 +749,22 @@ async function dispatchTTS(text, title) {
     speakLocally(text);
 }
 
-function stopTTS() {
-    if(window.responsiveVoice) responsiveVoice.cancel();
-    if(window.speechSynthesis) speechSynthesis.cancel();
-}
-
 function speakLocally(text, onEnd) {
     const voiceSelect = document.getElementById('ttsVoiceSelect');
     const voiceName = voiceSelect ? voiceSelect.value : 'Brazilian Portuguese Female';
-
-    // ResponsiveVoice — muito mais natural que Web Speech API
     if(window.responsiveVoice && responsiveVoice.voiceSupport()) {
-        responsiveVoice.speak(text, voiceName, {
-            rate: 0.9,
-            pitch: 1,
-            volume: 1,
-            onend: onEnd || null
-        });
+        responsiveVoice.speak(text, voiceName, { rate:0.9, pitch:1, volume:1, onend:onEnd||null });
         return;
     }
-
-    // Fallback: Web Speech API nativa
     if(!window.speechSynthesis) { if(onEnd) onEnd(); return; }
     speechSynthesis.cancel();
     const utt = new SpeechSynthesisUtterance(text);
-    utt.lang = 'pt-BR'; utt.rate = 0.88; utt.pitch = 1.05;
-    const voices = speechSynthesis.getVoices();
-    const isFem = voiceName.toLowerCase().includes('female');
-    const match = voices.find(v => v.lang.startsWith('pt') &&
-        (isFem
-            ? (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('feminina'))
-            : (v.name.toLowerCase().includes('male') && !v.name.toLowerCase().includes('female'))
-        )
-    ) || voices.find(v => v.lang.startsWith('pt'));
-    if(match) utt.voice = match;
-    if(onEnd) utt.onend = onEnd;
+    utt.lang='pt-BR'; utt.rate=0.88; utt.pitch=1.05;
+    const voices=speechSynthesis.getVoices();
+    const isFem=voiceName.toLowerCase().includes('female');
+    const match=voices.find(v=>v.lang.startsWith('pt')&&(isFem?(v.name.toLowerCase().includes('female')||v.name.toLowerCase().includes('feminina')):(v.name.toLowerCase().includes('male')&&!v.name.toLowerCase().includes('female'))))||voices.find(v=>v.lang.startsWith('pt'));
+    if(match) utt.voice=match;
+    if(onEnd) utt.onend=onEnd;
     speechSynthesis.speak(utt);
 }
 
@@ -759,13 +776,7 @@ async function handleTTSSave() {
     const days=[...document.querySelectorAll('.tts-day-check:checked')].map(c=>c.value);
     if(!text||!title){ alert('Preencha título e texto.'); return; }
     try {
-        const payload={
-            title, text_content:text, category,
-            scheduled_time:schedTime||null,
-            scheduled_days:days.length?days:null,
-            auto_enabled:!!(schedTime&&days.length),
-            enabled:true
-        };
+        const payload={ title, text_content:text, category, scheduled_time:schedTime||null, scheduled_days:days.length?days:null, auto_enabled:!!(schedTime&&days.length), enabled:true };
         const {error}=await supabaseAdmin.from('tts_library').insert([payload]);
         if(error) throw error;
         alert('✅ Texto salvo na biblioteca!');
@@ -807,7 +818,6 @@ function setupBulkListeners() {
     document.getElementById('bulkDeactivateBtn')?.addEventListener('click', ()=>executeBulk('deactivate'));
     document.getElementById('bulkDeleteBtn')?.addEventListener('click',     ()=>executeBulk('delete'));
     document.getElementById('bulkCancelBtn')?.addEventListener('click',     clearBulkSelection);
-
     document.addEventListener('change', e=>{
         if(e.target.classList.contains('bulk-select-all')) {
             const tableId=e.target.dataset.table;
@@ -834,9 +844,7 @@ function updateBulkBar(tableId) {
     if(bulkSelectedIds.length>0) {
         bar.classList.add('visible');
         count.textContent=`${bulkSelectedIds.length} selecionada${bulkSelectedIds.length>1?'s':''}`;
-    } else {
-        bar.classList.remove('visible');
-    }
+    } else { bar.classList.remove('visible'); }
 }
 
 function clearBulkSelection() {
@@ -849,12 +857,10 @@ async function executeBulk(action) {
     if(!bulkSelectedIds.length) return;
     const count=bulkSelectedIds.length;
     if(action==='delete'&&!confirm(`Deletar ${count} item${count>1?'s':''}?`)) return;
-
     let tableName='background_playlist';
     if(bulkTableName==='playlistTableBody')         tableName='background_playlist';
     else if(bulkTableName?.startsWith('tableMusic')||bulkTableName?.startsWith('tableMusicS')) tableName='seasonal_playlists';
     else if(bulkTableName?.includes('Slot'))        tableName='slot_playlists';
-
     try {
         if(action==='activate')   await Promise.all(bulkSelectedIds.map(id=>supabaseAdmin.from(tableName).update({enabled:true}).eq('id',id)));
         if(action==='deactivate') await Promise.all(bulkSelectedIds.map(id=>supabaseAdmin.from(tableName).update({enabled:false}).eq('id',id)));
@@ -958,7 +964,7 @@ function renderGradeContent(slotId) {
                         <tbody id="tableSlotPlaylist_${slotId}"></tbody>
                     </table>
                 </div>
-                <div class="shuffle-box"><h4>🎲 Embaralhamento</h4><p>Automático à meia-noite.</p><button class="test-btn" onclick="handleForceShuffleSlot(${slotId})">🎲 Forçar Agora</button></div>
+                <div class="shuffle-box"><h4>🎲 Embaralhamento</h4><p>Automático ao completar a playlist.</p><button class="test-btn" onclick="handleForceShuffleSlot(${slotId})">🎲 Forçar Agora</button></div>
             </div>
             <div class="grade-subsection">
                 <h4>🎬 Vinhetas — ${slot.name}</h4>
@@ -1022,7 +1028,6 @@ function renderSlotPlaylistTable(slotId) {
                 <button class="btn-delete slot-delete-btn" data-id="${t.id}" data-slot="${slotId}">🗑️</button>
             </div></td>
         </tr>`).join('');
-    // Delegação de eventos para os botões da tabela
     tbody.querySelectorAll('.slot-edit-btn').forEach(b=>b.addEventListener('click',()=>editSlotTrack(parseInt(b.dataset.id),parseInt(b.dataset.slot))));
     tbody.querySelectorAll('.slot-toggle-btn').forEach(b=>b.addEventListener('click',()=>toggleSlotTrack(parseInt(b.dataset.id),b.dataset.enabled!=='true',parseInt(b.dataset.slot))));
     tbody.querySelectorAll('.slot-delete-btn').forEach(b=>b.addEventListener('click',()=>deleteSlotTrack(parseInt(b.dataset.id),parseInt(b.dataset.slot))));
@@ -1036,23 +1041,11 @@ async function handleSaveSlotTrack(e,slotId) {
     const genre=document.getElementById(`slotGenre_${slotId}`).value.trim();
     if(!url||!title){ alert('Preencha URL e Título!'); return; }
     try {
-        // Verifica duplicata
-        const {data:existing} = await supabase.from('slot_playlists')
-            .select('id,title').eq('slot_id',slotId).eq('audio_url',url).maybeSingle();
-        if(existing) { alert(`⚠️ Esta música já está na grade!
-"${existing.title}"`); return; }
-
-        // Numeração automática: busca o maior original_order e soma 1
-        const {data:maxData} = await supabase.from('slot_playlists')
-            .select('original_order').eq('slot_id',slotId)
-            .order('original_order',{ascending:false}).limit(1).maybeSingle();
+        const {data:existing} = await supabase.from('slot_playlists').select('id,title').eq('slot_id',slotId).eq('audio_url',url).maybeSingle();
+        if(existing) { alert(`⚠️ Esta música já está na grade!\n"${existing.title}"`); return; }
+        const {data:maxData} = await supabase.from('slot_playlists').select('original_order').eq('slot_id',slotId).order('original_order',{ascending:false}).limit(1).maybeSingle();
         const nextOrder = (maxData?.original_order ?? -1) + 1;
-
-        const {error}=await supabaseAdmin.from('slot_playlists').insert([{
-            slot_id:slotId, audio_url:url, title,
-            artist:artist||null, genre:genre||null,
-            original_order:nextOrder, daily_order:nextOrder, enabled:true
-        }]);
+        const {error}=await supabaseAdmin.from('slot_playlists').insert([{ slot_id:slotId, audio_url:url, title, artist:artist||null, genre:genre||null, original_order:nextOrder, daily_order:nextOrder, enabled:true }]);
         if(error) throw error;
         alert(`✅ Música adicionada! Numeração: ${nextOrder}`);
         clearSlotForm(slotId);
@@ -1094,7 +1087,7 @@ async function handleForceShuffleSlot(slotId) {
     for(let i=idx.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]];}
     const today=new Date().toISOString().split('T')[0];
     await Promise.all(tracks.map((t,i)=>supabaseAdmin.from('slot_playlists').update({daily_order:idx[i],last_shuffle_date:today}).eq('id',t.id)));
-    alert('✅ Embaralhado! A nova ordem será usada a partir do próximo ciclo completo.'); 
+    alert('✅ Embaralhado!');
     await refreshSlotPlaylist(slotId);
 }
 
@@ -1140,12 +1133,10 @@ async function refreshSlotJingles(slotId) {
 // YOUTUBE
 // ─────────────────────────────────────────────────────────────
 function populateSlotSelects() {
-    const slotOptions = 
+    const slotOptions =
         '<option value="">Selecione o destino</option>' +
         '<optgroup label="🕐 Grades Horárias">' +
-        timeSlots.filter(s=>s.name!=='Madrugada Aleatória').map(s=>
-            `<option value="slot_${s.id}">${s.name}</option>`
-        ).join('') +
+        timeSlots.filter(s=>s.name!=='Madrugada Aleatória').map(s=>`<option value="slot_${s.id}">${s.name}</option>`).join('') +
         '</optgroup>' +
         '<optgroup label="🎭 Playlists Sazonais">' +
         '<option value="seasonal_natal">🎄 Natal</option>' +
@@ -1156,12 +1147,7 @@ function populateSlotSelects() {
         '<optgroup label="🎵 Outros">' +
         '<option value="general">📋 Playlist Geral (Madrugada)</option>' +
         '</optgroup>';
-
-    ['ytSlotManual','ytSlotAuto'].forEach(id=>{
-        const el=document.getElementById(id);
-        if(!el) return;
-        el.innerHTML = slotOptions;
-    });
+    ['ytSlotManual','ytSlotAuto'].forEach(id=>{ const el=document.getElementById(id); if(!el) return; el.innerHTML=slotOptions; });
 }
 
 function setupYouTubeListeners() {
@@ -1312,7 +1298,7 @@ function renderAllSeasonalTables() {
 function renderSeasonalTable(category,type,tableId) {
     const tbody=document.getElementById(tableId); if(!tbody) return;
     const items=type==='music'?seasonalData[category].music:seasonalData[category].ads;
-    if(!items.length){ tbody.innerHTML=`<tr><td colspan="${type==='music'?6:6}" style="text-align:center;padding:20px;color:#999;">Nenhum item.</td></tr>`; return; }
+    if(!items.length){ tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:20px;color:#999;">Nenhum item.</td></tr>`; return; }
     tbody.innerHTML=items.map(item=>`
         <tr>
             ${type==='music'?`<td><input type="checkbox" class="row-checkbox" data-id="${item.id}"></td>`:''}
@@ -1388,22 +1374,13 @@ async function handleSeasonalFormSubmit(e) {
     const advertiser=form.querySelector('.seasonal-advertiser')?.value.trim()||null;
     const frequency=parseInt(form.querySelector('.seasonal-frequency')?.value||3);
     try {
-        // Numeração automática + checagem de duplicata (apenas ao inserir)
         let nextOrder = order;
         if(!editingSeasonalId) {
-            // Verifica duplicata
-            const {data:dup} = await supabase.from('seasonal_playlists')
-                .select('id,title').eq('audio_url',url).eq('category',category).maybeSingle();
-            if(dup){ alert(`⚠️ Esta música já está na playlist de ${category}!
-"${dup.title}"`); return; }
-
-            // Numeração automática
-            const {data:maxData} = await supabase.from('seasonal_playlists')
-                .select('play_order').eq('category',category).eq('type',type)
-                .order('play_order',{ascending:false}).limit(1).maybeSingle();
+            const {data:dup} = await supabase.from('seasonal_playlists').select('id,title').eq('audio_url',url).eq('category',category).maybeSingle();
+            if(dup){ alert(`⚠️ Esta música já está na playlist de ${category}!\n"${dup.title}"`); return; }
+            const {data:maxData} = await supabase.from('seasonal_playlists').select('play_order').eq('category',category).eq('type',type).order('play_order',{ascending:false}).limit(1).maybeSingle();
             nextOrder = (maxData?.play_order ?? -1) + 1;
         }
-
         const payload={category,type,audio_url:url,title,play_order:nextOrder,enabled:true};
         if(type==='music'){payload.original_order=nextOrder;payload.daily_order=nextOrder;}
         if(type==='ad'){payload.advertiser=advertiser;payload.frequency=frequency;}
@@ -1591,27 +1568,14 @@ async function handleSavePlaylist(e) {
     if(!url||!title){ alert('Preencha URL e Título!'); return; }
     try {
         if(editingPlaylistId){
-            await supabaseAdmin.from('background_playlist')
-                .update({audio_url:url,title,enabled})
-                .eq('id',editingPlaylistId);
+            await supabaseAdmin.from('background_playlist').update({audio_url:url,title,enabled}).eq('id',editingPlaylistId);
             alert('✅ Atualizado!');
         } else {
-            // Verifica duplicata
-            const {data:dup} = await supabase.from('background_playlist')
-                .select('id,title').eq('audio_url',url).maybeSingle();
-            if(dup){ alert(`⚠️ Esta música já está na playlist!
-"${dup.title}"`); return; }
-
-            // Numeração automática
-            const {data:maxData} = await supabase.from('background_playlist')
-                .select('original_order').order('original_order',{ascending:false}).limit(1).maybeSingle();
+            const {data:dup} = await supabase.from('background_playlist').select('id,title').eq('audio_url',url).maybeSingle();
+            if(dup){ alert(`⚠️ Esta música já está na playlist!\n"${dup.title}"`); return; }
+            const {data:maxData} = await supabase.from('background_playlist').select('original_order').order('original_order',{ascending:false}).limit(1).maybeSingle();
             const nextOrder = (maxData?.original_order ?? -1) + 1;
-
-            await supabaseAdmin.from('background_playlist').insert([{
-                audio_url:url, title,
-                play_order:nextOrder, original_order:nextOrder,
-                daily_order:nextOrder, enabled
-            }]);
+            await supabaseAdmin.from('background_playlist').insert([{ audio_url:url, title, play_order:nextOrder, original_order:nextOrder, daily_order:nextOrder, enabled }]);
             alert(`✅ Adicionado! Numeração: ${nextOrder}`);
         }
         handleClearPlaylistForm();
@@ -1731,280 +1695,174 @@ function handleClearAdForm() {
     document.getElementById('adsForm').querySelector('.submit-btn').textContent='💾 Adicionar Propaganda';
 }
 
-
 // ─────────────────────────────────────────────────────────────
-// ALERTA DE EMERGÊNCIA
+// ANALYTICS — usa tabela play_analytics
 // ─────────────────────────────────────────────────────────────
-let emergencyActive = false;
-
-async function loadEmergencyState() {
+async function loadAnalytics() {
+    const el = document.getElementById('analyticsContent');
+    if(!el) return;
+    el.innerHTML = '<div class="grade-empty">Carregando analytics...</div>';
     try {
-        const {data} = await supabase.from('emergency_alert').select('*').eq('id',1).single();
-        if(!data) return;
-        emergencyActive = data.is_active;
-        updateEmergencyUI(data);
-    } catch(err) { console.error(err); }
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const { data: topTracks } = await supabase
+            .from('play_analytics')
+            .select('track_title, track_table, slot_name')
+            .gte('played_at', thirtyDaysAgo.toISOString())
+            .order('played_at', { ascending: false });
+
+        if(!topTracks) { el.innerHTML='<div class="grade-empty">Sem dados ainda.</div>'; return; }
+
+        const trackCount = {};
+        topTracks.forEach(t => { const k=t.track_title; trackCount[k]=(trackCount[k]||0)+1; });
+        const top10 = Object.entries(trackCount).sort((a,b)=>b[1]-a[1]).slice(0,10);
+        const total = topTracks.length;
+
+        const { data: byHour } = await supabase.from('play_analytics').select('hour_of_day').gte('played_at', thirtyDaysAgo.toISOString());
+        const hourCount = Array(24).fill(0);
+        (byHour||[]).forEach(r=>{ hourCount[r.hour_of_day]++; });
+        const peakHour = hourCount.indexOf(Math.max(...hourCount));
+
+        const gradeCount = {};
+        topTracks.forEach(t=>{ if(t.slot_name) gradeCount[t.slot_name]=(gradeCount[t.slot_name]||0)+1; });
+
+        const maxHour = Math.max(...hourCount,1);
+        el.innerHTML = `
+            <div class="analytics-grid">
+                <div class="analytics-card analytics-card-wide">
+                    <div class="analytics-title">🎵 Top 10 Músicas (últimos 30 dias)</div>
+                    <div class="analytics-list">
+                        ${top10.map(([title,count],i)=>`
+                        <div class="analytics-row">
+                            <span class="analytics-rank">#${i+1}</span>
+                            <span class="analytics-name">${title}</span>
+                            <span class="analytics-count">${count}×</span>
+                            <div class="analytics-bar-wrap"><div class="analytics-bar" style="width:${Math.round((count/top10[0][1])*100)}%"></div></div>
+                        </div>`).join('')}
+                        ${top10.length===0?'<div style="color:#999;padding:20px;text-align:center;">Nenhum dado ainda</div>':''}
+                    </div>
+                </div>
+                <div class="analytics-card">
+                    <div class="analytics-title">⏰ Atividade por Hora</div>
+                    <div class="analytics-hours">
+                        ${hourCount.map((c,h)=>`<div class="analytics-hour-col" title="${h}h: ${c} reproduções"><div class="analytics-hour-bar" style="height:${Math.round((c/maxHour)*60)}px"></div><div class="analytics-hour-label">${h}</div></div>`).join('')}
+                    </div>
+                    <div class="analytics-peak">Horário de pico: ${String(peakHour).padStart(2,'0')}h</div>
+                </div>
+                <div class="analytics-card">
+                    <div class="analytics-title">🕐 Por Grade Horária</div>
+                    <div class="analytics-list">
+                        ${Object.entries(gradeCount).sort((a,b)=>b[1]-a[1]).map(([grade,count])=>`<div class="analytics-row"><span class="analytics-name">${grade}</span><span class="analytics-count">${count}×</span></div>`).join('')}
+                        ${Object.keys(gradeCount).length===0?'<div style="color:#999;padding:10px;">Nenhum dado</div>':''}
+                    </div>
+                </div>
+                <div class="analytics-card">
+                    <div class="analytics-title">📊 Resumo</div>
+                    <div class="analytics-summary" style="flex-direction:column;">
+                        <div class="analytics-stat"><div class="analytics-stat-num">${total}</div><div class="analytics-stat-label">Reproduções (30 dias)</div></div>
+                        <div class="analytics-stat"><div class="analytics-stat-num">${Math.round(total/30)}</div><div class="analytics-stat-label">Média por dia</div></div>
+                        <div class="analytics-stat"><div class="analytics-stat-num">${top10.length}</div><div class="analytics-stat-label">Músicas distintas</div></div>
+                    </div>
+                </div>
+            </div>`;
+    } catch(err) {
+        el.innerHTML = `<div class="grade-empty">Erro ao carregar: ${err.message}</div>`;
+    }
 }
 
-function updateEmergencyUI(state) {
+// ─────────────────────────────────────────────────────────────
+// ALERTA DE EMERGÊNCIA — usa tabela emergency_state
+// ─────────────────────────────────────────────────────────────
+async function loadEmergencyState() {
+    try {
+        const { data } = await supabase.from('emergency_state').select('*').eq('id',1).single();
+        emergencyActive = data?.is_active || false;
+        renderEmergencyUI(data);
+    } catch(err) {
+        // Tenta emergency_alert como fallback
+        try {
+            const { data } = await supabase.from('emergency_alert').select('*').eq('id',1).single();
+            emergencyActive = data?.is_active || false;
+            renderEmergencyUI(data);
+        } catch(err2) { console.error('Erro ao carregar emergência:', err2); }
+    }
+}
+
+function renderEmergencyUI(state) {
     const btn = document.getElementById('emergencyBtn');
-    const bar = document.getElementById('emergencyBar');
-    if(!btn || !bar) return;
+    const ind = document.getElementById('emergencyIndicator');
+    const txt = document.getElementById('emergencyStatusText');
+    if(!btn) return;
     if(state?.is_active) {
-        btn.textContent = '⏹️ Desativar Emergência';
-        btn.style.background = '#555';
-        bar.style.display = 'flex';
+        btn.textContent = '⏹️ Encerrar Alerta';
+        btn.classList.add('active');
+        if(ind) ind.classList.add('active');
+        if(txt) txt.textContent = '🚨 ALERTA ATIVO — todos os players estão em modo de emergência';
     } else {
-        btn.textContent = '🚨 Ativar Alerta de Emergência';
-        btn.style.background = '#dc3545';
-        bar.style.display = 'none';
+        btn.textContent = '🚨 Disparar Alerta';
+        btn.classList.remove('active');
+        if(ind) ind.classList.remove('active');
+        if(txt) txt.textContent = 'Alerta inativo';
     }
 }
 
 async function toggleEmergency() {
-    const newActive = !emergencyActive;
-    const ttsText = document.getElementById('emergencyTtsText')?.value.trim();
-    const audioUrl = document.getElementById('emergencyAudioUrl')?.value.trim();
-    const mode = document.getElementById('emergencyMode')?.value || 'tts';
-    const interval = parseInt(document.getElementById('emergencyInterval')?.value || 60);
+    const newStatus = !emergencyActive;
+    const message   = document.getElementById('emergencyMessage')?.value.trim();
+    const audioUrl  = document.getElementById('emergencyAudioUrl')?.value.trim();
+    const useTTS    = document.getElementById('emergencyUseTTS')?.checked !== false;
+    const voice     = document.getElementById('emergencyVoice')?.value || 'Brazilian Portuguese Female';
 
-    if(newActive) {
-        if(mode === 'tts' && !ttsText) { alert('Digite o texto do alerta.'); return; }
-        if(mode === 'audio' && !audioUrl) { alert('Cole a URL do áudio de emergência.'); return; }
-        if(!confirm('⚠️ Isso irá interromper a rádio em TODOS os players. Confirma?')) return;
+    if(newStatus && !message && !audioUrl) {
+        alert('Preencha a mensagem de texto ou a URL do áudio de emergência.'); return;
     }
 
+    const payload = {
+        is_active:    newStatus,
+        message:      message  || null,
+        audio_url:    audioUrl || null,
+        use_tts:      useTTS,
+        voice:        voice,
+        activated_at: newStatus ? new Date().toISOString() : null,
+        updated_at:   new Date().toISOString()
+    };
+
     try {
-        await supabaseAdmin.from('emergency_alert').update({
-            is_active: newActive,
-            mode,
-            tts_text: ttsText || null,
-            audio_url: audioUrl || null,
-            repeat_interval_sec: interval,
-            activated_at: newActive ? new Date().toISOString() : null,
-            updated_at: new Date().toISOString()
-        }).eq('id', 1);
-        emergencyActive = newActive;
-        updateEmergencyUI({is_active: newActive});
-        if(!newActive) alert('✅ Alerta de emergência desativado. Rádio retomando.');
+        // Tenta emergency_state primeiro, senão emergency_alert
+        let err1;
+        ({ error: err1 } = await supabaseAdmin.from('emergency_state').update(payload).eq('id',1));
+        if(err1) await supabaseAdmin.from('emergency_alert').update({ is_active: newStatus, tts_text: message||null, audio_url: audioUrl||null, updated_at: new Date().toISOString() }).eq('id',1);
+        emergencyActive = newStatus;
+        renderEmergencyUI({ is_active: newStatus });
     } catch(err) { alert('❌ Erro: ' + err.message); }
 }
 
 function setupEmergencyListeners() {
-    document.getElementById('emergencyBtn')?.addEventListener('click', toggleEmergency);
     document.getElementById('emergencyMode')?.addEventListener('change', e => {
         const isTTS = e.target.value === 'tts';
-        document.getElementById('emergencyTtsRow').style.display = isTTS ? 'flex' : 'none';
-        document.getElementById('emergencyAudioRow').style.display = isTTS ? 'none' : 'flex';
+        document.getElementById('emergencyTtsRow').style.display = isTTS ? 'block' : 'none';
+        document.getElementById('emergencyAudioRow').style.display = isTTS ? 'none' : 'block';
     });
-    // Realtime para atualizar UI
     supabase.channel('emergency_admin')
+        .on('postgres_changes', {event:'UPDATE', schema:'public', table:'emergency_state'},
+            payload => { emergencyActive = payload.new.is_active; renderEmergencyUI(payload.new); })
         .on('postgres_changes', {event:'UPDATE', schema:'public', table:'emergency_alert'},
-            payload => { emergencyActive = payload.new.is_active; updateEmergencyUI(payload.new); })
+            payload => { emergencyActive = payload.new.is_active; renderEmergencyUI(payload.new); })
         .subscribe();
 }
 
-// ─────────────────────────────────────────────────────────────
-// ANALYTICS
-// ─────────────────────────────────────────────────────────────
-async function loadAnalytics() {
-    const container = document.getElementById('analyticsContainer');
-    if(!container) return;
-    container.innerHTML = '<div class="grade-empty">Carregando analytics...</div>';
-    try {
-        // Total de reproduções
-        const {count: totalCount} = await supabase.from('play_log').select('*', {count:'exact', head:true});
-
-        // Músicas mais tocadas (top 10)
-        const {data: topTracks} = await supabase
-            .from('play_log').select('title, artist, slot_name')
-            .not('title','is',null)
-            .order('played_at', {ascending:false})
-            .limit(500);
-
-        // Conta frequência
-        const freq = {};
-        (topTracks||[]).forEach(t => {
-            const key = t.title;
-            if(!freq[key]) freq[key] = {title:t.title, artist:t.artist, slot:t.slot_name, count:0};
-            freq[key].count++;
-        });
-        const sorted = Object.values(freq).sort((a,b) => b.count - a.count).slice(0,10);
-
-        // Reproduções por grade
-        const {data: bySlot} = await supabase
-            .from('play_log').select('slot_name')
-            .not('slot_name','is',null)
-            .order('played_at', {ascending:false})
-            .limit(1000);
-
-        const slotFreq = {};
-        (bySlot||[]).forEach(r => {
-            slotFreq[r.slot_name] = (slotFreq[r.slot_name]||0) + 1;
-        });
-        const slotSorted = Object.entries(slotFreq).sort((a,b)=>b[1]-a[1]);
-
-        // Últimas 10 reproduções
-        const {data: recent} = await supabase
-            .from('play_log').select('*')
-            .order('played_at', {ascending:false})
-            .limit(10);
-
-        container.innerHTML = `
-            <div class="analytics-summary">
-                <div class="analytics-stat"><div class="as-num">${totalCount||0}</div><div class="as-label">Reproduções totais</div></div>
-                <div class="analytics-stat"><div class="as-num">${sorted.length}</div><div class="as-label">Músicas únicas</div></div>
-                <div class="analytics-stat"><div class="as-num">${slotSorted.length}</div><div class="as-label">Grades ativas</div></div>
-            </div>
-
-            <h4 style="margin:20px 0 10px;color:#333;">🏆 Músicas mais tocadas</h4>
-            <div class="table-container">
-                <table class="data-table">
-                    <thead><tr><th>#</th><th>Título</th><th>Artista</th><th>Grade</th><th>Reproduções</th></tr></thead>
-                    <tbody>
-                        ${sorted.map((t,i)=>`
-                        <tr>
-                            <td style="font-weight:700;color:#006b3f;">${i+1}</td>
-                            <td style="font-weight:500;">${t.title||'-'}</td>
-                            <td style="color:#666;">${t.artist||'-'}</td>
-                            <td style="color:#666;">${t.slot||'-'}</td>
-                            <td><span style="padding:3px 10px;background:#e6f4ed;border-radius:10px;font-weight:700;color:#006b3f;">${t.count}×</span></td>
-                        </tr>`).join('')}
-                    </tbody>
-                </table>
-            </div>
-
-            <h4 style="margin:20px 0 10px;color:#333;">🕐 Reproduções por grade</h4>
-            <div class="table-container">
-                <table class="data-table">
-                    <thead><tr><th>Grade</th><th>Reproduções</th></tr></thead>
-                    <tbody>
-                        ${slotSorted.map(([slot,count])=>`
-                        <tr>
-                            <td style="font-weight:500;">${slot}</td>
-                            <td><span style="padding:3px 10px;background:#e3f2fd;border-radius:10px;font-weight:700;color:#1976d2;">${count}×</span></td>
-                        </tr>`).join('')}
-                    </tbody>
-                </table>
-            </div>
-
-            <h4 style="margin:20px 0 10px;color:#333;">🕐 Últimas reproduções</h4>
-            <div class="table-container">
-                <table class="data-table">
-                    <thead><tr><th>Título</th><th>Grade</th><th>Horário</th></tr></thead>
-                    <tbody>
-                        ${(recent||[]).map(r=>`
-                        <tr>
-                            <td style="font-weight:500;">${r.title||'-'}</td>
-                            <td style="color:#666;">${r.slot_name||'-'}</td>
-                            <td style="color:#999;font-size:11px;">${new Date(r.played_at).toLocaleString('pt-BR')}</td>
-                        </tr>`).join('')}
-                    </tbody>
-                </table>
-            </div>
-
-            <div style="margin-top:12px;">
-                <button class="clear-btn" onclick="clearAnalytics()">🗑️ Limpar histórico</button>
-            </div>
-        `;
-    } catch(err) {
-        container.innerHTML = `<div class="grade-empty">Erro ao carregar analytics: ${err.message}</div>`;
+window.setEmergencyMessage = function(msg) {
+    const el = document.getElementById('emergencyMessage');
+    if(el) { el.value = msg; }
+    const ttsRadio = document.getElementById('emergencyUseTTS');
+    if(ttsRadio) {
+        ttsRadio.checked = true;
+        document.getElementById('emergencyTTSGroup').style.display = 'block';
+        document.getElementById('emergencyAudioGroup').style.display = 'none';
     }
-}
+};
 
-async function clearAnalytics() {
-    if(!confirm('Deletar todo o histórico de reproduções?')) return;
-    await supabaseAdmin.from('play_log').delete().neq('id', 0);
-    loadAnalytics();
-}
-
-// ─────────────────────────────────────────────────────────────
-// LOCUTOR AO VIVO (MICROFONE)
-// ─────────────────────────────────────────────────────────────
-let liveStream = null;
-let livePeerChannel = null;
-let liveActive = false;
-
-async function toggleLiveLocutor() {
-    const btn = document.getElementById('liveLocutorBtn');
-    if(!btn) return;
-
-    if(liveActive) {
-        stopLiveLocutor();
-        return;
-    }
-
-    try {
-        // Solicita acesso ao microfone
-        liveStream = await navigator.mediaDevices.getUserMedia({audio:true, video:false});
-        liveActive = true;
-        btn.textContent = '⏹️ Encerrar ao vivo';
-        btn.classList.add('active');
-        document.getElementById('liveLocutorStatus').textContent = '🔴 Transmitindo ao vivo...';
-
-        // Notifica players para pausar
-        await supabase.channel('live_locutor_player').send({
-            type:'broadcast', event:'live_locutor_start', payload:{}
-        });
-
-        // Usa Web Audio API para transmitir via chunks de áudio
-        const audioCtx = new AudioContext();
-        const source = audioCtx.createMediaStreamSource(liveStream);
-        const processor = audioCtx.createScriptProcessor(4096, 1, 1);
-
-        source.connect(processor);
-        processor.connect(audioCtx.destination);
-
-        processor.onaudioprocess = async (e) => {
-            if(!liveActive) return;
-            // Transmite dados de áudio via broadcast (chunks Float32Array → base64)
-            const inputData = e.inputBuffer.getChannelData(0);
-            const buffer = new Float32Array(inputData).buffer;
-            const bytes = new Uint8Array(buffer);
-            let binary = '';
-            bytes.forEach(b => binary += String.fromCharCode(b));
-            const base64 = btoa(binary);
-            await supabase.channel('live_locutor_audio').send({
-                type:'broadcast', event:'audio_chunk',
-                payload:{ data: base64, sampleRate: audioCtx.sampleRate }
-            });
-        };
-
-        // Salva referências para parar depois
-        liveStream._audioCtx = audioCtx;
-        liveStream._processor = processor;
-        liveStream._source = source;
-
-    } catch(err) {
-        alert('❌ Erro ao acessar microfone: ' + err.message);
-        liveActive = false;
-    }
-}
-
-async function stopLiveLocutor() {
-    liveActive = false;
-    const btn = document.getElementById('liveLocutorBtn');
-    if(btn) { btn.textContent = '🎙️ Iniciar ao vivo'; btn.classList.remove('active'); }
-    const statusEl = document.getElementById('liveLocutorStatus');
-    if(statusEl) statusEl.textContent = 'Inativo';
-
-    if(liveStream) {
-        liveStream._processor?.disconnect();
-        liveStream._source?.disconnect();
-        liveStream._audioCtx?.close();
-        liveStream.getTracks().forEach(t => t.stop());
-        liveStream = null;
-    }
-
-    // Notifica players para retomar
-    await supabase.channel('live_locutor_player').send({
-        type:'broadcast', event:'live_locutor_stop', payload:{}
-    });
-}
-
-function setupLiveLocutorListeners() {
-    document.getElementById('liveLocutorBtn')?.addEventListener('click', toggleLiveLocutor);
-}
 // ─────────────────────────────────────────────────────────────
 // UTILITÁRIOS
 // ─────────────────────────────────────────────────────────────
@@ -2040,16 +1898,13 @@ function goSection(name) {
     if(sec) sec.classList.add('active');
     const nav = document.querySelector(`.nav-item[data-section="${name}"]`);
     if(nav) nav.classList.add('active');
-    // Fecha sidebar no mobile após navegar
     document.getElementById('adminSidebar')?.classList.remove('open');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Navegação sidebar
     document.querySelectorAll('.nav-item').forEach(btn => {
         btn.addEventListener('click', () => goSection(btn.dataset.section));
     });
-    // Toggle sidebar mobile
     document.getElementById('sidebarToggle')?.addEventListener('click', () => {
         document.getElementById('adminSidebar')?.classList.toggle('open');
     });
@@ -2064,19 +1919,14 @@ async function toggleGrades() {
     const isActive = btn.classList.contains('active');
     const newStatus = !isActive;
     try {
-        await supabaseAdmin.from('radio_settings')
-            .update({ grades_enabled: newStatus, updated_at: new Date().toISOString() })
-            .eq('id', 1);
+        await supabaseAdmin.from('radio_settings').update({ grades_enabled: newStatus, updated_at: new Date().toISOString() }).eq('id', 1);
         btn.classList.toggle('active', newStatus);
         btn.classList.toggle('inactive', !newStatus);
         btn.textContent = newStatus ? '✅ Ativadas' : '⏸️ Desativadas';
-        alert(newStatus
-            ? '✅ Grades horárias ativadas! O player usará as playlists de cada faixa horária.'
-            : '⏸️ Grades desativadas. O player voltará para a Playlist de Fundo geral.');
+        alert(newStatus ? '✅ Grades horárias ativadas!' : '⏸️ Grades desativadas. O player voltará para a Playlist de Fundo geral.');
     } catch(err) { alert('❌ Erro: ' + err.message); }
 }
 
-// Carrega estado das grades ao iniciar
 async function loadGradesState() {
     try {
         const {data} = await supabase.from('radio_settings').select('grades_enabled').eq('id',1).single();
@@ -2090,308 +1940,38 @@ async function loadGradesState() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// FUNÇÕES GLOBAIS — acessíveis via onclick no HTML gerado
+// FUNÇÕES GLOBAIS
 // ─────────────────────────────────────────────────────────────
-window.editSlotTrack      = editSlotTrack;
-window.toggleSlotTrack    = toggleSlotTrack;
-window.deleteSlotTrack    = deleteSlotTrack;
-window.clearSlotForm      = clearSlotForm;
+window.editSlotTrack        = editSlotTrack;
+window.toggleSlotTrack      = toggleSlotTrack;
+window.deleteSlotTrack      = deleteSlotTrack;
+window.clearSlotForm        = clearSlotForm;
 window.handleForceShuffleSlot = handleForceShuffleSlot;
-window.editPlaylist       = editPlaylist;
-window.togglePlaylist     = togglePlaylist;
-window.deletePlaylist     = deletePlaylist;
-window.editAd             = editAd;
-window.toggleAd           = toggleAd;
-window.deleteAd           = deleteAd;
-window.editSeasonalItem   = editSeasonalItem;
-window.toggleSeasonalItem = toggleSeasonalItem;
-window.deleteSeasonalItem = deleteSeasonalItem;
-window.toggleJingle       = toggleJingle;
-window.deleteJingle       = deleteJingle;
-window.clearJingleForm    = clearJingleForm;
+window.editPlaylist         = editPlaylist;
+window.togglePlaylist       = togglePlaylist;
+window.deletePlaylist       = deletePlaylist;
+window.editAd               = editAd;
+window.toggleAd             = toggleAd;
+window.deleteAd             = deleteAd;
+window.editSeasonalItem     = editSeasonalItem;
+window.toggleSeasonalItem   = toggleSeasonalItem;
+window.deleteSeasonalItem   = deleteSeasonalItem;
+window.toggleJingle         = toggleJingle;
+window.deleteJingle         = deleteJingle;
+window.clearJingleForm      = clearJingleForm;
 window.toggleSeasonalJingle = toggleSeasonalJingle;
 window.deleteSeasonalJingle = deleteSeasonalJingle;
-window.testAudioUrl       = testAudioUrl;
-window.approveQueueItem   = approveQueueItem;
-window.rejectQueueItem    = rejectQueueItem;
-window.toggleYTPreview    = toggleYTPreview;
-window.selectLocutorTrack = selectLocutorTrack;
-window.deleteLocutorTrack = deleteLocutorTrack;
-window.loadTTSText        = loadTTSText;
-window.playTTSFromLib     = playTTSFromLib;
-window.deleteTTSItem      = deleteTTSItem;
-window.goSection          = goSection;
-window.toggleGrades       = toggleGrades;
-
-// ─────────────────────────────────────────────────────────────
-// ANALYTICS
-// ─────────────────────────────────────────────────────────────
-async function loadAnalytics() {
-    try {
-        // Top 10 músicas mais tocadas (últimos 30 dias)
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-        const { data: topTracks } = await supabase
-            .from('play_analytics')
-            .select('track_title, track_table, slot_name')
-            .gte('played_at', thirtyDaysAgo.toISOString())
-            .order('played_at', { ascending: false });
-
-        if(!topTracks) return;
-
-        // Conta reproduções por música
-        const trackCount = {};
-        topTracks.forEach(t => {
-            const key = t.track_title;
-            trackCount[key] = (trackCount[key]||0) + 1;
-        });
-
-        // Top 10
-        const top10 = Object.entries(trackCount)
-            .sort((a,b) => b[1]-a[1])
-            .slice(0, 10);
-
-        // Total reproduções
-        const total = topTracks.length;
-
-        // Por hora do dia
-        const { data: byHour } = await supabase
-            .from('play_analytics')
-            .select('hour_of_day')
-            .gte('played_at', thirtyDaysAgo.toISOString());
-
-        const hourCount = Array(24).fill(0);
-        (byHour||[]).forEach(r => { hourCount[r.hour_of_day]++; });
-        const peakHour = hourCount.indexOf(Math.max(...hourCount));
-
-        // Por grade
-        const gradeCount = {};
-        topTracks.forEach(t => {
-            if(t.slot_name) gradeCount[t.slot_name] = (gradeCount[t.slot_name]||0) + 1;
-        });
-
-        renderAnalytics(top10, total, hourCount, peakHour, gradeCount);
-    } catch(err) { console.error('Erro analytics:', err); }
-}
-
-function renderAnalytics(top10, total, hourCount, peakHour, gradeCount) {
-    const el = document.getElementById('analyticsContent');
-    if(!el) return;
-
-    const maxHour = Math.max(...hourCount);
-    const days = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-
-    el.innerHTML = `
-        <div class="analytics-grid">
-            <div class="analytics-card analytics-card-wide">
-                <div class="analytics-title">🎵 Top 10 Músicas (últimos 30 dias)</div>
-                <div class="analytics-list">
-                    ${top10.map(([title, count], i) => `
-                        <div class="analytics-row">
-                            <span class="analytics-rank">#${i+1}</span>
-                            <span class="analytics-name">${title}</span>
-                            <span class="analytics-count">${count}×</span>
-                            <div class="analytics-bar-wrap">
-                                <div class="analytics-bar" style="width:${Math.round((count/top10[0][1])*100)}%"></div>
-                            </div>
-                        </div>`).join('')}
-                    ${top10.length === 0 ? '<div style="color:#999;padding:20px;text-align:center;">Nenhum dado ainda</div>' : ''}
-                </div>
-            </div>
-            <div class="analytics-card">
-                <div class="analytics-title">⏰ Atividade por Hora</div>
-                <div class="analytics-hours">
-                    ${hourCount.map((c,h) => `
-                        <div class="analytics-hour-col" title="${h}h: ${c} reproduções">
-                            <div class="analytics-hour-bar" style="height:${maxHour>0?Math.round((c/maxHour)*60):0}px"></div>
-                            <div class="analytics-hour-label">${h}</div>
-                        </div>`).join('')}
-                </div>
-                <div class="analytics-peak">Horário de pico: ${String(peakHour).padStart(2,'0')}h</div>
-            </div>
-            <div class="analytics-card">
-                <div class="analytics-title">🕐 Por Grade Horária</div>
-                <div class="analytics-list">
-                    ${Object.entries(gradeCount).sort((a,b)=>b[1]-a[1]).map(([grade, count]) => `
-                        <div class="analytics-row">
-                            <span class="analytics-name">${grade}</span>
-                            <span class="analytics-count">${count}×</span>
-                        </div>`).join('')}
-                    ${Object.keys(gradeCount).length===0?'<div style="color:#999;padding:10px;">Nenhum dado</div>':''}
-                </div>
-            </div>
-            <div class="analytics-card">
-                <div class="analytics-title">📊 Resumo</div>
-                <div class="analytics-summary">
-                    <div class="analytics-stat">
-                        <div class="analytics-stat-num">${total}</div>
-                        <div class="analytics-stat-label">Reproduções (30 dias)</div>
-                    </div>
-                    <div class="analytics-stat">
-                        <div class="analytics-stat-num">${Math.round(total/30)}</div>
-                        <div class="analytics-stat-label">Média por dia</div>
-                    </div>
-                    <div class="analytics-stat">
-                        <div class="analytics-stat-num">${top10.length}</div>
-                        <div class="analytics-stat-label">Músicas distintas</div>
-                    </div>
-                </div>
-            </div>
-        </div>`;
-}
-
-window.loadAnalytics = loadAnalytics;
-
-// ─────────────────────────────────────────────────────────────
-// ALERTA DE EMERGÊNCIA
-// ─────────────────────────────────────────────────────────────
-
-async function loadEmergencyState() {
-    try {
-        const { data } = await supabase.from('emergency_state').select('*').eq('id',1).single();
-        emergencyActive = data?.is_active || false;
-        renderEmergencyUI(data);
-    } catch(err) { console.error(err); }
-}
-
-function renderEmergencyUI(state) {
-    const btn = document.getElementById('emergencyBtn');
-    const ind = document.getElementById('emergencyIndicator');
-    const txt = document.getElementById('emergencyStatusText');
-    if(!btn) return;
-    if(state?.is_active) {
-        btn.textContent = '⏹️ Encerrar Alerta';
-        btn.classList.add('active');
-        if(ind) ind.classList.add('active');
-        if(txt) txt.textContent = '🚨 ALERTA ATIVO — todos os players estão em modo de emergência';
-    } else {
-        btn.textContent = '🚨 Disparar Alerta';
-        btn.classList.remove('active');
-        if(ind) ind.classList.remove('active');
-        if(txt) txt.textContent = 'Alerta inativo';
-    }
-}
-
-async function toggleEmergency() {
-    const newStatus = !emergencyActive;
-    const message   = document.getElementById('emergencyMessage')?.value.trim();
-    const audioUrl  = document.getElementById('emergencyAudioUrl')?.value.trim();
-    const useTTS    = document.getElementById('emergencyUseTTS')?.checked !== false;
-    const voice     = document.getElementById('emergencyVoice')?.value || 'Brazilian Portuguese Female';
-
-    if(newStatus && !message && !audioUrl) {
-        alert('Preencha a mensagem de texto ou a URL do áudio de emergência.'); return;
-    }
-
-    try {
-        await supabaseAdmin.from('emergency_state').update({
-            is_active:    newStatus,
-            message:      message  || null,
-            audio_url:    audioUrl || null,
-            use_tts:      useTTS,
-            voice:        voice,
-            activated_at: newStatus ? new Date().toISOString() : null,
-            updated_at:   new Date().toISOString()
-        }).eq('id', 1);
-
-        emergencyActive = newStatus;
-        renderEmergencyUI({ is_active: newStatus });
-    } catch(err) { alert('❌ Erro: ' + err.message); }
-}
-
-window.toggleEmergency  = toggleEmergency;
-window.loadEmergencyState = loadEmergencyState;
-
-// ─────────────────────────────────────────────────────────────
-// LOCUTOR AO VIVO — microfone em tempo real
-// ─────────────────────────────────────────────────────────────
-let liveStream      = null;
-let liveProcessor   = null;
-let liveAudioCtx    = null;
-let liveActive      = false;
-let liveBroadcastCh = null;
-
-async function startLiveLocutor() {
-    if(liveActive) { stopLiveLocutor(); return; }
-    try {
-        liveStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        liveAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const source = liveAudioCtx.createMediaStreamSource(liveStream);
-        liveProcessor = liveAudioCtx.createScriptProcessor(4096, 1, 1);
-
-        liveBroadcastCh = supabase.channel('live_locutor_admin');
-        await liveBroadcastCh.subscribe();
-
-        // Avisa players para pausar
-        await liveBroadcastCh.send({ type:'broadcast', event:'live_locutor_start', payload:{} });
-
-        liveProcessor.onaudioprocess = async (e) => {
-            if(!liveActive) return;
-            const inputData  = e.inputBuffer.getChannelData(0);
-            const outputData = e.outputBuffer.getChannelData(0);
-            outputData.set(inputData);
-            // Converte para base64 e envia
-            const buf    = new ArrayBuffer(inputData.length * 2);
-            const view   = new DataView(buf);
-            for(let i=0;i<inputData.length;i++) view.setInt16(i*2, Math.max(-1,Math.min(1,inputData[i]))*0x7FFF, true);
-            const bytes  = new Uint8Array(buf);
-            let binary   = '';
-            for(let i=0;i<bytes.length;i++) binary += String.fromCharCode(bytes[i]);
-            const chunk  = btoa(binary);
-            await liveBroadcastCh.send({ type:'broadcast', event:'live_audio_chunk', payload:{ chunk } });
-        };
-
-        source.connect(liveProcessor);
-        liveProcessor.connect(liveAudioCtx.destination);
-        liveActive = true;
-        updateLiveLocutorUI(true);
-    } catch(err) {
-        alert('❌ Não foi possível acessar o microfone: ' + err.message);
-    }
-}
-
-async function stopLiveLocutor() {
-    liveActive = false;
-    if(liveProcessor) { liveProcessor.disconnect(); liveProcessor = null; }
-    if(liveAudioCtx)  { await liveAudioCtx.close(); liveAudioCtx = null; }
-    if(liveStream)    { liveStream.getTracks().forEach(t => t.stop()); liveStream = null; }
-    if(liveBroadcastCh) {
-        await liveBroadcastCh.send({ type:'broadcast', event:'live_locutor_stop', payload:{} });
-        supabase.removeChannel(liveBroadcastCh);
-        liveBroadcastCh = null;
-    }
-    updateLiveLocutorUI(false);
-}
-
-function updateLiveLocutorUI(active) {
-    const btn = document.getElementById('liveLocutorBtn');
-    const ind = document.getElementById('liveLocutorIndicator');
-    const txt = document.getElementById('liveLocutorStatus');
-    if(!btn) return;
-    if(active) {
-        btn.textContent = '⏹️ Parar Transmissão';
-        btn.classList.add('active');
-        if(ind) ind.classList.add('active');
-        if(txt) txt.textContent = '🔴 Transmitindo ao vivo...';
-    } else {
-        btn.textContent = '🎙️ Iniciar ao Vivo';
-        btn.classList.remove('active');
-        if(ind) ind.classList.remove('active');
-        if(txt) txt.textContent = 'Microfone inativo';
-    }
-}
-
-window.startLiveLocutor = startLiveLocutor;
-
-window.setEmergencyMessage = function(msg) {
-    const el = document.getElementById('emergencyMessage');
-    if(el) { el.value = msg; }
-    // Garante que TTS está selecionado
-    const ttsRadio = document.getElementById('emergencyUseTTS');
-    if(ttsRadio) {
-        ttsRadio.checked = true;
-        document.getElementById('emergencyTTSGroup').style.display = 'block';
-        document.getElementById('emergencyAudioGroup').style.display = 'none';
-    }
-};
+window.testAudioUrl         = testAudioUrl;
+window.approveQueueItem     = approveQueueItem;
+window.rejectQueueItem      = rejectQueueItem;
+window.toggleYTPreview      = toggleYTPreview;
+window.selectLocutorTrack   = selectLocutorTrack;
+window.deleteLocutorTrack   = deleteLocutorTrack;
+window.loadTTSText          = loadTTSText;
+window.playTTSFromLib       = playTTSFromLib;
+window.deleteTTSItem        = deleteTTSItem;
+window.goSection            = goSection;
+window.toggleGrades         = toggleGrades;
+window.loadAnalytics        = loadAnalytics;
+window.toggleEmergency      = toggleEmergency;
+window.startLiveLocutor     = startLiveLocutor;
