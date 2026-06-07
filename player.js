@@ -260,49 +260,67 @@ function checkSlotChange() {
 // ─────────────────────────────────────────────────────────────
 async function savePlaybackState() {
     try {
-        const table = isGradeMode ? 'slot_playlists' : (isSeasonalActive ? 'seasonal_playlists' : 'background_playlist');
-        const index = isGradeMode ? slotCurrentIndex : currentBgIndex;
-        const playlist = isGradeMode ? slotPlaylist : (isSeasonalActive ? seasonalPlaylist : backgroundPlaylist);
-        const track = playlist[index % Math.max(playlist.length,1)];
+        const current_table = isGradeMode
+            ? 'slot_playlists'
+            : (isSeasonalActive ? 'seasonal_playlists' : 'background_playlist');
+        const current_index = isGradeMode ? slotCurrentIndex : currentBgIndex;
+        const playlist = isGradeMode ? slotPlaylist
+            : (isSeasonalActive ? seasonalPlaylist : backgroundPlaylist);
+        const track = playlist[current_index % Math.max(playlist.length, 1)];
 
-        await supabase.from('playback_state').update({
-            track_id:     track?.id       || null,
-            track_table:  table,
-            slot_id:      currentSlot?.id || null,
-            track_title:  track?.title    || null,
-            audio_url:    track?.audio_url|| null,
-            playlist_index: index,
-            updated_at:   new Date().toISOString()
-        }).eq('id', 1);
-    } catch(err) { /* silencioso */ }
+        // upsert garante que a linha existe mesmo que a tabela esteja vazia
+        await supabase.from('player_state').upsert({
+            id:            1,
+            current_table,
+            current_id:    track?.id    || null,
+            current_index,
+            slot_id:       currentSlot?.id || null,
+            is_grade_mode: isGradeMode,
+            updated_at:    new Date().toISOString()
+        }, { onConflict: 'id' });
+    } catch(err) { console.warn('savePlaybackState:', err); }
 }
 
 async function restorePlaybackState() {
     try {
         const { data } = await supabase
-            .from('playback_state')
+            .from('player_state')
             .select('*')
             .eq('id', 1)
             .maybeSingle();
 
-        if(!data || !data.audio_url) return false;
+        if(!data) return false;
 
-        if(data.track_table === 'slot_playlists' && data.slot_id) {
+        // Restaura modo grade
+        if(data.is_grade_mode && data.slot_id) {
             const slot = timeSlots.find(s => s.id === data.slot_id);
             if(slot) {
                 currentSlot = slot; lastSlotId = slot.id; isGradeMode = true;
                 await loadSlotPlaylist(slot.id);
                 await loadSlotJingles(slot.id);
-                const idx = slotPlaylist.findIndex(t => t.id === data.track_id);
-                slotCurrentIndex = idx >= 0 ? idx : (data.playlist_index || 0);
+                // Tenta achar pela ID, senão usa o índice salvo
+                const idxById = data.current_id
+                    ? slotPlaylist.findIndex(t => t.id === data.current_id)
+                    : -1;
+                slotCurrentIndex = idxById >= 0 ? idxById
+                    : Math.min(data.current_index || 0, Math.max(slotPlaylist.length - 1, 0));
+                console.log(`▶️ Retomando grade "${slot.name}" na música ${slotCurrentIndex + 1}/${slotPlaylist.length}`);
                 return true;
             }
-        } else if(data.track_table === 'background_playlist') {
+        }
+
+        // Restaura modo playlist geral / sazonal
+        if(!data.is_grade_mode && data.current_table === 'background_playlist') {
             isGradeMode = false;
-            const idx = backgroundPlaylist.findIndex(t => t.id === data.track_id);
-            currentBgIndex = idx >= 0 ? idx : (data.playlist_index || 0);
+            const idxById = data.current_id
+                ? backgroundPlaylist.findIndex(t => t.id === data.current_id)
+                : -1;
+            currentBgIndex = idxById >= 0 ? idxById
+                : Math.min(data.current_index || 0, Math.max(backgroundPlaylist.length - 1, 0));
+            console.log(`▶️ Retomando playlist geral na música ${currentBgIndex + 1}/${backgroundPlaylist.length}`);
             return true;
         }
+
         return false;
     } catch(err) { return false; }
 }
