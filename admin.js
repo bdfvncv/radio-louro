@@ -177,7 +177,7 @@ function buildDestinationsHTML(selectedValue) {
         {value:'seasonal_ano_novo', label:'🎆 Ano-Novo'},
         {value:'seasonal_pascoa',   label:'🐰 Páscoa'},
         {value:'seasonal_sao_joao', label:'🔥 São João'},
-        {value:'general',           label:'🎵 Playlist Geral (Madrugada)'},
+        {value:'general',           label:'🎵 Playlist de Fundo'},
     ];
     return destinations.map(d=>`
         <label class="dest-check-label" style="display:flex;align-items:center;gap:6px;padding:5px 4px;font-size:12px;cursor:pointer;border-radius:6px;transition:background .15s;" onmouseover="this.style.background='#f0faf5'" onmouseout="this.style.background=''">
@@ -216,13 +216,16 @@ async function handleAdminSearch() {
         if(!data.items?.length){ resultsEl.innerHTML='<div class="suggest-empty">Nenhum resultado.</div>'; return; }
         const filtered=data.items.filter(i=>!BLOCKED_TERMS.some(b=>i.snippet.title.toLowerCase().includes(b)));
         resultsEl.innerHTML=filtered.map(item=>`
-            <div class="suggest-result-card">
+            <div class="suggest-result-card" style="flex-wrap:wrap;">
                 <img src="${item.snippet.thumbnails?.default?.url||''}" alt="" class="suggest-result-thumb">
-                <div class="suggest-result-info">
+                <div class="suggest-result-info" style="flex:1;min-width:0;">
                     <div class="suggest-result-title">${item.snippet.title}</div>
                     <div class="suggest-result-channel">${item.snippet.channelTitle}</div>
+                    <iframe id="adminsearch_frame_${item.id.videoId}" src="" allowfullscreen allow="autoplay"
+                        style="display:none;width:100%;aspect-ratio:16/9;border:none;border-radius:8px;margin-top:6px;"></iframe>
                 </div>
-                <div style="display:flex;flex-direction:column;gap:4px;">
+                <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
+                    <button class="suggest-preview-btn admin-preview-btn" data-id="${item.id.videoId}">▶️ Prévia</button>
                     <button class="suggest-btn admin-search-queue-btn"
                         data-id="${item.id.videoId}"
                         data-title="${item.snippet.title.replace(/"/g,'&quot;')}"
@@ -232,6 +235,23 @@ async function handleAdminSearch() {
                     </button>
                 </div>
             </div>`).join('');
+        // Listeners: prévia
+        resultsEl.querySelectorAll('.admin-preview-btn').forEach(btn=>{
+            btn.addEventListener('click', ()=>{
+                const vid=btn.dataset.id;
+                const frame=document.getElementById(`adminsearch_frame_${vid}`);
+                if(!frame) return;
+                if(frame.style.display==='none'){
+                    resultsEl.querySelectorAll('iframe').forEach(f=>{f.src='';f.style.display='none';});
+                    resultsEl.querySelectorAll('.admin-preview-btn').forEach(b=>b.textContent='▶️ Prévia');
+                    frame.src=`https://www.youtube.com/embed/${vid}?autoplay=1`;
+                    frame.style.display='block';
+                    btn.textContent='⏹ Fechar';
+                } else {
+                    frame.src=''; frame.style.display='none'; btn.textContent='▶️ Prévia';
+                }
+            });
+        });
         resultsEl.querySelectorAll('.admin-search-queue-btn').forEach(b=>{
             b.addEventListener('click', async()=>{
                 await addToQueueFromSearch({
@@ -540,7 +560,7 @@ function populateSlotSelects() {
         '<option value="seasonal_ano_novo">🎆 Ano-Novo</option>' +
         '<option value="seasonal_pascoa">🐰 Páscoa</option>' +
         '<option value="seasonal_sao_joao">🔥 São João</option>' +
-        '<option value="general">🎵 Playlist Geral</option>';
+        '<option value="general">🎵 Playlist de Fundo</option>';
 
     document.querySelectorAll('#ytSlotManual, #ytSlotAuto').forEach(el => { el.innerHTML = slotOptions; });
 
@@ -562,7 +582,12 @@ function setupYouTubeListeners() {
     document.getElementById('ytAddManualBtn')?.addEventListener('click', handleYTAddManual);
     document.getElementById('ytCancelManualBtn')?.addEventListener('click',()=>{
         document.getElementById('ytPreviewResult').style.display='none';
-        document.getElementById('ytUrlManual').value=''; ytManualData=null;
+        document.getElementById('ytUrlManual').value='';
+        const f=document.getElementById('ytManualPreviewFrame');
+        if(f){f.src='';f.style.display='none';}
+        const b=document.getElementById('ytManualPreviewBtn');
+        if(b) b.textContent='▶️ Ouvir Prévia';
+        ytManualData=null;
     });
     document.getElementById('ytAutoSearchBtn')?.addEventListener('click', handleYTAutoSearch);
     document.getElementById('ytAutoAddSelectedBtn')?.addEventListener('click', handleYTAutoAddSelected);
@@ -596,6 +621,19 @@ async function handleYTPreview() {
         document.getElementById('ytPreviewTitle').textContent=data.title;
         document.getElementById('ytPreviewChannel').textContent=data.channel;
         document.getElementById('ytPreviewDuration').textContent=formatDuration(data.duration);
+        // Botão/iframe de prévia no card
+        const prevBtn=document.getElementById('ytManualPreviewBtn');
+        const prevFrame=document.getElementById('ytManualPreviewFrame');
+        if(prevBtn&&prevFrame){
+            prevBtn.onclick=()=>{
+                if(prevFrame.style.display==='none'){
+                    prevFrame.src=`https://www.youtube.com/embed/${data.id}?autoplay=1`;
+                    prevFrame.style.display='block'; prevBtn.textContent='⏹ Fechar Prévia';
+                } else {
+                    prevFrame.src=''; prevFrame.style.display='none'; prevBtn.textContent='▶️ Ouvir Prévia';
+                }
+            };
+        }
         document.getElementById('ytPreviewResult').style.display='block';
     } catch(err){ alert('❌ Erro: '+err.message); }
     finally{ btn.textContent='🔍 Visualizar'; btn.disabled=false; }
