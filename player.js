@@ -116,9 +116,14 @@ async function init() {
         setInterval(checkHourChange, 30000);
         setInterval(checkSeasonalStatus, 10000);
         setInterval(checkSlotChange, 60000);
-        await loadCurrentHourAudio();
-        await detectAndActivateSlot();
+
+        // 1) Restaura índice da playlist salvo no banco (player_state)
         await restorePlaybackState();
+        // 2) Ativa grade horária sem disparar reprodução automática
+        await detectAndActivateSlotSilent();
+        // 3) Pré-carrega hora certa sem disparar reprodução automática
+        await loadCurrentHourAudioSilent();
+
         startSaveStateInterval();
         initEmergencyListener();
         initLiveLocutorListener();
@@ -221,6 +226,25 @@ async function detectAndActivateSlot() {
     await loadSlotJingles(slot.id);
     if(isSeasonalActive) await ensureSeasonalBlocksToday();
     if(isPlaying && !isPlayingHourCerta) startGrade();
+}
+
+// Versão silenciosa: carrega dados da grade sem disparar reprodução (usada no boot)
+async function detectAndActivateSlotSilent() {
+    const hour = new Date().getHours();
+    const slot = getActiveSlotForHour(hour);
+    if(!slot) { isGradeMode=false; currentSlot=null; lastSlotId=null; return; }
+    // Só atualiza se mudou de grade — preserva slotCurrentIndex restaurado
+    if(slot.id !== lastSlotId) {
+        isGradeMode=true; currentSlot=slot; lastSlotId=slot.id;
+        gradeOpeningDone=false; gradeMiddle1Done=false; gradeMiddle2Done=false;
+        const gradeStart = new Date(); gradeStart.setMinutes(0,0,0); gradeStart.setHours(slot.start_hour);
+        const gradeEnd = new Date(gradeStart); gradeEnd.setHours(slot.end_hour);
+        gradeStartTime = gradeStart; gradeDurationMs = gradeEnd - gradeStart;
+        await loadSlotPlaylist(slot.id);
+        await loadSlotJingles(slot.id);
+    }
+    if(isSeasonalActive) await ensureSeasonalBlocksToday();
+    // NÃO chama startGrade() — o usuário inicia a reprodução manualmente
 }
 
 async function loadSlotPlaylist(slotId) {
@@ -339,15 +363,15 @@ function startSaveStateInterval() {
 // ─────────────────────────────────────────────────────────────
 async function logAnalytics(track, table, slotId, slotName) {
     try {
-        const now = new Date();
-        await supabase.from('play_analytics').insert([{
-            track_id:    track?.id    || null,
-            track_title: track?.title || 'Desconhecida',
-            track_table: table,
-            slot_id:     slotId  || null,
-            slot_name:   slotName|| null,
-            day_of_week: now.getDay(),
-            hour_of_day: now.getHours()
+        // Insere em play_log — tabela real do banco
+        await supabase.from('play_log').insert([{
+            audio_url:    track?.audio_url || null,
+            title:        track?.title     || 'Desconhecida',
+            artist:       track?.artist    || null,
+            source_table: table,
+            source_id:    track?.id        || null,
+            slot_id:      slotId           || null,
+            slot_name:    slotName         || null
         }]);
     } catch(err) { /* silencioso */ }
 }
@@ -449,6 +473,7 @@ function playSlotMusicTrack() {
     updateDisplay(currentSlot?`🎵 ${currentSlot.name}`:'Tocando agora', track.title||'Música');
     slotTracksSinceAd++;
     logAnalytics(track, 'slot_playlists', currentSlot?.id, currentSlot?.name);
+    savePlaybackState(); // salva posição a cada troca de música
     if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
 }
 
@@ -479,6 +504,7 @@ function playBgMusic() {
     updateDisplay(isSeasonalActive?'🎭 Especial':'Tocando agora', track.title||'Música');
     tracksPlayedSinceAd++;
     logAnalytics(track, isSeasonalActive?'seasonal_playlists':'background_playlist', null, isSeasonalActive?activeSeasonalCat:'Fundo');
+    savePlaybackState(); // salva posição a cada troca de música
     if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
 }
 
@@ -553,6 +579,22 @@ async function loadCurrentHourAudio() {
             if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
         } else { resumeAfterHourCerta(); }
     } catch(err){ console.error(err); resumeAfterHourCerta(); }
+}
+
+// Versão silenciosa: apenas pré-carrega hora certa sem reproduzir (usada no boot)
+async function loadCurrentHourAudioSilent() {
+    const now=new Date(), hour=now.getHours(), min=now.getMinutes();
+    try {
+        const data=allSchedules.find(s=>s.hour===hour&&s.enabled);
+        if(!data) return;
+        const isExact=min<=2, isHalf=min>=30&&min<=32;
+        const slotStr=isExact?`${hour}:00`:`${hour}:30`;
+        if(lastPlayedSlot===slotStr) return;
+        // Só marca pendente — a hora certa tocará quando o usuário der play
+        if((isExact&&data.audio_url?.trim()) || (isHalf&&data.audio_url_half?.trim())) {
+            lastPlayedSlot = null; // garante que tocará quando o play for pressionado
+        }
+    } catch(err){ console.error(err); }
 }
 
 function resumeAfterHourCerta() {
@@ -690,12 +732,33 @@ function togglePlay() {
     if(isPlaying){
         audioPlayer.pause(); isPlaying=false; updatePlayButtonState(false);
     } else {
-        // Se não tem src ainda, começa a música correta
+        isPlaying=true; updatePlayButtonState(true);
+        // Se não tem src, escolhe a música correta (posição restaurada ou início)
         if(!audioPlayer.src || audioPlayer.src === window.location.href) {
-            if(isGradeMode && slotPlaylist.length) playSlotTrack();
-            else playBgMusic();
+            // Verifica se há hora certa pendente para este momento
+            const now=new Date(), hour=now.getHours(), min=now.getMinutes();
+            const sched=allSchedules.find(s=>s.hour===hour&&s.enabled);
+            const isExact=min<=2, isHalf=min>=30&&min<=32;
+            if(sched && isExact && sched.audio_url?.trim()) {
+                isPlayingHourCerta=true;
+                const slotStr=`${hour}:00`;
+                lastPlayedSlot=slotStr;
+                audioPlayer.src=sched.audio_url;
+                updateDisplay('Hora Certa',`${String(hour).padStart(2,'0')}:00`);
+            } else if(sched && isHalf && sched.audio_url_half?.trim()) {
+                isPlayingHourCerta=true;
+                const slotStr=`${hour}:30`;
+                lastPlayedSlot=slotStr;
+                audioPlayer.src=sched.audio_url_half;
+                updateDisplay('Hora Certa',`${String(hour).padStart(2,'0')}:30`);
+            } else if(isGradeMode && slotPlaylist.length) {
+                playSlotTrack();
+            } else {
+                playBgMusic();
+            }
+            return; // playSlotTrack/playBgMusic já chamam audioPlayer.play()
         }
-        audioPlayer.play().then(()=>{ isPlaying=true; updatePlayButtonState(true); }).catch(e=>console.error(e));
+        audioPlayer.play().catch(e=>{ console.error(e); isPlaying=false; updatePlayButtonState(false); });
     }
 }
 
