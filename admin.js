@@ -11,6 +11,8 @@ const supabaseAdmin = window.supabase.createClient(SUPABASE_URL, SUPABASE_SERVIC
 // ── Estado ────────────────────────────────────────────────────
 let allSchedules=[], backgroundPlaylist=[], advertisements=[];
 let timeSlots=[], slotPlaylists={}, slotJingles={};
+// Grades visíveis — exclui "Madrugada Aleatória" (coberta pela Playlist de Fundo)
+const visibleSlots = () => timeSlots.filter(s => s.name !== 'Madrugada Aleatória');
 let seasonalData={natal:{music:[],ads:[]},ano_novo:{music:[],ads:[]},pascoa:{music:[],ads:[]},sao_joao:{music:[],ads:[]}};
 let seasonalJingles={natal:[],ano_novo:[],pascoa:[],sao_joao:[]};
 let seasonalSettings={};
@@ -149,7 +151,7 @@ async function loadSlotData() {
         supabase.from('jingles').select('*').not('slot_id','is',null)
     ]);
     slotPlaylists={}; slotJingles={};
-    timeSlots.forEach(s=>{slotPlaylists[s.id]=[]; slotJingles[s.id]=[];});
+    visibleSlots().forEach(s=>{slotPlaylists[s.id]=[]; slotJingles[s.id]=[];});
     (plRes.data||[]).forEach(t=>{if(slotPlaylists[t.slot_id])slotPlaylists[t.slot_id].push(t);});
     (jRes.data||[]).forEach(j=>{if(slotJingles[j.slot_id])slotJingles[j.slot_id].push(j);});
 }
@@ -172,7 +174,7 @@ function renderAll() {
 // ─────────────────────────────────────────────────────────────
 function buildDestinationsHTML(selectedValue) {
     const destinations = [
-        ...timeSlots.filter(s=>s.name!=='Madrugada Aleatória').map(s=>({value:`slot_${s.id}`, label:`🕐 ${s.name}`})),
+        ...visibleSlots().map(s=>({value:`slot_${s.id}`, label:`🕐 ${s.name}`})),
         {value:'seasonal_natal',    label:'🎄 Natal'},
         {value:'seasonal_ano_novo', label:'🎆 Ano-Novo'},
         {value:'seasonal_pascoa',   label:'🐰 Páscoa'},
@@ -553,7 +555,7 @@ function populateSlotSelects() {
     // Popula selects simples (manual/auto preview, não os de destino)
     const slotOptions =
         '<option value="">Selecione o destino</option>' +
-        timeSlots.filter(s=>s.name!=='Madrugada Aleatória').map(s=>
+        visibleSlots().map(s=>
             `<option value="slot_${s.id}">${s.name}</option>`
         ).join('') +
         '<option value="seasonal_natal">🎄 Natal</option>' +
@@ -1102,13 +1104,14 @@ function setupGradesTabs() {
 function renderGradesTabs() {
     const tabsEl=document.getElementById('gradesTabs');
     const contentEl=document.getElementById('gradesContent');
-    if(!timeSlots.length){ tabsEl.innerHTML=''; contentEl.innerHTML='<div class="grade-empty">Nenhuma grade.</div>'; return; }
-    tabsEl.innerHTML=timeSlots.map(s=>`
+    const slots=visibleSlots();
+    if(!slots.length){ tabsEl.innerHTML=''; contentEl.innerHTML='<div class="grade-empty">Nenhuma grade configurada.</div>'; return; }
+    tabsEl.innerHTML=slots.map(s=>`
         <button class="grade-tab${currentGradeTab===s.id?' active':''}" data-slot-id="${s.id}" style="border-bottom-color:${s.color}">
             <span class="grade-tab-dot" style="background:${s.color}"></span>${s.name}
             <span class="grade-tab-count">${(slotPlaylists[s.id]||[]).length}</span>
         </button>`).join('');
-    if(!currentGradeTab&&timeSlots.length) currentGradeTab=timeSlots[0].id;
+    if(!currentGradeTab&&slots.length) currentGradeTab=slots[0].id;
     renderGradeContent(currentGradeTab);
 }
 
