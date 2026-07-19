@@ -472,7 +472,7 @@ async function approveQueueItem(id) {
 
 const CONVERT_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/convert-youtube`;
 // Se configurou FUNCTION_SECRET no Supabase, coloque aqui:
-const FUNCTION_SECRET = '';
+const FUNCTION_SECRET = 'minhasenhasecreta123';
 
 async function convertYoutubeToMp3(youtubeUrl, title, onProgress) {
     try {
