@@ -494,6 +494,7 @@ async function convertYoutubeToMp3(youtubeUrl, title, onProgress) {
 
         if (!res.ok || !data.audio_url) {
             console.warn('Edge Function erro:', data.error || data);
+            alert('🔍 DIAGNÓSTICO TEMPORÁRIO\n\nStatus HTTP: ' + res.status + '\nResposta: ' + JSON.stringify(data));
             return null;
         }
 
@@ -502,6 +503,7 @@ async function convertYoutubeToMp3(youtubeUrl, title, onProgress) {
 
     } catch (err) {
         console.warn('convertYoutubeToMp3 erro:', err);
+        alert('🔍 DIAGNÓSTICO TEMPORÁRIO\n\nErro de rede/fetch: ' + (err && err.message ? err.message : String(err)));
         return null;
     }
 }
