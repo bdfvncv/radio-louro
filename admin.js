@@ -141,6 +141,8 @@ async function loadAllData() {
         await loadEmergencyState();
         setupRealtimeSubscription();
         startTTSScheduleChecker();
+        // Carrega módulos novos
+        extendedLoadAllData();
     } catch(err){ console.error('Erro ao carregar:',err); }
 }
 
@@ -362,15 +364,26 @@ async function approveQueueItem(id) {
     try {
         let audioUrl = item.audio_url || null;
         if(!audioUrl) {
-            updateStatus('🎵 Convertendo MP3...');
-            audioUrl = await convertYoutubeToMp3(item.youtube_url, item.youtube_title);
-        }
-        if(!audioUrl) {
-            audioUrl = item.youtube_url;
-            updateStatus('⚠️ Usando link YouTube...');
+            audioUrl = await convertYoutubeToMp3(
+                item.youtube_url,
+                item.youtube_title,
+                updateStatus
+            );
         }
 
-        const convDone = audioUrl && !audioUrl.includes('youtube.com');
+        if(!audioUrl) {
+            if(btn){ btn.textContent='✅ Aprovar'; btn.disabled=false; }
+            alert('❌ A conversão falhou.\n\nPossíveis causas:\n• Edge Function não foi deployada no Supabase\n• Música removida do YouTube\n• YouTube bloqueou temporariamente\n\nAguarde alguns minutos e tente novamente.');
+            return;
+        }
+
+        if(audioUrl.includes('youtube.com') || audioUrl.includes('youtu.be')) {
+            if(btn){ btn.textContent='✅ Aprovar'; btn.disabled=false; }
+            alert('❌ A URL retornada ainda é do YouTube — Edge Function pode precisar ser redeploy.');
+            return;
+        }
+
+        const convDone = true;
         await supabaseAdmin.from('music_queue').update({
             status:'approved',
             conversion_status: convDone ? 'done' : 'pending',
@@ -452,91 +465,43 @@ async function approveQueueItem(id) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// COBALT — conversão YouTube → MP3
+// CONVERSÃO YOUTUBE → MP3 via Supabase Edge Function
+// A Edge Function roda no servidor: sem CORS, sem limite de download
+// Fluxo: Cobalt (servidor) → upload Cloudinary → URL permanente
 // ─────────────────────────────────────────────────────────────
-async function getCobaltInstance() {
-    try {
-        const res = await fetch('https://instances.cobalt.best/instances.json', {
-            headers: { 'User-Agent': 'RadioLouro/1.0 (+https://supermercadodolouro.com.br)' }
-        });
-        const data = await res.json();
-        const valid = data.filter(inst =>
-            inst.online?.api === true &&
-            inst.services?.youtube === true &&
-            inst.cors === true &&
-            inst.trust >= 1 &&
-            inst.score >= 50
-        ).sort((a, b) => b.score - a.score);
-        if (!valid.length) throw new Error('Nenhuma instância disponível');
-        return `${valid[0].protocol}://${valid[0].api}`;
-    } catch(err) {
-        console.warn('Erro ao buscar instância Cobalt:', err);
-        return null;
-    }
-}
 
-async function convertYoutubeToMp3(youtubeUrl, title) {
-    try {
-        const instance = await getCobaltInstance();
-        if (!instance) throw new Error('Sem instância Cobalt disponível');
+const CONVERT_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/convert-youtube`;
+// Se configurou FUNCTION_SECRET no Supabase, coloque aqui:
+const FUNCTION_SECRET = '';
 
-        const res = await fetch(instance, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'User-Agent': 'RadioLouro/1.0 (+https://supermercadodolouro.com.br)'
-            },
-            body: JSON.stringify({
-                url: youtubeUrl,
-                downloadMode: 'audio',
-                audioFormat: 'mp3',
-                audioBitrate: '192'
-            })
+async function convertYoutubeToMp3(youtubeUrl, title, onProgress) {
+    try {
+        if (onProgress) onProgress('☁️ Convertendo via servidor...');
+
+        const headers = {
+            'Content-Type':  'application/json',
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        };
+        if (FUNCTION_SECRET) headers['x-function-secret'] = FUNCTION_SECRET;
+
+        const res = await fetch(CONVERT_FUNCTION_URL, {
+            method:  'POST',
+            headers,
+            body:    JSON.stringify({ youtube_url: youtubeUrl, title }),
         });
 
         const data = await res.json();
 
-        if(data.status === 'tunnel' || data.status === 'redirect') {
-            const cloudUrl = await uploadToCloudinary(data.url, title);
-            return cloudUrl || data.url;
+        if (!res.ok || !data.audio_url) {
+            console.warn('Edge Function erro:', data.error || data);
+            return null;
         }
-        throw new Error(`Cobalt retornou: ${data.status}`);
-    } catch(err) {
-        console.warn('Conversão MP3 falhou:', err);
-        return null;
-    }
-}
 
-async function uploadToCloudinary(mp3Url, title) {
-    try {
-        const safeName = (title||'musica').replace(/[^a-z0-9]/gi,'_').toLowerCase().substring(0,50);
-        const formData = new FormData();
-        formData.append('file', mp3Url);
-        formData.append('upload_preset', 'radio_louro_preset');
-        formData.append('folder', 'radio_louro');
-        formData.append('tags', 'radio_louro');
+        if (onProgress) onProgress('✅ Convertido!');
+        return data.audio_url; // URL permanente do Cloudinary
 
-        const res = await fetch('https://api.cloudinary.com/v1_1/dygbrcrr6/video/upload', {
-            method: 'POST',
-            body: formData
-        });
-        const data = await res.json();
-        if(data.secure_url) return data.secure_url;
-        if(data.error) {
-            const fd2 = new FormData();
-            fd2.append('file', mp3Url);
-            fd2.append('upload_preset', 'ml_default');
-            fd2.append('folder', 'radio_louro');
-            const res2 = await fetch('https://api.cloudinary.com/v1_1/dygbrcrr6/video/upload', {
-                method: 'POST', body: fd2
-            });
-            const data2 = await res2.json();
-            if(data2.secure_url) return data2.secure_url;
-        }
-        return null;
-    } catch(err) {
-        console.error('Upload Cloudinary falhou:', err);
+    } catch (err) {
+        console.warn('convertYoutubeToMp3 erro:', err);
         return null;
     }
 }
@@ -547,6 +512,95 @@ async function rejectQueueItem(id) {
     musicQueue=musicQueue.filter(m=>m.id!==id);
     renderQueueSection();
 }
+
+// ─────────────────────────────────────────────────────────────
+// DIAGNÓSTICO — detecta e permite corrigir músicas com URL inválida
+// (salvas como youtube.com em vez de Cloudinary/MP3)
+// ─────────────────────────────────────────────────────────────
+async function scanAndFixBrokenTracks() {
+    const btn = document.getElementById('scanBrokenBtn');
+    if(btn) { btn.textContent = '🔍 Verificando...'; btn.disabled = true; }
+
+    const tables = [
+        { name: 'slot_playlists',    label: 'Grades Horárias' },
+        { name: 'background_playlist', label: 'Playlist de Fundo' },
+        { name: 'seasonal_playlists',  label: 'Sazonais' },
+    ];
+
+    let broken = [];
+    for (const t of tables) {
+        try {
+            const { data } = await supabase.from(t.name).select('id, title, audio_url, slot_id, category');
+            (data || []).forEach(row => {
+                if (row.audio_url && (
+                    row.audio_url.includes('youtube.com') ||
+                    row.audio_url.includes('youtu.be') ||
+                    row.audio_url.includes('cobalt') ||
+                    (!row.audio_url.includes('cloudinary') && !row.audio_url.endsWith('.mp3') && !row.audio_url.endsWith('.wav') && !row.audio_url.endsWith('.ogg'))
+                )) {
+                    broken.push({ ...row, table: t.name, tableLabel: t.label });
+                }
+            });
+        } catch(err) { console.error(t.name, err); }
+    }
+
+    const container = document.getElementById('brokenTracksContainer');
+    if (!container) { if(btn){ btn.textContent='🔍 Verificar Músicas'; btn.disabled=false; } return; }
+
+    if (!broken.length) {
+        container.innerHTML = '<div style="color:#155724;background:#d4edda;padding:12px 16px;border-radius:8px;font-weight:600;">✅ Nenhuma música com URL inválida encontrada!</div>';
+        if(btn){ btn.textContent='🔍 Verificar Músicas'; btn.disabled=false; }
+        return;
+    }
+
+    container.innerHTML = `
+        <div style="color:#721c24;background:#f8d7da;padding:12px 16px;border-radius:8px;margin-bottom:14px;font-weight:600;">
+            ⚠️ ${broken.length} música(s) com URL inválida (não reproduzirão corretamente)
+        </div>
+        ${broken.map(t => `
+        <div style="border:1px solid #ddd;border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#fff;">
+            <div style="font-weight:700;font-size:13px;margin-bottom:4px;">${t.title || 'Sem título'}</div>
+            <div style="font-size:11px;color:#666;margin-bottom:4px;">Tabela: ${t.tableLabel} | Slot: ${t.slot_id||t.category||'-'}</div>
+            <div style="font-size:11px;color:#dc3545;word-break:break-all;margin-bottom:8px;">URL atual: ${t.audio_url}</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <input type="url" id="fix_${t.table}_${t.id}"
+                    placeholder="Cole a URL do Cloudinary (.mp3) aqui"
+                    style="flex:1;min-width:200px;padding:7px 10px;border:2px solid #ddd;border-radius:8px;font-family:inherit;font-size:12px;">
+                <button class="submit-btn" style="font-size:12px;padding:7px 14px;"
+                    onclick="fixBrokenTrack('${t.table}', ${t.id})">💾 Corrigir</button>
+                <button class="btn-delete" style="font-size:12px;padding:7px 10px;"
+                    onclick="deleteBrokenTrack('${t.table}', ${t.id}, this)">🗑️ Remover</button>
+            </div>
+        </div>`).join('')}`;
+
+    if(btn){ btn.textContent='🔍 Verificar Músicas'; btn.disabled=false; }
+}
+
+async function fixBrokenTrack(table, id) {
+    const inp = document.getElementById(`fix_${table}_${id}`);
+    const newUrl = inp?.value?.trim();
+    if (!newUrl) { alert('Cole a URL do Cloudinary antes de salvar.'); return; }
+    if (newUrl.includes('youtube.com') || newUrl.includes('youtu.be')) {
+        alert('Esta URL ainda é do YouTube. Faça o upload no Cloudinary primeiro.'); return;
+    }
+    try {
+        await supabaseAdmin.from(table).update({ audio_url: newUrl }).eq('id', id);
+        alert('✅ URL corrigida!');
+        scanAndFixBrokenTracks();
+    } catch(err) { alert('❌ Erro: ' + err.message); }
+}
+
+async function deleteBrokenTrack(table, id, btnEl) {
+    if (!confirm('Remover esta música da playlist?')) return;
+    try {
+        await supabaseAdmin.from(table).delete().eq('id', id);
+        btnEl.closest('div[style*="border"]').remove();
+    } catch(err) { alert('❌ Erro: ' + err.message); }
+}
+
+window.scanAndFixBrokenTracks = scanAndFixBrokenTracks;
+window.fixBrokenTrack         = fixBrokenTrack;
+window.deleteBrokenTrack      = deleteBrokenTrack;
 
 // ─────────────────────────────────────────────────────────────
 // YOUTUBE — adicionar músicas
@@ -848,6 +902,7 @@ async function deleteLocutorTrack(id) {
 // TTS
 // ─────────────────────────────────────────────────────────────
 function setupTTSListeners() {
+    populateTTSVoices(); // preenche select com vozes nativas do navegador
     const textarea=document.getElementById('ttsTextInput');
     if(textarea) textarea.addEventListener('input', ()=>{
         document.getElementById('ttsCharCount').textContent=textarea.value.length;
@@ -930,28 +985,41 @@ async function dispatchTTS(text, title) {
     speakLocally(text);
 }
 
+// ─── TTS: Web Speech API nativa (gratuita, sem cadastro, sem chave) ──────────
+function populateTTSVoices() {
+    const sel = document.getElementById('ttsVoiceSelect');
+    if(!sel || !window.speechSynthesis) return;
+    const fill = () => {
+        const voices = speechSynthesis.getVoices().filter(v => v.lang.startsWith('pt'));
+        if(!voices.length) return;
+        sel.innerHTML = voices.map(v =>
+            `<option value="${v.name}">${v.name} (${v.lang})</option>`
+        ).join('');
+        // Prioriza Microsoft Francisca (Windows) > Google Português > qualquer pt-BR
+        const preferred = voices.find(v => v.name.includes('Francisca'))
+            || voices.find(v => v.name.includes('Google') && v.lang === 'pt-BR')
+            || voices.find(v => v.lang === 'pt-BR')
+            || voices[0];
+        if(preferred) sel.value = preferred.name;
+    };
+    fill();
+    speechSynthesis.onvoiceschanged = fill;
+}
+
 function speakLocally(text, onEnd) {
-    const voiceSelect = document.getElementById('ttsVoiceSelect');
-    const voiceName = voiceSelect ? voiceSelect.value : 'Brazilian Portuguese Female';
-    if(window.responsiveVoice && responsiveVoice.voiceSupport()) {
-        responsiveVoice.speak(text, voiceName, {
-            rate: 0.9, pitch: 1, volume: 1,
-            onend: onEnd || null
-        });
-        return;
-    }
     if(!window.speechSynthesis) { if(onEnd) onEnd(); return; }
     speechSynthesis.cancel();
     const utt = new SpeechSynthesisUtterance(text);
-    utt.lang = 'pt-BR'; utt.rate = 0.88; utt.pitch = 1.05;
+    utt.lang = 'pt-BR';
+    utt.rate = 0.88;
+    utt.pitch = 1.05;
+    utt.volume = 1;
+    const sel = document.getElementById('ttsVoiceSelect');
+    const selectedName = sel?.value;
     const voices = speechSynthesis.getVoices();
-    const isFem = voiceName.toLowerCase().includes('female');
-    const match = voices.find(v => v.lang.startsWith('pt') &&
-        (isFem
-            ? (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('feminina'))
-            : (v.name.toLowerCase().includes('male') && !v.name.toLowerCase().includes('female'))
-        )
-    ) || voices.find(v => v.lang.startsWith('pt'));
+    const match = selectedName
+        ? voices.find(v => v.name === selectedName)
+        : voices.find(v => v.lang === 'pt-BR') || voices.find(v => v.lang.startsWith('pt'));
     if(match) utt.voice = match;
     if(onEnd) utt.onend = onEnd;
     speechSynthesis.speak(utt);
@@ -1738,20 +1806,30 @@ async function handleForceShufflePlaylist() {
 // ─────────────────────────────────────────────────────────────
 function renderAdsTable() {
     const tbody=document.getElementById('adsTableBody'); if(!tbody) return;
-    if(!advertisements.length){ tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:30px;color:#999;">Nenhuma propaganda.</td></tr>'; return; }
-    tbody.innerHTML=advertisements.map(ad=>`
-        <tr>
+    if(!advertisements.length){ tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:30px;color:#999;">Nenhuma propaganda.</td></tr>'; return; }
+    tbody.innerHTML=advertisements.map(ad=>{
+        const horario = (ad.start_hour!=null && ad.end_hour!=null)
+            ? `${String(ad.start_hour).padStart(2,'0')}h–${String(ad.end_hour).padStart(2,'0')}h`
+            : '🕐 Sempre';
+        const lastPlayed = ad.last_played
+            ? new Date(ad.last_played).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
+            : '-';
+        return `<tr>
             <td style="font-weight:bold;">${ad.play_order}</td>
             <td style="font-weight:500;">${ad.title}</td>
             <td>${ad.advertiser||'-'}</td>
             <td><span style="padding:3px 8px;background:#e3f2fd;border-radius:10px;font-size:11px;font-weight:bold;color:#1976d2;">A cada ${ad.frequency}</span></td>
+            <td style="font-size:12px;color:#555;">${horario}</td>
+            <td><span style="padding:3px 8px;background:#e6f4ed;border-radius:10px;font-size:11px;font-weight:bold;color:#006b3f;">${ad.play_count||0}×</span></td>
+            <td style="font-size:11px;color:#888;">${lastPlayed}</td>
             <td><span class="status-badge ${ad.enabled?'active':'inactive'}">${ad.enabled?'✅ Ativo':'❌ Inativo'}</span></td>
             <td><div class="action-btns">
                 <button class="btn-edit ad-edit-btn" data-id="${ad.id}">✏️</button>
                 <button class="btn-toggle ad-toggle-btn" data-id="${ad.id}" data-enabled="${ad.enabled}">${ad.enabled?'🔴':'🟢'}</button>
                 <button class="btn-delete ad-delete-btn" data-id="${ad.id}">🗑️</button>
             </div></td>
-        </tr>`).join('');
+        </tr>`;
+    }).join('');
     tbody.querySelectorAll('.ad-edit-btn').forEach(b=>b.addEventListener('click',()=>editAd(parseInt(b.dataset.id))));
     tbody.querySelectorAll('.ad-toggle-btn').forEach(b=>b.addEventListener('click',()=>toggleAd(parseInt(b.dataset.id),b.dataset.enabled!=='true')));
     tbody.querySelectorAll('.ad-delete-btn').forEach(b=>b.addEventListener('click',()=>deleteAd(parseInt(b.dataset.id))));
@@ -1765,10 +1843,15 @@ async function handleSaveAd(e) {
     const frequency=parseInt(document.getElementById('adFrequency').value);
     const order=parseInt(document.getElementById('adOrder').value);
     const enabled=document.getElementById('adEnabled').checked;
+    const startHourVal=document.getElementById('adStartHour')?.value;
+    const endHourVal=document.getElementById('adEndHour')?.value;
+    const startHour=startHourVal!==''&&startHourVal!=null?parseInt(startHourVal):null;
+    const endHour=endHourVal!==''&&endHourVal!=null?parseInt(endHourVal):null;
     if(!url||!title){ alert('Preencha URL e Título!'); return; }
     if(frequency<1||frequency>100){ alert('Frequência entre 1 e 100!'); return; }
     try {
-        const payload={audio_url:url,title,advertiser:advertiser||null,frequency,play_order:order,enabled};
+        const payload={audio_url:url,title,advertiser:advertiser||null,frequency,play_order:order,enabled,
+            start_hour:startHour,end_hour:endHour};
         if(editingAdId){ await supabaseAdmin.from('advertisements').update(payload).eq('id',editingAdId); alert('✅ Atualizado!'); }
         else { await supabaseAdmin.from('advertisements').insert([payload]); alert('✅ Adicionado!'); }
         handleClearAdForm();
@@ -1782,6 +1865,9 @@ function editAd(id) {
     document.getElementById('adUrl').value=ad.audio_url; document.getElementById('adTitle').value=ad.title;
     document.getElementById('adAdvertiser').value=ad.advertiser||''; document.getElementById('adFrequency').value=ad.frequency;
     document.getElementById('adOrder').value=ad.play_order; document.getElementById('adEnabled').checked=ad.enabled;
+    const sh=document.getElementById('adStartHour'); const eh=document.getElementById('adEndHour');
+    if(sh) sh.value=ad.start_hour!=null?ad.start_hour:'';
+    if(eh) eh.value=ad.end_hour!=null?ad.end_hour:'';
     document.getElementById('adsForm').scrollIntoView({behavior:'smooth',block:'center'});
 }
 
@@ -1797,7 +1883,9 @@ async function deleteAd(id) {
 }
 
 function handleClearAdForm() {
-    ['adUrl','adTitle','adAdvertiser'].forEach(f=>document.getElementById(f).value='');
+    ['adUrl','adTitle','adAdvertiser','adStartHour','adEndHour'].forEach(f=>{
+        const el=document.getElementById(f); if(el) el.value='';
+    });
     document.getElementById('adFrequency').value='3'; document.getElementById('adOrder').value='0';
     document.getElementById('adEnabled').checked=true; editingAdId=null;
 }
@@ -2103,6 +2191,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('sidebarToggle')?.addEventListener('click', () => {
         document.getElementById('adminSidebar')?.classList.toggle('open');
     });
+    // Novos módulos — registra listeners após DOM pronto
+    setupBlacklistListeners();
+    setupCreateGradeListeners();
+    setupSilenceListeners();
+    setupFlashListeners();
 });
 
 // ─────────────────────────────────────────────────────────────
@@ -2151,3 +2244,609 @@ window.loadAnalytics          = loadAnalytics;
 window.clearAnalytics         = clearAnalytics;
 window.loadEmergencyState     = loadEmergencyState;
 window.startLiveLocutor       = startLiveLocutor;
+
+// ═════════════════════════════════════════════════════════════
+// BLACKLIST DE MÚSICAS
+// ═════════════════════════════════════════════════════════════
+let blacklist = [];
+
+async function loadBlacklist() {
+    const { data } = await supabase.from('music_blacklist').select('*').order('created_at', { ascending: false });
+    blacklist = data || [];
+    renderBlacklist();
+}
+
+function renderBlacklist() {
+    const tbody = document.getElementById('blacklistTableBody');
+    if (!tbody) return;
+    if (!blacklist.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:#999;">Nenhuma música bloqueada.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = blacklist.map(b => `
+        <tr>
+            <td style="font-weight:500;">${b.title || '-'}</td>
+            <td>${b.artist || '-'}</td>
+            <td style="font-size:12px;color:#666;">${b.reason || '-'}</td>
+            <td style="font-size:12px;">${b.blocked_by || '-'}</td>
+            <td style="font-size:11px;color:#888;">${new Date(b.created_at).toLocaleDateString('pt-BR')}</td>
+            <td><button class="btn-delete bl-remove-btn" data-id="${b.id}" data-url="${b.audio_url}">🔓 Desbloquear</button></td>
+        </tr>`).join('');
+    tbody.querySelectorAll('.bl-remove-btn').forEach(b => b.addEventListener('click', () => removeFromBlacklist(parseInt(b.dataset.id), b.dataset.url)));
+}
+
+function setupBlacklistListeners() {
+    document.getElementById('blacklistForm')?.addEventListener('submit', handleAddBlacklist);
+}
+
+async function handleAddBlacklist(e) {
+    e.preventDefault();
+    const url    = document.getElementById('blacklistUrl').value.trim();
+    const title  = document.getElementById('blacklistTitle').value.trim();
+    const artist = document.getElementById('blacklistArtist').value.trim();
+    const reason = document.getElementById('blacklistReason').value.trim();
+    const by     = document.getElementById('blacklistBy').value.trim();
+    if (!url) { alert('Informe a URL!'); return; }
+    try {
+        await supabaseAdmin.from('music_blacklist').insert([{
+            audio_url: url, title: title || null, artist: artist || null,
+            reason: reason || null, blocked_by: by || null
+        }]);
+        // Desativa a música em todas as grades onde ela aparecer
+        await Promise.all([
+            supabaseAdmin.from('slot_playlists').update({ enabled: false }).eq('audio_url', url),
+            supabaseAdmin.from('background_playlist').update({ enabled: false }).eq('audio_url', url),
+            supabaseAdmin.from('seasonal_playlists').update({ enabled: false }).eq('audio_url', url)
+        ]);
+        alert('🚫 Música bloqueada e desativada em todas as grades!');
+        clearBlacklistForm();
+        await loadBlacklist();
+    } catch (err) { alert('❌ Erro: ' + err.message); }
+}
+
+async function removeFromBlacklist(id, url) {
+    if (!confirm('Desbloquear esta música? Ela não será reativada automaticamente nas grades.')) return;
+    await supabaseAdmin.from('music_blacklist').delete().eq('id', id);
+    blacklist = blacklist.filter(b => b.id !== id);
+    renderBlacklist();
+}
+
+function clearBlacklistForm() {
+    ['blacklistUrl','blacklistTitle','blacklistArtist','blacklistReason','blacklistBy'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+    });
+}
+window.clearBlacklistForm = clearBlacklistForm;
+
+// ═════════════════════════════════════════════════════════════
+// CRIAR GRADE HORÁRIA
+// ═════════════════════════════════════════════════════════════
+function showCreateGradeForm() {
+    const card = document.getElementById('createGradeCard');
+    if (card) { card.style.display = 'block'; card.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+}
+function hideCreateGradeForm() {
+    const card = document.getElementById('createGradeCard');
+    if (card) card.style.display = 'none';
+}
+window.showCreateGradeForm = showCreateGradeForm;
+window.hideCreateGradeForm = hideCreateGradeForm;
+
+function setupCreateGradeListeners() {
+    document.getElementById('createGradeForm')?.addEventListener('submit', handleCreateGrade);
+}
+
+async function handleCreateGrade(e) {
+    e.preventDefault();
+    const name      = document.getElementById('newGradeName').value.trim();
+    const desc      = document.getElementById('newGradeDesc').value.trim();
+    const genres    = document.getElementById('newGradeGenres').value.trim();
+    const startHour = parseInt(document.getElementById('newGradeStart').value);
+    const endHour   = parseInt(document.getElementById('newGradeEnd').value);
+    const color     = document.getElementById('newGradeColor').value;
+    const adFreq    = parseInt(document.getElementById('newGradeAdFreq').value) || 3;
+
+    if (!name) { alert('Informe o nome da grade!'); return; }
+    if (isNaN(startHour) || isNaN(endHour)) { alert('Informe as horas de início e fim!'); return; }
+    if (startHour === endHour) { alert('Início e fim não podem ser iguais!'); return; }
+
+    // Verifica conflito com grades existentes
+    const conflict = timeSlots.find(s => {
+        if (s.name === 'Madrugada Aleatória') return false;
+        if (s.start_hour <= s.end_hour) {
+            return !(endHour <= s.start_hour || startHour >= s.end_hour);
+        }
+        return true; // simplificado para grades que cruzam meia-noite
+    });
+    if (conflict) {
+        if (!confirm(`⚠️ Possível conflito de horário com a grade "${conflict.name}". Criar mesmo assim?`)) return;
+    }
+
+    const sortOrder = timeSlots.length;
+    try {
+        const { data, error } = await supabaseAdmin.from('time_slots').insert([{
+            name, description: desc || null, genres: genres || null,
+            start_hour: startHour, end_hour: endHour,
+            color, sort_order: sortOrder, enabled: true,
+            ad_frequency: adFreq
+        }]).select().single();
+        if (error) throw error;
+        alert(`✅ Grade "${name}" criada!`);
+        hideCreateGradeForm();
+        document.getElementById('createGradeForm').reset();
+        // Recarrega grades
+        const { data: slots } = await supabase.from('time_slots').select('*').order('sort_order', { ascending: true });
+        timeSlots = slots || [];
+        await loadSlotData();
+        renderGradesTabs();
+        populateSlotSelects();
+    } catch (err) { alert('❌ Erro: ' + err.message); }
+}
+
+// ═════════════════════════════════════════════════════════════
+// MODO SILÊNCIO
+// ═════════════════════════════════════════════════════════════
+let silenceActive = false;
+let silenceSchedules = [];
+let silenceCountdownInterval = null;
+
+async function loadSilenceState() {
+    try {
+        const { data } = await supabase.from('silence_state').select('*').eq('id', 1).single();
+        if (!data) return;
+        silenceActive = data.is_active;
+        renderSilenceUI(data);
+    } catch(err) { console.error(err); }
+}
+
+async function loadSilenceSchedules() {
+    const { data } = await supabase.from('silence_schedules').select('*').order('start_time', { ascending: true });
+    silenceSchedules = data || [];
+    renderSilenceSchedules();
+}
+
+function renderSilenceUI(state) {
+    const ind  = document.getElementById('silenceIndicator');
+    const txt  = document.getElementById('silenceStatusText');
+    const btn  = document.getElementById('silenceManualBtn');
+    if (!btn) return;
+    if (state?.is_active) {
+        if (ind) ind.classList.add('active');
+        let msg = `🔇 Silêncio ativo${state.reason ? ` — ${state.reason}` : ''}`;
+        if (state.end_at) {
+            const rem = Math.max(0, Math.round((new Date(state.end_at) - new Date()) / 60000));
+            msg += ` (${rem} min restantes)`;
+        }
+        if (txt) txt.textContent = msg;
+        btn.textContent = '▶️ Retomar Rádio';
+        btn.style.background = '#006b3f';
+    } else {
+        if (ind) ind.classList.remove('active');
+        if (txt) txt.textContent = 'Rádio tocando normalmente';
+        btn.textContent = '🔇 Silenciar Agora';
+        btn.style.background = '';
+    }
+}
+
+function setupSilenceListeners() {
+    document.getElementById('silenceManualBtn')?.addEventListener('click', toggleSilenceManual);
+    document.getElementById('silenceScheduleForm')?.addEventListener('submit', handleSaveSilenceSchedule);
+    // Realtime
+    supabase.channel('silence_admin')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'silence_state' },
+            payload => { silenceActive = payload.new.is_active; renderSilenceUI(payload.new); })
+        .subscribe();
+}
+
+async function toggleSilenceManual() {
+    const newActive = !silenceActive;
+    const dur  = parseInt(document.getElementById('silenceManualDuration')?.value || 0);
+    const reason = document.getElementById('silenceManualReason')?.value.trim() || null;
+    const end_at = newActive && dur > 0
+        ? new Date(Date.now() + dur * 60000).toISOString()
+        : null;
+    try {
+        await supabaseAdmin.from('silence_state').update({
+            is_active: newActive, reason, end_at,
+            activated_at: newActive ? new Date().toISOString() : null,
+            updated_at: new Date().toISOString()
+        }).eq('id', 1);
+        silenceActive = newActive;
+        renderSilenceUI({ is_active: newActive, reason, end_at });
+    } catch (err) { alert('❌ Erro: ' + err.message); }
+}
+
+function renderSilenceSchedules() {
+    const tbody = document.getElementById('silenceScheduleBody');
+    if (!tbody) return;
+    const dayNames = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+    if (!silenceSchedules.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#999;">Nenhum agendamento.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = silenceSchedules.map(s => `
+        <tr>
+            <td style="font-weight:500;">${s.label}</td>
+            <td>${s.start_time?.substring(0,5)}</td>
+            <td>${s.end_time?.substring(0,5)}</td>
+            <td style="font-size:12px;">${(s.days||[]).map(d=>dayNames[parseInt(d)]).join(', ')}</td>
+            <td><span class="status-badge ${s.enabled?'active':'inactive'}">${s.enabled?'✅':'❌'}</span></td>
+            <td><div class="action-btns">
+                <button class="btn-toggle" onclick="toggleSilenceSchedule(${s.id},${!s.enabled})">${s.enabled?'🔴':'🟢'}</button>
+                <button class="btn-delete" onclick="deleteSilenceSchedule(${s.id})">🗑️</button>
+            </div></td>
+        </tr>`).join('');
+}
+
+async function handleSaveSilenceSchedule(e) {
+    e.preventDefault();
+    const label = document.getElementById('silenceLabel').value.trim();
+    const start = document.getElementById('silenceStart').value;
+    const end   = document.getElementById('silenceEnd').value;
+    const days  = [...document.querySelectorAll('.silence-day-check:checked')].map(c => c.value);
+    if (!label || !start || !end) { alert('Preencha todos os campos!'); return; }
+    if (!days.length) { alert('Selecione pelo menos um dia!'); return; }
+    try {
+        await supabaseAdmin.from('silence_schedules').insert([{ label, start_time: start, end_time: end, days, enabled: true }]);
+        alert('✅ Agendamento salvo!');
+        clearSilenceForm();
+        await loadSilenceSchedules();
+    } catch (err) { alert('❌ Erro: ' + err.message); }
+}
+
+async function toggleSilenceSchedule(id, newStatus) {
+    await supabaseAdmin.from('silence_schedules').update({ enabled: newStatus }).eq('id', id);
+    await loadSilenceSchedules();
+}
+
+async function deleteSilenceSchedule(id) {
+    if (!confirm('Deletar agendamento?')) return;
+    await supabaseAdmin.from('silence_schedules').delete().eq('id', id);
+    silenceSchedules = silenceSchedules.filter(s => s.id !== id);
+    renderSilenceSchedules();
+}
+
+function clearSilenceForm() {
+    document.getElementById('silenceLabel').value = '';
+    document.getElementById('silenceStart').value = '';
+    document.getElementById('silenceEnd').value   = '';
+    document.querySelectorAll('.silence-day-check').forEach(c => c.checked = false);
+}
+window.clearSilenceForm          = clearSilenceForm;
+window.toggleSilenceSchedule     = toggleSilenceSchedule;
+window.deleteSilenceSchedule     = deleteSilenceSchedule;
+
+// Verifica agendamentos de silêncio a cada 30s
+function checkSilenceSchedules() {
+    if (!silenceSchedules.length) return;
+    const now = new Date();
+    const day = String(now.getDay());
+    const hm  = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    for (const s of silenceSchedules.filter(s => s.enabled)) {
+        if (!s.days?.includes(day)) continue;
+        if (hm >= s.start_time?.substring(0,5) && hm < s.end_time?.substring(0,5)) {
+            if (!silenceActive) toggleSilenceManual();
+            return;
+        }
+    }
+    // Se o silêncio estava ativo por agendamento e o horário passou, desativa
+    if (silenceActive) {
+        supabase.from('silence_state').select('end_at').eq('id',1).single().then(({data}) => {
+            if (data?.end_at && new Date(data.end_at) < now) toggleSilenceManual();
+        });
+    }
+}
+
+// ═════════════════════════════════════════════════════════════
+// PROMOÇÃO RELÂMPAGO
+// ═════════════════════════════════════════════════════════════
+let flashActive = false;
+let flashCountdownTimer = null;
+
+async function loadFlashState() {
+    try {
+        const { data } = await supabase.from('flash_state').select('*').eq('id', 1).single();
+        if (!data) return;
+        flashActive = data.is_active;
+        renderFlashUI(data);
+        if (data.is_active && data.ends_at) startFlashCountdown(new Date(data.ends_at));
+    } catch(err) { console.error(err); }
+}
+
+function renderFlashUI(state) {
+    const ind  = document.getElementById('flashIndicator');
+    const txt  = document.getElementById('flashStatusText');
+    const stop = document.getElementById('flashStopBtn');
+    const cd   = document.getElementById('flashCountdown');
+    if (!txt) return;
+    if (state?.is_active) {
+        if (ind) ind.classList.add('active');
+        txt.textContent = `⚡ Ativa: ${state.title || 'Promoção Relâmpago'}`;
+        if (stop) stop.style.display = 'block';
+        if (cd)  cd.style.display   = 'block';
+    } else {
+        if (ind) ind.classList.remove('active');
+        txt.textContent = 'Nenhuma promoção ativa';
+        if (stop) stop.style.display = 'none';
+        if (cd)  { cd.style.display = 'none'; cd.textContent = ''; }
+    }
+}
+
+function startFlashCountdown(endsAt) {
+    if (flashCountdownTimer) clearInterval(flashCountdownTimer);
+    const cd = document.getElementById('flashCountdown');
+    const update = () => {
+        const rem = Math.max(0, endsAt - new Date());
+        if (!cd) return;
+        const m = Math.floor(rem / 60000);
+        const s = Math.floor((rem % 60000) / 1000);
+        cd.textContent = `⏱ ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')} restantes`;
+        if (rem <= 0) {
+            clearInterval(flashCountdownTimer);
+            flashCountdownTimer = null;
+            stopFlashPromotion();
+        }
+    };
+    update();
+    flashCountdownTimer = setInterval(update, 1000);
+}
+
+function setupFlashListeners() {
+    document.getElementById('flashForm')?.addEventListener('submit', handleFlashSubmit);
+    document.getElementById('flashStopBtn')?.addEventListener('click', stopFlashPromotion);
+    // Realtime
+    supabase.channel('flash_admin')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'flash_state' }, payload => {
+            flashActive = payload.new.is_active;
+            renderFlashUI(payload.new);
+            if (payload.new.is_active && payload.new.ends_at) startFlashCountdown(new Date(payload.new.ends_at));
+            else if (flashCountdownTimer) { clearInterval(flashCountdownTimer); flashCountdownTimer = null; }
+        }).subscribe();
+}
+
+async function handleFlashSubmit(e) {
+    e.preventDefault();
+    const title   = document.getElementById('flashTitle').value.trim();
+    const text    = document.getElementById('flashText').value.trim();
+    const durMin  = parseInt(document.getElementById('flashDuration').value) || 15;
+    if (!title || !text) { alert('Preencha título e texto!'); return; }
+    const endsAt  = new Date(Date.now() + durMin * 60000);
+    try {
+        // Salva no histórico
+        await supabaseAdmin.from('flash_promotions').insert([{
+            title, tts_text: text, duration_min: durMin,
+            is_active: true, started_at: new Date().toISOString(), ends_at: endsAt.toISOString()
+        }]);
+        // Atualiza estado ativo (broadcast para players)
+        await supabaseAdmin.from('flash_state').update({
+            is_active: true, tts_text: text, title,
+            ends_at: endsAt.toISOString(), updated_at: new Date().toISOString()
+        }).eq('id', 1);
+        // Dispara TTS imediatamente
+        await dispatchTTS(text, title);
+        // Avisa quando restar 2 minutos
+        const warn2min = durMin * 60000 - 120000;
+        if (warn2min > 0) {
+            setTimeout(() => {
+                if (flashActive) dispatchTTS(`Atenção! Restam apenas 2 minutos da promoção: ${title}. Aproveite!`, 'Aviso de Encerramento');
+            }, warn2min);
+        }
+        // Encerra automaticamente no fim
+        setTimeout(() => { if (flashActive) stopFlashPromotion(); }, durMin * 60000);
+        flashActive = true;
+        renderFlashUI({ is_active: true, title, ends_at: endsAt.toISOString() });
+        startFlashCountdown(endsAt);
+        loadFlashHistory();
+    } catch (err) { alert('❌ Erro: ' + err.message); }
+}
+
+async function stopFlashPromotion() {
+    try {
+        await supabaseAdmin.from('flash_state').update({
+            is_active: false, tts_text: null, title: null, ends_at: null,
+            updated_at: new Date().toISOString()
+        }).eq('id', 1);
+        // Atualiza ended_at no histórico
+        const { data: promos } = await supabase.from('flash_promotions')
+            .select('id').eq('is_active', true).order('started_at', { ascending: false }).limit(1);
+        if (promos?.length) {
+            await supabaseAdmin.from('flash_promotions')
+                .update({ is_active: false }).eq('id', promos[0].id);
+        }
+        flashActive = false;
+        if (flashCountdownTimer) { clearInterval(flashCountdownTimer); flashCountdownTimer = null; }
+        renderFlashUI({ is_active: false });
+        loadFlashHistory();
+    } catch (err) { alert('❌ Erro: ' + err.message); }
+}
+
+async function loadFlashHistory() {
+    const tbody = document.getElementById('flashHistoryBody');
+    if (!tbody) return;
+    const { data } = await supabase.from('flash_promotions')
+        .select('*').order('started_at', { ascending: false }).limit(20);
+    if (!data?.length) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#999;">Nenhum histórico.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = data.map(p => `<tr>
+        <td style="font-weight:500;">${p.title}</td>
+        <td>${p.duration_min} min</td>
+        <td style="font-size:12px;">${new Date(p.started_at).toLocaleString('pt-BR')}</td>
+        <td style="font-size:12px;">${p.ends_at ? new Date(p.ends_at).toLocaleString('pt-BR') : p.is_active ? '🔴 Em andamento' : '-'}</td>
+    </tr>`).join('');
+}
+
+function setFlashPreset(title, text, dur) {
+    const t = document.getElementById('flashTitle');
+    const tx = document.getElementById('flashText');
+    const d = document.getElementById('flashDuration');
+    if (t) t.value = title;
+    if (tx) tx.value = text;
+    if (d) d.value = dur;
+}
+window.setFlashPreset = setFlashPreset;
+
+// ═════════════════════════════════════════════════════════════
+// ATIVAÇÃO AUTOMÁTICA SAZONAL POR DATA
+// ═════════════════════════════════════════════════════════════
+async function saveSeasonalAutoConfig(category) {
+    const sm = document.querySelector(`.seasonal-auto-start-month[data-cat="${category}"]`)?.value;
+    const sd = document.querySelector(`.seasonal-auto-start-day[data-cat="${category}"]`)?.value;
+    const em = document.querySelector(`.seasonal-auto-end-month[data-cat="${category}"]`)?.value;
+    const ed = document.querySelector(`.seasonal-auto-end-day[data-cat="${category}"]`)?.value;
+    const autoEnabled = document.querySelector(`.seasonal-auto-enabled[data-cat="${category}"]`)?.checked;
+    const requireMusic = document.querySelector(`.seasonal-require-music[data-cat="${category}"]`)?.checked;
+
+    try {
+        await supabaseAdmin.from('seasonal_settings').update({
+            auto_start_month : sm ? parseInt(sm) : null,
+            auto_start_day   : sd ? parseInt(sd) : null,
+            auto_end_month   : em ? parseInt(em) : null,
+            auto_end_day     : ed ? parseInt(ed) : null,
+            auto_enabled     : !!autoEnabled,
+            require_music    : requireMusic !== false
+        }).eq('category', category);
+        alert('✅ Configuração de ativação automática salva!');
+        await loadSeasonalAutoStatuses();
+    } catch(err) { alert('❌ Erro: ' + err.message); }
+}
+
+async function loadSeasonalAutoStatuses() {
+    const { data } = await supabase.from('seasonal_settings').select('*');
+    if (!data) return;
+    data.forEach(s => {
+        // Preenche campos do formulário
+        const cat = s.category;
+        const sm = document.querySelector(`.seasonal-auto-start-month[data-cat="${cat}"]`);
+        const sd = document.querySelector(`.seasonal-auto-start-day[data-cat="${cat}"]`);
+        const em = document.querySelector(`.seasonal-auto-end-month[data-cat="${cat}"]`);
+        const ed = document.querySelector(`.seasonal-auto-end-day[data-cat="${cat}"]`);
+        const ae = document.querySelector(`.seasonal-auto-enabled[data-cat="${cat}"]`);
+        const rm = document.querySelector(`.seasonal-require-music[data-cat="${cat}"]`);
+        if (sm && s.auto_start_month) sm.value = s.auto_start_month;
+        if (sd && s.auto_start_day)   sd.value = s.auto_start_day;
+        if (em && s.auto_end_month)   em.value = s.auto_end_month;
+        if (ed && s.auto_end_day)     ed.value = s.auto_end_day;
+        if (ae) ae.checked = !!s.auto_enabled;
+        if (rm) rm.checked = s.require_music !== false;
+
+        // Status textual
+        const statusEl = document.getElementById(`autoStatus${cat.split('_').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join('')}`);
+        if (!statusEl) return;
+        if (!s.auto_enabled) {
+            statusEl.textContent = '⏸️ Ativação automática desligada';
+            statusEl.style.color = '#999';
+        } else if (!s.auto_start_month) {
+            statusEl.textContent = '⚠️ Datas não configuradas — ativação automática não funcionará';
+            statusEl.style.color = '#e65100';
+        } else {
+            statusEl.textContent = `✅ Ativa automaticamente de ${s.auto_start_day}/${s.auto_start_month} até ${s.auto_end_day}/${s.auto_end_month}${s.require_music?' (somente com músicas)':''}`;
+            statusEl.style.color = '#006b3f';
+        }
+    });
+    seasonalSettings = {};
+    data.forEach(s => { seasonalSettings[s.category] = s; });
+    updateSeasonalStatusBadges();
+}
+
+// Verifica ativação automática sazonal a cada 10min
+async function checkSeasonalAutoActivation() {
+    const now  = new Date();
+    const month = now.getMonth() + 1;
+    const day   = now.getDate();
+    for (const cat of ['natal','ano_novo','pascoa','sao_joao']) {
+        const s = seasonalSettings[cat];
+        if (!s?.auto_enabled || !s.auto_start_month) continue;
+        // Verifica se hoje está no intervalo
+        const inRange = isDateInRange(month, day, s.auto_start_month, s.auto_start_day, s.auto_end_month, s.auto_end_day);
+        if (inRange && !s.is_active) {
+            // Verifica se tem músicas (se require_music)
+            if (s.require_music) {
+                const { count } = await supabase.from('seasonal_playlists')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('category', cat).eq('type', 'music').eq('enabled', true);
+                if (!count) continue; // sem músicas, não ativa
+            }
+            await toggleSeasonalPlaylist(cat);
+        } else if (!inRange && s.is_active) {
+            await toggleSeasonalPlaylist(cat); // desativa automaticamente
+        }
+    }
+}
+
+function isDateInRange(month, day, sm, sd, em, ed) {
+    const cur = month * 100 + day;
+    const start = sm * 100 + sd;
+    const end   = em * 100 + ed;
+    if (start <= end) return cur >= start && cur <= end;
+    // Intervalo que cruza virada de ano (ex: 27/12 a 02/01)
+    return cur >= start || cur <= end;
+}
+
+// ═════════════════════════════════════════════════════════════
+// HISTÓRICO DE PROPAGANDAS
+// ═════════════════════════════════════════════════════════════
+async function loadAdHistory() {
+    const el = document.getElementById('adHistoryContent');
+    if (!el) return;
+    el.innerHTML = '<div class="grade-empty">Carregando...</div>';
+    try {
+        const { data } = await supabase.from('ad_log')
+            .select('*').order('played_at', { ascending: false }).limit(100);
+        if (!data?.length) { el.innerHTML = '<div class="grade-empty">Nenhum histórico ainda.</div>'; return; }
+
+        // Agrupa por propaganda para mostrar total
+        const totals = {};
+        data.forEach(r => {
+            const key = r.title || r.ad_id;
+            if (!totals[key]) totals[key] = { title: r.title, advertiser: r.advertiser, count: 0 };
+            totals[key].count++;
+        });
+        const topList = Object.values(totals).sort((a,b) => b.count - a.count).slice(0,10);
+
+        el.innerHTML = `
+            <h4 style="margin:0 0 10px;color:#333;font-size:14px;">🏆 Mais tocadas (últimas 100)</h4>
+            <div class="table-container" style="margin-bottom:16px;">
+                <table class="data-table"><thead><tr><th>Propaganda</th><th>Anunciante</th><th>Vezes tocada</th></tr></thead>
+                <tbody>${topList.map(t=>`<tr>
+                    <td style="font-weight:500;">${t.title||'-'}</td>
+                    <td>${t.advertiser||'-'}</td>
+                    <td><span style="padding:3px 10px;background:#e6f4ed;border-radius:10px;font-weight:700;color:#006b3f;">${t.count}×</span></td>
+                </tr>`).join('')}</tbody></table>
+            </div>
+            <h4 style="margin:0 0 10px;color:#333;font-size:14px;">🕐 Últimas reproduções</h4>
+            <div class="table-container">
+                <table class="data-table"><thead><tr><th>Propaganda</th><th>Grade</th><th>Horário</th></tr></thead>
+                <tbody>${data.slice(0,30).map(r=>`<tr>
+                    <td style="font-weight:500;">${r.title||'-'}</td>
+                    <td style="color:#666;">${r.slot_name||'-'}</td>
+                    <td style="font-size:11px;color:#888;">${new Date(r.played_at).toLocaleString('pt-BR')}</td>
+                </tr>`).join('')}</tbody></table>
+            </div>`;
+    } catch(err) { el.innerHTML = `<div class="grade-empty">Erro: ${err.message}</div>`; }
+}
+window.loadAdHistory = loadAdHistory;
+
+// ═════════════════════════════════════════════════════════════
+// CARGA DE MÓDULOS NOVOS (chamada dentro de loadAllData)
+// ═════════════════════════════════════════════════════════════
+async function extendedLoadAllData() {
+    await loadBlacklist();
+    await loadSilenceState();
+    await loadSilenceSchedules();
+    await loadFlashState();
+    await loadFlashHistory();
+    await loadSeasonalAutoStatuses();
+    setInterval(checkSilenceSchedules, 30000);
+    setInterval(checkSeasonalAutoActivation, 600000); // a cada 10min
+    checkSeasonalAutoActivation(); // verifica imediatamente ao carregar
+}
+
+// ── Novos globais ────────────────────────────────────────────
+window.saveSeasonalAutoConfig  = saveSeasonalAutoConfig;
+window.loadFlashHistory        = loadFlashHistory;
+window.loadSilenceSchedules    = loadSilenceSchedules;
+window.removeFromBlacklist = removeFromBlacklist;
+window.stopFlashPromotion  = stopFlashPromotion;
+window.loadAdHistory       = loadAdHistory;
