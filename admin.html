@@ -46,6 +46,9 @@
             <button class="nav-item" data-section="schedule">⏰ Horas Certas</button>
             <button class="nav-item" data-section="playlist">🎵 Playlist de Fundo</button>
             <button class="nav-item" data-section="ads">📢 Propagandas</button>
+            <button class="nav-item" data-section="blacklist">🚫 Blacklist</button>
+            <button class="nav-item" data-section="flash">⚡ Promoção Relâmpago</button>
+            <button class="nav-item" data-section="silence">🔇 Modo Silêncio</button>
             <button class="nav-item" data-section="analytics">📊 Analytics</button>
             <button class="nav-item" data-section="emergency">🚨 Emergência</button>
             <button class="nav-item" data-section="upload">☁️ Upload Cloudinary</button>
@@ -105,6 +108,9 @@
                     <div class="wc-icon">📢</div>
                     <div class="wc-label">Propagandas</div>
                 </div>
+                <div class="welcome-card" onclick="goSection('blacklist')"><div class="wc-icon">🚫</div><div class="wc-label">Blacklist</div></div>
+                <div class="welcome-card" onclick="goSection('flash')"><div class="wc-icon">⚡</div><div class="wc-label">Promoção Relâmpago</div></div>
+                <div class="welcome-card" onclick="goSection('silence')"><div class="wc-icon">🔇</div><div class="wc-label">Modo Silêncio</div></div>
                 <div class="welcome-card" onclick="goSection('analytics')">
                     <div class="wc-icon">📊</div>
                     <div class="wc-label">Analytics</div>
@@ -124,12 +130,34 @@
         <section class="admin-section" id="section-grades">
             <div class="section-header">
                 <h2>🕐 Grades Horárias</h2>
-                <div class="grades-toggle-row">
-                    <span class="grades-toggle-label">Grades ativas</span>
-                    <button class="grades-toggle-btn active" id="gradesToggleBtn" onclick="toggleGrades()">✅ Ativadas</button>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                    <button class="submit-btn" style="font-size:13px;padding:8px 16px;" onclick="showCreateGradeForm()">➕ Nova Grade</button>
+                    <div class="grades-toggle-row">
+                        <span class="grades-toggle-label">Grades ativas</span>
+                        <button class="grades-toggle-btn active" id="gradesToggleBtn" onclick="toggleGrades()">✅ Ativadas</button>
+                    </div>
                 </div>
             </div>
             <p class="section-desc">Cada faixa horária tem sua própria playlist e vinhetas. Desativar as grades volta para a Playlist de Fundo geral.</p>
+            <div class="admin-card" id="createGradeCard" style="display:none;border:2px solid #006b3f;">
+                <h3 class="card-title">➕ Criar Nova Grade Horária</h3>
+                <form class="edit-form" id="createGradeForm">
+                    <div class="form-group"><label>Nome da Grade:</label><input type="text" id="newGradeName" placeholder="Ex: Tarde Animada" required></div>
+                    <div class="form-group"><label>Descrição / Gêneros:</label><input type="text" id="newGradeDesc" placeholder="Ex: MPB e sertanejo leve"></div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <div class="form-group"><label>Hora de início (0–23):</label><input type="number" id="newGradeStart" min="0" max="23" value="8" required></div>
+                        <div class="form-group"><label>Hora de fim (0–23):</label><input type="number" id="newGradeEnd" min="0" max="23" value="12" required></div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <div class="form-group"><label>Cor:</label><input type="color" id="newGradeColor" value="#006b3f"></div>
+                        <div class="form-group"><label>Freq. de propagandas (a cada X músicas):</label><input type="number" id="newGradeAdFreq" min="1" max="50" value="3"></div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="submit-btn">💾 Criar Grade</button>
+                        <button type="button" class="clear-btn" onclick="hideCreateGradeForm()">✖ Cancelar</button>
+                    </div>
+                </form>
+            </div>
             <div class="grades-tabs" id="gradesTabs"></div>
             <div class="grades-content" id="gradesContent"><div class="grade-empty">Carregando grades...</div></div>
         </section>
@@ -239,7 +267,19 @@
             <div class="section-header">
                 <h2>⏳ Fila de Aprovação <span class="queue-badge" id="queueBadge">0</span></h2>
             </div>
-            <p class="section-desc">Ouça a prévia antes de aprovar. A conversão MP3 só acontece após sua aprovação.</p>
+            <p class="section-desc">Ouça a prévia antes de aprovar. O sistema tenta converter via Cobalt automaticamente. Se não conseguir, solicitará a URL do Cloudinary.</p>
+
+            <div class="admin-card" style="border-left:4px solid #dc3545;background:#fff5f5;">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+                    <div>
+                        <h3 class="card-title" style="margin:0;color:#dc3545;">🔧 Diagnóstico de Músicas</h3>
+                        <p style="font-size:12px;color:#666;margin-top:4px;">Detecta músicas salvas com URL do YouTube (não reproduzem) e permite corrigir ou remover.</p>
+                    </div>
+                    <button id="scanBrokenBtn" class="submit-btn" style="background:#dc3545;" onclick="scanAndFixBrokenTracks()">🔍 Verificar Músicas</button>
+                </div>
+                <div id="brokenTracksContainer"></div>
+            </div>
+
             <div id="queueList"><div class="grade-empty">Nenhuma música aguardando aprovação.</div></div>
         </section>
 
@@ -433,13 +473,17 @@
         <!-- ── PROPAGANDAS ── -->
         <section class="admin-section" id="section-ads">
             <div class="section-header"><h2>📢 Propagandas / Anúncios</h2></div>
-            <p class="section-desc">Tocadas entre músicas em todas as grades.</p>
+            <p class="section-desc">Tocadas entre músicas em todas as grades. Configure horário de veiculação para exibir apenas em períodos específicos do dia.</p>
             <div class="admin-card">
                 <form id="adsForm" class="edit-form">
                     <div class="form-group"><label>URL do Áudio:</label><input type="url" id="adUrl" placeholder="https://res.cloudinary.com/..." required></div>
                     <div class="form-group"><label>Título:</label><input type="text" id="adTitle" placeholder="Ex: Promoção do Dia" required></div>
                     <div class="form-group"><label>Anunciante:</label><input type="text" id="adAdvertiser" placeholder="Opcional"></div>
                     <div class="form-group"><label>Frequência (a cada X músicas):</label><input type="number" id="adFrequency" value="3" min="1" max="100" required><small>Ex: 3 = toca a cada 3 músicas</small></div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <div class="form-group"><label>Hora início (opcional):</label><input type="number" id="adStartHour" min="0" max="23" placeholder="Ex: 8"><small>Só toca a partir desta hora</small></div>
+                        <div class="form-group"><label>Hora fim (opcional):</label><input type="number" id="adEndHour" min="0" max="23" placeholder="Ex: 18"><small>Para de tocar após esta hora</small></div>
+                    </div>
                     <div class="form-group"><label>Ordem:</label><input type="number" id="adOrder" value="0" min="0"></div>
                     <div class="form-group checkbox-group"><label><input type="checkbox" id="adEnabled" checked> Ativo</label></div>
                     <div class="form-actions">
@@ -449,9 +493,121 @@
                     </div>
                 </form>
             </div>
-            <div class="admin-card"><div class="table-container"><table class="data-table"><thead><tr><th>Ordem</th><th>Título</th><th>Anunciante</th><th>Frequência</th><th>Status</th><th>Ações</th></tr></thead><tbody id="adsTableBody"></tbody></table></div></div>
+            <div class="admin-card">
+                <div class="table-container"><table class="data-table"><thead><tr><th>Ordem</th><th>Título</th><th>Anunciante</th><th>Freq.</th><th>Horário</th><th>Reproduções</th><th>Última vez</th><th>Status</th><th>Ações</th></tr></thead><tbody id="adsTableBody"></tbody></table></div>
+            </div>
+            <div class="admin-card">
+                <div class="section-header" style="margin-bottom:8px;">
+                    <h3 class="card-title" style="margin:0;">📊 Histórico de Propagandas</h3>
+                    <button class="submit-btn" onclick="loadAdHistory()" style="font-size:12px;padding:7px 14px;">🔄 Atualizar</button>
+                </div>
+                <div id="adHistoryContent"><div class="grade-empty">Clique em Atualizar para carregar.</div></div>
+            </div>
         </section>
 
+
+        <section class="admin-section" id="section-blacklist">
+            <div class="section-header"><h2>🚫 Blacklist de Músicas</h2></div>
+            <p class="section-desc">Músicas bloqueadas nunca serão tocadas. Ao bloquear, a música é desativada em todas as grades.</p>
+            <div class="admin-card">
+                <h3 class="card-title">➕ Bloquear Manualmente</h3>
+                <form class="edit-form" id="blacklistForm">
+                    <div class="form-group"><label>URL do Áudio:</label><input type="url" id="blacklistUrl" placeholder="https://res.cloudinary.com/..." required></div>
+                    <div class="form-group"><label>Título:</label><input type="text" id="blacklistTitle" placeholder="Ex: Nome da música"></div>
+                    <div class="form-group"><label>Artista:</label><input type="text" id="blacklistArtist" placeholder="Opcional"></div>
+                    <div class="form-group"><label>Motivo:</label><input type="text" id="blacklistReason" placeholder="Ex: Letra inapropriada, reclamação de funcionário..."></div>
+                    <div class="form-group"><label>Bloqueado por:</label><input type="text" id="blacklistBy" placeholder="Seu nome"></div>
+                    <div class="form-actions">
+                        <button type="submit" class="submit-btn">🚫 Bloquear</button>
+                        <button type="button" class="clear-btn" onclick="clearBlacklistForm()">🗑️ Limpar</button>
+                    </div>
+                </form>
+            </div>
+            <div class="admin-card">
+                <h3 class="card-title">📋 Músicas Bloqueadas</h3>
+                <div class="table-container"><table class="data-table"><thead><tr><th>Título</th><th>Artista</th><th>Motivo</th><th>Por</th><th>Data</th><th>Ações</th></tr></thead><tbody id="blacklistTableBody"><tr><td colspan="6" style="text-align:center;padding:20px;color:#999;">Nenhuma música bloqueada.</td></tr></tbody></table></div>
+            </div>
+        </section>
+
+        <section class="admin-section" id="section-flash">
+            <div class="section-header"><h2>⚡ Promoção Relâmpago</h2></div>
+            <p class="section-desc">Anuncia uma promoção com contagem regressiva visível no player. O TTS dispara no início e avisa quando restam 2 minutos.</p>
+            <div class="admin-card">
+                <div class="locutor-status-bar">
+                    <div class="locutor-indicator" id="flashIndicator"></div>
+                    <div style="flex:1;">
+                        <div class="locutor-status-text" id="flashStatusText">Nenhuma promoção ativa</div>
+                        <div id="flashCountdown" style="font-size:20px;font-weight:700;color:#f59e0b;display:none;font-variant-numeric:tabular-nums;"></div>
+                    </div>
+                    <button class="emergency-btn" id="flashStopBtn" style="display:none;background:#dc3545;">⏹ Encerrar</button>
+                </div>
+            </div>
+            <div class="admin-card">
+                <h3 class="card-title">⚡ Disparar Promoção</h3>
+                <form class="edit-form" id="flashForm">
+                    <div class="form-group"><label>Título:</label><input type="text" id="flashTitle" placeholder="Ex: Desconto no açougue!" required></div>
+                    <div class="form-group"><label>Texto para voz (TTS):</label><textarea id="flashText" class="tts-textarea" style="min-height:60px;" placeholder="Ex: Atenção clientes! Por 15 minutos, todo o açougue com 20% de desconto. Aproveite!" required></textarea></div>
+                    <div class="form-group"><label>Duração (minutos):</label><input type="number" id="flashDuration" value="15" min="1" max="120"><small>Contagem regressiva visível no player</small></div>
+                    <div class="form-actions"><button type="submit" class="submit-btn" style="background:#f59e0b;">⚡ Disparar Agora</button></div>
+                </form>
+            </div>
+            <div class="admin-card">
+                <h3 class="card-title">📋 Promoções Rápidas</h3>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <button class="emergency-preset-btn" onclick="setFlashPreset('Desconto no A&ccedil;ougue','Aten&ccedil;&atilde;o clientes! Por tempo limitado, todo o a&ccedil;ougue com desconto especial!',15)">🥩 Açougue</button>
+                    <button class="emergency-preset-btn" onclick="setFlashPreset('Promo&ccedil;&atilde;o do Dia','Aten&ccedil;&atilde;o clientes! Produtos selecionados com pre&ccedil;os especiais por tempo limitado!',20)">🏷️ Promoção do Dia</button>
+                    <button class="emergency-preset-btn" onclick="setFlashPreset('Frutaria em Oferta','Aten&ccedil;&atilde;o clientes! Frutas e verduras fresquinhas com pre&ccedil;o especial agora!',15)">🍎 Frutaria</button>
+                    <button class="emergency-preset-btn" onclick="setFlashPreset('Padaria Especial','Aten&ccedil;&atilde;o clientes! P&atilde;o fresquinho com desconto especial na padaria!',10)">🍞 Padaria</button>
+                </div>
+            </div>
+            <div class="admin-card">
+                <div class="section-header" style="margin-bottom:8px;"><h3 class="card-title" style="margin:0;">📊 Histórico</h3><button class="submit-btn" onclick="loadFlashHistory()" style="font-size:12px;padding:7px 14px;">🔄 Atualizar</button></div>
+                <div class="table-container"><table class="data-table"><thead><tr><th>Título</th><th>Duração</th><th>Disparada em</th><th>Encerrada em</th></tr></thead><tbody id="flashHistoryBody"><tr><td colspan="4" style="text-align:center;padding:20px;color:#999;">Nenhum histórico.</td></tr></tbody></table></div>
+            </div>
+        </section>
+
+        <section class="admin-section" id="section-silence">
+            <div class="section-header"><h2>🔇 Modo Silêncio</h2></div>
+            <p class="section-desc">Pausa todos os players sem alerta. Use para reuniões, momentos de oração ou manutenção. Retoma automaticamente no horário configurado.</p>
+            <div class="admin-card">
+                <div class="locutor-status-bar">
+                    <div class="locutor-indicator" id="silenceIndicator"></div>
+                    <div class="locutor-status-text" id="silenceStatusText">Rádio tocando normalmente</div>
+                    <button class="locutor-play-btn" id="silenceManualBtn">🔇 Silenciar Agora</button>
+                </div>
+                <div style="margin-top:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+                    <div class="form-group" style="margin:0;"><label style="font-size:12px;">Duração (min, 0 = manual):</label><input type="number" id="silenceManualDuration" value="30" min="0" max="480" style="width:100px;padding:7px;border:2px solid #ddd;border-radius:8px;font-family:inherit;"></div>
+                    <div class="form-group" style="margin:0;"><label style="font-size:12px;">Motivo:</label><input type="text" id="silenceManualReason" placeholder="Ex: Reunião de equipe" style="padding:7px;border:2px solid #ddd;border-radius:8px;font-family:inherit;"></div>
+                </div>
+            </div>
+            <div class="admin-card">
+                <h3 class="card-title">📅 Silêncio Agendado</h3>
+                <p style="font-size:13px;color:#666;margin-bottom:14px;">Configure horários fixos. Ex: reunião toda segunda às 08h.</p>
+                <form class="edit-form" id="silenceScheduleForm">
+                    <div class="form-group"><label>Nome/Motivo:</label><input type="text" id="silenceLabel" placeholder="Ex: Reunião semanal" required></div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <div class="form-group"><label>Início:</label><input type="time" id="silenceStart" required></div>
+                        <div class="form-group"><label>Fim:</label><input type="time" id="silenceEnd" required></div>
+                    </div>
+                    <div class="form-group"><label>Dias da semana:</label>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+                            <label style="font-size:12px;"><input type="checkbox" class="silence-day-check" value="1"> Seg</label>
+                            <label style="font-size:12px;"><input type="checkbox" class="silence-day-check" value="2"> Ter</label>
+                            <label style="font-size:12px;"><input type="checkbox" class="silence-day-check" value="3"> Qua</label>
+                            <label style="font-size:12px;"><input type="checkbox" class="silence-day-check" value="4"> Qui</label>
+                            <label style="font-size:12px;"><input type="checkbox" class="silence-day-check" value="5"> Sex</label>
+                            <label style="font-size:12px;"><input type="checkbox" class="silence-day-check" value="6"> Sáb</label>
+                            <label style="font-size:12px;"><input type="checkbox" class="silence-day-check" value="0"> Dom</label>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="submit-btn">💾 Salvar Agendamento</button>
+                        <button type="button" class="clear-btn" onclick="clearSilenceForm()">🗑️ Limpar</button>
+                    </div>
+                </form>
+                <div style="margin-top:16px;"><div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Início</th><th>Fim</th><th>Dias</th><th>Status</th><th>Ações</th></tr></thead><tbody id="silenceScheduleBody"><tr><td colspan="6" style="text-align:center;padding:20px;color:#999;">Nenhum agendamento.</td></tr></tbody></table></div></div>
+            </div>
+        </section>
         <!-- ── ANALYTICS ── (único) -->
         <section class="admin-section" id="section-analytics">
             <div class="section-header">
