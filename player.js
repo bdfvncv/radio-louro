@@ -130,6 +130,9 @@ async function init() {
         initSuggest();
         initLocutorListener();
         initTTSListener();
+        initSilenceListener();
+        initFlashListener();
+        await loadBlacklistPlayer();
     } catch(err){ console.error('Erro init:', err); }
 }
 
@@ -469,6 +472,11 @@ function playSlotMusicTrack() {
     if(!slotPlaylist.length){ playBgMusic(); return; }
     const track = slotPlaylist[slotCurrentIndex % slotPlaylist.length];
     if(!track?.audio_url){ playBgMusic(); return; }
+    // Pula músicas na blacklist
+    if(isBlacklisted(track.audio_url)) {
+        slotCurrentIndex = (slotCurrentIndex + 1) % Math.max(slotPlaylist.length, 1);
+        playSlotMusicTrack(); return;
+    }
     audioPlayer.src = track.audio_url;
     updateDisplay(currentSlot?`🎵 ${currentSlot.name}`:'Tocando agora', track.title||'Música');
     slotTracksSinceAd++;
@@ -477,14 +485,26 @@ function playSlotMusicTrack() {
     if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
 }
 
+function getEligibleAds() {
+    const h = new Date().getHours();
+    return advertisements.filter(ad => {
+        if (!ad.enabled) return false;
+        if (ad.start_hour != null && h < ad.start_hour) return false;
+        if (ad.end_hour   != null && h > ad.end_hour)   return false;
+        return true;
+    });
+}
+
 function playSlotAd(cb) {
-    if(!advertisements.length){ if(cb) cb(); return; }
+    const eligible = getEligibleAds();
+    if(!eligible.length){ if(cb) cb(); return; }
     isPlayingAd=true; slotTracksSinceAd=0;
-    const ad = advertisements[slotAdIndex%advertisements.length];
-    slotAdIndex = (slotAdIndex+1)%Math.max(advertisements.length,1);
+    const ad = eligible[slotAdIndex % eligible.length];
+    slotAdIndex = (slotAdIndex+1) % Math.max(eligible.length,1);
     if(!ad?.audio_url){ if(cb) cb(); return; }
     audioPlayer.src=ad.audio_url; audioPlayer._adCb=cb;
     updateDisplay('📢 Propaganda', ad.title);
+    logAdPlay(ad); // registra no histórico
     if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
 }
 
@@ -500,6 +520,11 @@ function playBgMusic() {
     if(ads.length>0 && tracksPlayedSinceAd>=freq){ playLegacyAd(); return; }
     const track = playlist[currentBgIndex%playlist.length];
     if(!track?.audio_url){ handleNoAudio(); return; }
+    // Pula músicas na blacklist
+    if(isBlacklisted(track.audio_url)) {
+        currentBgIndex = (currentBgIndex + 1) % Math.max(playlist.length, 1);
+        playBgMusic(); return;
+    }
     audioPlayer.src=track.audio_url;
     updateDisplay(isSeasonalActive?'🎭 Especial':'Tocando agora', track.title||'Música');
     tracksPlayedSinceAd++;
@@ -509,14 +534,15 @@ function playBgMusic() {
 }
 
 function playLegacyAd() {
-    const ads = isSeasonalActive ? seasonalAds : advertisements;
-    if(!ads.length){ playBgMusic(); return; }
+    const allAds = isSeasonalActive ? seasonalAds : getEligibleAds();
+    if(!allAds.length){ playBgMusic(); return; }
     isPlayingAd=true; tracksPlayedSinceAd=0;
-    const ad=ads[currentAdIndex%ads.length];
-    currentAdIndex=(currentAdIndex+1)%Math.max(ads.length,1);
+    const ad=allAds[currentAdIndex%allAds.length];
+    currentAdIndex=(currentAdIndex+1)%Math.max(allAds.length,1);
     if(!ad?.audio_url){ playBgMusic(); return; }
     audioPlayer.src=ad.audio_url;
     updateDisplay('📢 Propaganda', ad.title);
+    logAdPlay(ad); // registra no histórico
     if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
 }
 
@@ -732,6 +758,9 @@ function togglePlay() {
     if(isPlaying){
         audioPlayer.pause(); isPlaying=false; updatePlayButtonState(false);
     } else {
+        if(silenceActivePlayer) {
+            updateDisplay('🔇 Silêncio', 'Rádio pausada pelo admin'); return;
+        }
         isPlaying=true; updatePlayButtonState(true);
         // Se não tem src, escolhe a música correta (posição restaurada ou início)
         if(!audioPlayer.src || audioPlayer.src === window.location.href) {
@@ -863,7 +892,7 @@ async function handleEmergencyChange(state) {
     } else if(!state.is_active && emergencyActive) {
         emergencyActive = false;
         if(emergencyInterval) { clearInterval(emergencyInterval); emergencyInterval = null; }
-        if(window.responsiveVoice) responsiveVoice.cancel();
+        if(window.speechSynthesis) speechSynthesis.cancel();
         if(emergencyAudioEl) { emergencyAudioEl.pause(); emergencyAudioEl.src = ''; }
         if(playerPausedByEmergency && isPlaying) {
             playerPausedByEmergency = false;
@@ -872,16 +901,26 @@ async function handleEmergencyChange(state) {
     }
 }
 
+function speakTTS(text, onEnd) {
+    if(!window.speechSynthesis) { if(onEnd) onEnd(); return; }
+    speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = 'pt-BR'; utt.rate = 0.88; utt.pitch = 1.05; utt.volume = 1;
+    const voices = speechSynthesis.getVoices();
+    const best = voices.find(v => v.name.includes('Francisca'))
+        || voices.find(v => v.name.includes('Google') && v.lang === 'pt-BR')
+        || voices.find(v => v.lang === 'pt-BR')
+        || voices.find(v => v.lang.startsWith('pt'));
+    if(best) utt.voice = best;
+    if(onEnd) utt.onend = onEnd;
+    speechSynthesis.speak(utt);
+}
+
 function playEmergencyAlert(state) {
     const doPlay = () => {
         if(!emergencyActive) return;
         if(state.use_tts !== false && state.message) {
-            if(window.responsiveVoice && responsiveVoice.voiceSupport()) {
-                responsiveVoice.speak(state.message, state.voice || 'Brazilian Portuguese Female', {
-                    rate: 0.85, pitch: 1, volume: 1,
-                    onend: () => { if(emergencyActive) setTimeout(doPlay, 2000); }
-                });
-            }
+            speakTTS(state.message, () => { if(emergencyActive) setTimeout(doPlay, 2000); });
         } else if(state.audio_url) {
             emergencyAudioEl.src = state.audio_url;
             emergencyAudioEl.play().catch(e => console.error(e));
@@ -975,8 +1014,6 @@ function handleTTSPlay(data) {
         updateDisplay('📢 Aviso', data.title || 'Promoção');
     }
 
-    const voiceName = data.voice || 'Brazilian Portuguese Female';
-
     const onEnd = () => {
         if(wasPaused && isPlaying) {
             audioPlayer.currentTime = playerResumePos;
@@ -984,25 +1021,7 @@ function handleTTSPlay(data) {
         }
     };
 
-    if(window.responsiveVoice && responsiveVoice.voiceSupport()) {
-        responsiveVoice.speak(data.text, voiceName, {
-            rate: 0.9, pitch: 1, volume: 1,
-            onend: onEnd
-        });
-        return;
-    }
-
-    if(!window.speechSynthesis) { onEnd(); return; }
-    speechSynthesis.cancel();
-    const utt = new SpeechSynthesisUtterance(data.text);
-    utt.lang = 'pt-BR'; utt.rate = 0.88; utt.pitch = 1.05;
-    const voices = speechSynthesis.getVoices();
-    const fem = voices.find(v => v.lang.startsWith('pt') &&
-        (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('feminina'))
-    ) || voices.find(v => v.lang.startsWith('pt'));
-    if(fem) utt.voice = fem;
-    utt.onend = onEnd;
-    speechSynthesis.speak(utt);
+    speakTTS(data.text, onEnd);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1142,4 +1161,134 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {
     init();
+}
+
+// ═════════════════════════════════════════════════════════════
+// MODO SILÊNCIO — listener no player
+// ═════════════════════════════════════════════════════════════
+let silenceActivePlayer = false;
+let playerPausedBySilence = false;
+
+function initSilenceListener() {
+    supabase.channel('silence_player')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'silence_state' },
+            payload => handleSilenceChange(payload.new))
+        .subscribe();
+}
+
+function handleSilenceChange(state) {
+    if (state.is_active && !silenceActivePlayer) {
+        silenceActivePlayer = true;
+        if (isPlaying && audioPlayer.src) {
+            audioPlayer.pause();
+            playerPausedBySilence = true;
+        }
+        if (window.speechSynthesis) speechSynthesis.cancel();
+        updateDisplay('🔇 Silêncio', state.reason || 'Modo silêncio ativo');
+    } else if (!state.is_active && silenceActivePlayer) {
+        silenceActivePlayer = false;
+        if (playerPausedBySilence && isPlaying) {
+            playerPausedBySilence = false;
+            audioPlayer.play().catch(e => console.error(e));
+        } else {
+            playerPausedBySilence = false;
+        }
+    }
+}
+
+// ═════════════════════════════════════════════════════════════
+// PROMOÇÃO RELÂMPAGO — listener e exibição de contagem no player
+// ═════════════════════════════════════════════════════════════
+let flashCountdownEl = null;
+let flashTimerPlayer = null;
+
+function initFlashListener() {
+    supabase.channel('flash_player')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'flash_state' },
+            payload => handleFlashChange(payload.new))
+        .subscribe();
+    // Verifica estado inicial
+    supabase.from('flash_state').select('*').eq('id', 1).single()
+        .then(({ data }) => { if (data?.is_active) handleFlashChange(data); });
+}
+
+function handleFlashChange(state) {
+    ensureFlashDisplay();
+    if (state.is_active) {
+        if (flashCountdownEl) {
+            flashCountdownEl.style.display = 'block';
+            updateFlashCountdown(state.ends_at ? new Date(state.ends_at) : null);
+            if (state.ends_at) {
+                if (flashTimerPlayer) clearInterval(flashTimerPlayer);
+                flashTimerPlayer = setInterval(() => updateFlashCountdown(new Date(state.ends_at)), 1000);
+            }
+        }
+    } else {
+        if (flashCountdownEl) flashCountdownEl.style.display = 'none';
+        if (flashTimerPlayer) { clearInterval(flashTimerPlayer); flashTimerPlayer = null; }
+    }
+}
+
+function ensureFlashDisplay() {
+    if (flashCountdownEl) return;
+    // Cria banner de contagem regressiva no player
+    flashCountdownEl = document.createElement('div');
+    flashCountdownEl.id = 'flashPlayerBanner';
+    flashCountdownEl.style.cssText = `
+        display:none; position:fixed; top:0; left:0; right:0; z-index:999;
+        background:linear-gradient(90deg,#f59e0b,#d97706);
+        color:#fff; text-align:center; padding:10px 16px;
+        font-family:'Sora',sans-serif; font-weight:700; font-size:15px;
+        box-shadow:0 2px 8px rgba(0,0,0,.2);
+    `;
+    document.body.prepend(flashCountdownEl);
+}
+
+function updateFlashCountdown(endsAt) {
+    if (!flashCountdownEl) return;
+    const rem = endsAt ? Math.max(0, endsAt - new Date()) : 0;
+    const m = Math.floor(rem / 60000);
+    const s = Math.floor((rem % 60000) / 1000);
+    flashCountdownEl.textContent = `⚡ PROMOÇÃO RELÂMPAGO — ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')} restantes`;
+    if (rem <= 0) {
+        flashCountdownEl.style.display = 'none';
+        if (flashTimerPlayer) { clearInterval(flashTimerPlayer); flashTimerPlayer = null; }
+    }
+}
+
+// ═════════════════════════════════════════════════════════════
+// BLACKLIST — verifica músicas antes de tocar
+// ═════════════════════════════════════════════════════════════
+let blacklistedUrls = new Set();
+
+async function loadBlacklistPlayer() {
+    try {
+        const { data } = await supabase.from('music_blacklist').select('audio_url');
+        blacklistedUrls = new Set((data || []).map(b => b.audio_url));
+    } catch(err) { console.warn('blacklist:', err); }
+}
+
+function isBlacklisted(url) {
+    return url && blacklistedUrls.has(url);
+}
+
+// ═════════════════════════════════════════════════════════════
+// LOG DE PROPAGANDAS — registra cada propaganda tocada
+// ═════════════════════════════════════════════════════════════
+async function logAdPlay(ad) {
+    try {
+        await supabase.from('ad_log').insert([{
+            ad_id:      ad.id       || null,
+            title:      ad.title    || null,
+            advertiser: ad.advertiser || null,
+            audio_url:  ad.audio_url  || null,
+            slot_name:  currentSlot?.name || (isGradeMode ? 'Grade' : 'Fundo')
+        }]);
+        // Atualiza contador e timestamp na tabela advertisements
+        await supabase.from('advertisements').update({
+            play_count:  (ad.play_count || 0) + 1,
+            last_played: new Date().toISOString()
+        }).eq('id', ad.id);
+        ad.play_count = (ad.play_count || 0) + 1;
+    } catch(err) { /* silencioso */ }
 }
