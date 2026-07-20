@@ -521,59 +521,146 @@ async function scanAndFixBrokenTracks() {
     const btn = document.getElementById('scanBrokenBtn');
     if(btn) { btn.textContent = '🔍 Verificando...'; btn.disabled = true; }
 
+    const container = document.getElementById('brokenTracksContainer');
+    if(container) container.innerHTML = '<div style="color:#666;font-size:13px;padding:10px;">Varrendo todas as grades e playlists...</div>';
+
+    // Varre TODAS as tabelas que contêm áudio — incluindo grades já publicadas
     const tables = [
-        { name: 'slot_playlists',    label: 'Grades Horárias' },
-        { name: 'background_playlist', label: 'Playlist de Fundo' },
-        { name: 'seasonal_playlists',  label: 'Sazonais' },
+        { name: 'slot_playlists',      label: 'Grades Horárias',   cols: 'id, title, audio_url, slot_id' },
+        { name: 'background_playlist', label: 'Playlist de Fundo', cols: 'id, title, audio_url' },
+        { name: 'seasonal_playlists',  label: 'Sazonais',          cols: 'id, title, audio_url, category' },
     ];
 
     let broken = [];
+    let total  = 0;
+
     for (const t of tables) {
         try {
-            const { data } = await supabase.from(t.name).select('id, title, audio_url, slot_id, category');
+            const { data, error } = await supabase.from(t.name).select(t.cols);
+            if(error) { console.error(t.name, error); continue; }
+            total += (data||[]).length;
             (data || []).forEach(row => {
-                if (row.audio_url && (
-                    row.audio_url.includes('youtube.com') ||
-                    row.audio_url.includes('youtu.be') ||
-                    row.audio_url.includes('cobalt') ||
-                    (!row.audio_url.includes('cloudinary') && !row.audio_url.endsWith('.mp3') && !row.audio_url.endsWith('.wav') && !row.audio_url.endsWith('.ogg'))
-                )) {
-                    broken.push({ ...row, table: t.name, tableLabel: t.label });
+                const url = row.audio_url || '';
+                const isBroken =
+                    url.includes('youtube.com') ||
+                    url.includes('youtu.be')    ||
+                    url.includes('cobalt')       ||
+                    url === ''                   ||
+                    // não é Cloudinary nem arquivo de áudio direto
+                    (!url.includes('cloudinary') &&
+                     !url.endsWith('.mp3') &&
+                     !url.endsWith('.wav') &&
+                     !url.endsWith('.ogg') &&
+                     !url.endsWith('.m4a') &&
+                     !url.endsWith('.aac'));
+                if (isBroken) {
+                    broken.push({
+                        ...row,
+                        table:      t.name,
+                        tableLabel: t.label,
+                        context:    row.slot_id ? `Grade #${row.slot_id}` : (row.category || 'Geral')
+                    });
                 }
             });
         } catch(err) { console.error(t.name, err); }
     }
 
-    const container = document.getElementById('brokenTracksContainer');
     if (!container) { if(btn){ btn.textContent='🔍 Verificar Músicas'; btn.disabled=false; } return; }
 
     if (!broken.length) {
-        container.innerHTML = '<div style="color:#155724;background:#d4edda;padding:12px 16px;border-radius:8px;font-weight:600;">✅ Nenhuma música com URL inválida encontrada!</div>';
+        container.innerHTML = `<div style="color:#155724;background:#d4edda;padding:12px 16px;border-radius:8px;font-weight:600;">✅ Tudo certo! ${total} músicas verificadas — nenhuma URL inválida encontrada.</div>`;
         if(btn){ btn.textContent='🔍 Verificar Músicas'; btn.disabled=false; }
         return;
     }
 
+    // Agrupa por tabela para facilitar a leitura
+    const byTable = {};
+    broken.forEach(b => {
+        if(!byTable[b.tableLabel]) byTable[b.tableLabel] = [];
+        byTable[b.tableLabel].push(b);
+    });
+
     container.innerHTML = `
         <div style="color:#721c24;background:#f8d7da;padding:12px 16px;border-radius:8px;margin-bottom:14px;font-weight:600;">
-            ⚠️ ${broken.length} música(s) com URL inválida (não reproduzirão corretamente)
+            ⚠️ ${broken.length} música(s) com URL inválida em ${total} verificadas — essas não reproduzem no player
         </div>
-        ${broken.map(t => `
-        <div style="border:1px solid #ddd;border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#fff;">
-            <div style="font-weight:700;font-size:13px;margin-bottom:4px;">${t.title || 'Sem título'}</div>
-            <div style="font-size:11px;color:#666;margin-bottom:4px;">Tabela: ${t.tableLabel} | Slot: ${t.slot_id||t.category||'-'}</div>
-            <div style="font-size:11px;color:#dc3545;word-break:break-all;margin-bottom:8px;">URL atual: ${t.audio_url}</div>
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                <input type="url" id="fix_${t.table}_${t.id}"
-                    placeholder="Cole a URL do Cloudinary (.mp3) aqui"
-                    style="flex:1;min-width:200px;padding:7px 10px;border:2px solid #ddd;border-radius:8px;font-family:inherit;font-size:12px;">
-                <button class="submit-btn" style="font-size:12px;padding:7px 14px;"
-                    onclick="fixBrokenTrack('${t.table}', ${t.id})">💾 Corrigir</button>
-                <button class="btn-delete" style="font-size:12px;padding:7px 10px;"
-                    onclick="deleteBrokenTrack('${t.table}', ${t.id}, this)">🗑️ Remover</button>
-            </div>
-        </div>`).join('')}`;
+        <div style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="submit-btn" style="background:#e65100;font-size:12px;padding:7px 14px;"
+                onclick="reconvertAllBroken()">🔄 Reconverter Todas Automaticamente</button>
+            <small style="color:#666;align-self:center;">ou corrija individualmente abaixo</small>
+        </div>
+        ${Object.entries(byTable).map(([label, items]) => `
+            <div style="margin-bottom:16px;">
+                <h4 style="color:#495057;font-size:13px;margin-bottom:8px;padding:6px 10px;background:#f8f9fa;border-radius:6px;">
+                    📁 ${label} — ${items.length} música(s)
+                </h4>
+                ${items.map(t => `
+                <div style="border:1px solid #ddd;border-radius:10px;padding:12px 14px;margin-bottom:8px;background:#fff;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
+                        <div style="flex:1;">
+                            <div style="font-weight:700;font-size:13px;">${t.title || '(sem título)'}</div>
+                            <div style="font-size:11px;color:#666;margin-top:2px;">${t.context}</div>
+                            <div style="font-size:11px;color:#dc3545;word-break:break-all;margin-top:4px;">${t.audio_url || '(vazio)'}</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;">
+                        <button class="submit-btn" style="font-size:11px;padding:5px 10px;background:#17a2b8;"
+                            id="reconvBtn_${t.table}_${t.id}"
+                            onclick="reconvertSingle('${t.table}', ${t.id}, '${(t.audio_url||'').replace(/'/g,'').slice(0,200)}', '${(t.title||'').replace(/'/g,'')}')">
+                            🔄 Reconverter
+                        </button>
+                        <button class="btn-delete" style="font-size:11px;padding:5px 10px;"
+                            onclick="deleteBrokenTrack('${t.table}', ${t.id}, this)">
+                            🗑️ Remover
+                        </button>
+                    </div>
+                    <div id="reconvStatus_${t.table}_${t.id}" style="font-size:11px;color:#006b3f;margin-top:6px;display:none;"></div>
+                </div>`).join('')}
+            </div>`).join('')}`;
 
     if(btn){ btn.textContent='🔍 Verificar Músicas'; btn.disabled=false; }
+}
+
+// Reconverte uma música individual: extrai ID do YouTube da URL salva, converte de novo
+async function reconvertSingle(table, id, youtubeUrl, title) {
+    const btn    = document.getElementById(`reconvBtn_${table}_${id}`);
+    const status = document.getElementById(`reconvStatus_${table}_${id}`);
+    if(btn)    { btn.textContent = '⏳ Convertendo...'; btn.disabled = true; }
+    if(status) { status.style.display='block'; status.textContent='☁️ Chamando servidor...'; }
+
+    // Se a URL salva já é do YouTube, usa ela direto
+    // Se não, tenta extrair o video ID de alguma forma
+    let ytUrl = youtubeUrl;
+    if (!ytUrl.includes('youtube.com') && !ytUrl.includes('youtu.be')) {
+        if(btn)    { btn.textContent='🔄 Reconverter'; btn.disabled=false; }
+        if(status) { status.textContent='❌ URL não é do YouTube — cole manualmente no Cloudinary.'; status.style.color='#dc3545'; }
+        return;
+    }
+
+    try {
+        const newUrl = await convertYoutubeToMp3(ytUrl, title, (msg) => {
+            if(status) status.textContent = msg;
+        });
+        if (!newUrl || newUrl.includes('youtube.com')) {
+            throw new Error('Conversão retornou URL inválida');
+        }
+        await supabaseAdmin.from(table).update({ audio_url: newUrl }).eq('id', id);
+        if(status) { status.textContent = `✅ Corrigido! ${newUrl.slice(0,60)}...`; status.style.color='#006b3f'; }
+        if(btn)    { btn.textContent = '✅ Pronto'; btn.disabled = true; btn.style.background='#28a745'; }
+    } catch(err) {
+        if(status) { status.textContent = `❌ Falhou: ${err.message}`; status.style.color='#dc3545'; }
+        if(btn)    { btn.textContent = '🔄 Tentar de Novo'; btn.disabled = false; }
+    }
+}
+
+// Reconverte todas as músicas quebradas em sequência
+async function reconvertAllBroken() {
+    if(!confirm('Isso tentará reconverter TODAS as músicas com URL inválida automaticamente. Pode demorar alguns minutos. Continuar?')) return;
+    const allBtns = document.querySelectorAll('[id^="reconvBtn_"]');
+    for (const btn of allBtns) {
+        if(!btn.disabled) btn.click();
+        await new Promise(r => setTimeout(r, 3000)); // aguarda 3s entre cada
+    }
 }
 
 async function fixBrokenTrack(table, id) {
@@ -601,6 +688,8 @@ async function deleteBrokenTrack(table, id, btnEl) {
 window.scanAndFixBrokenTracks = scanAndFixBrokenTracks;
 window.fixBrokenTrack         = fixBrokenTrack;
 window.deleteBrokenTrack      = deleteBrokenTrack;
+window.reconvertSingle        = reconvertSingle;
+window.reconvertAllBroken     = reconvertAllBroken;
 
 // ─────────────────────────────────────────────────────────────
 // YOUTUBE — adicionar músicas
