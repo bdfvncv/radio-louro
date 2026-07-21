@@ -19,6 +19,7 @@ let seasonalSettings={};
 let musicQueue=[], locutorTracks=[], ttsLibrary=[];
 let currentSeasonalTab='natal', currentGradeTab=null;
 let editingSeasonalId=null, editingPlaylistId=null, editingAdId=null;
+let editingSlotTrackId=null, editingSlotTrackSlotId=null;
 let locutorSelectedId=null, locutorActive=false;
 let ytManualData=null;
 let bulkSelectedIds=[], bulkTableName=null;
@@ -1247,6 +1248,33 @@ async function refreshTableAfterBulk(tableName) {
     }
 }
 
+
+// ─────────────────────────────────────────────────────────────
+// HELPER — reordena original_order/play_order após deleção
+// ─────────────────────────────────────────────────────────────
+async function reorderAfterDelete(table, filterCol, filterVal) {
+    // Busca todos os itens restantes ordenados
+    let query = supabase.from(table).select('id').order('original_order', {ascending:true});
+    if(filterCol && filterVal !== undefined) query = query.eq(filterCol, filterVal);
+    const {data} = await query;
+    if(!data?.length) return;
+    // Renumera 0, 1, 2, 3...
+    await Promise.all(data.map((row, i) =>
+        supabaseAdmin.from(table).update({
+            original_order: i,
+            daily_order:    i,
+            play_order:     i   // propagandas usam play_order
+        }).eq('id', row.id)
+    ));
+}
+
+async function reorderAdsAfterDelete() {
+    const {data} = await supabase.from('advertisements').select('id').order('play_order', {ascending:true});
+    if(!data?.length) return;
+    await Promise.all(data.map((row, i) =>
+        supabaseAdmin.from('advertisements').update({ play_order: i }).eq('id', row.id)
+    ));
+}
 // ─────────────────────────────────────────────────────────────
 // GRADES HORÁRIAS
 // ─────────────────────────────────────────────────────────────
@@ -1399,6 +1427,23 @@ async function handleSaveSlotTrack(e,slotId) {
     const genre=document.getElementById(`slotGenre_${slotId}`).value.trim();
     if(!url||!title){ alert('Preencha URL e Título!'); return; }
     try {
+        // MODO EDIÇÃO
+        if(editingSlotTrackId && editingSlotTrackSlotId===slotId) {
+            const {error}=await supabaseAdmin.from('slot_playlists').update({
+                audio_url:url, title,
+                artist:artist||null, genre:genre||null
+            }).eq('id', editingSlotTrackId);
+            if(error) throw error;
+            alert('✅ Música atualizada!');
+            editingSlotTrackId=null; editingSlotTrackSlotId=null;
+            // Restaura botão para "Adicionar"
+            const btn=document.querySelector(`#formSlotPlaylist_${slotId} .submit-btn`);
+            if(btn) btn.textContent='💾 Adicionar';
+            clearSlotForm(slotId);
+            await refreshSlotPlaylist(slotId);
+            return;
+        }
+        // MODO INSERÇÃO — verifica duplicata
         const {data:existing} = await supabase.from('slot_playlists')
             .select('id,title').eq('slot_id',slotId).eq('audio_url',url).maybeSingle();
         if(existing) { alert(`⚠️ Esta música já está na grade!\n"${existing.title}"`); return; }
@@ -1414,7 +1459,7 @@ async function handleSaveSlotTrack(e,slotId) {
             original_order:nextOrder, daily_order:nextOrder, enabled:true
         }]);
         if(error) throw error;
-        alert(`✅ Música adicionada! Numeração: ${nextOrder}`);
+        alert(`✅ Música adicionada! Posição: ${nextOrder + 1}`);
         clearSlotForm(slotId);
         await refreshSlotPlaylist(slotId);
     } catch(err){ alert('❌ Erro: '+err.message); }
@@ -1423,11 +1468,16 @@ async function handleSaveSlotTrack(e,slotId) {
 function editSlotTrack(id,slotId) {
     const t=(slotPlaylists[slotId]||[]).find(t=>t.id===id);
     if(!t) return;
+    editingSlotTrackId=id; editingSlotTrackSlotId=slotId;
     document.getElementById(`slotUrl_${slotId}`).value=t.audio_url;
     document.getElementById(`slotTitle_${slotId}`).value=t.title;
     document.getElementById(`slotArtist_${slotId}`).value=t.artist||'';
     document.getElementById(`slotGenre_${slotId}`).value=t.genre||'';
     document.getElementById(`slotOrder_${slotId}`).value=t.original_order;
+    // Muda botão para indicar modo edição
+    const btn=document.querySelector(`#formSlotPlaylist_${slotId} .submit-btn`);
+    if(btn) btn.textContent='💾 Salvar Alteração';
+    document.getElementById(`formSlotPlaylist_${slotId}`)?.scrollIntoView({behavior:'smooth',block:'center'});
 }
 
 async function toggleSlotTrack(id,newStatus,slotId) {
@@ -1436,8 +1486,9 @@ async function toggleSlotTrack(id,newStatus,slotId) {
 }
 
 async function deleteSlotTrack(id,slotId) {
-    if(!confirm('Deletar?')) return;
+    if(!confirm('Deletar esta música?')) return;
     await supabaseAdmin.from('slot_playlists').delete().eq('id',id);
+    await reorderAfterDelete('slot_playlists','slot_id',slotId);
     await refreshSlotPlaylist(slotId);
 }
 
@@ -1448,6 +1499,11 @@ function clearSlotForm(slotId) {
     });
     const ord=document.getElementById(`slotOrder_${slotId}`);
     if(ord) ord.value='0';
+    if(editingSlotTrackSlotId===slotId) {
+        editingSlotTrackId=null; editingSlotTrackSlotId=null;
+        const btn=document.querySelector(`#formSlotPlaylist_${slotId} .submit-btn`);
+        if(btn) btn.textContent='💾 Adicionar';
+    }
 }
 
 async function handleForceShuffleSlot(slotId) {
@@ -1643,6 +1699,8 @@ async function handleSeasonalFormSubmit(e) {
         const ord=form.querySelector('.seasonal-order'); if(ord) ord.value='0';
         const frq=form.querySelector('.seasonal-frequency'); if(frq) frq.value='3';
         editingSeasonalId=null;
+        const submitBtn=form.querySelector('.submit-btn');
+        if(submitBtn) submitBtn.textContent='💾 Adicionar';
         const [mRes,aRes]=await Promise.all([supabase.from('seasonal_playlists').select('*').eq('type','music').order('original_order',{ascending:true}),supabase.from('seasonal_playlists').select('*').eq('type','ad').order('play_order',{ascending:true})]);
         seasonalData={natal:{music:[],ads:[]},ano_novo:{music:[],ads:[]},pascoa:{music:[],ads:[]},sao_joao:{music:[],ads:[]}};
         (mRes.data||[]).forEach(i=>{if(seasonalData[i.category])seasonalData[i.category].music.push(i);});
@@ -1664,6 +1722,8 @@ function editSeasonalItem(id,category,type) {
         const adv=form.querySelector('.seasonal-advertiser'); if(adv) adv.value=item.advertiser||'';
         const frq=form.querySelector('.seasonal-frequency'); if(frq) frq.value=item.frequency||3;
     }
+    const btn=form.querySelector('.submit-btn');
+    if(btn) btn.textContent='💾 Salvar Alteração';
     form.scrollIntoView({behavior:'smooth',block:'center'});
 }
 
@@ -1677,8 +1737,23 @@ async function toggleSeasonalItem(id,newStatus) {
 }
 
 async function deleteSeasonalItem(id) {
-    if(!confirm('Deletar?')) return;
+    if(!confirm('Deletar esta música?')) return;
+    // Busca categoria e tipo antes de deletar para reordenar depois
+    const {data:itemData}=await supabase.from('seasonal_playlists').select('category,type').eq('id',id).maybeSingle();
     await supabaseAdmin.from('seasonal_playlists').delete().eq('id',id);
+    // Reordena os restantes da mesma categoria+tipo
+    if(itemData) {
+        const {data:remaining}=await supabase.from('seasonal_playlists')
+            .select('id').eq('category',itemData.category).eq('type',itemData.type)
+            .order('original_order',{ascending:true});
+        if(remaining?.length) {
+            await Promise.all(remaining.map((row,i)=>
+                supabaseAdmin.from('seasonal_playlists').update({
+                    original_order:i, daily_order:i, play_order:i
+                }).eq('id',row.id)
+            ));
+        }
+    }
     const [mRes,aRes]=await Promise.all([supabase.from('seasonal_playlists').select('*').eq('type','music').order('original_order',{ascending:true}),supabase.from('seasonal_playlists').select('*').eq('type','ad').order('play_order',{ascending:true})]);
     seasonalData={natal:{music:[],ads:[]},ano_novo:{music:[],ads:[]},pascoa:{music:[],ads:[]},sao_joao:{music:[],ads:[]}};
     (mRes.data||[]).forEach(i=>{if(seasonalData[i.category])seasonalData[i.category].music.push(i);});
@@ -1858,6 +1933,8 @@ function editPlaylist(id) {
     document.getElementById('playlistTitle').value=t.title||'';
     document.getElementById('playlistOrder').value=t.play_order;
     document.getElementById('playlistEnabled').checked=t.enabled;
+    const btn=document.querySelector('#playlistForm .submit-btn');
+    if(btn) btn.textContent='💾 Salvar Alteração';
     document.getElementById('playlistForm').scrollIntoView({behavior:'smooth',block:'center'});
 }
 
@@ -1867,8 +1944,9 @@ async function togglePlaylist(id,newStatus) {
 }
 
 async function deletePlaylist(id) {
-    if(!confirm('Deletar?')) return;
+    if(!confirm('Deletar esta música?')) return;
     await supabaseAdmin.from('background_playlist').delete().eq('id',id);
+    await reorderAfterDelete('background_playlist', null, null);
     const {data}=await supabase.from('background_playlist').select('*').order('original_order',{ascending:true}); backgroundPlaylist=data||[]; renderPlaylistTable();
 }
 
@@ -1876,6 +1954,8 @@ function handleClearPlaylistForm() {
     document.getElementById('playlistUrl').value=''; document.getElementById('playlistTitle').value='';
     document.getElementById('playlistOrder').value='0'; document.getElementById('playlistEnabled').checked=true;
     editingPlaylistId=null;
+    const btn=document.querySelector('#playlistForm .submit-btn');
+    if(btn) btn.textContent='💾 Adicionar';
 }
 
 async function handleForceShufflePlaylist() {
@@ -1957,6 +2037,8 @@ function editAd(id) {
     const sh=document.getElementById('adStartHour'); const eh=document.getElementById('adEndHour');
     if(sh) sh.value=ad.start_hour!=null?ad.start_hour:'';
     if(eh) eh.value=ad.end_hour!=null?ad.end_hour:'';
+    const adBtn=document.querySelector('#adsForm .submit-btn');
+    if(adBtn) adBtn.textContent='💾 Salvar Alteração';
     document.getElementById('adsForm').scrollIntoView({behavior:'smooth',block:'center'});
 }
 
@@ -1966,8 +2048,9 @@ async function toggleAd(id,newStatus) {
 }
 
 async function deleteAd(id) {
-    if(!confirm('Deletar?')) return;
+    if(!confirm('Deletar esta propaganda?')) return;
     await supabaseAdmin.from('advertisements').delete().eq('id',id);
+    await reorderAdsAfterDelete();
     const {data}=await supabase.from('advertisements').select('*').order('play_order',{ascending:true}); advertisements=data||[]; renderAdsTable();
 }
 
@@ -1977,6 +2060,8 @@ function handleClearAdForm() {
     });
     document.getElementById('adFrequency').value='3'; document.getElementById('adOrder').value='0';
     document.getElementById('adEnabled').checked=true; editingAdId=null;
+    const adBtn=document.querySelector('#adsForm .submit-btn');
+    if(adBtn) adBtn.textContent='💾 Adicionar';
 }
 
 // ─────────────────────────────────────────────────────────────
