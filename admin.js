@@ -1394,8 +1394,9 @@ function renderGradesTabs() {
             <span class="grade-tab-dot" style="background:${s.color}"></span>${s.name}
             <span class="grade-tab-count">${(slotPlaylists[s.id]||[]).length}</span>
         </button>`).join('');
-    if(!currentGradeTab&&slots.length) currentGradeTab=slots[0].id;
-    renderGradeContent(currentGradeTab);
+    if(!currentGradeTab || !slots.find(s=>s.id===currentGradeTab))
+        currentGradeTab = slots.length ? slots[0].id : null;
+    if(currentGradeTab) renderGradeContent(currentGradeTab);
 }
 
 function switchGradeTab(slotId) {
@@ -1588,6 +1589,8 @@ async function toggleSlotTrack(id,newStatus,slotId) {
 
 async function deleteSlotTrack(id,slotId) {
     if(!confirm('Deletar esta música?')) return;
+    // Cancela modo edição se estiver editando esta mesma música
+    if(editingSlotTrackId===id) clearSlotForm(slotId);
     await supabaseAdmin.from('slot_playlists').delete().eq('id',id);
     await reorderAfterDelete('slot_playlists','slot_id',slotId);
     await refreshSlotPlaylist(slotId);
@@ -2047,6 +2050,7 @@ async function togglePlaylist(id,newStatus) {
 
 async function deletePlaylist(id) {
     if(!confirm('Deletar esta música?')) return;
+    if(editingPlaylistId===id) handleClearPlaylistForm();
     await supabaseAdmin.from('background_playlist').delete().eq('id',id);
     await reorderAfterDelete('background_playlist', null, null);
     const {data}=await supabase.from('background_playlist').select('*').order('original_order',{ascending:true}); backgroundPlaylist=data||[]; renderPlaylistTable();
@@ -2116,10 +2120,13 @@ async function handleSaveAd(e) {
     const enabled=document.getElementById('adEnabled').checked;
     const startHourVal=document.getElementById('adStartHour')?.value;
     const endHourVal=document.getElementById('adEndHour')?.value;
-    const startHour=startHourVal!==''&&startHourVal!=null?parseInt(startHourVal):null;
-    const endHour=endHourVal!==''&&endHourVal!=null?parseInt(endHourVal):null;
+    const startHour=(startHourVal!=null&&startHourVal!==''&&!isNaN(parseInt(startHourVal)))?parseInt(startHourVal):null;
+    const endHour  =(endHourVal!=null  &&endHourVal!==''  &&!isNaN(parseInt(endHourVal)))?  parseInt(endHourVal)  :null;
     if(!url||!title){ alert('Preencha URL e Título!'); return; }
     if(frequency<1||frequency>100){ alert('Frequência entre 1 e 100!'); return; }
+    // Validação de horas
+    if(startHour!==null&&(startHour<0||startHour>23)){ alert('Hora início inválida (0–23).'); return; }
+    if(endHour  !==null&&(endHour  <0||endHour  >23)){ alert('Hora fim inválida (0–23).'); return; }
     try {
         const payload={audio_url:url,title,advertiser:advertiser||null,frequency,play_order:order,enabled,
             start_hour:startHour,end_hour:endHour};
@@ -2151,6 +2158,7 @@ async function toggleAd(id,newStatus) {
 
 async function deleteAd(id) {
     if(!confirm('Deletar esta propaganda?')) return;
+    if(editingAdId===id) handleClearAdForm();
     await supabaseAdmin.from('advertisements').delete().eq('id',id);
     await reorderAdsAfterDelete();
     const {data}=await supabase.from('advertisements').select('*').order('play_order',{ascending:true}); advertisements=data||[]; renderAdsTable();
