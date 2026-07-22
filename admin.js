@@ -404,10 +404,7 @@ async function approveQueueItem(id) {
 
             let order = 0;
             if(isSlot) {
-                const {data:maxD} = await supabase.from('slot_playlists')
-                    .select('original_order').eq('slot_id',slotId)
-                    .order('original_order',{ascending:false}).limit(1).maybeSingle();
-                order = (maxD?.original_order??-1)+1;
+                order = await getNextSlot('slot_playlists', 'slot_id', slotId);
                 const {data:dup} = await supabase.from('slot_playlists')
                     .select('id').eq('slot_id',slotId).eq('audio_url',audioUrl).maybeSingle();
                 if(dup) continue;
@@ -418,10 +415,11 @@ async function approveQueueItem(id) {
                 }]);
                 await refreshSlotPlaylist(slotId);
             } else if(isSeasonal) {
-                const {data:maxD} = await supabase.from('seasonal_playlists')
-                    .select('play_order').eq('category',seasonalCat).eq('type','music')
-                    .order('play_order',{ascending:false}).limit(1).maybeSingle();
-                order = (maxD?.play_order??-1)+1;
+                const {data:usedSeas} = await supabase.from('seasonal_playlists')
+                    .select('original_order').eq('category',seasonalCat).eq('type','music')
+                    .order('original_order',{ascending:true});
+                const usedSeasSet = new Set((usedSeas||[]).map(r=>r.original_order));
+                order = 0; while(usedSeasSet.has(order)) order++;
                 const {data:dup} = await supabase.from('seasonal_playlists')
                     .select('id').eq('category',seasonalCat).eq('audio_url',audioUrl).maybeSingle();
                 if(dup) continue;
@@ -431,9 +429,7 @@ async function approveQueueItem(id) {
                     play_order:order, original_order:order, daily_order:order, enabled:true
                 }]);
             } else {
-                const {data:maxD} = await supabase.from('background_playlist')
-                    .select('original_order').order('original_order',{ascending:false}).limit(1).maybeSingle();
-                order = (maxD?.original_order??-1)+1;
+                order = await getNextSlot('background_playlist', null, null);
                 const {data:dup} = await supabase.from('background_playlist')
                     .select('id').eq('audio_url',audioUrl).maybeSingle();
                 if(dup) continue;
@@ -1250,31 +1246,133 @@ async function refreshTableAfterBulk(tableName) {
 
 
 // ─────────────────────────────────────────────────────────────
-// HELPER — reordena original_order/play_order após deleção
+// HELPERS DE ORDEM — lógica de slots com gaps preservados
+//
+// Regras:
+//  DELETE  → posição fica vaga (não renumera)
+//  INSERT  → ocupa o menor slot vago disponível
+//  COMPACT → botão "Organizar" — preenche gaps mantendo ordem relativa
 // ─────────────────────────────────────────────────────────────
+
+// Retorna o menor número inteiro não usado como original_order na tabela/filtro
+async function getNextSlot(table, filterCol, filterVal) {
+    let query = supabase.from(table).select('original_order').order('original_order', {ascending:true});
+    if(filterCol && filterVal !== undefined) query = query.eq(filterCol, filterVal);
+    const {data} = await query;
+    const used = new Set((data||[]).map(r => r.original_order));
+    // Acha o menor inteiro >= 0 não usado
+    let slot = 0;
+    while(used.has(slot)) slot++;
+    return slot;
+}
+
+// Mesmo para ads (usam play_order)
+async function getNextAdSlot() {
+    const {data} = await supabase.from('advertisements').select('play_order').order('play_order', {ascending:true});
+    const used = new Set((data||[]).map(r => r.play_order));
+    let slot = 0;
+    while(used.has(slot)) slot++;
+    return slot;
+}
+
+// DELETE: apenas deleta — gap fica vago, próxima inserção ocupa o espaço
+// (nenhuma renumeração aqui — é intencional)
 async function reorderAfterDelete(table, filterCol, filterVal) {
-    // Busca todos os itens restantes ordenados
-    let query = supabase.from(table).select('id').order('original_order', {ascending:true});
+    // Não faz nada: o gap fica vago propositalmente
+    // A próxima música inserida usará getNextSlot() e ocupará este espaço
+    return;
+}
+
+async function reorderAdsAfterDelete() {
+    // Idem: gap fica vago
+    return;
+}
+
+// COMPACT: botão "Organizar" — preenche todos os gaps mantendo a ordem relativa
+// Exemplo: [0,1,_,3,4] → [0,1,2,3,4] (sem mudar quem está na frente de quem)
+async function compactOrder(table, filterCol, filterVal) {
+    let query = supabase.from(table).select('id, original_order').order('original_order', {ascending:true});
     if(filterCol && filterVal !== undefined) query = query.eq(filterCol, filterVal);
     const {data} = await query;
     if(!data?.length) return;
-    // Renumera 0, 1, 2, 3...
     await Promise.all(data.map((row, i) =>
         supabaseAdmin.from(table).update({
             original_order: i,
             daily_order:    i,
-            play_order:     i   // propagandas usam play_order
+            play_order:     i
         }).eq('id', row.id)
     ));
 }
 
-async function reorderAdsAfterDelete() {
+async function compactAdsOrder() {
     const {data} = await supabase.from('advertisements').select('id').order('play_order', {ascending:true});
     if(!data?.length) return;
     await Promise.all(data.map((row, i) =>
         supabaseAdmin.from('advertisements').update({ play_order: i }).eq('id', row.id)
     ));
 }
+
+// Botões "Organizar" — chamados pelo HTML
+async function organizeSlotPlaylist(slotId) {
+    await compactOrder('slot_playlists', 'slot_id', slotId);
+    await refreshSlotPlaylist(slotId);
+    showToast('✅ Playlist organizada!');
+}
+
+async function organizeBackgroundPlaylist() {
+    await compactOrder('background_playlist', null, null);
+    const {data} = await supabase.from('background_playlist').select('*').order('original_order', {ascending:true});
+    backgroundPlaylist = data||[]; renderPlaylistTable();
+    showToast('✅ Playlist organizada!');
+}
+
+async function organizeSeasonalPlaylist(category, type) {
+    let query = supabase.from('seasonal_playlists').select('id, original_order')
+        .eq('category', category).eq('type', type).order('original_order', {ascending:true});
+    const {data} = await query;
+    if(!data?.length) return;
+    await Promise.all(data.map((row, i) =>
+        supabaseAdmin.from('seasonal_playlists').update({
+            original_order: i, daily_order: i, play_order: i
+        }).eq('id', row.id)
+    ));
+    const [mRes,aRes] = await Promise.all([
+        supabase.from('seasonal_playlists').select('*').eq('type','music').order('original_order',{ascending:true}),
+        supabase.from('seasonal_playlists').select('*').eq('type','ad').order('play_order',{ascending:true})
+    ]);
+    seasonalData = {natal:{music:[],ads:[]},ano_novo:{music:[],ads:[]},pascoa:{music:[],ads:[]},sao_joao:{music:[],ads:[]}};
+    (mRes.data||[]).forEach(i=>{if(seasonalData[i.category])seasonalData[i.category].music.push(i);});
+    (aRes.data||[]).forEach(i=>{if(seasonalData[i.category])seasonalData[i.category].ads.push(i);});
+    renderAllSeasonalTables();
+    showToast('✅ Playlist sazonal organizada!');
+}
+
+async function organizeAds() {
+    await compactAdsOrder();
+    const {data} = await supabase.from('advertisements').select('*').order('play_order',{ascending:true});
+    advertisements = data||[]; renderAdsTable();
+    showToast('✅ Propagandas organizadas!');
+}
+
+// Toast leve para feedback sem alert()
+function showToast(msg) {
+    let t = document.getElementById('adminToast');
+    if(!t) {
+        t = document.createElement('div');
+        t.id = 'adminToast';
+        t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#006b3f;color:#fff;padding:10px 22px;border-radius:50px;font-size:14px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.2);transition:opacity .3s;';
+        document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.opacity = '0'; }, 2500);
+}
+
+window.organizeSlotPlaylist        = organizeSlotPlaylist;
+window.organizeBackgroundPlaylist  = organizeBackgroundPlaylist;
+window.organizeSeasonalPlaylist    = organizeSeasonalPlaylist;
+window.organizeAds                 = organizeAds;
 // ─────────────────────────────────────────────────────────────
 // GRADES HORÁRIAS
 // ─────────────────────────────────────────────────────────────
@@ -1351,6 +1449,11 @@ function renderGradeContent(slotId) {
                     </table>
                 </div>
                 <div class="shuffle-box"><h4>🎲 Embaralhamento</h4><p>Automático ao completar a playlist.</p><button class="test-btn" onclick="handleForceShuffleSlot(${slotId})">🎲 Forçar Agora</button></div>
+                <div class="shuffle-box" style="border-left-color:#006b3f;background:#e6f4ed;margin-top:8px;">
+                    <h4 style="color:#006b3f;">🔢 Organizar Ordem</h4>
+                    <p>Preenche os espaços vazios mantendo a ordem relativa das músicas.</p>
+                    <button class="submit-btn" style="margin-top:8px;font-size:12px;padding:7px 14px;" onclick="organizeSlotPlaylist(${slotId})">🔢 Organizar Agora</button>
+                </div>
             </div>
             <div class="grade-subsection">
                 <h4>🎬 Vinhetas — ${slot.name}</h4>
@@ -1448,10 +1551,8 @@ async function handleSaveSlotTrack(e,slotId) {
             .select('id,title').eq('slot_id',slotId).eq('audio_url',url).maybeSingle();
         if(existing) { alert(`⚠️ Esta música já está na grade!\n"${existing.title}"`); return; }
 
-        const {data:maxData} = await supabase.from('slot_playlists')
-            .select('original_order').eq('slot_id',slotId)
-            .order('original_order',{ascending:false}).limit(1).maybeSingle();
-        const nextOrder = (maxData?.original_order ?? -1) + 1;
+        // Ocupa o menor slot vago (gap deixado por deleções)
+        const nextOrder = await getNextSlot('slot_playlists', 'slot_id', slotId);
 
         const {error}=await supabaseAdmin.from('slot_playlists').insert([{
             slot_id:slotId, audio_url:url, title,
@@ -1459,7 +1560,7 @@ async function handleSaveSlotTrack(e,slotId) {
             original_order:nextOrder, daily_order:nextOrder, enabled:true
         }]);
         if(error) throw error;
-        alert(`✅ Música adicionada! Posição: ${nextOrder + 1}`);
+        alert(`✅ Música adicionada na posição ${nextOrder + 1}!`);
         clearSlotForm(slotId);
         await refreshSlotPlaylist(slotId);
     } catch(err){ alert('❌ Erro: '+err.message); }
@@ -1684,10 +1785,13 @@ async function handleSeasonalFormSubmit(e) {
                 .select('id,title').eq('audio_url',url).eq('category',category).maybeSingle();
             if(dup){ alert(`⚠️ Esta música já está na playlist de ${category}!\n"${dup.title}"`); return; }
 
-            const {data:maxData} = await supabase.from('seasonal_playlists')
-                .select('play_order').eq('category',category).eq('type',type)
-                .order('play_order',{ascending:false}).limit(1).maybeSingle();
-            nextOrder = (maxData?.play_order ?? -1) + 1;
+            // Ocupa menor slot vago dentro desta categoria+tipo
+            const {data:usedOrders} = await supabase.from('seasonal_playlists')
+                .select('original_order').eq('category',category).eq('type',type)
+                .order('original_order',{ascending:true});
+            const usedSet = new Set((usedOrders||[]).map(r=>r.original_order));
+            nextOrder = 0;
+            while(usedSet.has(nextOrder)) nextOrder++;
         }
 
         const payload={category,type,audio_url:url,title,play_order:nextOrder,enabled:true};
@@ -1909,16 +2013,14 @@ async function handleSavePlaylist(e) {
                 .select('id,title').eq('audio_url',url).maybeSingle();
             if(dup){ alert(`⚠️ Esta música já está na playlist!\n"${dup.title}"`); return; }
 
-            const {data:maxData} = await supabase.from('background_playlist')
-                .select('original_order').order('original_order',{ascending:false}).limit(1).maybeSingle();
-            const nextOrder = (maxData?.original_order ?? -1) + 1;
+            const nextOrder = await getNextSlot('background_playlist', null, null);
 
             await supabaseAdmin.from('background_playlist').insert([{
                 audio_url:url, title,
                 play_order:nextOrder, original_order:nextOrder,
                 daily_order:nextOrder, enabled
             }]);
-            alert(`✅ Adicionado! Numeração: ${nextOrder}`);
+            alert(`✅ Adicionado na posição ${nextOrder + 1}!`);
         }
         handleClearPlaylistForm();
         const {data}=await supabase.from('background_playlist').select('*').order('original_order',{ascending:true});
