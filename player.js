@@ -3,7 +3,10 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const YOUTUBE_API_KEY   = 'AIzaSyCcpLnZ0XHsSEx34Zvkc80FwmHiHIqS6Gs';
 const BLOCKED_TERMS     = ['funk','rock pesado','metal','punk','rap','trap'];
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase      = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Cliente com service key para operações internas do player (shuffle, play_count)
+const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5empzZ2ZvYXh5ZXllcG95bHZnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTU4NTM2NSwiZXhwIjoyMDc1MTYxMzY1fQ.rxDX7YsuxAvoMbImnk1Ovlj7YQ0WI_XwcTZUJpXKQYU';
+const supabaseWrite = window.supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 // ── DOM — declaradas aqui, atribuídas no init ────────────────
 let audioPlayer, playBtn, volumeSlider, syncBtn;
@@ -15,7 +18,6 @@ let isShuffling       = false;
 let lastKnownDate     = null;
 
 // ── Analytics ────────────────────────────────────────────────
-let currentTrackInfo  = null;
 
 // ── Emergência ───────────────────────────────────────────────
 let emergencyActive         = false;
@@ -25,7 +27,6 @@ let playerPausedByEmergency = false;
 
 // ── Locutor ao vivo ───────────────────────────────────────────
 let liveLocutorChannel = null;
-let liveAudioQueue     = [];
 let liveAudioCtx       = null;
 
 // ── Playlist legada (fundo / madrugada) ───────────────────────
@@ -192,7 +193,7 @@ async function shufflePlaylistAfterComplete(table, slotId) {
         for(let i = 0; i < tracks.length; i += BATCH) {
             const batch = tracks.slice(i, i + BATCH);
             await Promise.all(batch.map((t, bi) =>
-                supabase.from(table).update({ daily_order: idx[i + bi] }).eq('id', t.id)
+                supabaseWrite.from(table).update({ daily_order: idx[i + bi] }).eq('id', t.id)
             ));
         }
     } catch(err) { console.error('Erro shuffle:', err); }
@@ -348,6 +349,18 @@ async function restorePlaybackState() {
             return true;
         }
 
+        // Restaura modo sazonal
+        if(!data.is_grade_mode && data.current_table === 'seasonal_playlists') {
+            isGradeMode = false;
+            if(isSeasonalActive && seasonalPlaylist.length) {
+                const idxById = data.current_id
+                    ? seasonalPlaylist.findIndex(t => t.id === data.current_id)
+                    : -1;
+                currentBgIndex = idxById >= 0 ? idxById
+                    : Math.min(data.current_index || 0, Math.max(seasonalPlaylist.length - 1, 0));
+                return true;
+            }
+        }
         return false;
     } catch(err) { return false; }
 }
@@ -472,11 +485,17 @@ function playSlotMusicTrack() {
     if(!slotPlaylist.length){ playBgMusic(); return; }
     const track = slotPlaylist[slotCurrentIndex % slotPlaylist.length];
     if(!track?.audio_url){ playBgMusic(); return; }
-    // Pula músicas na blacklist
+    // Pula músicas na blacklist (máx de tentativas = tamanho da playlist)
     if(isBlacklisted(track.audio_url)) {
+        if(!playSlotMusicTrack._skipCount) playSlotMusicTrack._skipCount = 0;
+        playSlotMusicTrack._skipCount++;
+        if(playSlotMusicTrack._skipCount >= slotPlaylist.length) {
+            playSlotMusicTrack._skipCount = 0; handleNoAudio(); return;
+        }
         slotCurrentIndex = (slotCurrentIndex + 1) % Math.max(slotPlaylist.length, 1);
         playSlotMusicTrack(); return;
     }
+    playSlotMusicTrack._skipCount = 0; // reseta ao tocar com sucesso
     audioPlayer.src = track.audio_url;
     updateDisplay(currentSlot?`🎵 ${currentSlot.name}`:'Tocando agora', track.title||'Música');
     slotTracksSinceAd++;
@@ -520,11 +539,17 @@ function playBgMusic() {
     if(ads.length>0 && tracksPlayedSinceAd>=freq){ playLegacyAd(); return; }
     const track = playlist[currentBgIndex%playlist.length];
     if(!track?.audio_url){ handleNoAudio(); return; }
-    // Pula músicas na blacklist
+    // Pula músicas na blacklist (máx de tentativas = tamanho da playlist)
     if(isBlacklisted(track.audio_url)) {
+        if(!playBgMusic._skipCount) playBgMusic._skipCount = 0;
+        playBgMusic._skipCount++;
+        if(playBgMusic._skipCount >= playlist.length) {
+            playBgMusic._skipCount = 0; handleNoAudio(); return;
+        }
         currentBgIndex = (currentBgIndex + 1) % Math.max(playlist.length, 1);
         playBgMusic(); return;
     }
+    playBgMusic._skipCount = 0;
     audioPlayer.src=track.audio_url;
     updateDisplay(isSeasonalActive?'🎭 Especial':'Tocando agora', track.title||'Música');
     tracksPlayedSinceAd++;
@@ -806,7 +831,7 @@ function updateDisplay(status, track) {
 async function forceSync() {
     syncBtn.disabled=true; syncBtn.textContent='⏳ Sincronizando...';
     try {
-        await loadAllData(); await detectAndActivateSlot(); await loadCurrentHourAudio();
+        await loadAllData(); await detectAndActivateSlotSilent(); await loadCurrentHourAudio();
         syncBtn.textContent='✅ Sincronizado!';
     } catch(e){ syncBtn.textContent='❌ Erro'; }
     finally { setTimeout(()=>{ syncBtn.textContent='🔄 Sincronizar'; syncBtn.disabled=false; },2000); }
@@ -867,6 +892,9 @@ function setupRealtimeSubscription() {
             if(currentSlot) await loadSlotJingles(currentSlot.id);
         })
         .on('postgres_changes',{event:'UPDATE',schema:'public',table:'locutor_state'},payload=>handleLocutorStateChange(payload.new))
+        .on('postgres_changes',{event:'*',schema:'public',table:'music_blacklist'},async()=>{
+            await loadBlacklistPlayer(); // atualiza blacklist em tempo real
+        })
         .subscribe();
 }
 
@@ -999,6 +1027,10 @@ async function handleLocutorStateChange(state) {
 // TTS
 // ─────────────────────────────────────────────────────────────
 function initTTSListener() {
+    // Escuta ambos os canais por compatibilidade
+    supabase.channel('tts_broadcast')
+        .on('broadcast',{event:'tts_play'},payload=>handleTTSPlay(payload.payload))
+        .subscribe();
     supabase.channel('tts_player')
         .on('broadcast',{event:'tts_play'},payload=>handleTTSPlay(payload.payload))
         .subscribe();
@@ -1285,7 +1317,7 @@ async function logAdPlay(ad) {
             slot_name:  currentSlot?.name || (isGradeMode ? 'Grade' : 'Fundo')
         }]);
         // Atualiza contador e timestamp na tabela advertisements
-        await supabase.from('advertisements').update({
+        await supabaseWrite.from('advertisements').update({
             play_count:  (ad.play_count || 0) + 1,
             last_played: new Date().toISOString()
         }).eq('id', ad.id);
