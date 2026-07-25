@@ -49,6 +49,7 @@
             <button class="nav-item" data-section="blacklist">🚫 Blacklist</button>
             <button class="nav-item" data-section="flash">⚡ Promoção Relâmpago</button>
             <button class="nav-item" data-section="silence">🔇 Modo Silêncio</button>
+            <button class="nav-item" data-section="health">🏥 Saúde do Sistema</button>
             <button class="nav-item" data-section="analytics">📊 Analytics</button>
             <button class="nav-item" data-section="emergency">🚨 Emergência</button>
             <button class="nav-item" data-section="upload">☁️ Upload Cloudinary</button>
@@ -111,6 +112,7 @@
                 <div class="welcome-card" onclick="goSection('blacklist')"><div class="wc-icon">🚫</div><div class="wc-label">Blacklist</div></div>
                 <div class="welcome-card" onclick="goSection('flash')"><div class="wc-icon">⚡</div><div class="wc-label">Promoção Relâmpago</div></div>
                 <div class="welcome-card" onclick="goSection('silence')"><div class="wc-icon">🔇</div><div class="wc-label">Modo Silêncio</div></div>
+                <div class="welcome-card" onclick="goSection('health')"><div class="wc-icon">🏥</div><div class="wc-label">Saúde do Sistema</div></div>
                 <div class="welcome-card" onclick="goSection('analytics')">
                     <div class="wc-icon">📊</div>
                     <div class="wc-label">Analytics</div>
@@ -324,10 +326,51 @@
                 <div class="section-desc" style="margin-top:8px;margin-bottom:0;">⚠️ O navegador pedirá permissão para acessar o microfone. Funciona melhor no Chrome/Edge.</div>
             </div>
 
+            <!-- Chamada de Funcionário -->
+            <div class="admin-card" style="border-left:4px solid #f59e0b;background:#fffbf0;">
+                <h3 class="card-title" style="color:#92400e;">📣 Chamada de Funcionário</h3>
+                <p class="section-desc" style="border-color:#f59e0b;background:#fff8e1;">Chame um funcionário pelo nome em todos os players com um clique. Digite o nome e use os botões rápidos por setor.</p>
+                <form class="edit-form" id="chamadaForm">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <div class="form-group">
+                            <label>Nome do Funcionário:</label>
+                            <input type="text" id="chamadaNome" placeholder="Ex: Maria, João..." required>
+                        </div>
+                        <div class="form-group">
+                            <label>Setor do Funcionário:</label>
+                            <input type="text" id="chamadaSetor" placeholder="Ex: Caixa, Açougue..." required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Comparecer a (opcional):</label>
+                        <input type="text" id="chamadaDestino" placeholder="Ex: Gerência, Caixa 3, Estoque...">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="submit-btn" style="background:#f59e0b;">📣 Chamar Agora</button>
+                    </div>
+                </form>
+
+                <h4 style="margin:14px 0 8px;color:#92400e;font-size:13px;">⚡ Atalhos Rápidos</h4>
+                <p style="font-size:12px;color:#666;margin-bottom:10px;">Digite o nome acima e clique no setor de destino:</p>
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+                    <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('Caixa','à gerência')">🛒 Gerência</button>
+                    <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('','ao caixa central')">💰 Caixa Central</button>
+                    <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('','ao açougue')">🥩 Açougue</button>
+                    <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('','à padaria')">🍞 Padaria</button>
+                    <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('','à frutaria')">🍎 Frutaria</button>
+                    <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('','ao estoque')">📦 Estoque</button>
+                    <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('','à segurança')">🔒 Segurança</button>
+                    <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('','à limpeza')">🧹 Limpeza</button>
+                </div>
+            </div>
+
             <!-- TTS -->
             <div class="admin-card">
                 <h3 class="card-title">📢 Promoções em Voz (TTS)</h3>
-                <p class="section-desc">Digite o texto e dispare com voz feminina em todos os players. Salve textos recorrentes na biblioteca.</p>
+                <p class="section-desc">Digite o texto e dispare com voz em todos os players. Escolha entre ElevenLabs (alta qualidade, 10k chars/mês grátis) ou Edge TTS (Microsoft, sem limite).</p>
+                <div id="elevenLabsUsageBar" style="margin-bottom:12px;padding:10px 14px;background:#f0faf5;border-radius:8px;border:1px solid #a7d9bb;">
+                    <span style="font-size:12px;color:#666;">Carregando consumo ElevenLabs...</span>
+                </div>
                 <div class="tts-compose">
                     <div class="form-group"><label>Título:</label><input type="text" id="ttsTitleInput" placeholder="Ex: Promoção de Quinta"></div>
                     <div class="form-group"><label>Categoria:</label>
@@ -502,7 +545,10 @@
             </div>
             <div class="admin-card">
                 <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
-                    <button class="submit-btn" style="font-size:12px;padding:7px 16px;" onclick="organizeAds()">🔢 Organizar Ordem</button>
+                    <div style="display:flex;gap:8px;">
+                        <button class="submit-btn" style="font-size:12px;padding:7px 16px;" onclick="organizeAds()">🔢 Organizar</button>
+                        <button class="test-btn" style="font-size:12px;padding:7px 14px;" onclick="shuffleAdsAfterComplete().then(()=>renderAdsTable())">🎲 Embaralhar</button>
+                    </div>
                 </div>
                 <div class="table-container"><table class="data-table"><thead><tr><th>Ordem</th><th>Título</th><th>Anunciante</th><th>Freq.</th><th>Horário</th><th>Reproduções</th><th>Última vez</th><th>Status</th><th>Ações</th></tr></thead><tbody id="adsTableBody"></tbody></table></div>
             </div>
@@ -618,6 +664,27 @@
                 <div style="margin-top:16px;"><div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Início</th><th>Fim</th><th>Dias</th><th>Status</th><th>Ações</th></tr></thead><tbody id="silenceScheduleBody"><tr><td colspan="6" style="text-align:center;padding:20px;color:#999;">Nenhum agendamento.</td></tr></tbody></table></div></div>
             </div>
         </section>
+        <!-- SAÚDE DO SISTEMA -->
+        <section class="admin-section" id="section-health">
+            <div class="section-header">
+                <h2>🏥 Saúde do Sistema</h2>
+                <button class="submit-btn" onclick="loadSystemHealth()" style="font-size:13px;padding:8px 16px;">🔄 Verificar Agora</button>
+            </div>
+            <p class="section-desc">Visão geral de todos os serviços externos. Verifica Cloudinary, ElevenLabs, Cobalt, Supabase e Edge Functions de uma vez.</p>
+            <div id="systemHealthContent">
+                <div style="color:#666;font-size:13px;padding:20px;text-align:center;">Clique em "Verificar Agora" para checar o status de todos os serviços.</div>
+            </div>
+            <div class="admin-card" style="margin-top:16px;border-left:4px solid #6c757d;">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+                    <div>
+                        <h3 class="card-title" style="margin:0;">💾 Backup dos Dados</h3>
+                        <p style="font-size:12px;color:#666;margin-top:4px;">Exporta grades, playlists, propagandas e configurações em JSON. Proteção contra perda por edição errada ou falha de serviço.</p>
+                    </div>
+                    <button id="exportBackupBtn" class="submit-btn" style="background:#6c757d;white-space:nowrap;" onclick="exportBackup()">⬇️ Exportar Backup</button>
+                </div>
+            </div>
+        </section>
+
         <!-- ── ANALYTICS ── (único) -->
         <section class="admin-section" id="section-analytics">
             <div class="section-header">
@@ -700,7 +767,17 @@
 
         <!-- ── UPLOAD CLOUDINARY ── -->
         <section class="admin-section" id="section-upload">
-            <div class="section-header"><h2>☁️ Upload no Cloudinary</h2></div>
+            <div class="section-header">
+                <h2>☁️ Upload no Cloudinary</h2>
+                <button class="submit-btn" onclick="loadCloudinaryUsage()" style="font-size:12px;padding:7px 14px;">🔄 Atualizar uso</button>
+            </div>
+
+            <!-- Indicador de uso -->
+            <div class="admin-card" style="border-left:4px solid #006b3f;">
+                <h3 class="card-title">📊 Uso de Armazenamento</h3>
+                <div id="cloudinaryUsageBar"><span style="color:#666;font-size:12px;">Carregando...</span></div>
+            </div>
+
             <div class="admin-card">
                 <h3 class="card-title">Como fazer upload de áudio:</h3>
                 <ol class="upload-steps">
