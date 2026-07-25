@@ -271,6 +271,56 @@
             </div>
             <p class="section-desc">Ouça a prévia antes de aprovar. O sistema tenta converter via Cobalt automaticamente. Se não conseguir, solicitará a URL do Cloudinary.</p>
 
+            <!-- Guia de classificação -->
+            <div class="admin-card" style="border-left:4px solid #7c3aed;background:#faf5ff;">
+                <details>
+                    <summary style="cursor:pointer;font-weight:700;font-size:14px;color:#7c3aed;user-select:none;list-style:none;display:flex;align-items:center;gap:8px;">
+                        <span>🤖</span>
+                        <span>Classificador de Músicas — Rádio</span>
+                        <span style="font-size:11px;font-weight:400;color:#9f7aea;margin-left:auto;">(clique para expandir)</span>
+                    </summary>
+                    <div style="margin-top:14px;font-size:13px;line-height:1.8;color:#333;">
+                        <p style="margin:0 0 10px;">Classifique cada música em 3 níveis:</p>
+
+                        <p style="margin:0 0 6px;font-weight:700;">1. Estilo:</p>
+                        <p style="margin:0 0 12px;color:#555;">Sertanejo Raiz/Modão, Sertanejo Romântico, Sertanejo Universitário, Feminejo, Arrocha, Seresta, Sofrência, Forró Tradicional, Forró Eletrônico, Piseiro, Xote, MPB, Regional Nordestino, Pop Nacional, Pagode.</p>
+
+                        <p style="margin:0 0 6px;font-weight:700;">2. Tópico da programação <span style="font-weight:400;color:#555;">(1 principal + sempre "Madrugada Aleatória" junto):</span></p>
+                        <div style="background:#f3e8ff;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;">
+                            <div><strong>07–09h</strong> Manhã do Campo — raiz, modão, forró tradicional</div>
+                            <div><strong>09–12h</strong> Manhã Animada — sertanejo leve, pagode leve, MPB</div>
+                            <div><strong>12–14h</strong> Hora do Almoço — romântico, arrocha, seresta, sofrência leve</div>
+                            <div><strong>14–18h</strong> Tarde Variada — universitário, feminejo, hits, sofrência, pop</div>
+                            <div><strong>18–20h</strong> Saída do Trabalho — forró eletrônico, piseiro, dançantes</div>
+                            <div><strong>20–07h</strong> Madrugada Aleatória — shuffle, todas</div>
+                        </div>
+
+                        <p style="margin:0 0 6px;font-weight:700;">3. Playlist(s) temática(s) <span style="font-weight:400;color:#555;">(0 ou mais):</span></p>
+                        <p style="margin:0 0 12px;color:#555;">Natal, Ano Novo, Páscoa, São João, Românticas, Sofrência, Sertanejo Universitário, Sertanejo Raiz/Modão, Forró e Piseiro, Boteco/Churrasco, Raízes do Brasil.</p>
+
+                        <p style="margin:0 0 6px;font-weight:700;">Regras:</p>
+                        <ul style="margin:0 0 12px;padding-left:18px;color:#555;font-size:12px;">
+                            <li>Se a música já foi enviada antes, avise que é repetida — não reclassifique.</li>
+                            <li>Se não tiver certeza do estilo, busque antes de responder; se ainda assim faltar info, marque "pendente de revisão" e peça contexto.</li>
+                            <li>Se tiver letra explícita, avise e sugira horário mais adulto.</li>
+                            <li>Se for fora do padrão sertanejo/forró/regional, avise e sugira o mais próximo.</li>
+                        </ul>
+
+                        <p style="margin:0 0 6px;font-weight:700;">Formato de resposta:</p>
+                        <div style="background:#ede9fe;border-radius:8px;padding:10px 14px;font-size:12px;font-family:monospace;color:#4c1d95;line-height:1.9;">
+                            [Música] - [Artista]<br>
+                            1. Estilo: [estilo]<br>
+                            2. Tópico: [principal] + Madrugada Aleatória<br>
+                            3. Playlist(s): [lista ou nenhuma]
+                        </div>
+
+                        <div style="margin-top:10px;padding:8px 12px;background:#fff;border-radius:8px;border:1px dashed #c4b5fd;font-size:11px;color:#7c3aed;">
+                            💡 Copie este guia e cole em uma conversa com o Claude antes de pedir a classificação.
+                        </div>
+                    </div>
+                </details>
+            </div>
+
             <div class="admin-card" style="border-left:4px solid #dc3545;background:#fff5f5;">
                 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
                     <div>
