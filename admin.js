@@ -58,6 +58,7 @@ function init() {
     setupAdminSearchListeners();
     setupEmergencyListeners();
     setupLiveLocutorListeners();
+    setupChamadaFuncionario();
 }
 
 function checkAuth() {
@@ -1421,9 +1422,12 @@ function renderGradeContent(slotId) {
                     <div class="grade-panel-name">${slot.name}</div>
                     <div class="grade-panel-info">${String(slot.start_hour).padStart(2,'0')}h – ${String(slot.end_hour).padStart(2,'0')}h · ${slot.genres||'Sem gêneros'}</div>
                 </div>
-                <div class="grade-panel-stats">
-                    <span class="grade-stat">${playlist.filter(t=>t.enabled).length} músicas</span>
-                    <span class="grade-stat">${jingles.filter(j=>j.enabled).length} vinhetas</span>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <div class="grade-panel-stats">
+                        <span class="grade-stat">${playlist.filter(t=>t.enabled).length} músicas</span>
+                        <span class="grade-stat">${jingles.filter(j=>j.enabled).length} vinhetas</span>
+                    </div>
+                    <button class="btn-edit" style="font-size:11px;padding:5px 10px;" onclick="editGrade(${slotId})">✏️ Editar Grade</button>
                 </div>
             </div>
             <div class="grade-subsection">
@@ -1514,6 +1518,7 @@ function renderSlotPlaylistTable(slotId) {
             <td><span class="status-badge ${t.enabled?'active':'inactive'}">${t.enabled?'✅ Ativo':'❌ Inativo'}</span></td>
             <td><div class="action-btns">
                 <button class="btn-edit slot-edit-btn" data-id="${t.id}" data-slot="${slotId}">✏️</button>
+                <button class="btn-toggle" style="background:#17a2b8;" onclick="downloadAudio('${t.audio_url}','${t.title?.replace(/'/g,'')||'audio'}.mp3')">⬇️</button>
                 <button class="btn-toggle slot-toggle-btn" data-id="${t.id}" data-enabled="${t.enabled}" data-slot="${slotId}">${t.enabled?'🔴':'🟢'}</button>
                 <button class="btn-delete slot-delete-btn" data-id="${t.id}" data-slot="${slotId}">🗑️</button>
             </div></td>
@@ -1990,6 +1995,7 @@ function renderPlaylistTable() {
             <td><span class="audio-url" title="${t.audio_url}">${t.audio_url}</span></td>
             <td><div class="action-btns">
                 <button class="btn-edit pl-edit-btn" data-id="${t.id}">✏️</button>
+                <button class="btn-toggle" style="background:#17a2b8;" onclick="downloadAudio('${t.audio_url}','${t.title?.replace(/'/g,'')||'audio'}.mp3')">⬇️</button>
                 <button class="btn-toggle pl-toggle-btn" data-id="${t.id}" data-enabled="${t.enabled}">${t.enabled?'🔴':'🟢'}</button>
                 <button class="btn-delete pl-delete-btn" data-id="${t.id}">🗑️</button>
             </div></td>
@@ -2100,6 +2106,7 @@ function renderAdsTable() {
             <td><span class="status-badge ${ad.enabled?'active':'inactive'}">${ad.enabled?'✅ Ativo':'❌ Inativo'}</span></td>
             <td><div class="action-btns">
                 <button class="btn-edit ad-edit-btn" data-id="${ad.id}">✏️</button>
+                <button class="btn-toggle" style="background:#17a2b8;" onclick="downloadAudio('${ad.audio_url}','${ad.title?.replace(/'/g,'')||'ad'}.mp3')">⬇️</button>
                 <button class="btn-toggle ad-toggle-btn" data-id="${ad.id}" data-enabled="${ad.enabled}">${ad.enabled?'🔴':'🟢'}</button>
                 <button class="btn-delete ad-delete-btn" data-id="${ad.id}">🗑️</button>
             </div></td>
@@ -2470,7 +2477,12 @@ function goSection(name) {
 
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.nav-item').forEach(btn => {
-        btn.addEventListener('click', () => goSection(btn.dataset.section));
+        btn.addEventListener('click', () => {
+            goSection(btn.dataset.section);
+            if(btn.dataset.section === 'health')    loadSystemHealth();
+            if(btn.dataset.section === 'upload')    loadCloudinaryUsage();
+            if(btn.dataset.section === 'locutor')   loadElevenLabsUsage('elevenLabsUsageBar');
+        });
     });
     document.getElementById('sidebarToggle')?.addEventListener('click', () => {
         document.getElementById('adminSidebar')?.classList.toggle('open');
@@ -2526,6 +2538,85 @@ window.goSection              = goSection;
 window.toggleGrades           = toggleGrades;
 window.loadAnalytics          = loadAnalytics;
 window.clearAnalytics         = clearAnalytics;
+// ─────────────────────────────────────────────────────────────
+// CLOUDINARY — Indicador de uso de armazenamento
+// ─────────────────────────────────────────────────────────────
+async function loadCloudinaryUsage() {
+    const el = document.getElementById('cloudinaryUsageBar');
+    if(!el) return;
+    el.innerHTML = '<span style="color:#666;font-size:12px;">⏳ Carregando uso...</span>';
+    try {
+        // Cloudinary Usage API (não requer autenticação para cloud name público)
+        // Usa o endpoint de resources para contar via admin API
+        // Como não temos API Secret exposto no frontend, estimamos pelo ad_log + play_log
+        const [plRes, bgRes, slotRes, seasRes] = await Promise.all([
+            supabase.from('background_playlist').select('id', {count:'exact', head:true}),
+            supabase.from('slot_playlists').select('id', {count:'exact', head:true}),
+            supabase.from('seasonal_playlists').select('id', {count:'exact', head:true}),
+            supabase.from('advertisements').select('id', {count:'exact', head:true}),
+        ]);
+        const totalTracks = (plRes.count||0) + (bgRes.count||0) + (slotRes.count||0) + (seasRes.count||0);
+        // Estimativa: média de 5MB por faixa de áudio MP3 128kbps
+        const estimatedMB  = totalTracks * 5;
+        const limitMB      = 25 * 1024; // 25GB em MB
+        const pct          = Math.min(Math.round((estimatedMB / limitMB) * 100), 100);
+        const color        = pct >= 85 ? '#dc3545' : pct >= 65 ? '#f59e0b' : '#006b3f';
+        const icon         = pct >= 85 ? '🔴' : pct >= 65 ? '🟡' : '🟢';
+
+        el.innerHTML = `
+            <div style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+                <span style="font-size:13px;font-weight:600;color:${color};">${icon} Armazenamento Cloudinary</span>
+                <span style="font-size:12px;color:#666;">~${estimatedMB.toLocaleString('pt-BR')} MB estimados de 25.600 MB (plano gratuito)</span>
+            </div>
+            <div style="background:#e9ecef;border-radius:50px;height:10px;overflow:hidden;">
+                <div style="background:${color};width:${pct}%;height:100%;border-radius:50px;transition:width .5s;"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:4px;">
+                <span style="font-size:11px;color:#666;">${totalTracks} faixas de áudio cadastradas</span>
+                <span style="font-size:11px;font-weight:700;color:${color};">${pct}% estimado</span>
+            </div>
+            ${pct >= 85 ? '<div style="margin-top:8px;padding:8px 12px;background:#f8d7da;border-radius:8px;font-size:12px;color:#721c24;font-weight:600;">⚠️ Armazenamento próximo do limite! Remova faixas não utilizadas ou considere upgrade.</div>' : ''}
+            ${pct >= 65 && pct < 85 ? '<div style="margin-top:8px;padding:8px 12px;background:#fff3cd;border-radius:8px;font-size:12px;color:#856404;">⚡ Atenção: mais da metade do armazenamento está em uso.</div>' : ''}
+            <div style="margin-top:8px;font-size:11px;color:#999;">* Estimativa baseada em 5MB por faixa. Para valor exato, acesse cloudinary.com/console.</div>`;
+    } catch(err) {
+        el.innerHTML = '<span style="color:#dc3545;font-size:12px;">❌ Não foi possível verificar o uso.</span>';
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// CHAMADA DE FUNCIONÁRIO POR SETOR
+// ─────────────────────────────────────────────────────────────
+const SETORES_DEFAULT = ['Caixa', 'Açougue', 'Padaria', 'Frutaria', 'Estoque', 'Gerência', 'Segurança', 'Limpeza'];
+
+function setupChamadaFuncionario() {
+    const form = document.getElementById('chamadaForm');
+    if(!form) return;
+    form.addEventListener('submit', e => {
+        e.preventDefault();
+        const nome   = document.getElementById('chamadaNome').value.trim();
+        const setor  = document.getElementById('chamadaSetor').value.trim();
+        const destino= document.getElementById('chamadaDestino').value.trim();
+        if(!nome || !setor) { alert('Preencha o nome e o setor.'); return; }
+        const msg = destino
+            ? `Atenção! Favor ${nome}, do setor de ${setor}, comparecer imediatamente a ${destino}. Obrigado.`
+            : `Atenção! Favor ${nome}, do setor de ${setor}, comparecer à gerência imediatamente. Obrigado.`;
+        dispatchTTS(msg, `Chamada: ${nome}`);
+        document.getElementById('chamadaNome').value = '';
+        document.getElementById('chamadaDestino').value = '';
+        showToast(`📢 Chamando ${nome}...`);
+    });
+}
+
+function chamadaRapida(setor, destino) {
+    const nome = document.getElementById('chamadaNome').value.trim();
+    if(!nome) { alert('Digite o nome do funcionário antes de usar os botões rápidos.'); return; }
+    const msg = `Atenção! Favor ${nome}, comparecer imediatamente ${destino ? 'a ' + destino : 'à gerência'}. Obrigado.`;
+    dispatchTTS(msg, `Chamada: ${nome}`);
+    showToast(`📢 Chamando ${nome} para ${destino || 'gerência'}...`);
+}
+
+window.loadCloudinaryUsage    = loadCloudinaryUsage;
+window.chamadaRapida          = chamadaRapida;
 window.loadEmergencyState     = loadEmergencyState;
 window.startLiveLocutor       = startLiveLocutor;
 
@@ -2617,7 +2708,7 @@ window.showCreateGradeForm = showCreateGradeForm;
 window.hideCreateGradeForm = hideCreateGradeForm;
 
 function setupCreateGradeListeners() {
-    document.getElementById('createGradeForm')?.addEventListener('submit', handleCreateGrade);
+    document.getElementById('createGradeForm')?.addEventListener('submit', handleSaveGrade);
 }
 
 async function handleCreateGrade(e) {
@@ -3123,6 +3214,8 @@ async function extendedLoadAllData() {
     await loadFlashHistory();
     await loadSeasonalAutoStatuses();
     setInterval(checkSilenceSchedules, 30000);
+    loadCloudinaryUsage(); // verifica uso de armazenamento ao carregar
+    loadElevenLabsUsage('elevenLabsUsageBar'); // medidor ElevenLabs
     setInterval(checkSeasonalAutoActivation, 600000); // a cada 10min
     checkSeasonalAutoActivation(); // verifica imediatamente ao carregar
 }
@@ -3131,6 +3224,431 @@ async function extendedLoadAllData() {
 window.saveSeasonalAutoConfig  = saveSeasonalAutoConfig;
 window.loadFlashHistory        = loadFlashHistory;
 window.loadSilenceSchedules    = loadSilenceSchedules;
+
+// ═════════════════════════════════════════════════════════════
+// TTS VIA EDGE FUNCTION (ElevenLabs + Edge TTS → Cloudinary)
+// ═════════════════════════════════════════════════════════════
+const TTS_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/tts-generate`;
+
+// Vozes disponíveis por motor
+const TTS_VOICES = {
+    elevenlabs: [
+        { id: 'EXAVITQu4vr4xnSDxMaL', label: 'Rachel (Feminina, natural)' },
+        { id: 'VR6AewLTigWG4xSOukaG', label: 'Arnold (Masculino, grave)' },
+        { id: 'pNInz6obpgDQGcFmaJgB', label: 'Adam (Masculino, médio)' },
+        { id: 'MF3mGyEYCl7XYWbV9V6O', label: 'Elli (Feminina, jovem)' },
+    ],
+    edge: [
+        { id: 'pt-BR-FranciscaNeural', label: 'Francisca (Feminina, pt-BR)' },
+        { id: 'pt-BR-AntonioNeural',   label: 'Antônio (Masculino, pt-BR)' },
+        { id: 'pt-PT-RaquelNeural',    label: 'Raquel (Feminina, pt-PT)' },
+        { id: 'pt-PT-DuarteNeural',    label: 'Duarte (Masculino, pt-PT)' },
+    ],
+};
+
+// Gera áudio TTS via Edge Function e retorna URL do Cloudinary
+async function generateTTSAudio(text, engine, voiceId, title, onProgress) {
+    if(onProgress) onProgress(`🎙️ Gerando áudio (${engine})...`);
+
+    // Se ElevenLabs, verifica cota primeiro
+    if(engine === 'elevenlabs') {
+        const remaining = await getElevenLabsRemaining();
+        if(remaining !== null && remaining < text.length) {
+            const msg = `❌ Cota ElevenLabs insuficiente.
+Texto: ${text.length} caracteres
+Disponível: ${remaining} caracteres`;
+            if(onProgress) onProgress(msg);
+            alert(msg);
+            return null;
+        }
+    }
+
+    const headers = {
+        'Content-Type':        'application/json',
+        'Authorization':       `Bearer ${SUPABASE_ANON_KEY}`,
+        'x-function-secret':   FUNCTION_SECRET,
+    };
+
+    try {
+        const res  = await fetch(TTS_FUNCTION_URL, {
+            method:  'POST',
+            headers,
+            body:    JSON.stringify({ text, engine, voice_id: voiceId, title }),
+        });
+        const data = await res.json();
+
+        if(!res.ok || !data.audio_url) {
+            if(onProgress) onProgress(`❌ ${data.error || 'Erro desconhecido'}`);
+            alert(`Erro ao gerar TTS: ${data.error || 'Erro desconhecido'}`);
+            return null;
+        }
+
+        // Registra consumo ElevenLabs
+        if(engine === 'elevenlabs' && data.chars_used) {
+            await supabase.from('elevenlabs_usage').insert([{
+                chars_used: data.chars_used,
+                month:      new Date().toISOString().slice(0, 7),
+                engine:     'elevenlabs',
+                title,
+            }]);
+        }
+
+        if(onProgress) onProgress('✅ Áudio gerado!');
+        return data.audio_url;
+    } catch(err) {
+        if(onProgress) onProgress(`❌ ${err.message}`);
+        return null;
+    }
+}
+
+// ═════════════════════════════════════════════════════════════
+// 2. MEDIDOR DE CONSUMO ELEVENLABS
+// ═════════════════════════════════════════════════════════════
+const ELEVENLABS_MONTHLY_LIMIT = 10000; // plano gratuito
+
+async function getElevenLabsRemaining() {
+    try {
+        const month = new Date().toISOString().slice(0, 7);
+        const { data } = await supabase.from('elevenlabs_usage')
+            .select('chars_used').eq('month', month);
+        const used = (data || []).reduce((sum, r) => sum + (r.chars_used || 0), 0);
+        return Math.max(0, ELEVENLABS_MONTHLY_LIMIT - used);
+    } catch { return null; }
+}
+
+async function loadElevenLabsUsage(containerId) {
+    const el = document.getElementById(containerId);
+    if(!el) return;
+    try {
+        const month = new Date().toISOString().slice(0, 7);
+        const { data } = await supabase.from('elevenlabs_usage')
+            .select('chars_used').eq('month', month);
+        const used      = (data || []).reduce((sum, r) => sum + (r.chars_used || 0), 0);
+        const remaining = Math.max(0, ELEVENLABS_MONTHLY_LIMIT - used);
+        const pct       = Math.round((used / ELEVENLABS_MONTHLY_LIMIT) * 100);
+        const color     = pct >= 90 ? '#dc3545' : pct >= 70 ? '#f59e0b' : '#006b3f';
+        const icon      = pct >= 90 ? '🔴' : pct >= 70 ? '🟡' : '🟢';
+        const meses     = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        const [y, m]    = month.split('-');
+        el.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:4px;">
+                <span style="font-size:13px;font-weight:600;color:${color};">${icon} ElevenLabs — ${meses[parseInt(m)-1]}/${y}</span>
+                <span style="font-size:12px;color:#666;">${used.toLocaleString('pt-BR')} / ${ELEVENLABS_MONTHLY_LIMIT.toLocaleString('pt-BR')} caracteres (${pct}%)</span>
+            </div>
+            <div style="background:#e9ecef;border-radius:50px;height:8px;overflow:hidden;">
+                <div style="background:${color};width:${pct}%;height:100%;border-radius:50px;transition:width .5s;"></div>
+            </div>
+            <div style="font-size:11px;color:#666;margin-top:4px;">${remaining.toLocaleString('pt-BR')} caracteres restantes este mês</div>
+            ${pct >= 90 ? '<div style="margin-top:6px;padding:6px 10px;background:#f8d7da;border-radius:6px;font-size:11px;color:#721c24;font-weight:600;">⚠️ Cota quase esgotada! Use Edge TTS até o próximo mês.</div>' : ''}
+        `;
+    } catch(err) {
+        if(el) el.innerHTML = '<span style="font-size:12px;color:#999;">Não foi possível carregar o consumo.</span>';
+    }
+}
+
+// ═════════════════════════════════════════════════════════════
+// 3. BOTÃO DE DOWNLOAD UNIVERSAL
+// ═════════════════════════════════════════════════════════════
+async function downloadAudio(url, filename) {
+    if(!url) { alert('URL de áudio inválida.'); return; }
+    try {
+        const a = document.createElement('a');
+        // Tenta download direto primeiro (funciona para Cloudinary)
+        a.href     = url.replace('/upload/', '/upload/fl_attachment/');
+        a.download = filename || 'audio.mp3';
+        a.target   = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    } catch(err) {
+        // fallback: abre em nova aba
+        window.open(url, '_blank');
+    }
+}
+window.downloadAudio = downloadAudio;
+
+// ═════════════════════════════════════════════════════════════
+// 4. EDITOR DE GRADES (editar grades existentes)
+// ═════════════════════════════════════════════════════════════
+let editingGradeId = null;
+
+function editGrade(slotId) {
+    const slot = timeSlots.find(s => s.id === slotId);
+    if(!slot) return;
+    editingGradeId = slotId;
+
+    // Preenche o formulário de criação com os dados atuais
+    document.getElementById('newGradeName').value    = slot.name         || '';
+    document.getElementById('newGradeDesc').value    = slot.description  || '';
+    document.getElementById('newGradeGenres').value  = slot.genres       || '';
+    document.getElementById('newGradeStart').value   = slot.start_hour   ?? 8;
+    document.getElementById('newGradeEnd').value     = slot.end_hour     ?? 12;
+    document.getElementById('newGradeColor').value   = slot.color        || '#006b3f';
+    document.getElementById('newGradeAdFreq').value  = slot.ad_frequency || 3;
+
+    // Muda título e botão do formulário
+    const card = document.getElementById('createGradeCard');
+    if(card) {
+        card.style.display   = 'block';
+        card.style.borderColor = '#f59e0b';
+        card.querySelector('.card-title').textContent = `✏️ Editar Grade: ${slot.name}`;
+        card.querySelector('.submit-btn').textContent = '💾 Salvar Alteração';
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+async function handleSaveGrade(e) {
+    e.preventDefault();
+    const name      = document.getElementById('newGradeName').value.trim();
+    const desc      = document.getElementById('newGradeDesc').value.trim();
+    const genres    = document.getElementById('newGradeGenres')?.value.trim() || desc;
+    const startHour = parseInt(document.getElementById('newGradeStart').value);
+    const endHour   = parseInt(document.getElementById('newGradeEnd').value);
+    const color     = document.getElementById('newGradeColor').value;
+    const adFreq    = parseInt(document.getElementById('newGradeAdFreq').value) || 3;
+
+    if(!name) { alert('Informe o nome da grade.'); return; }
+    if(isNaN(startHour)||isNaN(endHour)) { alert('Informe as horas de início e fim.'); return; }
+    if(startHour === endHour) { alert('A hora de início e fim não podem ser iguais.'); return; }
+
+    try {
+        if(editingGradeId) {
+            // UPDATE — só metadados, nunca toca na lógica de funcionamento
+            await supabaseAdmin.from('time_slots').update({
+                name, description: desc || null, genres: genres || null,
+                start_hour: startHour, end_hour: endHour,
+                color, ad_frequency: adFreq,
+            }).eq('id', editingGradeId);
+            showToast(`✅ Grade "${name}" atualizada!`);
+            editingGradeId = null;
+        } else {
+            // INSERT nova grade
+            const { data: maxSort } = await supabase.from('time_slots')
+                .select('sort_order').order('sort_order',{ascending:false}).limit(1).maybeSingle();
+            const nextSort = (maxSort?.sort_order ?? -1) + 1;
+
+            await supabaseAdmin.from('time_slots').insert([{
+                name, description: desc || null, genres: genres || null,
+                start_hour: startHour, end_hour: endHour,
+                color, ad_frequency: adFreq,
+                enabled: true, sort_order: nextSort,
+            }]);
+            showToast(`✅ Grade "${name}" criada!`);
+        }
+
+        // Recarrega grades
+        const { data } = await supabase.from('time_slots').select('*').order('sort_order',{ascending:true});
+        timeSlots = data || [];
+        renderGradesTabs();
+        populateSlotSelects();
+        hideCreateGradeForm();
+    } catch(err) { alert('❌ Erro: ' + err.message); }
+}
+
+function hideCreateGradeForm() {
+    const card = document.getElementById('createGradeCard');
+    if(!card) return;
+    card.style.display    = 'none';
+    card.style.borderColor = '#006b3f';
+    card.querySelector('.card-title').textContent = '➕ Criar Nova Grade Horária';
+    card.querySelector('.submit-btn').textContent = '💾 Criar Grade';
+    document.getElementById('createGradeForm')?.reset();
+    editingGradeId = null;
+}
+
+window.editGrade        = editGrade;
+window.hideCreateGradeForm = hideCreateGradeForm;
+
+// ═════════════════════════════════════════════════════════════
+// 5. EMBARALHAMENTO DE PROPAGANDAS
+// ═════════════════════════════════════════════════════════════
+let lastPlayedAdId = null;
+
+function getNextAd() {
+    if(!advertisements.length) return null;
+    // Ordena por daily_order (embaralhada) ou play_order (original)
+    const sorted = [...advertisements]
+        .filter(a => a.enabled)
+        .sort((a,b) => (a.daily_order??a.play_order) - (b.daily_order??b.play_order));
+    return sorted[slotAdIndex % sorted.length] || null;
+}
+
+async function shuffleAdsAfterComplete() {
+    const { data: ads } = await supabase.from('advertisements').select('id').eq('enabled',true);
+    if(!ads?.length) return;
+
+    const idx = [...Array(ads.length).keys()];
+    for(let i = idx.length-1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i+1));
+        [idx[i], idx[j]] = [idx[j], idx[i]];
+    }
+
+    // Anti-repetição na costura
+    if(lastPlayedAdId && ads.length > 1) {
+        const lastPos = idx.findIndex(i => ads[i]?.id === lastPlayedAdId);
+        if(lastPos === 0) {
+            const swapWith = Math.floor(Math.random() * (ads.length-1)) + 1;
+            [idx[0], idx[swapWith]] = [idx[swapWith], idx[0]];
+        }
+    }
+    lastPlayedAdId = null;
+
+    await Promise.all(ads.map((ad, i) =>
+        supabaseAdmin.from('advertisements').update({ daily_order: idx[i] }).eq('id', ad.id)
+    ));
+    const { data } = await supabase.from('advertisements').select('*').eq('enabled',true).order('daily_order',{ascending:true});
+    advertisements = data || [];
+}
+
+window.shuffleAdsAfterComplete = shuffleAdsAfterComplete;
+
+// ═════════════════════════════════════════════════════════════
+// 6. PAINEL DE SAÚDE DO SISTEMA
+// ═════════════════════════════════════════════════════════════
+async function loadSystemHealth() {
+    const el = document.getElementById('systemHealthContent');
+    if(!el) return;
+    el.innerHTML = '<div style="color:#666;font-size:13px;padding:12px;">⏳ Verificando sistema...</div>';
+
+    const results = [];
+
+    // Cloudinary (estimativa por faixas)
+    try {
+        const [pl, sl, seas, ads] = await Promise.all([
+            supabase.from('background_playlist').select('id',{count:'exact',head:true}),
+            supabase.from('slot_playlists').select('id',{count:'exact',head:true}),
+            supabase.from('seasonal_playlists').select('id',{count:'exact',head:true}),
+            supabase.from('advertisements').select('id',{count:'exact',head:true}),
+        ]);
+        const total   = (pl.count||0)+(sl.count||0)+(seas.count||0)+(ads.count||0);
+        const estMB   = total * 5;
+        const limitMB = 25600;
+        const pct     = Math.min(Math.round((estMB/limitMB)*100), 100);
+        results.push({ label:'☁️ Cloudinary', status: pct>=85?'danger':pct>=65?'warn':'ok',
+            text: `~${estMB.toLocaleString('pt-BR')} MB / 25.600 MB — ${pct}% estimado (${total} faixas)` });
+    } catch { results.push({ label:'☁️ Cloudinary', status:'unknown', text:'Não foi possível verificar' }); }
+
+    // ElevenLabs
+    try {
+        const month = new Date().toISOString().slice(0,7);
+        const { data } = await supabase.from('elevenlabs_usage').select('chars_used').eq('month',month);
+        const used = (data||[]).reduce((s,r)=>s+(r.chars_used||0),0);
+        const pct  = Math.round((used/10000)*100);
+        results.push({ label:'🎙️ ElevenLabs', status: pct>=90?'danger':pct>=70?'warn':'ok',
+            text: `${used.toLocaleString('pt-BR')} / 10.000 caracteres — ${pct}% (${Math.max(0,10000-used)} restantes)` });
+    } catch { results.push({ label:'🎙️ ElevenLabs', status:'unknown', text:'Tabela não encontrada — execute banco v6' }); }
+
+    // Cobalt — testa primeira instância
+    try {
+        const cobaltInstances = [
+            'https://api.cobalt.liubquanti.click',
+            'https://cobaltapi.kittycat.boo',
+            'https://dog.kittycat.boo',
+            'https://kitty.tame.gg',
+            'https://rue-cobalt.xenon.zone',
+        ];
+        let onlineCount = 0;
+        const checks = await Promise.allSettled(cobaltInstances.map(inst =>
+            fetch(inst, { method:'HEAD', signal: AbortSignal.timeout(5000) })
+        ));
+        checks.forEach(r => { if(r.status==='fulfilled' && r.value.ok) onlineCount++; });
+        results.push({ label:'🔗 Cobalt (YouTube→MP3)', status: onlineCount===0?'danger':onlineCount<3?'warn':'ok',
+            text: `${onlineCount}/${cobaltInstances.length} instâncias respondendo` });
+    } catch { results.push({ label:'🔗 Cobalt', status:'warn', text:'Verificação parcial' }); }
+
+    // Supabase — testa conexão e conta registros
+    try {
+        const { count } = await supabase.from('play_log').select('id',{count:'exact',head:true});
+        results.push({ label:'🗄️ Supabase', status:'ok', text:`Conectado — ${count?.toLocaleString('pt-BR')||0} registros em play_log` });
+    } catch { results.push({ label:'🗄️ Supabase', status:'danger', text:'Sem conexão com o banco' }); }
+
+    // Edge Functions — testa se convert-youtube responde
+    try {
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/convert-youtube`, {
+            method: 'OPTIONS', headers: { 'x-function-secret': FUNCTION_SECRET },
+            signal: AbortSignal.timeout(8000),
+        });
+        const ok = res.status === 204 || res.status === 200;
+        results.push({ label:'⚡ Edge Functions', status: ok?'ok':'warn',
+            text: ok ? 'Respondendo normalmente' : `Status inesperado: ${res.status}` });
+    } catch { results.push({ label:'⚡ Edge Functions', status:'warn', text:'Sem resposta — pode estar fria (cold start)' }); }
+
+    const colorMap  = { ok:'#006b3f', warn:'#f59e0b', danger:'#dc3545', unknown:'#6c757d' };
+    const bgMap     = { ok:'#e6f4ed', warn:'#fff8e1', danger:'#f8d7da', unknown:'#f8f9fa' };
+    const iconMap   = { ok:'✅', warn:'⚠️', danger:'❌', unknown:'❓' };
+
+    el.innerHTML = results.map(r => `
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:${bgMap[r.status]};
+                    border-radius:10px;border-left:4px solid ${colorMap[r.status]};margin-bottom:8px;">
+            <span style="font-size:18px;">${iconMap[r.status]}</span>
+            <div>
+                <div style="font-weight:700;font-size:13px;color:${colorMap[r.status]};">${r.label}</div>
+                <div style="font-size:12px;color:#555;margin-top:2px;">${r.text}</div>
+            </div>
+        </div>`).join('');
+}
+window.loadSystemHealth       = loadSystemHealth;
+window.loadElevenLabsUsage    = loadElevenLabsUsage;
+window.generateTTSAudio       = generateTTSAudio;
+window.getElevenLabsRemaining = getElevenLabsRemaining;
+
+// ═════════════════════════════════════════════════════════════
+// 7. BACKUP / EXPORTAR DADOS
+// ═════════════════════════════════════════════════════════════
+async function exportBackup() {
+    const btn = document.getElementById('exportBackupBtn');
+    if(btn) { btn.textContent='⏳ Exportando...'; btn.disabled=true; }
+    try {
+        const [grades, slotPl, bgPl, ads, seas, seasSetts, schedule, jingles, tts, locutor] = await Promise.all([
+            supabase.from('time_slots').select('*'),
+            supabase.from('slot_playlists').select('*'),
+            supabase.from('background_playlist').select('*'),
+            supabase.from('advertisements').select('*'),
+            supabase.from('seasonal_playlists').select('*'),
+            supabase.from('seasonal_settings').select('*'),
+            supabase.from('radio_schedule').select('*'),
+            supabase.from('jingles').select('*'),
+            supabase.from('tts_library').select('*'),
+            supabase.from('locutor_tracks').select('*'),
+        ]);
+
+        const backup = {
+            version:    '5.0',
+            exported_at: new Date().toISOString(),
+            data: {
+                time_slots:          grades.data     || [],
+                slot_playlists:      slotPl.data     || [],
+                background_playlist: bgPl.data       || [],
+                advertisements:      ads.data        || [],
+                seasonal_playlists:  seas.data       || [],
+                seasonal_settings:   seasSetts.data  || [],
+                radio_schedule:      schedule.data   || [],
+                jingles:             jingles.data    || [],
+                tts_library:         tts.data        || [],
+                locutor_tracks:      locutor.data    || [],
+            },
+        };
+
+        const json = JSON.stringify(backup, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        const date = new Date().toISOString().slice(0,10);
+        a.href     = url;
+        a.download = `radio_louro_backup_${date}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('✅ Backup exportado com sucesso!');
+    } catch(err) {
+        alert('❌ Erro ao exportar: ' + err.message);
+    } finally {
+        if(btn) { btn.textContent='⬇️ Exportar Backup'; btn.disabled=false; }
+    }
+}
+window.exportBackup = exportBackup;
+
 window.removeFromBlacklist = removeFromBlacklist;
 window.stopFlashPromotion  = stopFlashPromotion;
 window.loadAdHistory       = loadAdHistory;
