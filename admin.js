@@ -3420,6 +3420,20 @@ async function handleSaveGrade(e) {
     if(!name) { alert('Informe o nome da grade.'); return; }
     if(isNaN(startHour)||isNaN(endHour)) { alert('Informe as horas de início e fim.'); return; }
     if(startHour === endHour) { alert('A hora de início e fim não podem ser iguais.'); return; }
+    // Verifica sobreposição com outras grades (exceto a própria ao editar)
+    const overlap = visibleSlots().find(s => {
+        if(editingGradeId && s.id === editingGradeId) return false;
+        const sStart = s.start_hour, sEnd = s.end_hour;
+        // Verifica interseção considerando virada de meia-noite
+        const aWraps = startHour >= endHour, bWraps = sStart >= sEnd;
+        if(!aWraps && !bWraps) return startHour < sEnd && endHour > sStart;
+        if(aWraps  && !bWraps) return sStart < endHour || sEnd > startHour;
+        if(!aWraps && bWraps)  return startHour < sEnd || endHour > sStart;
+        return true; // ambas viram meia-noite — sempre sobrepõem
+    });
+    if(overlap) {
+        if(!confirm(`⚠️ Esta grade sobrepõe o horário da grade "${overlap.name}" (${String(overlap.start_hour).padStart(2,'0')}h–${String(overlap.end_hour).padStart(2,'0')}h).\n\nDeseja criar mesmo assim?`)) return;
+    }
 
     try {
         if(editingGradeId) {
@@ -3609,18 +3623,17 @@ async function exportBackup() {
     const btn = document.getElementById('exportBackupBtn');
     if(btn) { btn.textContent='⏳ Exportando...'; btn.disabled=true; }
     try {
-        const [grades, slotPl, bgPl, ads, seas, seasSetts, schedule, jingles, tts, locutor] = await Promise.all([
-            supabase.from('time_slots').select('*'),
-            supabase.from('slot_playlists').select('*'),
-            supabase.from('background_playlist').select('*'),
-            supabase.from('advertisements').select('*'),
-            supabase.from('seasonal_playlists').select('*'),
-            supabase.from('seasonal_settings').select('*'),
-            supabase.from('radio_schedule').select('*'),
-            supabase.from('jingles').select('*'),
-            supabase.from('tts_library').select('*'),
-            supabase.from('locutor_tracks').select('*'),
-        ]);
+        // Sequencial para evitar timeout com muitas conexões simultâneas
+        const grades     = await supabase.from('time_slots').select('*');
+        const slotPl     = await supabase.from('slot_playlists').select('*');
+        const bgPl       = await supabase.from('background_playlist').select('*');
+        const ads        = await supabase.from('advertisements').select('*');
+        const seas       = await supabase.from('seasonal_playlists').select('*');
+        const seasSetts  = await supabase.from('seasonal_settings').select('*');
+        const schedule   = await supabase.from('radio_schedule').select('*');
+        const jingles    = await supabase.from('jingles').select('*');
+        const tts        = await supabase.from('tts_library').select('*');
+        const locutor    = await supabase.from('locutor_tracks').select('*');
 
         const backup = {
             version:    '5.0',
