@@ -15,6 +15,7 @@ let currentTime, countdownTimer, statusText, trackName;
 // ── Estado geral ──────────────────────────────────────────────
 let isPlaying         = false;
 let isShuffling       = false;
+let lastPlayedId      = null; // anti-repetição na costura do shuffle
 let lastKnownDate     = null;
 
 // ── Analytics ────────────────────────────────────────────────
@@ -183,11 +184,24 @@ async function shufflePlaylistAfterComplete(table, slotId) {
         const {data: tracks} = await query;
         if(!tracks?.length) { isShuffling = false; return; }
 
+        // Fisher-Yates shuffle
         const idx = [...Array(tracks.length).keys()];
         for(let i = idx.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [idx[i], idx[j]] = [idx[j], idx[i]];
         }
+
+        // Anti-repetição na costura: garante que a 1ª música do novo ciclo
+        // não seja a mesma da última do ciclo anterior
+        if(lastPlayedId && tracks.length > 1) {
+            const lastPos = idx.findIndex(i => tracks[i]?.id === lastPlayedId);
+            if(lastPos === 0) {
+                // Troca a posição 0 com uma posição aleatória diferente
+                const swapWith = Math.floor(Math.random() * (tracks.length - 1)) + 1;
+                [idx[0], idx[swapWith]] = [idx[swapWith], idx[0]];
+            }
+        }
+        lastPlayedId = null; // reseta após usar
 
         const BATCH = 50;
         for(let i = 0; i < tracks.length; i += BATCH) {
@@ -702,6 +716,7 @@ async function handleAudioEnded() {
     // Música da grade
     if(isGradeMode){
         const wasLast = slotCurrentIndex >= slotPlaylist.length - 1;
+        if(wasLast) lastPlayedId = slotPlaylist[slotCurrentIndex]?.id || null;
         slotCurrentIndex++;
         if(wasLast) {
             slotCurrentIndex = 0;
@@ -713,6 +728,7 @@ async function handleAudioEnded() {
     // Música legada
     const playlist = isSeasonalActive ? seasonalPlaylist : backgroundPlaylist;
     const wasLastBg = currentBgIndex >= playlist.length - 1;
+    if(wasLastBg) lastPlayedId = playlist[currentBgIndex]?.id || null;
     currentBgIndex++;
     if(wasLastBg) {
         currentBgIndex = 0;
