@@ -1262,7 +1262,9 @@ function initFlashListener() {
 
 function handleFlashChange(state) {
     ensureFlashDisplay();
-    if (state.is_active) {
+    // Se ends_at já passou, ignora como se fosse inativa
+    const alreadyExpired = state.ends_at && new Date(state.ends_at) <= new Date();
+    if (state.is_active && !alreadyExpired) {
         if (flashCountdownEl) {
             flashCountdownEl.style.display = 'block';
             updateFlashCountdown(state.ends_at ? new Date(state.ends_at) : null);
