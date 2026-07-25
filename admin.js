@@ -316,8 +316,16 @@ function renderQueueSection() {
                 <div class="queue-title">${m.youtube_title||m.title||'Sem título'}</div>
                 <div class="queue-meta">${m.youtube_channel||''}</div>
                 <div class="queue-source">Origem: ${m.source==='manual'?'🔗 Manual':m.source==='auto'?'🤖 Automático':`💬 ${m.suggested_by||'Funcionário'}`}</div>
-                <button class="queue-preview-btn" onclick="toggleYTPreview(${m.id},'${extractVideoId(m.youtube_url)}')">▶️ Ouvir Prévia</button>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+                    <button class="queue-preview-btn" onclick="toggleYTPreview(${m.id},'${extractVideoId(m.youtube_url)}')">▶️ Ouvir Prévia</button>
+                    <button class="queue-preview-btn" style="background:#7c3aed;color:#fff;border-color:#7c3aed;" onclick="toggleClassifier(${m.id},'${(m.youtube_title||m.title||''). replace(/'/g,'\\''). slice(0,80)}','${(m.youtube_channel||''). replace(/'/g,'\\''). slice(0,40)}')">🤖 Classificar</button>
+                </div>
                 <iframe id="ytframe_${m.id}" class="queue-yt-embed" src="" allowfullscreen allow="autoplay"></iframe>
+                <!-- Painel do classificador -->
+                <div id="classifier_${m.id}" style="display:none;margin-top:8px;">
+                    <div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:4px;">🤖 Classificação IA</div>
+                    <div class="classifier-content" data-loaded="0"></div>
+                </div>
             </div>
             <div class="queue-actions">
                 <div class="form-group" style="margin-bottom:8px;">
@@ -415,6 +423,7 @@ async function approveQueueItem(id) {
                     original_order:order, daily_order:order, enabled:true
                 }]);
                 await refreshSlotPlaylist(slotId);
+                addedCount++; // só conta se não era duplicata
             } else if(isSeasonal) {
                 const {data:usedSeas} = await supabase.from('seasonal_playlists')
                     .select('original_order').eq('category',seasonalCat).eq('type','music')
@@ -429,6 +438,7 @@ async function approveQueueItem(id) {
                     audio_url:audioUrl, title:trackTitle,
                     play_order:order, original_order:order, daily_order:order, enabled:true
                 }]);
+                addedCount++;
             } else {
                 order = await getNextSlot('background_playlist', null, null);
                 const {data:dup} = await supabase.from('background_playlist')
@@ -440,8 +450,8 @@ async function approveQueueItem(id) {
                 }]);
                 const {data}=await supabase.from('background_playlist').select('*').order('original_order',{ascending:true});
                 backgroundPlaylist=data||[]; renderPlaylistTable();
+                addedCount++;
             }
-            addedCount++;
         }
 
         if(dests.some(d=>d.startsWith('seasonal_'))) {
@@ -458,7 +468,7 @@ async function approveQueueItem(id) {
         musicQueue=musicQueue.filter(m=>m.id!==id);
         renderQueueSection();
         setTimeout(()=>populateSlotSelects(), 100);
-        alert(`✅ Música aprovada e adicionada em ${addedCount} destino(s)!`);
+        showToast(`✅ Aprovada em ${addedCount} destino(s)!`);
     } catch(err){ alert('❌ Erro ao aprovar: '+err.message); if(btn){btn.textContent='✅ Aprovar';btn.disabled=false;} }
 }
 
@@ -3648,6 +3658,112 @@ async function exportBackup() {
     }
 }
 window.exportBackup = exportBackup;
+
+
+// ─────────────────────────────────────────────────────────────
+// CLASSIFICADOR DE MÚSICAS — usa Claude (Anthropic API)
+// ─────────────────────────────────────────────────────────────
+const CLASSIFIER_SYSTEM = `Você é um classificador de músicas para uma rádio interna de supermercado.
+Classifique cada música enviada em exatamente 3 itens, sem texto extra além do formato pedido.
+
+Estilos disponíveis: Sertanejo Raiz/Modão, Sertanejo Romântico, Sertanejo Universitário, Feminejo, Arrocha, Seresta, Sofrência, Forró Tradicional, Forró Eletrônico, Piseiro, Xote, MPB, Regional Nordestino, Pop Nacional, Pagode.
+
+Tópicos (grades horárias):
+- Manhã do Campo (07–09h): raiz, modão, forró tradicional
+- Manhã Animada (09–12h): sertanejo leve, pagode leve, MPB
+- Hora do Almoço (12–14h): romântico, arrocha, seresta, sofrência leve
+- Tarde Variada (14–18h): universitário, feminejo, hits, sofrência, pop
+- Saída do Trabalho (18–20h): forró eletrônico, piseiro, dançantes
+- Madrugada Aleatória (20–07h): shuffle, todas — SEMPRE incluir junto ao tópico principal
+
+Playlists temáticas (0 ou mais): Natal, Ano Novo, Páscoa, São João, Românticas, Sofrência, Sertanejo Universitário, Sertanejo Raiz/Modão, Forró e Piseiro, Boteco/Churrasco, Raízes do Brasil.
+
+Regras:
+- Se a música tiver letra explícita, avise após a classificação e sugira horário mais adulto.
+- Se for fora do padrão (ex: rock, funk, rap), avise e sugira o mais próximo possível.
+- Se não tiver certeza, busque o máximo de informação antes de responder; se ainda assim faltar info, marque "pendente de revisão" e explique.
+- Se a música for claramente repetida (você já classificou ela antes nesta sessão), avise que é repetida e não reclassifique.
+
+Formato OBRIGATÓRIO de resposta (sem nenhum texto antes ou depois):
+[Música] - [Artista]
+1. Estilo: [estilo]
+2. Tópico: [principal] + Madrugada Aleatória
+3. Playlist(s): [lista separada por vírgula, ou "nenhuma"]`;
+
+// Cache da sessão para detectar repetidas
+const classifiedThisSession = new Set();
+
+async function classifyTrack(title, channel) {
+    const cacheKey = `${title}|||${channel}`.toLowerCase();
+    const isRepeat = classifiedThisSession.has(cacheKey);
+
+    const userMsg = isRepeat
+        ? `REPETIDA — já classificada antes nesta sessão:
+${title} - ${channel}`
+        : `${title} - ${channel}`;
+
+    try {
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model:      'claude-sonnet-4-6',
+                max_tokens: 1000,
+                system:     CLASSIFIER_SYSTEM,
+                messages:   [{ role: 'user', content: userMsg }],
+            }),
+        });
+        const data = await res.json();
+        const text = (data.content || []).map(b => b.text || '').join('').trim();
+        if(!isRepeat) classifiedThisSession.add(cacheKey);
+        return text || '(sem resposta do classificador)';
+    } catch(err) {
+        return `❌ Erro ao classificar: ${err.message}`;
+    }
+}
+
+// Mostra/esconde o painel de classificação de um card
+async function toggleClassifier(id, title, channel) {
+    const panel = document.getElementById(`classifier_${id}`);
+    if(!panel) return;
+    if(panel.style.display === 'block') { panel.style.display = 'none'; return; }
+    panel.style.display = 'block';
+    const content = panel.querySelector('.classifier-content');
+    if(content.dataset.loaded === '1') return; // já carregado
+    content.innerHTML = '<div style="color:#666;font-size:12px;padding:8px;">🤖 Classificando...</div>';
+    const result = await classifyTrack(title, channel);
+    content.dataset.loaded = '1';
+    // Detecta avisos especiais para destacar
+    const hasWarning = result.toLowerCase().includes('explícita') ||
+                       result.toLowerCase().includes('fora do padrão') ||
+                       result.toLowerCase().includes('pendente de revisão') ||
+                       result.toLowerCase().includes('repetida');
+    const bgColor  = hasWarning ? '#fff8e1' : '#f0faf5';
+    const border   = hasWarning ? '#f59e0b' : '#006b3f';
+    content.innerHTML = `
+        <div style="background:${bgColor};border-left:3px solid ${border};border-radius:0 8px 8px 0;
+                    padding:10px 12px;font-size:12px;line-height:1.7;white-space:pre-wrap;font-family:inherit;">
+            ${result.replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+        </div>
+        <button class="clear-btn" style="font-size:11px;padding:4px 10px;margin-top:6px;"
+            onclick="reclassifyTrack(${id},'${title.replace(/'/g,"\'").slice(0,80)}','${(channel||'').replace(/'/g,"\'").slice(0,40)}')">
+            🔄 Reclassificar
+        </button>`;
+}
+
+async function reclassifyTrack(id, title, channel) {
+    const panel   = document.getElementById(`classifier_${id}`);
+    const content = panel?.querySelector('.classifier-content');
+    if(!content) return;
+    content.dataset.loaded = '0';
+    // Remove do cache para forçar nova classificação
+    const cacheKey = `${title}|||${channel}`.toLowerCase();
+    classifiedThisSession.delete(cacheKey);
+    await toggleClassifier(id, title, channel);
+}
+
+window.toggleClassifier  = toggleClassifier;
+window.reclassifyTrack   = reclassifyTrack;
 
 window.removeFromBlacklist = removeFromBlacklist;
 window.stopFlashPromotion  = stopFlashPromotion;
