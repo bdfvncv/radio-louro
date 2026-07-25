@@ -5,8 +5,18 @@ const YOUTUBE_API_KEY     = 'AIzaSyCcpLnZ0XHsSEx34Zvkc80FwmHiHIqS6Gs';
 const ADMIN_PASSWORD      = 'senhaDev';
 const BLOCKED_TERMS       = ['funk','rock pesado','metal','punk','rap','trap'];
 
-const supabase      = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const supabaseAdmin = window.supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+// Clientes Supabase — inicializados após garantir que o CDN carregou
+let supabase, supabaseAdmin;
+function initSupabaseClients() {
+    if(!window.supabase) {
+        console.error('Supabase CDN não carregou. Verifique a conexão.');
+        document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;flex-direction:column;gap:12px;"><div style="font-size:32px;">⚠️</div><div style="font-size:16px;font-weight:600;">Erro ao carregar o sistema.</div><div style="font-size:13px;color:#666;">Verifique sua conexão com a internet e recarregue a página.</div><button onclick="location.reload()" style="padding:10px 24px;background:#006b3f;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;margin-top:8px;">🔄 Recarregar</button></div>';
+        return false;
+    }
+    supabase      = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    supabaseAdmin = window.supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+    return true;
+}
 
 // ── Estado ────────────────────────────────────────────────────
 let allSchedules=[], backgroundPlaylist=[], advertisements=[];
@@ -43,7 +53,10 @@ const testAudio    = document.getElementById('testAudio');
 // ─────────────────────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────────────────────
-init();
+// Aguarda DOM e CDNs antes de inicializar
+document.addEventListener('DOMContentLoaded', () => {
+    if(initSupabaseClients()) init();
+});
 
 function init() {
     checkAuth();
