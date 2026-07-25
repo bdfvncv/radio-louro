@@ -3672,6 +3672,179 @@ async function exportBackup() {
 }
 window.exportBackup = exportBackup;
 
+// ═════════════════════════════════════════════════════════════
+// IMPORTAR BACKUP
+// ═════════════════════════════════════════════════════════════
+
+// Tabelas e suas chaves primárias — ordem importa (grades antes de playlists)
+const IMPORT_TABLES = [
+    { key: 'radio_schedule',      table: 'radio_schedule',      label: '⏰ Horas Certas',       pk: 'hour' },
+    { key: 'time_slots',          table: 'time_slots',           label: '🕐 Grades Horárias',    pk: 'id'   },
+    { key: 'slot_playlists',      table: 'slot_playlists',       label: '🎵 Músicas das Grades', pk: 'id'   },
+    { key: 'background_playlist', table: 'background_playlist',  label: '🎵 Playlist de Fundo',  pk: 'id'   },
+    { key: 'advertisements',      table: 'advertisements',       label: '📢 Propagandas',         pk: 'id'   },
+    { key: 'seasonal_playlists',  table: 'seasonal_playlists',   label: '🎭 Playlists Sazonais', pk: 'id'   },
+    { key: 'seasonal_settings',   table: 'seasonal_settings',    label: '🎭 Config. Sazonais',   pk: 'category' },
+    { key: 'jingles',             table: 'jingles',              label: '🎬 Vinhetas',           pk: 'id'   },
+    { key: 'tts_library',         table: 'tts_library',          label: '📢 Biblioteca TTS',     pk: 'id'   },
+    { key: 'locutor_tracks',      table: 'locutor_tracks',       label: '🎙️ Locuções',           pk: 'id'   },
+];
+
+let importBackupData = null;
+
+function handleImportBackup(input) {
+    const file = input.files[0];
+    if(!file) return;
+
+    const nameEl    = document.getElementById('importFileName');
+    const previewEl = document.getElementById('importPreview');
+    if(nameEl) nameEl.textContent = file.name;
+
+    const reader = new FileReader();
+    reader.onload = e => {
+        try {
+            const data = JSON.parse(e.target.result);
+
+            // Valida estrutura básica
+            if(!data.version || !data.exported_at || !data.data) {
+                throw new Error('Arquivo inválido — não é um backup da Rádio Louro.');
+            }
+
+            importBackupData = data;
+            const d = data.data;
+            const exportDate = new Date(data.exported_at).toLocaleString('pt-BR');
+
+            // Monta preview com contagens
+            const rows = IMPORT_TABLES
+                .filter(t => d[t.key]?.length)
+                .map(t => `<tr>
+                    <td style="padding:4px 8px;font-size:12px;">${t.label}</td>
+                    <td style="padding:4px 8px;font-size:12px;font-weight:700;color:#006b3f;text-align:right;">${d[t.key].length} registros</td>
+                </tr>`).join('');
+
+            const totalRecords = IMPORT_TABLES.reduce((sum, t) => sum + (d[t.key]?.length || 0), 0);
+
+            previewEl.style.display = 'block';
+            previewEl.innerHTML = `
+                <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;">
+                    ⚠️ <strong>Atenção:</strong> A importação <strong>substitui</strong> os dados existentes de cada tabela. Esta ação não pode ser desfeita. Faça um novo export antes se quiser preservar o estado atual.
+                </div>
+                <div style="background:#f8f9fa;border-radius:8px;padding:10px 14px;margin-bottom:10px;">
+                    <div style="font-size:12px;color:#666;margin-bottom:8px;">📁 <strong>${file.name}</strong> — exportado em ${exportDate} (versão ${data.version})</div>
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead><tr>
+                            <th style="text-align:left;font-size:11px;color:#999;padding:2px 8px;">Tabela</th>
+                            <th style="text-align:right;font-size:11px;color:#999;padding:2px 8px;">Registros</th>
+                        </tr></thead>
+                        <tbody>${rows}</tbody>
+                        <tfoot><tr>
+                            <td style="padding:6px 8px;font-size:12px;font-weight:700;border-top:1px solid #dee2e6;">Total</td>
+                            <td style="padding:6px 8px;font-size:12px;font-weight:700;text-align:right;border-top:1px solid #dee2e6;color:#006b3f;">${totalRecords} registros</td>
+                        </tr></tfoot>
+                    </table>
+                </div>
+                <button class="submit-btn" style="width:100%;font-size:13px;padding:10px;" onclick="confirmImportBackup()">
+                    ⬆️ Confirmar e Restaurar Backup
+                </button>`;
+        } catch(err) {
+            previewEl.style.display = 'block';
+            previewEl.innerHTML = `<div style="background:#f8d7da;border-radius:8px;padding:10px 14px;font-size:12px;color:#721c24;">❌ ${err.message}</div>`;
+            importBackupData = null;
+        }
+    };
+    reader.readAsText(file);
+}
+
+async function confirmImportBackup() {
+    if(!importBackupData) return;
+    if(!confirm('⚠️ ATENÇÃO\n\nIsso vai substituir os dados atuais pelos do backup.\n\nTem certeza que deseja continuar?')) return;
+
+    const progressEl = document.getElementById('importProgress');
+    const previewEl  = document.getElementById('importPreview');
+    if(previewEl) previewEl.style.display = 'none';
+    if(progressEl) { progressEl.style.display = 'block'; progressEl.innerHTML = ''; }
+
+    const d = importBackupData.data;
+    let success = 0, errors = 0;
+
+    const log = (msg, ok = true) => {
+        if(!progressEl) return;
+        const color = ok ? '#006b3f' : '#dc3545';
+        const icon  = ok ? '✅' : '❌';
+        progressEl.innerHTML += `<div style="font-size:12px;color:${color};padding:2px 0;">${icon} ${msg}</div>`;
+        progressEl.scrollTop = progressEl.scrollHeight;
+    };
+
+    progressEl.style.cssText = 'display:block;max-height:260px;overflow-y:auto;background:#f8f9fa;border-radius:8px;padding:10px 14px;';
+    log('Iniciando restauração...', true);
+
+    for(const { key, table, label, pk } of IMPORT_TABLES) {
+        const records = d[key];
+        if(!records?.length) { log(`${label} — sem dados no backup, pulando`, true); continue; }
+
+        try {
+            // Remove os dados atuais
+            // Para radio_schedule, deleta por hora; para seasonal_settings por category; resto por id
+            if(pk === 'hour') {
+                await supabaseAdmin.from(table).delete().gte('hour', 0);
+            } else if(pk === 'category') {
+                await supabaseAdmin.from(table).delete().neq('category', '__placeholder__');
+            } else {
+                // Deleta todos usando id > 0 (garante que limpa tudo)
+                const { data: ids } = await supabase.from(table).select('id');
+                if(ids?.length) {
+                    const chunks = [];
+                    for(let i = 0; i < ids.length; i += 100) chunks.push(ids.slice(i, i+100));
+                    for(const chunk of chunks) {
+                        await supabaseAdmin.from(table).delete().in('id', chunk.map(r => r.id));
+                    }
+                }
+            }
+
+            // Insere em lotes de 50 para evitar limites da API
+            const CHUNK = 50;
+            // Remove campos que o banco gera automaticamente ao reinserir
+            const clean = records.map(r => {
+                const c = {...r};
+                // Mantém id para preservar FKs entre tabelas (ex: slot_playlists → time_slots)
+                // mas remove timestamps gerados automaticamente
+                delete c.created_at;
+                return c;
+            });
+
+            for(let i = 0; i < clean.length; i += CHUNK) {
+                await supabaseAdmin.from(table).insert(clean.slice(i, i + CHUNK));
+            }
+
+            log(`${label} — ${records.length} registros restaurados`, true);
+            success++;
+        } catch(err) {
+            log(`${label} — erro: ${err.message}`, false);
+            errors++;
+        }
+    }
+
+    log(`\nConcluído: ${success} tabelas restauradas${errors ? `, ${errors} com erro` : ''}.`, errors === 0);
+
+    if(errors === 0) {
+        progressEl.innerHTML += `<div style="margin-top:10px;padding:8px 12px;background:#d4edda;border-radius:8px;font-size:12px;color:#155724;font-weight:600;">
+            ✅ Backup restaurado com sucesso! Recarregue a página para ver os dados atualizados.
+            <button class="submit-btn" style="display:block;width:100%;margin-top:8px;" onclick="location.reload()">🔄 Recarregar Página</button>
+        </div>`;
+    }
+
+    // Limpa estado
+    importBackupData = null;
+    const input = document.getElementById('importBackupFile');
+    if(input) input.value = '';
+    const nameEl = document.getElementById('importFileName');
+    if(nameEl) nameEl.textContent = 'Nenhum arquivo selecionado';
+}
+
+window.handleImportBackup  = handleImportBackup;
+window.confirmImportBackup = confirmImportBackup;
+
+
 
 // ─────────────────────────────────────────────────────────────
 // CLASSIFICADOR DE MÚSICAS — usa Claude (Anthropic API)
