@@ -725,12 +725,34 @@
                 <div style="color:#666;font-size:13px;padding:20px;text-align:center;">Clique em "Verificar Agora" para checar o status de todos os serviços.</div>
             </div>
             <div class="admin-card" style="margin-top:16px;border-left:4px solid #6c757d;">
-                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+                <h3 class="card-title" style="margin:0 0 4px;">💾 Backup dos Dados</h3>
+                <p style="font-size:12px;color:#666;margin-bottom:16px;">Exporta e importa grades, playlists, propagandas e configurações em JSON. Proteção contra perda por edição errada ou falha de serviço.</p>
+
+                <!-- Exportar -->
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:12px 14px;background:#f8f9fa;border-radius:10px;margin-bottom:10px;">
                     <div>
-                        <h3 class="card-title" style="margin:0;">💾 Backup dos Dados</h3>
-                        <p style="font-size:12px;color:#666;margin-top:4px;">Exporta grades, playlists, propagandas e configurações em JSON. Proteção contra perda por edição errada ou falha de serviço.</p>
+                        <div style="font-weight:600;font-size:13px;">⬇️ Exportar</div>
+                        <div style="font-size:12px;color:#666;margin-top:2px;">Baixa um arquivo .json com todos os dados atuais do sistema.</div>
                     </div>
                     <button id="exportBackupBtn" class="submit-btn" style="background:#6c757d;white-space:nowrap;" onclick="exportBackup()">⬇️ Exportar Backup</button>
+                </div>
+
+                <!-- Importar -->
+                <div style="padding:12px 14px;background:#f8f9fa;border-radius:10px;">
+                    <div style="font-weight:600;font-size:13px;margin-bottom:4px;">⬆️ Importar</div>
+                    <div style="font-size:12px;color:#666;margin-bottom:10px;">Restaura os dados a partir de um arquivo de backup exportado anteriormente. Os dados existentes serão <strong>substituídos</strong> pelos do backup.</div>
+
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                        <label for="importBackupFile" style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;background:#fff;border:2px dashed #adb5bd;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:#495057;transition:border-color .2s;"
+                            onmouseover="this.style.borderColor='#006b3f'" onmouseout="this.style.borderColor='#adb5bd'">
+                            📂 Escolher arquivo .json
+                            <input type="file" id="importBackupFile" accept=".json" style="display:none;" onchange="handleImportBackup(this)">
+                        </label>
+                        <span id="importFileName" style="font-size:12px;color:#666;font-style:italic;">Nenhum arquivo selecionado</span>
+                    </div>
+
+                    <div id="importPreview" style="display:none;margin-top:12px;"></div>
+                    <div id="importProgress" style="display:none;margin-top:10px;"></div>
                 </div>
             </div>
         </section>
