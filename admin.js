@@ -59,9 +59,11 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function init() {
+    // Registra listeners do login PRIMEIRO — antes de qualquer operação assíncrona
+    // Garante que o form nunca fica sem handler mesmo se checkAuth lançar erro
+    setupLoginListeners();
     checkAuth();
     populateHourSelect();
-    setupLoginListeners();
     setupSeasonalEventListeners();
     setupYouTubeListeners();
     setupGradesTabs();
@@ -90,36 +92,46 @@ function showAdminPanel() {
 }
 
 function setupLoginListeners() {
-    document.getElementById('loginForm').addEventListener('submit', e => {
-        e.preventDefault();
-        const pw = document.getElementById('passwordInput').value;
-        if (pw === ADMIN_PASSWORD) {
-            sessionStorage.setItem('radio_admin_auth','authenticated');
-            showAdminPanel(); loadAllData();
-            document.getElementById('loginError').classList.remove('show');
-        } else {
-            document.getElementById('loginError').textContent='❌ Senha incorreta!';
-            document.getElementById('loginError').classList.add('show');
+    // Login — listener isolado para não depender do restante do init
+    const loginForm = document.getElementById('loginForm');
+    if(loginForm) {
+        loginForm.addEventListener('submit', e => {
+            e.preventDefault();
+            const pw = document.getElementById('passwordInput').value;
+            if (pw === ADMIN_PASSWORD) {
+                sessionStorage.setItem('radio_admin_auth','authenticated');
+                showAdminPanel(); loadAllData();
+                document.getElementById('loginError').classList.remove('show');
+            } else {
+                document.getElementById('loginError').textContent='❌ Senha incorreta!';
+                document.getElementById('loginError').classList.add('show');
+                document.getElementById('passwordInput').value='';
+            }
+        });
+    }
+    const logoutBtn = document.getElementById('logoutBtn');
+    if(logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            sessionStorage.removeItem('radio_admin_auth');
+            showLoginScreen();
             document.getElementById('passwordInput').value='';
-        }
-    });
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-        sessionStorage.removeItem('radio_admin_auth');
-        showLoginScreen();
-        document.getElementById('passwordInput').value='';
-    });
-    document.getElementById('editForm').addEventListener('submit', handleSaveSchedule);
-    document.getElementById('testBtn').addEventListener('click', () => testAudioUrl(document.getElementById('audioUrl').value));
-    document.getElementById('testBtnHalf').addEventListener('click', () => testAudioUrl(document.getElementById('audioUrlHalf').value));
-    document.getElementById('clearBtn').addEventListener('click', handleClearForm);
-    document.getElementById('hourSelect').addEventListener('change', e => { if(!isNaN(parseInt(e.target.value))) editSchedule(parseInt(e.target.value)); });
-    document.getElementById('playlistForm').addEventListener('submit', handleSavePlaylist);
-    document.getElementById('testPlaylistBtn').addEventListener('click', () => testAudioUrl(document.getElementById('playlistUrl').value));
-    document.getElementById('clearPlaylistBtn').addEventListener('click', handleClearPlaylistForm);
-    document.getElementById('forceShuffleBtn').addEventListener('click', handleForceShufflePlaylist);
-    document.getElementById('adsForm').addEventListener('submit', handleSaveAd);
-    document.getElementById('testAdBtn').addEventListener('click', () => testAudioUrl(document.getElementById('adUrl').value));
-    document.getElementById('clearAdBtn').addEventListener('click', handleClearAdForm);
+        });
+    }
+    // Demais listeners — em try/catch para não quebrar o login se algum ID falhar
+    try {
+        document.getElementById('editForm')?.addEventListener('submit', handleSaveSchedule);
+        document.getElementById('testBtn')?.addEventListener('click', () => testAudioUrl(document.getElementById('audioUrl').value));
+        document.getElementById('testBtnHalf')?.addEventListener('click', () => testAudioUrl(document.getElementById('audioUrlHalf').value));
+        document.getElementById('clearBtn')?.addEventListener('click', handleClearForm);
+        document.getElementById('hourSelect')?.addEventListener('change', e => { if(!isNaN(parseInt(e.target.value))) editSchedule(parseInt(e.target.value)); });
+        document.getElementById('playlistForm')?.addEventListener('submit', handleSavePlaylist);
+        document.getElementById('testPlaylistBtn')?.addEventListener('click', () => testAudioUrl(document.getElementById('playlistUrl').value));
+        document.getElementById('clearPlaylistBtn')?.addEventListener('click', handleClearPlaylistForm);
+        document.getElementById('forceShuffleBtn')?.addEventListener('click', handleForceShufflePlaylist);
+        document.getElementById('adsForm')?.addEventListener('submit', handleSaveAd);
+        document.getElementById('testAdBtn')?.addEventListener('click', () => testAudioUrl(document.getElementById('adUrl').value));
+        document.getElementById('clearAdBtn')?.addEventListener('click', handleClearAdForm);
+    } catch(err) { console.warn('setupLoginListeners (admin forms):', err); }
 }
 
 // ─────────────────────────────────────────────────────────────
