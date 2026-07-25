@@ -53,10 +53,15 @@ const testAudio    = document.getElementById('testAudio');
 // ─────────────────────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────────────────────
-// Aguarda DOM e CDNs antes de inicializar
-document.addEventListener('DOMContentLoaded', () => {
+// Inicializa imediatamente — script está no final do <body>, DOM já está pronto
+// DOMContentLoaded já disparou antes do script carregar nessa posição
+if(document.readyState === 'loading') {
+    // Ainda carregando — aguarda
+    document.addEventListener('DOMContentLoaded', () => { if(initSupabaseClients()) init(); });
+} else {
+    // DOM já pronto — executa direto
     if(initSupabaseClients()) init();
-});
+}
 
 function init() {
     // Registra listeners do login PRIMEIRO — antes de qualquer operação assíncrona
