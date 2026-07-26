@@ -3420,7 +3420,6 @@ function editGrade(slotId) {
     // Preenche o formulário de criação com os dados atuais
     document.getElementById('newGradeName').value    = slot.name         || '';
     document.getElementById('newGradeDesc').value    = slot.description  || '';
-    document.getElementById('newGradeGenres').value  = slot.genres       || '';
     document.getElementById('newGradeStart').value   = slot.start_hour   ?? 8;
     document.getElementById('newGradeEnd').value     = slot.end_hour     ?? 12;
     document.getElementById('newGradeColor').value   = slot.color        || '#006b3f';
