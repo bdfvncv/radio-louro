@@ -432,13 +432,13 @@
                             <option value="geral">📝 Geral</option>
                         </select>
                     </div>
-                    <div class="tts-voice-row">
-                        <span class="tts-voice-label">🎤 Voz:</span>
-                        <select class="tts-voice-select" id="ttsVoiceSelect">
-                            <option value="Brazilian Portuguese Female">Feminina (Português BR)</option>
-                            <option value="Brazilian Portuguese Male">Masculina (Português BR)</option>
-                        </select>
-                        <button type="button" class="tts-voice-test" id="ttsVoiceTestBtn">▶️ Testar voz</button>
+                    <div class="tts-voice-row" style="flex-direction:column;align-items:flex-start;gap:8px;">
+                        <span class="tts-voice-label">🎙️ Motor de voz:</span>
+                        <div style="display:flex;gap:8px;">
+                            <button type="button" class="engine-btn active" id="ttsEngineElevenBtn" data-engine="elevenlabs" style="padding:8px 16px;border-radius:8px;border:2px solid #006b3f;background:#006b3f;color:#fff;font-weight:600;cursor:pointer;">✨ ElevenLabs</button>
+                            <button type="button" class="engine-btn" id="ttsEngineEdgeBtn" data-engine="edge" style="padding:8px 16px;border-radius:8px;border:2px solid #006b3f;background:#fff;color:#006b3f;font-weight:600;cursor:pointer;">🔊 Edge TTS</button>
+                        </div>
+                        <select class="tts-voice-select" id="ttsVoiceSelect" style="width:100%;"></select>
                     </div>
                     <textarea class="tts-textarea" id="ttsTextInput" placeholder="Digite o texto que será lido em voz alta..." maxlength="500"></textarea>
                     <div class="tts-char-count"><span id="ttsCharCount">0</span>/500</div>
@@ -458,10 +458,10 @@
                         </div>
                     </div>
                     <div class="form-actions">
-                        <button class="tts-play-btn" id="ttsPlayNowBtn">🔊 Falar Agora</button>
+                        <button class="tts-play-btn" id="ttsPlayNowBtn">🔊 Gerar e Tocar Agora</button>
                     </div>
                     <div class="form-actions" style="margin-top:8px;">
-                        <button class="submit-btn" id="ttsSaveBtn">💾 Salvar na Biblioteca</button>
+                        <button class="submit-btn" id="ttsSaveBtn">💾 Gerar e Salvar na Biblioteca</button>
                         <button class="clear-btn" id="ttsClearBtn">🗑️ Limpar</button>
                     </div>
                 </div>
