@@ -79,6 +79,7 @@ function init() {
     setupEmergencyListeners();
     setupLiveLocutorListeners();
     setupChamadaFuncionario();
+    setupNavigationListeners();
 }
 
 function checkAuth() {
@@ -2515,7 +2516,7 @@ function goSection(name) {
     document.getElementById('adminSidebar')?.classList.remove('open');
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+function setupNavigationListeners() {
     document.querySelectorAll('.nav-item').forEach(btn => {
         btn.addEventListener('click', () => {
             goSection(btn.dataset.section);
@@ -2527,12 +2528,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('sidebarToggle')?.addEventListener('click', () => {
         document.getElementById('adminSidebar')?.classList.toggle('open');
     });
-    // Novos módulos — registra listeners após DOM pronto
     setupBlacklistListeners();
     setupCreateGradeListeners();
     setupSilenceListeners();
     setupFlashListeners();
-});
+}
 
 // ─────────────────────────────────────────────────────────────
 // UTILITÁRIOS
