@@ -26,6 +26,10 @@ let emergencyInterval       = null;
 let emergencyAudioEl        = new Audio();
 let playerPausedByEmergency = false;
 
+// ── TTS / Promoções em voz (áudio gerado via ElevenLabs/Edge TTS) ────────────
+let ttsAudioEl               = new Audio();
+let playerPausedByTTS        = false;
+
 // ── Locutor ao vivo ───────────────────────────────────────────
 let liveLocutorChannel = null;
 let liveAudioCtx       = null;
@@ -132,10 +136,50 @@ async function init() {
         initSuggest();
         initLocutorListener();
         initTTSListener();
+        initTTSScheduleChecker();
         initSilenceListener();
         initFlashListener();
         await loadBlacklistPlayer();
     } catch(err){ console.error('Erro init:', err); }
+}
+
+// ── Agendamento automático de TTS (biblioteca) ───────────────────────────────
+let ttsLibraryPlayer = [];
+let ttsFiredToday    = {}; // evita repetir a mesma peça no mesmo minuto/dia
+
+async function loadTTSLibraryPlayer() {
+    try {
+        const { data } = await supabase.from('tts_library')
+            .select('*').eq('enabled', true).eq('auto_enabled', true);
+        ttsLibraryPlayer = data || [];
+    } catch(err) { console.error('Erro ao carregar biblioteca TTS:', err); }
+}
+
+function checkTTSSchedulePlayer() {
+    if(!ttsLibraryPlayer.length) return;
+    const now = new Date();
+    const currentDay  = String(now.getDay());
+    const currentTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const todayKey    = now.toISOString().split('T')[0];
+
+    ttsLibraryPlayer.forEach(item => {
+        if(!item.scheduled_time || !item.scheduled_days || !item.audio_url) return;
+        const itemTime = item.scheduled_time.substring(0,5);
+        if(itemTime !== currentTime) return;
+        if(!item.scheduled_days.includes(currentDay)) return;
+
+        const fireKey = `${item.id}_${todayKey}_${currentTime}`;
+        if(ttsFiredToday[fireKey]) return; // já disparou neste exato minuto hoje
+        ttsFiredToday[fireKey] = true;
+
+        handleTTSPlay({ audio_url: item.audio_url, title: item.title });
+    });
+}
+
+function initTTSScheduleChecker() {
+    loadTTSLibraryPlayer();
+    setInterval(loadTTSLibraryPlayer, 3 * 60 * 1000); // atualiza a lista a cada 3 min
+    setInterval(checkTTSSchedulePlayer, 20000);        // checa o horário a cada 20s
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1053,23 +1097,25 @@ function initTTSListener() {
 }
 
 function handleTTSPlay(data) {
-    if(!data?.text) return;
+    if(!data?.audio_url) return;
     let wasPaused = false;
     if(isPlaying && audioPlayer.src) {
         playerResumePos = audioPlayer.currentTime;
         wasPaused = true;
+        playerPausedByTTS = true;
         audioPlayer.pause();
         updateDisplay('📢 Aviso', data.title || 'Promoção');
     }
 
-    const onEnd = () => {
+    ttsAudioEl.src = data.audio_url;
+    ttsAudioEl.onended = () => {
+        playerPausedByTTS = false;
         if(wasPaused && isPlaying) {
             audioPlayer.currentTime = playerResumePos;
             audioPlayer.play().catch(e => console.error(e));
         }
     };
-
-    speakTTS(data.text, onEnd);
+    ttsAudioEl.play().catch(e => console.error('Erro ao tocar TTS:', e));
 }
 
 // ─────────────────────────────────────────────────────────────
