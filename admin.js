@@ -349,7 +349,7 @@ function renderQueueSection() {
                 <div class="queue-source">Origem: ${m.source==='manual'?'🔗 Manual':m.source==='auto'?'🤖 Automático':`💬 ${m.suggested_by||'Funcionário'}`}</div>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
                     <button class="queue-preview-btn" onclick="toggleYTPreview(${m.id},'${extractVideoId(m.youtube_url)}')">▶️ Ouvir Prévia</button>
-                    <button class="queue-preview-btn" style="background:#7c3aed;color:#fff;border-color:#7c3aed;" onclick="toggleClassifier(${m.id},'${(m.youtube_title||m.title||''). replace(/'/g,'\\''). slice(0,80)}','${(m.youtube_channel||''). replace(/'/g,'\\''). slice(0,40)}')">🤖 Classificar</button>
+                    <button class="queue-preview-btn" style="background:#7c3aed;color:#fff;border-color:#7c3aed;" onclick="toggleClassifier(${m.id},'${(m.youtube_title||m.title||'').replace(/'/g,"\\'").slice(0,80)}','${(m.youtube_channel||'').replace(/'/g,"\\'").slice(0,40)}')">🤖 Classificar</button>
                 </div>
                 <iframe id="ytframe_${m.id}" class="queue-yt-embed" src="" allowfullscreen allow="autoplay"></iframe>
                 <!-- Painel do classificador -->
