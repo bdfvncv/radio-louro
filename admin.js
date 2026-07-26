@@ -4,6 +4,23 @@ const SUPABASE_SERVICE_KEY= 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdX
 const YOUTUBE_API_KEY     = 'AIzaSyCcpLnZ0XHsSEx34Zvkc80FwmHiHIqS6Gs';
 const ADMIN_PASSWORD      = 'senhaDev';
 const BLOCKED_TERMS       = ['funk','rock pesado','metal','punk','rap','trap'];
+const TTS_FUNCTION_URL    = `${SUPABASE_URL}/functions/v1/tts-generate`;
+
+// Vozes disponíveis por motor de TTS
+const TTS_VOICES = {
+    elevenlabs: [
+        { id: 'EXAVITQu4vr4xnSDxMaL', label: 'Rachel (Feminina, natural)' },
+        { id: 'VR6AewLTigWG4xSOukaG', label: 'Arnold (Masculino, grave)' },
+        { id: 'pNInz6obpgDQGcFmaJgB', label: 'Adam (Masculino, médio)' },
+        { id: 'MF3mGyEYCl7XYWbV9V6O', label: 'Elli (Feminina, jovem)' },
+    ],
+    edge: [
+        { id: 'pt-BR-FranciscaNeural', label: 'Francisca (Feminina, pt-BR)' },
+        { id: 'pt-BR-AntonioNeural',   label: 'Antônio (Masculino, pt-BR)' },
+        { id: 'pt-PT-RaquelNeural',    label: 'Raquel (Feminina, pt-PT)' },
+        { id: 'pt-PT-DuarteNeural',    label: 'Duarte (Masculino, pt-PT)' },
+    ],
+};
 
 // Clientes Supabase — inicializados após garantir que o CDN carregou
 let supabase, supabaseAdmin;
@@ -1029,17 +1046,18 @@ async function deleteLocutorTrack(id) {
 // ─────────────────────────────────────────────────────────────
 // TTS
 // ─────────────────────────────────────────────────────────────
+let selectedTTSEngine = 'elevenlabs';
+
 function setupTTSListeners() {
-    populateTTSVoices(); // preenche select com vozes nativas do navegador
+    populateEngineVoices(selectedTTSEngine);
+    document.getElementById('ttsEngineElevenBtn')?.addEventListener('click', ()=>selectTTSEngine('elevenlabs'));
+    document.getElementById('ttsEngineEdgeBtn')?.addEventListener('click', ()=>selectTTSEngine('edge'));
     const textarea=document.getElementById('ttsTextInput');
     if(textarea) textarea.addEventListener('input', ()=>{
         document.getElementById('ttsCharCount').textContent=textarea.value.length;
     });
     document.getElementById('ttsPlayNowBtn')?.addEventListener('click', handleTTSPlayNow);
     document.getElementById('ttsSaveBtn')?.addEventListener('click', handleTTSSave);
-    document.getElementById('ttsVoiceTestBtn')?.addEventListener('click', ()=>{
-        speakLocally('Olá! Esta é uma demonstração da voz selecionada. Bem-vindo ao Supermercado do Louro!');
-    });
     document.getElementById('ttsClearBtn')?.addEventListener('click', ()=>{
         document.getElementById('ttsTextInput').value='';
         document.getElementById('ttsTitleInput').value='';
@@ -1047,6 +1065,27 @@ function setupTTSListeners() {
         document.getElementById('ttsScheduleTime').value='';
         document.querySelectorAll('.tts-day-check').forEach(c=>c.checked=false);
     });
+}
+
+// ─── Escolha de motor (ElevenLabs / Edge TTS) ────────────────────────────────
+function selectTTSEngine(engine) {
+    selectedTTSEngine = engine;
+    const elevenBtn = document.getElementById('ttsEngineElevenBtn');
+    const edgeBtn   = document.getElementById('ttsEngineEdgeBtn');
+    if(elevenBtn && edgeBtn) {
+        elevenBtn.style.background = engine==='elevenlabs' ? '#006b3f' : '#fff';
+        elevenBtn.style.color      = engine==='elevenlabs' ? '#fff'    : '#006b3f';
+        edgeBtn.style.background   = engine==='edge'       ? '#006b3f' : '#fff';
+        edgeBtn.style.color        = engine==='edge'       ? '#fff'    : '#006b3f';
+    }
+    populateEngineVoices(engine);
+}
+
+function populateEngineVoices(engine) {
+    const sel = document.getElementById('ttsVoiceSelect');
+    if(!sel) return;
+    const voices = TTS_VOICES[engine] || [];
+    sel.innerHTML = voices.map(v => `<option value="${v.id}">${v.label}</option>`).join('');
 }
 
 function renderTTSLibrary() {
@@ -1062,7 +1101,7 @@ function renderTTSLibrary() {
             <div class="tts-lib-title">${t.title}</div>
             <div class="tts-lib-preview">${t.text_content}</div>
             <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
-                <span class="tts-lib-category">${catIcons[t.category]||'📝'} ${t.category}</span>
+                <span class="tts-lib-category">${catIcons[t.category]||'📝'} ${t.category} · ${t.engine==='elevenlabs'?'✨ ElevenLabs':'🔊 Edge'}</span>
                 <div style="display:flex;gap:4px;">
                     <button class="suggest-btn" style="font-size:10px;padding:4px 8px;" onclick="event.stopPropagation();playTTSFromLib(${t.id})">🔊 Falar</button>
                     <button class="btn-delete" style="padding:4px 6px;font-size:11px;" onclick="event.stopPropagation();deleteTTSItem(${t.id})">🗑️</button>
@@ -1080,13 +1119,25 @@ function loadTTSText(id) {
     document.getElementById('ttsCategoryInput').value=item.category||'geral';
     document.getElementById('ttsCharCount').textContent=item.text_content.length;
     if(item.scheduled_time) document.getElementById('ttsScheduleTime').value=item.scheduled_time.substring(0,5);
+    if(item.engine) selectTTSEngine(item.engine);
+    if(item.voice_id) { const sel=document.getElementById('ttsVoiceSelect'); if(sel) sel.value=item.voice_id; }
     document.getElementById('ttsTextInput').focus();
 }
 
+// Toca um áudio já gerado (URL do Cloudinary) — transmite pra todos os players e toca localmente
+async function dispatchTTSAudio(audioUrl, title) {
+    await supabase.channel('tts_broadcast').send({
+        type:'broadcast', event:'tts_play', payload:{ audio_url:audioUrl, title }
+    });
+    if(testAudio) { testAudio.src=audioUrl; testAudio.play().catch(e=>console.warn('Erro ao tocar localmente:',e)); }
+}
+
+// Toca um item já salvo na biblioteca (usa o audio_url já gerado, sem gastar cota de novo)
 async function playTTSFromLib(id) {
     const item=ttsLibrary.find(t=>t.id===id);
     if(!item) return;
-    await dispatchTTS(item.text_content, item.title);
+    if(!item.audio_url) { alert('⚠️ Este item ainda não tem áudio gerado. Abra, clique em "Gerar e Salvar" de novo.'); return; }
+    await dispatchTTSAudio(item.audio_url, item.title);
     await supabaseAdmin.from('tts_library').update({
         last_played_at:new Date().toISOString(),
         play_count:(item.play_count||0)+1
@@ -1095,74 +1146,38 @@ async function playTTSFromLib(id) {
 }
 
 async function handleTTSPlayNow() {
-    const text=document.getElementById('ttsTextInput').value.trim();
-    const title=document.getElementById('ttsTitleInput').value.trim()||'Aviso';
+    const text    = document.getElementById('ttsTextInput').value.trim();
+    const title   = document.getElementById('ttsTitleInput').value.trim()||'Aviso';
+    const voiceId = document.getElementById('ttsVoiceSelect')?.value;
     if(!text){ alert('Digite o texto antes de falar.'); return; }
     const btn=document.getElementById('ttsPlayNowBtn');
-    btn.textContent='🔊 Falando...'; btn.disabled=true;
+    btn.disabled=true;
     try {
-        await dispatchTTS(text, title);
-        setTimeout(()=>{ btn.textContent='🔊 Falar Agora'; btn.disabled=false; }, 3000);
-    } catch(err){ alert('❌ Erro: '+err.message); btn.textContent='🔊 Falar Agora'; btn.disabled=false; }
-}
-
-async function dispatchTTS(text, title) {
-    await supabase.channel('tts_broadcast').send({
-        type:'broadcast', event:'tts_play', payload:{ text, title }
-    });
-    speakLocally(text);
-}
-
-// ─── TTS: Web Speech API nativa (gratuita, sem cadastro, sem chave) ──────────
-function populateTTSVoices() {
-    const sel = document.getElementById('ttsVoiceSelect');
-    if(!sel || !window.speechSynthesis) return;
-    const fill = () => {
-        const voices = speechSynthesis.getVoices().filter(v => v.lang.startsWith('pt'));
-        if(!voices.length) return;
-        sel.innerHTML = voices.map(v =>
-            `<option value="${v.name}">${v.name} (${v.lang})</option>`
-        ).join('');
-        // Prioriza Microsoft Francisca (Windows) > Google Português > qualquer pt-BR
-        const preferred = voices.find(v => v.name.includes('Francisca'))
-            || voices.find(v => v.name.includes('Google') && v.lang === 'pt-BR')
-            || voices.find(v => v.lang === 'pt-BR')
-            || voices[0];
-        if(preferred) sel.value = preferred.name;
-    };
-    fill();
-    speechSynthesis.onvoiceschanged = fill;
-}
-
-function speakLocally(text, onEnd) {
-    if(!window.speechSynthesis) { if(onEnd) onEnd(); return; }
-    speechSynthesis.cancel();
-    const utt = new SpeechSynthesisUtterance(text);
-    utt.lang = 'pt-BR';
-    utt.rate = 0.88;
-    utt.pitch = 1.05;
-    utt.volume = 1;
-    const sel = document.getElementById('ttsVoiceSelect');
-    const selectedName = sel?.value;
-    const voices = speechSynthesis.getVoices();
-    const match = selectedName
-        ? voices.find(v => v.name === selectedName)
-        : voices.find(v => v.lang === 'pt-BR') || voices.find(v => v.lang.startsWith('pt'));
-    if(match) utt.voice = match;
-    if(onEnd) utt.onend = onEnd;
-    speechSynthesis.speak(utt);
+        const audioUrl = await generateTTSAudio(text, selectedTTSEngine, voiceId, title, msg=>{ btn.textContent=msg; });
+        if(audioUrl) {
+            await dispatchTTSAudio(audioUrl, title);
+            if(selectedTTSEngine === 'elevenlabs') loadElevenLabsUsage('elevenLabsUsageBar');
+        }
+    } catch(err){ alert('❌ Erro: '+err.message); }
+    btn.textContent='🔊 Gerar e Tocar Agora'; btn.disabled=false;
 }
 
 async function handleTTSSave() {
-    const text=document.getElementById('ttsTextInput').value.trim();
-    const title=document.getElementById('ttsTitleInput').value.trim();
-    const category=document.getElementById('ttsCategoryInput').value;
+    const text    = document.getElementById('ttsTextInput').value.trim();
+    const title   = document.getElementById('ttsTitleInput').value.trim();
+    const category= document.getElementById('ttsCategoryInput').value;
+    const voiceId = document.getElementById('ttsVoiceSelect')?.value;
     const schedTime=document.getElementById('ttsScheduleTime').value;
     const days=[...document.querySelectorAll('.tts-day-check:checked')].map(c=>c.value);
     if(!text||!title){ alert('Preencha título e texto.'); return; }
+    const btn=document.getElementById('ttsSaveBtn');
+    btn.disabled=true;
     try {
+        const audioUrl = await generateTTSAudio(text, selectedTTSEngine, voiceId, title, msg=>{ btn.textContent=msg; });
+        if(!audioUrl) { btn.textContent='💾 Gerar e Salvar na Biblioteca'; btn.disabled=false; return; }
         const payload={
             title, text_content:text, category,
+            engine:selectedTTSEngine, voice_id:voiceId, audio_url:audioUrl,
             scheduled_time:schedTime||null,
             scheduled_days:days.length?days:null,
             auto_enabled:!!(schedTime&&days.length),
@@ -1170,10 +1185,12 @@ async function handleTTSSave() {
         };
         const {error}=await supabaseAdmin.from('tts_library').insert([payload]);
         if(error) throw error;
-        alert('✅ Texto salvo na biblioteca!');
+        alert('✅ Áudio gerado e salvo na biblioteca!');
+        if(selectedTTSEngine === 'elevenlabs') loadElevenLabsUsage('elevenLabsUsageBar');
         const {data}=await supabase.from('tts_library').select('*').order('created_at',{ascending:false});
         ttsLibrary=data||[]; renderTTSLibrary();
     } catch(err){ alert('❌ Erro: '+err.message); }
+    btn.textContent='💾 Gerar e Salvar na Biblioteca'; btn.disabled=false;
 }
 
 async function deleteTTSItem(id) {
@@ -2740,62 +2757,10 @@ function showCreateGradeForm() {
     const card = document.getElementById('createGradeCard');
     if (card) { card.style.display = 'block'; card.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
 }
-function hideCreateGradeForm() {
-    const card = document.getElementById('createGradeCard');
-    if (card) card.style.display = 'none';
-}
 window.showCreateGradeForm = showCreateGradeForm;
-window.hideCreateGradeForm = hideCreateGradeForm;
 
 function setupCreateGradeListeners() {
     document.getElementById('createGradeForm')?.addEventListener('submit', handleSaveGrade);
-}
-
-async function handleCreateGrade(e) {
-    e.preventDefault();
-    const name      = document.getElementById('newGradeName').value.trim();
-    const desc      = document.getElementById('newGradeDesc').value.trim();
-    const genres    = document.getElementById('newGradeGenres').value.trim();
-    const startHour = parseInt(document.getElementById('newGradeStart').value);
-    const endHour   = parseInt(document.getElementById('newGradeEnd').value);
-    const color     = document.getElementById('newGradeColor').value;
-    const adFreq    = parseInt(document.getElementById('newGradeAdFreq').value) || 3;
-
-    if (!name) { alert('Informe o nome da grade!'); return; }
-    if (isNaN(startHour) || isNaN(endHour)) { alert('Informe as horas de início e fim!'); return; }
-    if (startHour === endHour) { alert('Início e fim não podem ser iguais!'); return; }
-
-    // Verifica conflito com grades existentes
-    const conflict = timeSlots.find(s => {
-        if (s.name === 'Madrugada Aleatória') return false;
-        if (s.start_hour <= s.end_hour) {
-            return !(endHour <= s.start_hour || startHour >= s.end_hour);
-        }
-        return true; // simplificado para grades que cruzam meia-noite
-    });
-    if (conflict) {
-        if (!confirm(`⚠️ Possível conflito de horário com a grade "${conflict.name}". Criar mesmo assim?`)) return;
-    }
-
-    const sortOrder = timeSlots.length;
-    try {
-        const { data, error } = await supabaseAdmin.from('time_slots').insert([{
-            name, description: desc || null, genres: genres || null,
-            start_hour: startHour, end_hour: endHour,
-            color, sort_order: sortOrder, enabled: true,
-            ad_frequency: adFreq
-        }]).select().single();
-        if (error) throw error;
-        alert(`✅ Grade "${name}" criada!`);
-        hideCreateGradeForm();
-        document.getElementById('createGradeForm').reset();
-        // Recarrega grades
-        const { data: slots } = await supabase.from('time_slots').select('*').order('sort_order', { ascending: true });
-        timeSlots = slots || [];
-        await loadSlotData();
-        renderGradesTabs();
-        populateSlotSelects();
-    } catch (err) { alert('❌ Erro: ' + err.message); }
 }
 
 // ═════════════════════════════════════════════════════════════
@@ -3267,24 +3232,8 @@ window.loadSilenceSchedules    = loadSilenceSchedules;
 
 // ═════════════════════════════════════════════════════════════
 // TTS VIA EDGE FUNCTION (ElevenLabs + Edge TTS → Cloudinary)
+// (TTS_FUNCTION_URL e TTS_VOICES ficam no topo do arquivo — usados no carregamento inicial)
 // ═════════════════════════════════════════════════════════════
-const TTS_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/tts-generate`;
-
-// Vozes disponíveis por motor
-const TTS_VOICES = {
-    elevenlabs: [
-        { id: 'EXAVITQu4vr4xnSDxMaL', label: 'Rachel (Feminina, natural)' },
-        { id: 'VR6AewLTigWG4xSOukaG', label: 'Arnold (Masculino, grave)' },
-        { id: 'pNInz6obpgDQGcFmaJgB', label: 'Adam (Masculino, médio)' },
-        { id: 'MF3mGyEYCl7XYWbV9V6O', label: 'Elli (Feminina, jovem)' },
-    ],
-    edge: [
-        { id: 'pt-BR-FranciscaNeural', label: 'Francisca (Feminina, pt-BR)' },
-        { id: 'pt-BR-AntonioNeural',   label: 'Antônio (Masculino, pt-BR)' },
-        { id: 'pt-PT-RaquelNeural',    label: 'Raquel (Feminina, pt-PT)' },
-        { id: 'pt-PT-DuarteNeural',    label: 'Duarte (Masculino, pt-PT)' },
-    ],
-};
 
 // Gera áudio TTS via Edge Function e retorna URL do Cloudinary
 async function generateTTSAudio(text, engine, voiceId, title, onProgress) {
