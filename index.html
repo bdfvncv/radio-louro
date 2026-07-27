@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>📻 Rádio 24H Supermercado do Louro</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="icon" type="image/png" href="logo.png">
 </head>
@@ -15,79 +15,12 @@
 
     <div class="player-container">
 
-        <!-- CAPA -->
-        <div class="player-hero">
-            <svg class="player-hero-art" viewBox="0 0 480 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ilustração de uma ouvinte com fone de ouvido, cabelo cacheado">
-                <defs>
-                    <linearGradient id="heroBg" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stop-color="#14361f"/>
-                        <stop offset="100%" stop-color="#081b12"/>
-                    </linearGradient>
-                    <radialGradient id="heroHalo" cx="50%" cy="50%" r="50%">
-                        <stop offset="0%" stop-color="#f2c230" stop-opacity="0.9"/>
-                        <stop offset="55%" stop-color="#f2c230" stop-opacity="0.28"/>
-                        <stop offset="100%" stop-color="#f2c230" stop-opacity="0"/>
-                    </radialGradient>
-                </defs>
-                <rect x="0" y="0" width="480" height="520" rx="32" fill="url(#heroBg)"/>
-                <circle cx="248" cy="225" r="175" fill="url(#heroHalo)"/>
-                <g transform="rotate(-6 248 250)">
-                    <path d="M215,300 C210,330 195,350 168,368 C128,394 106,430 100,480 C97,498 96,510 96,520 L400,520 C400,510 399,498 396,480 C390,430 368,394 328,368 C301,350 286,330 281,300 C270,312 262,316 248,316 C234,316 226,312 215,300 Z" fill="#8a5535"/>
-                    <rect x="222" y="270" width="52" height="55" rx="18" fill="#8a5535"/>
-                    <g fill="#0c1c12">
-                        <circle cx="150" cy="205" r="40"/>
-                        <circle cx="140" cy="250" r="32"/>
-                        <circle cx="150" cy="292" r="26"/>
-                        <circle cx="176" cy="150" r="38"/>
-                        <circle cx="215" cy="118" r="36"/>
-                        <circle cx="258" cy="112" r="34"/>
-                        <circle cx="300" cy="128" r="34"/>
-                        <circle cx="332" cy="160" r="32"/>
-                        <circle cx="348" cy="205" r="30"/>
-                        <circle cx="345" cy="252" r="26"/>
-                        <circle cx="120" cy="185" r="22"/>
-                        <circle cx="365" cy="180" r="20"/>
-                    </g>
-                    <g class="hero-curl" fill="#0c1c12">
-                        <circle cx="380" cy="120" r="17" opacity="0.85"/>
-                        <circle cx="405" cy="98" r="11" opacity="0.6"/>
-                        <circle cx="420" cy="130" r="8" opacity="0.4"/>
-                        <circle cx="95" cy="145" r="14" opacity="0.75"/>
-                        <circle cx="70" cy="120" r="9" opacity="0.5"/>
-                    </g>
-                    <ellipse cx="248" cy="235" rx="62" ry="70" fill="#a2683f"/>
-                    <ellipse cx="222" cy="215" rx="26" ry="32" fill="#b47a4d" opacity="0.55"/>
-                    <path d="M170,220 C170,140 200,90 248,90 C296,90 326,140 326,220" fill="none" stroke="#f2c230" stroke-width="16" stroke-linecap="round"/>
-                    <ellipse cx="168" cy="248" rx="24" ry="34" fill="#f2c230"/>
-                    <ellipse cx="168" cy="248" rx="12" ry="20" fill="#0c1c12"/>
-                    <ellipse cx="328" cy="248" rx="24" ry="34" fill="#f2c230"/>
-                    <ellipse cx="328" cy="248" rx="12" ry="20" fill="#0c1c12"/>
-                </g>
-                <g fill="none" stroke="#f2c230" stroke-linecap="round">
-                    <path class="hero-wave" d="M368,225 C388,240 388,268 368,284" stroke-width="4" opacity="0.7"/>
-                    <path class="hero-wave hero-wave-2" d="M386,208 C416,232 416,278 386,302" stroke-width="4" opacity="0.4"/>
-                </g>
-                <g fill="#f2c230">
-                    <rect class="hero-eq" x="60" y="470" width="8" height="24" rx="4"/>
-                    <rect class="hero-eq" x="74" y="450" width="8" height="44" rx="4" style="animation-delay:-.6s"/>
-                    <rect class="hero-eq" x="88" y="460" width="8" height="34" rx="4" style="animation-delay:-1.1s"/>
-                    <rect class="hero-eq" x="102" y="440" width="8" height="54" rx="4" style="animation-delay:-.3s"/>
-                    <rect class="hero-eq" x="116" y="465" width="8" height="29" rx="4" style="animation-delay:-.9s"/>
-                </g>
-            </svg>
-            <div class="player-hero-text">
-                <span class="player-hero-eyebrow">Transmissão ao vivo · 24 horas</span>
-                <h1 class="player-hero-title">A trilha sonora do<br>Supermercado do Louro</h1>
-                <p class="player-hero-sub">Sertanejo, forró e muito mais — direto pra loja, o dia inteiro.</p>
-            </div>
-        </div>
-
         <!-- LOGO -->
         <div class="player-logo-wrap">
             <img src="logo.png" alt="Supermercado do Louro" class="player-logo">
             <div class="player-brand">
                 <span class="player-brand-name">Rádio Supermercado do Louro</span>
-                <span class="player-brand-tag live-dot">AO VIVO</span>
+                <span class="player-brand-tag live-dot">● AO VIVO</span>
             </div>
         </div>
 
