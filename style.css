@@ -395,21 +395,31 @@ a:hover { text-decoration: underline; }
 }
 
 .hi-glow   { fill: var(--green-light); }
-.hi-bust   { fill: var(--green-dark); }
-.hi-head   { fill: var(--green-dark); }
-.hi-note   { fill: var(--gold); opacity: .85; }
 
-.hi-crown {
-  fill: none; stroke: var(--gold); stroke-width: 7; stroke-linecap: round;
+.ill-body   { fill: var(--gold); }
+.ill-neck   { fill: #d9a24a; }
+.ill-head   { fill: #d9a24a; }
+.ill-hair   { fill: var(--green-dark); }
+.ill-hair circle { fill: var(--green-dark); }
+
+.ill-face      { fill: none; stroke: var(--green-dark); stroke-width: 2.2; stroke-linecap: round; }
+.ill-face-dot  { fill: var(--green-dark); }
+
+.ill-headband  { fill: none; stroke: var(--gray-800); stroke-width: 6; stroke-linecap: round; }
+.ill-earcup    { fill: var(--gray-800); }
+.ill-earcup-glow { fill: var(--gold-light); opacity: .9; animation: earcup-pulse 2.2s ease-in-out infinite; }
+
+@keyframes earcup-pulse {
+  0%, 100% { opacity: .55; }
+  50%      { opacity: 1; }
 }
-.hi-crown-dot { fill: var(--green); }
 
-.hi-pulse path {
-  fill: none; stroke: var(--gold); stroke-width: 3; stroke-linecap: round;
+.ill-pulse path {
+  fill: none; stroke: var(--gold); stroke-width: 2.4; stroke-linecap: round;
   opacity: 0;
   animation: pulse-out 2.4s ease-out infinite;
 }
-.hi-pulse path:nth-child(2) { animation-delay: .45s; }
+.ill-pulse path:nth-child(2) { animation-delay: .4s; }
 
 @keyframes pulse-out {
   0%   { opacity: .85; }
@@ -457,7 +467,7 @@ a:hover { text-decoration: underline; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-icon, .hi-pulse path, .eq-bar, .play-ring, .player-play-btn { animation: none !important; }
+  .hero-icon, .ill-pulse path, .ill-earcup-glow, .eq-bar, .play-ring, .player-play-btn { animation: none !important; }
   .eq-bar { height: 45%; }
 }
 
