@@ -417,7 +417,7 @@
             <!-- TTS -->
             <div class="admin-card">
                 <h3 class="card-title">📢 Promoções em Voz (TTS)</h3>
-                <p class="section-desc">Digite o texto e dispare com voz em todos os players. Escolha entre ElevenLabs (alta qualidade, 10k chars/mês grátis) ou Edge TTS (Microsoft, sem limite).</p>
+                <p class="section-desc">Digite o texto e dispare com voz em todos os players, via ElevenLabs (alta qualidade, 10k chars/mês grátis).</p>
                 <div id="elevenLabsUsageBar" style="margin-bottom:12px;padding:10px 14px;background:#f0faf5;border-radius:8px;border:1px solid #a7d9bb;">
                     <span style="font-size:12px;color:#666;">Carregando consumo ElevenLabs...</span>
                 </div>
@@ -433,11 +433,7 @@
                         </select>
                     </div>
                     <div class="tts-voice-row" style="flex-direction:column;align-items:flex-start;gap:8px;">
-                        <span class="tts-voice-label">🎙️ Motor de voz:</span>
-                        <div style="display:flex;gap:8px;">
-                            <button type="button" class="engine-btn active" id="ttsEngineElevenBtn" data-engine="elevenlabs" style="padding:8px 16px;border-radius:8px;border:2px solid #006b3f;background:#006b3f;color:#fff;font-weight:600;cursor:pointer;">✨ ElevenLabs</button>
-                            <button type="button" class="engine-btn" id="ttsEngineEdgeBtn" data-engine="edge" style="padding:8px 16px;border-radius:8px;border:2px solid #006b3f;background:#fff;color:#006b3f;font-weight:600;cursor:pointer;">🔊 Edge TTS</button>
-                        </div>
+                        <span class="tts-voice-label">🎙️ Voz (ElevenLabs):</span>
                         <select class="tts-voice-select" id="ttsVoiceSelect" style="width:100%;"></select>
                     </div>
                     <textarea class="tts-textarea" id="ttsTextInput" placeholder="Digite o texto que será lido em voz alta..." maxlength="500"></textarea>
