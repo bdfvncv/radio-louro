@@ -9,10 +9,10 @@ const TTS_FUNCTION_URL    = `${SUPABASE_URL}/functions/v1/tts-generate`;
 // Vozes disponíveis por motor de TTS
 const TTS_VOICES = {
     elevenlabs: [
-        { id: 'EXAVITQu4vr4xnSDxMaL', label: 'Rachel (Feminina, natural)' },
-        { id: 'VR6AewLTigWG4xSOukaG', label: 'Arnold (Masculino, grave)' },
-        { id: 'pNInz6obpgDQGcFmaJgB', label: 'Adam (Masculino, médio)' },
-        { id: 'MF3mGyEYCl7XYWbV9V6O', label: 'Elli (Feminina, jovem)' },
+        { id: 'WZlYpi1yf6zJhNWXih74', label: 'Hope (Profissional, clara)' },
+        { id: 'GzE4TcXfh9rYCU9gVgPp', label: 'Alex Wright (Clara e alegre)' },
+        { id: 'p4w8j6zCUDJ0nGJ3okKs', label: 'Ninoska (Brilhante, genuína)' },
+        { id: 'HR2TRGmi4QbMsO5omv7l', label: 'Rômulo Franklin (Locutor de rádio)' },
     ],
     edge: [
         { id: 'pt-BR-FranciscaNeural', label: 'Francisca (Feminina, pt-BR)' },
@@ -1046,12 +1046,10 @@ async function deleteLocutorTrack(id) {
 // ─────────────────────────────────────────────────────────────
 // TTS
 // ─────────────────────────────────────────────────────────────
-let selectedTTSEngine = 'elevenlabs';
+const selectedTTSEngine = 'elevenlabs'; // único motor disponível
 
 function setupTTSListeners() {
     populateEngineVoices(selectedTTSEngine);
-    document.getElementById('ttsEngineElevenBtn')?.addEventListener('click', ()=>selectTTSEngine('elevenlabs'));
-    document.getElementById('ttsEngineEdgeBtn')?.addEventListener('click', ()=>selectTTSEngine('edge'));
     const textarea=document.getElementById('ttsTextInput');
     if(textarea) textarea.addEventListener('input', ()=>{
         document.getElementById('ttsCharCount').textContent=textarea.value.length;
@@ -1065,20 +1063,6 @@ function setupTTSListeners() {
         document.getElementById('ttsScheduleTime').value='';
         document.querySelectorAll('.tts-day-check').forEach(c=>c.checked=false);
     });
-}
-
-// ─── Escolha de motor (ElevenLabs / Edge TTS) ────────────────────────────────
-function selectTTSEngine(engine) {
-    selectedTTSEngine = engine;
-    const elevenBtn = document.getElementById('ttsEngineElevenBtn');
-    const edgeBtn   = document.getElementById('ttsEngineEdgeBtn');
-    if(elevenBtn && edgeBtn) {
-        elevenBtn.style.background = engine==='elevenlabs' ? '#006b3f' : '#fff';
-        elevenBtn.style.color      = engine==='elevenlabs' ? '#fff'    : '#006b3f';
-        edgeBtn.style.background   = engine==='edge'       ? '#006b3f' : '#fff';
-        edgeBtn.style.color        = engine==='edge'       ? '#fff'    : '#006b3f';
-    }
-    populateEngineVoices(engine);
 }
 
 function populateEngineVoices(engine) {
@@ -1119,7 +1103,6 @@ function loadTTSText(id) {
     document.getElementById('ttsCategoryInput').value=item.category||'geral';
     document.getElementById('ttsCharCount').textContent=item.text_content.length;
     if(item.scheduled_time) document.getElementById('ttsScheduleTime').value=item.scheduled_time.substring(0,5);
-    if(item.engine) selectTTSEngine(item.engine);
     if(item.voice_id) { const sel=document.getElementById('ttsVoiceSelect'); if(sel) sel.value=item.voice_id; }
     document.getElementById('ttsTextInput').focus();
 }
