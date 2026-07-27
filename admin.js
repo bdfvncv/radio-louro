@@ -9,10 +9,10 @@ const TTS_FUNCTION_URL    = `${SUPABASE_URL}/functions/v1/tts-generate`;
 // Vozes disponíveis por motor de TTS
 const TTS_VOICES = {
     elevenlabs: [
-        { id: 'WZlYpi1yf6zJhNWXih74', label: 'Hope (Profissional, clara)' },
-        { id: 'GzE4TcXfh9rYCU9gVgPp', label: 'Alex Wright (Clara e alegre)' },
-        { id: 'p4w8j6zCUDJ0nGJ3okKs', label: 'Ninoska (Brilhante, genuína)' },
-        { id: 'HR2TRGmi4QbMsO5omv7l', label: 'Rômulo Franklin (Locutor de rádio)' },
+        { id: 'EXAVITQu4vr4xnSDxMaL', label: 'Rachel (Feminina, natural) ⚠️ descontinua fim de 2026' },
+        { id: 'VR6AewLTigWG4xSOukaG', label: 'Arnold (Masculino, grave) ⚠️ descontinua fim de 2026' },
+        { id: 'pNInz6obpgDQGcFmaJgB', label: 'Adam (Masculino, médio) ⚠️ descontinua fim de 2026' },
+        { id: 'MF3mGyEYCl7XYWbV9V6O', label: 'Elli (Feminina, jovem) ⚠️ descontinua fim de 2026' },
     ],
     edge: [
         { id: 'pt-BR-FranciscaNeural', label: 'Francisca (Feminina, pt-BR)' },
