@@ -386,27 +386,30 @@ a:hover { text-decoration: underline; }
 .hero-icon {
   flex-shrink: 0;
   width: 108px; height: 108px;
-  animation: hero-float 4.5s ease-in-out infinite;
-}
-
-@keyframes hero-float {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-6px); }
+  overflow: visible;
 }
 
 .hi-glow   { fill: var(--green-light); }
 
-.ill-body   { fill: var(--gold); }
-.ill-neck   { fill: #d9a24a; }
-.ill-head   { fill: #d9a24a; }
-.ill-hair   { fill: var(--green-dark); }
-.ill-hair circle { fill: var(--green-dark); }
+.ill-figure { animation: ill-sway 3.6s ease-in-out infinite; transform-origin: 100px 220px; }
 
-.ill-face      { fill: none; stroke: var(--green-dark); stroke-width: 2.2; stroke-linecap: round; }
-.ill-face-dot  { fill: var(--green-dark); }
+@keyframes ill-sway {
+  0%, 100% { transform: translateY(0) rotate(-1.2deg); }
+  50%      { transform: translateY(-4px) rotate(1.2deg); }
+}
 
-.ill-headband  { fill: none; stroke: var(--gray-800); stroke-width: 6; stroke-linecap: round; }
-.ill-earcup    { fill: var(--gray-800); }
+.ill-body    { fill: var(--green-dark); }
+.ill-collar  { fill: var(--gold); }
+.ill-head    { fill: var(--green-dark); }
+
+.ill-hair-back circle { fill: var(--green); }
+.ill-hair circle      { fill: var(--green-dark); }
+
+.ill-face      { fill: none; stroke: var(--green-light); stroke-width: 2.6; stroke-linecap: round; }
+.ill-face-dot  { fill: var(--green-light); }
+
+.ill-headband  { fill: none; stroke: var(--gold); stroke-width: 8; stroke-linecap: round; }
+.ill-earcup    { fill: var(--gold-dark); }
 .ill-earcup-glow { fill: var(--gold-light); opacity: .9; animation: earcup-pulse 2.2s ease-in-out infinite; }
 
 @keyframes earcup-pulse {
@@ -467,7 +470,7 @@ a:hover { text-decoration: underline; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-icon, .ill-pulse path, .ill-earcup-glow, .eq-bar, .play-ring, .player-play-btn { animation: none !important; }
+  .ill-figure, .ill-pulse path, .ill-earcup-glow, .eq-bar, .play-ring, .player-play-btn { animation: none !important; }
   .eq-bar { height: 45%; }
 }
 
