@@ -5,10 +5,10 @@
 
 :root{
   /* ── cor: verde escuro + branco + amarelo + preto ── */
-  --ink:        #060a08;
-  --ink-2:      #0b120e;
-  --ink-3:      #101c15;
-  --ink-4:      #182a20;
+  --ink:        #081b12;
+  --ink-2:      #0d2618;
+  --ink-3:      #12331e;
+  --ink-4:      #1b4a2b;
 
   --paper:      #ffffff;
   --paper-2:    #f1f2ee;
@@ -288,20 +288,46 @@ input,select,textarea,button{ font-family:inherit; }
 }
 
 .player-play-btn{
-  width:84px; height:84px;
-  border-radius:var(--r-lg);
-  border:1px solid var(--line);
-  background:linear-gradient(160deg, var(--brand), var(--brand-deep));
-  color:var(--paper);
+  width:96px; height:96px;
+  border-radius:26px;
+  border:none;
+  background:radial-gradient(120% 130% at 30% 22%, #ffe08a 0%, var(--signal) 42%, var(--signal-deep) 100%);
+  color:var(--ink);
   display:flex; align-items:center; justify-content:center;
   cursor:pointer;
-  box-shadow:var(--shadow-btn), 0 0 0 6px var(--brand-soft);
-  transition:transform .15s var(--ease), box-shadow .2s var(--ease), filter .2s var(--ease);
+  position:relative;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.55) inset,
+    0 -14px 18px -10px rgba(0,0,0,.25) inset,
+    0 14px 30px -10px rgba(242,194,48,.55),
+    0 0 0 3px var(--ink-2),
+    0 0 0 6px rgba(14,108,63,.55);
+  transition:transform .15s var(--ease), box-shadow .25s var(--ease), filter .2s var(--ease);
 }
-.player-play-btn svg{ width:32px; height:32px; margin-left:2px; }
+.player-play-btn::after{
+  content:"";
+  position:absolute; inset:-11px;
+  border-radius:32px;
+  border:1.5px dashed rgba(242,194,48,.35);
+  animation:spin-slow 22s linear infinite;
+  pointer-events:none;
+}
+.player-play-btn svg{ width:34px; height:34px; margin-left:3px; filter:drop-shadow(0 1px 1px rgba(0,0,0,.2)); }
 .player-play-btn .pause-icon{ margin-left:0; }
-.player-play-btn:hover{ filter:brightness(1.08); transform:translateY(-1px); }
-.player-play-btn:active{ transform:translateY(1px) scale(.97); box-shadow:0 4px 10px -4px rgba(0,0,0,.6) inset; }
+.player-play-btn:hover{
+  filter:brightness(1.05);
+  transform:translateY(-2px) scale(1.02);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.6) inset,
+    0 -14px 18px -10px rgba(0,0,0,.22) inset,
+    0 18px 38px -10px rgba(242,194,48,.7),
+    0 0 0 3px var(--ink-2),
+    0 0 0 7px rgba(14,108,63,.65);
+}
+.player-play-btn:active{
+  transform:translateY(1px) scale(.97);
+  filter:brightness(.97);
+}
 
 .player-controls{
   width:100%;
