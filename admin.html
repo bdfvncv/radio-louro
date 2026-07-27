@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin — Rádio 24H Supermercado do Louro</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="icon" type="image/png" href="logo.png">
 </head>
@@ -141,7 +141,7 @@
                 </div>
             </div>
             <p class="section-desc">Cada faixa horária tem sua própria playlist e vinhetas. Desativar as grades volta para a Playlist de Fundo geral.</p>
-            <div class="admin-card" id="createGradeCard" style="display:none;border:2px solid #006b3f;">
+            <div class="admin-card" id="createGradeCard" style="display:none;border:2px solid #0b3d2e;">
                 <h3 class="card-title">➕ Criar Nova Grade Horária</h3>
                 <form class="edit-form" id="createGradeForm">
                     <div class="form-group"><label>Nome da Grade:</label><input type="text" id="newGradeName" placeholder="Ex: Tarde Animada" required></div>
@@ -151,7 +151,7 @@
                         <div class="form-group"><label>Hora de fim (0–23):</label><input type="number" id="newGradeEnd" min="0" max="23" value="12" required></div>
                     </div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                        <div class="form-group"><label>Cor:</label><input type="color" id="newGradeColor" value="#006b3f"></div>
+                        <div class="form-group"><label>Cor:</label><input type="color" id="newGradeColor" value="#0b3d2e"></div>
                         <div class="form-group"><label>Freq. de propagandas (a cada X músicas):</label><input type="number" id="newGradeAdFreq" min="1" max="50" value="3"></div>
                     </div>
                     <div class="form-actions">
@@ -211,7 +211,7 @@
                                 style="display:none;width:100%;aspect-ratio:16/9;border:none;border-radius:8px;margin-top:6px;"></iframe>
                         </div>
                         <div class="form-group" style="margin-top:12px;">
-                            <label style="font-weight:700;color:#006b3f;font-size:13px;">📍 Destinos (selecione um ou mais):</label>
+                            <label style="font-weight:700;color:#0b3d2e;font-size:13px;">📍 Destinos (selecione um ou mais):</label>
                             <div id="ytDestManualContainer" style="border:2px solid #e9ecef;border-radius:8px;padding:8px;margin-top:6px;background:#fafafa;max-height:200px;overflow-y:auto;">
                                 <!-- preenchido por populateSlotSelects() -->
                             </div>
@@ -249,7 +249,7 @@
                         <div id="ytAutoResultsList"></div>
 
                         <div class="form-group" style="margin-top:14px;">
-                            <label style="font-weight:700;color:#006b3f;font-size:13px;">📍 Destinos (selecione um ou mais):</label>
+                            <label style="font-weight:700;color:#0b3d2e;font-size:13px;">📍 Destinos (selecione um ou mais):</label>
                             <div id="ytDestAutoContainer" style="border:2px solid #e9ecef;border-radius:8px;padding:8px;margin-top:6px;background:#fafafa;max-height:200px;overflow-y:auto;">
                                 <!-- preenchido por populateSlotSelects() -->
                             </div>
@@ -321,13 +321,13 @@
                 </details>
             </div>
 
-            <div class="admin-card" style="border-left:4px solid #dc3545;background:#fff5f5;">
+            <div class="admin-card" style="border-left:4px solid #b3413a;background:#fff5f5;">
                 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
                     <div>
-                        <h3 class="card-title" style="margin:0;color:#dc3545;">🔧 Diagnóstico de Músicas</h3>
+                        <h3 class="card-title" style="margin:0;color:#b3413a;">🔧 Diagnóstico de Músicas</h3>
                         <p style="font-size:12px;color:#666;margin-top:4px;">Detecta músicas salvas com URL do YouTube (não reproduzem) e permite corrigir ou remover.</p>
                     </div>
-                    <button id="scanBrokenBtn" class="submit-btn" style="background:#dc3545;" onclick="scanAndFixBrokenTracks()">🔍 Verificar Músicas</button>
+                    <button id="scanBrokenBtn" class="submit-btn" style="background:#b3413a;" onclick="scanAndFixBrokenTracks()">🔍 Verificar Músicas</button>
                 </div>
                 <div id="brokenTracksContainer"></div>
             </div>
@@ -377,9 +377,9 @@
             </div>
 
             <!-- Chamada de Funcionário -->
-            <div class="admin-card" style="border-left:4px solid #f59e0b;background:#fffbf0;">
+            <div class="admin-card" style="border-left:4px solid #c9a227;background:#fffbf0;">
                 <h3 class="card-title" style="color:#92400e;">📣 Chamada de Funcionário</h3>
-                <p class="section-desc" style="border-color:#f59e0b;background:#fff8e1;">Chame um funcionário pelo nome em todos os players com um clique. Digite o nome e use os botões rápidos por setor.</p>
+                <p class="section-desc" style="border-color:#c9a227;background:#fff8e1;">Chame um funcionário pelo nome em todos os players com um clique. Digite o nome e use os botões rápidos por setor.</p>
                 <form class="edit-form" id="chamadaForm">
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                         <div class="form-group">
@@ -396,21 +396,21 @@
                         <input type="text" id="chamadaDestino" placeholder="Ex: Gerência, Caixa 3, Estoque...">
                     </div>
                     <div class="form-actions">
-                        <button type="submit" class="submit-btn" style="background:#f59e0b;">📣 Chamar Agora</button>
+                        <button type="submit" class="submit-btn" style="background:#c9a227;">📣 Chamar Agora</button>
                     </div>
                 </form>
 
                 <h4 style="margin:14px 0 8px;color:#92400e;font-size:13px;">⚡ Atalhos Rápidos</h4>
                 <p style="font-size:12px;color:#666;margin-bottom:10px;">Digite o nome acima e clique no setor de destino:</p>
                 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
-                    <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('Caixa','à gerência')">🛒 Gerência</button>
-                    <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('','ao caixa central')">💰 Caixa Central</button>
-                    <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('','ao açougue')">🥩 Açougue</button>
-                    <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('','à padaria')">🍞 Padaria</button>
-                    <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('','à frutaria')">🍎 Frutaria</button>
-                    <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('','ao estoque')">📦 Estoque</button>
-                    <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('','à segurança')">🔒 Segurança</button>
-                    <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('','à limpeza')">🧹 Limpeza</button>
+                    <button class="emergency-preset-btn" style="border-color:#c9a227;" onclick="chamadaRapida('Caixa','à gerência')">🛒 Gerência</button>
+                    <button class="emergency-preset-btn" style="border-color:#c9a227;" onclick="chamadaRapida('','ao caixa central')">💰 Caixa Central</button>
+                    <button class="emergency-preset-btn" style="border-color:#c9a227;" onclick="chamadaRapida('','ao açougue')">🥩 Açougue</button>
+                    <button class="emergency-preset-btn" style="border-color:#c9a227;" onclick="chamadaRapida('','à padaria')">🍞 Padaria</button>
+                    <button class="emergency-preset-btn" style="border-color:#c9a227;" onclick="chamadaRapida('','à frutaria')">🍎 Frutaria</button>
+                    <button class="emergency-preset-btn" style="border-color:#c9a227;" onclick="chamadaRapida('','ao estoque')">📦 Estoque</button>
+                    <button class="emergency-preset-btn" style="border-color:#c9a227;" onclick="chamadaRapida('','à segurança')">🔒 Segurança</button>
+                    <button class="emergency-preset-btn" style="border-color:#c9a227;" onclick="chamadaRapida('','à limpeza')">🧹 Limpeza</button>
                 </div>
             </div>
 
@@ -557,8 +557,8 @@
                         <p style="color:#555;">Automático ao completar a playlist.</p>
                         <button class="test-btn" id="forceShuffleBtn" style="margin-top:8px;">🎲 Forçar Agora</button>
                     </div>
-                    <div class="shuffle-box" style="flex:1;border-left-color:#006b3f;background:#e6f4ed;">
-                        <h4 style="color:#006b3f;">🔢 Organizar Ordem</h4>
+                    <div class="shuffle-box" style="flex:1;border-left-color:#0b3d2e;background:#eaf3ee;">
+                        <h4 style="color:#0b3d2e;">🔢 Organizar Ordem</h4>
                         <p style="color:#555;">Preenche espaços vazios mantendo a ordem relativa.</p>
                         <button class="submit-btn" style="margin-top:8px;font-size:12px;padding:7px 14px;" onclick="organizeBackgroundPlaylist()">🔢 Organizar Agora</button>
                     </div>
@@ -639,9 +639,9 @@
                     <div class="locutor-indicator" id="flashIndicator"></div>
                     <div style="flex:1;">
                         <div class="locutor-status-text" id="flashStatusText">Nenhuma promoção ativa</div>
-                        <div id="flashCountdown" style="font-size:20px;font-weight:700;color:#f59e0b;display:none;font-variant-numeric:tabular-nums;"></div>
+                        <div id="flashCountdown" style="font-size:20px;font-weight:700;color:#c9a227;display:none;font-variant-numeric:tabular-nums;"></div>
                     </div>
-                    <button class="emergency-btn" id="flashStopBtn" style="display:none;background:#dc3545;">⏹ Encerrar</button>
+                    <button class="emergency-btn" id="flashStopBtn" style="display:none;background:#b3413a;">⏹ Encerrar</button>
                 </div>
             </div>
             <div class="admin-card">
@@ -650,7 +650,7 @@
                     <div class="form-group"><label>Título:</label><input type="text" id="flashTitle" placeholder="Ex: Desconto no açougue!" required></div>
                     <div class="form-group"><label>Texto para voz (TTS):</label><textarea id="flashText" class="tts-textarea" style="min-height:60px;" placeholder="Ex: Atenção clientes! Por 15 minutos, todo o açougue com 20% de desconto. Aproveite!" required></textarea></div>
                     <div class="form-group"><label>Duração (minutos):</label><input type="number" id="flashDuration" value="15" min="1" max="120"><small>Contagem regressiva visível no player</small></div>
-                    <div class="form-actions"><button type="submit" class="submit-btn" style="background:#f59e0b;">⚡ Disparar Agora</button></div>
+                    <div class="form-actions"><button type="submit" class="submit-btn" style="background:#c9a227;">⚡ Disparar Agora</button></div>
                 </form>
             </div>
             <div class="admin-card">
@@ -740,7 +740,7 @@
 
                     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
                         <label for="importBackupFile" style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;background:#fff;border:2px dashed #adb5bd;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:#495057;transition:border-color .2s;"
-                            onmouseover="this.style.borderColor='#006b3f'" onmouseout="this.style.borderColor='#adb5bd'">
+                            onmouseover="this.style.borderColor='#0b3d2e'" onmouseout="this.style.borderColor='#adb5bd'">
                             📂 Escolher arquivo .json
                             <input type="file" id="importBackupFile" accept=".json" style="display:none;" onchange="handleImportBackup(this)">
                         </label>
@@ -841,7 +841,7 @@
             </div>
 
             <!-- Indicador de uso -->
-            <div class="admin-card" style="border-left:4px solid #006b3f;">
+            <div class="admin-card" style="border-left:4px solid #0b3d2e;">
                 <h3 class="card-title">📊 Uso de Armazenamento</h3>
                 <div id="cloudinaryUsageBar"><span style="color:#666;font-size:12px;">Carregando...</span></div>
             </div>
