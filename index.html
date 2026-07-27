@@ -12,7 +12,6 @@
 <body class="player-body">
 
     <div class="player-bg-circle"></div>
-    <div class="player-bg-circle player-bg-circle-2"></div>
 
     <div class="player-container">
 
@@ -24,76 +23,41 @@
             <div class="hero-top">
                 <div class="player-logo-wrap">
                     <img src="logo.png" alt="Supermercado do Louro" class="player-logo">
-                    <div class="player-brand">
-                        <span class="player-brand-name">Rádio Supermercado do Louro</span>
-                        <span class="player-brand-tag live-dot">AO VIVO</span>
-                    </div>
+                    <span class="player-brand-name hero-brand-name">Rádio Supermercado do Louro</span>
                 </div>
+                <span class="hero-live-badge live-dot">AO VIVO</span>
             </div>
 
-            <div class="hero-stage" aria-hidden="true">
-                <svg class="hero-waves" viewBox="0 0 400 200">
-                    <path class="wave wave-1" d="M0,100 Q50,40 100,100 T200,100 T300,100 T400,100" />
-                    <path class="wave wave-2" d="M0,100 Q50,150 100,100 T200,100 T300,100 T400,100" />
-                    <path class="wave wave-3" d="M0,100 Q50,60 100,100 T200,100 T300,100 T400,100" />
-                </svg>
+            <div class="hero-main">
+                <div class="hero-copy">
+                    <span class="hero-eyebrow">Sua trilha sonora 24 horas</span>
+                    <h1 class="hero-title">O som que move o<br>Supermercado do Louro</h1>
+                </div>
 
-                <svg class="hero-illustration" viewBox="0 0 300 320" xmlns="http://www.w3.org/2000/svg">
-                    <ellipse class="ill-shadow" cx="150" cy="300" rx="80" ry="14"/>
-
-                    <g class="ill-note ill-note-1">
-                        <circle cx="0" cy="0" r="7"/>
-                        <rect x="6" y="-34" width="3" height="34"/>
+                <svg class="hero-icon" viewBox="0 0 200 200" aria-hidden="true">
+                    <circle class="hi-glow" cx="100" cy="100" r="72"/>
+                    <path class="hi-note" d="M150 55 L150 95 Q150 105 140 105 Q130 105 130 95 Q130 85 140 85 Q145 85 150 88 L150 55 Z"/>
+                    <circle class="hi-bust" cx="100" cy="150" r="55"/>
+                    <circle class="hi-head" cx="100" cy="92" r="40"/>
+                    <path class="hi-crown" d="M64 92 Q64 46 100 46 Q136 46 136 92" />
+                    <circle class="hi-crown-dot" cx="64" cy="92" r="8"/>
+                    <circle class="hi-crown-dot" cx="80" cy="58" r="6"/>
+                    <circle class="hi-crown-dot" cx="100" cy="48" r="7"/>
+                    <circle class="hi-crown-dot" cx="120" cy="58" r="6"/>
+                    <circle class="hi-crown-dot" cx="136" cy="92" r="8"/>
+                    <g class="hi-pulse">
+                        <path d="M46 92 Q30 92 30 112"/>
+                        <path d="M38 92 Q16 92 16 124"/>
                     </g>
-                    <g class="ill-note ill-note-2">
-                        <circle cx="0" cy="0" r="5"/>
-                        <rect x="4.5" y="-24" width="2.5" height="24"/>
-                    </g>
-
-                    <g class="ill-pulse">
-                        <path d="M60 150 Q30 150 30 180" />
-                        <path d="M50 150 Q15 150 15 195" />
-                    </g>
-                    <g class="ill-pulse ill-pulse-right">
-                        <path d="M240 150 Q270 150 270 180" />
-                        <path d="M250 150 Q285 150 285 195" />
-                    </g>
-
-                    <path class="ill-body" d="M95 320 L95 250 Q95 200 150 200 Q205 200 205 250 L205 320 Z"/>
-                    <rect class="ill-neck" x="135" y="185" width="30" height="30" rx="8"/>
-                    <circle class="ill-head" cx="150" cy="150" r="52"/>
-
-                    <g class="ill-hair">
-                        <circle cx="97" cy="118" r="20"/>
-                        <circle cx="90" cy="145" r="18"/>
-                        <circle cx="95" cy="172" r="16"/>
-                        <circle cx="108" cy="192" r="14"/>
-                        <circle cx="203" cy="118" r="20"/>
-                        <circle cx="210" cy="145" r="18"/>
-                        <circle cx="205" cy="172" r="16"/>
-                        <circle cx="192" cy="192" r="14"/>
-                        <circle cx="112" cy="100" r="20"/>
-                        <circle cx="150" cy="92" r="22"/>
-                        <circle cx="188" cy="100" r="20"/>
-                        <circle cx="130" cy="106" r="16"/>
-                        <circle cx="170" cy="106" r="16"/>
-                    </g>
-
-                    <path class="ill-face" d="M132 158 Q140 165 150 165 Q160 165 168 158" />
-                    <circle class="ill-face-dot" cx="128" cy="145" r="2.6"/>
-                    <circle class="ill-face-dot" cx="172" cy="145" r="2.6"/>
-
-                    <path class="ill-headband" d="M100 128 Q150 78 200 128"/>
-                    <rect class="ill-earcup" x="82" y="124" width="26" height="42" rx="12"/>
-                    <rect class="ill-earcup" x="192" y="124" width="26" height="42" rx="12"/>
-                    <rect class="ill-earcup-glow" x="88" y="132" width="14" height="26" rx="7"/>
-                    <rect class="ill-earcup-glow" x="198" y="132" width="14" height="26" rx="7"/>
                 </svg>
             </div>
 
-            <div class="hero-copy">
-                <span class="hero-eyebrow">Sua trilha sonora 24 horas</span>
-                <h1 class="hero-title">O som que move o Supermercado do Louro</h1>
+            <div class="hero-eq" aria-hidden="true">
+                <span class="eq-bar"></span><span class="eq-bar"></span><span class="eq-bar"></span>
+                <span class="eq-bar"></span><span class="eq-bar"></span><span class="eq-bar"></span>
+                <span class="eq-bar"></span><span class="eq-bar"></span><span class="eq-bar"></span>
+                <span class="eq-bar"></span><span class="eq-bar"></span><span class="eq-bar"></span>
+                <span class="eq-bar"></span><span class="eq-bar"></span>
             </div>
         </div>
 
