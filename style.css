@@ -4,47 +4,47 @@
    ========================================================================== */
 
 :root{
-  /* ── cor ── */
-  --ink:        #0a130f;
-  --ink-2:      #0f1c16;
-  --ink-3:      #16261e;
-  --ink-4:      #1e332a;
+  /* ── cor: verde escuro + branco + amarelo + preto ── */
+  --ink:        #060a08;
+  --ink-2:      #0b120e;
+  --ink-3:      #101c15;
+  --ink-4:      #182a20;
 
-  --paper:      #f8f4e9;
-  --paper-2:    #efe8d6;
-  --paper-line: rgba(24,32,26,.12);
+  --paper:      #ffffff;
+  --paper-2:    #f1f2ee;
+  --paper-line: rgba(10,16,12,.14);
 
-  --line:       rgba(244,241,230,.10);
-  --line-soft:  rgba(244,241,230,.05);
+  --line:       rgba(255,255,255,.09);
+  --line-soft:  rgba(255,255,255,.04);
 
-  --brand:      #12a05c;
-  --brand-deep: #0a6b3e;
-  --brand-soft: rgba(18,160,92,.16);
+  --brand:      #0e6c3f;
+  --brand-deep: #073c23;
+  --brand-soft: rgba(14,108,63,.16);
 
-  --signal:      #e3a527;
-  --signal-deep: #a97b12;
-  --signal-soft: rgba(227,165,39,.18);
+  --signal:      #f2c230;
+  --signal-deep: #b6900f;
+  --signal-soft: rgba(242,194,48,.20);
 
   --danger:      #d3452a;
   --danger-deep: #a3341f;
   --danger-soft: rgba(211,69,42,.14);
 
-  --violet:      #8b6df2;
-  --violet-soft: rgba(139,109,242,.14);
+  --onk:        #ffffff;
+  --onk-muted:  #a3b0a8;
+  --onk-faint:  #5f6e66;
 
-  --onk:        #f4f1e6;
-  --onk-muted:  #93a49a;
-  --onk-faint:  #5d6e64;
+  --onp:        #0e130f;
+  --onp-muted:  #5c665e;
+  --onp-faint:  #96998f;
 
-  --onp:        #1b241d;
-  --onp-muted:  #6a7266;
-  --onp-faint:  #9a9d8e;
-
-  /* ── forma ── */
-  --r-sm:  8px;
-  --r:     14px;
-  --r-lg:  20px;
-  --r-xl:  28px;
+  /* ── forma: só o essencial vira "quadrado arredondado" ──
+     chrome plano (abas, tabela, sidebar, badges) = quase reto
+     ações principais (play, enviar, emergência, cards) = arredondado */
+  --r-flat: 4px;
+  --r-sm:  6px;
+  --r:     12px;
+  --r-lg:  16px;
+  --r-xl:  18px;
 
   /* ── sombra ── */
   --shadow-ink:   0 1px 0 rgba(255,255,255,.03) inset, 0 18px 40px -20px rgba(0,0,0,.7), 0 2px 6px rgba(0,0,0,.4);
@@ -599,7 +599,7 @@ button:active{ transform:translateY(1px); }
   background:transparent;
   color:var(--onp-muted);
   border:none;
-  border-radius:var(--r-sm) var(--r-sm) 0 0;
+  border-radius:var(--r-flat) var(--r-flat) 0 0;
   padding:11px 18px;
   border-bottom:2px solid transparent;
 }
@@ -709,7 +709,7 @@ button:active{ transform:translateY(1px); }
   background:transparent;
   border:none;
   border-left:2px solid transparent;
-  border-radius:var(--r-sm);
+  border-radius:0 var(--r-flat) var(--r-flat) 0;
   color:var(--onk-muted);
   font-size:13px;
   font-weight:500;
@@ -865,7 +865,7 @@ button:active{ transform:translateY(1px); }
 .tts-textarea, .tts-voice-select{
   background:var(--paper);
   border:1.5px solid var(--paper-line);
-  border-radius:var(--r-sm);
+  border-radius:var(--r-flat);
   padding:11px 13px;
   font-size:13.5px;
   color:var(--onp);
@@ -898,7 +898,7 @@ button:active{ transform:translateY(1px); }
 }
 
 /* ── tabelas ── */
-.table-container{ overflow-x:auto; border-radius:var(--r); border:1px solid var(--paper-line); }
+.table-container{ overflow-x:auto; border-radius:var(--r-flat); border:1px solid var(--paper-line); }
 .data-table{ width:100%; border-collapse:collapse; font-size:13px; }
 .data-table th{
   text-align:left; background:var(--paper-2); color:var(--onp-muted);
@@ -914,7 +914,7 @@ button:active{ transform:translateY(1px); }
   font-family:var(--f-mono);
   font-size:11px;
   font-weight:700;
-  border-radius:99px;
+  border-radius:var(--r-flat);
   padding:3px 10px;
   display:inline-block;
 }
@@ -962,7 +962,7 @@ button:active{ transform:translateY(1px); }
 .locutor-tracks-list{ display:flex; flex-direction:column; gap:8px; margin:14px 0; }
 
 .jingle-title, .jingle-url, .jingle-position{
-  background:var(--paper); border:1.5px solid var(--paper-line); border-radius:var(--r-sm);
+  background:var(--paper); border:1.5px solid var(--paper-line); border-radius:var(--r-flat);
   padding:9px 12px; font-size:13px; color:var(--onp);
 }
 
@@ -978,7 +978,7 @@ button:active{ transform:translateY(1px); }
 /* ── sazonal ── */
 .seasonal-tabs{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
 .seasonal-tab{
-  background:#fff; border:1.5px solid var(--paper-line); border-radius:var(--r-sm);
+  background:#fff; border:1.5px solid var(--paper-line); border-radius:var(--r-flat);
   padding:8px 14px; font-size:12.5px; font-weight:600; color:var(--onp-muted); cursor:pointer;
   transition:.15s var(--ease);
 }
@@ -991,7 +991,7 @@ button:active{ transform:translateY(1px); }
 .seasonal-subsection{ margin-top:18px; padding-top:16px; border-top:1px solid var(--paper-line); }
 .seasonal-form{ display:flex; flex-direction:column; gap:12px; }
 .seasonal-advertiser, .seasonal-url, .seasonal-frequency, .seasonal-order{
-  background:var(--paper); border:1.5px solid var(--paper-line); border-radius:var(--r-sm);
+  background:var(--paper); border:1.5px solid var(--paper-line); border-radius:var(--r-flat);
   padding:9px 12px; font-size:13px; color:var(--onp);
 }
 .seasonal-status{ font-size:12px; font-weight:700; }
