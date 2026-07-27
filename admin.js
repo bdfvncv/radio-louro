@@ -6,19 +6,12 @@ const ADMIN_PASSWORD      = 'senhaDev';
 const BLOCKED_TERMS       = ['funk','rock pesado','metal','punk','rap','trap'];
 const TTS_FUNCTION_URL    = `${SUPABASE_URL}/functions/v1/tts-generate`;
 
-// Vozes disponíveis por motor de TTS
+// Vozes disponíveis (ElevenLabs — único motor)
 const TTS_VOICES = {
     elevenlabs: [
         { id: 'EXAVITQu4vr4xnSDxMaL', label: 'Rachel (Feminina, natural) ⚠️ descontinua fim de 2026' },
         { id: 'VR6AewLTigWG4xSOukaG', label: 'Arnold (Masculino, grave) ⚠️ descontinua fim de 2026' },
         { id: 'pNInz6obpgDQGcFmaJgB', label: 'Adam (Masculino, médio) ⚠️ descontinua fim de 2026' },
-        { id: 'MF3mGyEYCl7XYWbV9V6O', label: 'Elli (Feminina, jovem) ⚠️ descontinua fim de 2026' },
-    ],
-    edge: [
-        { id: 'pt-BR-FranciscaNeural', label: 'Francisca (Feminina, pt-BR)' },
-        { id: 'pt-BR-AntonioNeural',   label: 'Antônio (Masculino, pt-BR)' },
-        { id: 'pt-PT-RaquelNeural',    label: 'Raquel (Feminina, pt-PT)' },
-        { id: 'pt-PT-DuarteNeural',    label: 'Duarte (Masculino, pt-PT)' },
     ],
 };
 
