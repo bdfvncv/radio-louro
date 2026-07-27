@@ -5,89 +5,95 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>📻 Rádio 24H Supermercado do Louro</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="icon" type="image/png" href="logo.png">
 </head>
 <body class="player-body">
 
     <div class="player-bg-circle"></div>
+    <div class="player-bg-circle player-bg-circle-2"></div>
 
     <div class="player-container">
 
         <!-- HERO -->
         <div class="hero-card">
-            <div class="hero-decor" aria-hidden="true">
-                <div class="hero-blob hero-blob-a"></div>
-                <div class="hero-blob hero-blob-b"></div>
-            </div>
+            <div class="hero-blob hero-blob-a"></div>
+            <div class="hero-blob hero-blob-b"></div>
 
             <div class="hero-top">
-                <img src="logo.png" alt="Supermercado do Louro" class="hero-logo">
-                <div class="hero-brand">
-                    <span class="hero-brand-name">Rádio Supermercado do Louro</span>
-                    <span class="hero-live-badge"><span class="live-dot"></span>AO VIVO</span>
+                <div class="player-logo-wrap">
+                    <img src="logo.png" alt="Supermercado do Louro" class="player-logo">
+                    <div class="player-brand">
+                        <span class="player-brand-name">Rádio Supermercado do Louro</span>
+                        <span class="player-brand-tag live-dot">AO VIVO</span>
+                    </div>
                 </div>
             </div>
 
-            <div class="hero-body">
-                <p class="hero-tagline">A <strong>trilha sonora</strong> da sua loja, tocando <strong>24 horas</strong> por dia.</p>
-                <div class="hero-illustration" aria-hidden="true">
-                    <svg viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg">
-                        <!-- ombros -->
-                        <path d="M28 220 C28 163 60 148 100 148 C140 148 172 163 172 220 Z" fill="#0b3d2e"/>
-                        <!-- pescoço -->
-                        <rect x="88" y="118" width="24" height="32" rx="10" fill="#0b3d2e"/>
-                        <!-- cachos (fundo) -->
-                        <g fill="#1f8a5f">
-                            <circle cx="56" cy="70" r="17"/>
-                            <circle cx="64" cy="48" r="15"/>
-                            <circle cx="92" cy="36" r="17"/>
-                            <circle cx="120" cy="38" r="16"/>
-                            <circle cx="144" cy="54" r="16"/>
-                            <circle cx="150" cy="78" r="14"/>
-                            <circle cx="50" cy="94" r="13"/>
-                            <circle cx="148" cy="100" r="12"/>
-                        </g>
-                        <!-- cabeça -->
-                        <ellipse cx="100" cy="98" rx="40" ry="44" fill="#0b3d2e"/>
-                        <!-- cachos (frente) -->
-                        <g fill="#0b3d2e">
-                            <circle cx="70" cy="32" r="13"/>
-                            <circle cx="102" cy="24" r="14"/>
-                            <circle cx="132" cy="32" r="13"/>
-                            <circle cx="58" cy="56" r="12"/>
-                            <circle cx="146" cy="64" r="12"/>
-                        </g>
-                        <!-- fone de ouvido -->
-                        <path d="M54 68 C54 22 146 22 146 68" fill="none" stroke="#c9a227" stroke-width="9" stroke-linecap="round"/>
-                        <rect x="44" y="86" width="20" height="32" rx="10" fill="#c9a227"/>
-                        <rect x="136" y="86" width="20" height="32" rx="10" fill="#c9a227"/>
-                        <!-- ondas sonoras saindo do fone -->
-                        <g fill="none" stroke="#c9a227" stroke-width="2.5">
-                            <circle class="wave-ring" cx="162" cy="102" r="12"/>
-                            <circle class="wave-ring" cx="162" cy="102" r="20"/>
-                            <circle class="wave-ring" cx="162" cy="102" r="28"/>
-                        </g>
-                    </svg>
-                </div>
+            <div class="hero-stage" aria-hidden="true">
+                <svg class="hero-waves" viewBox="0 0 400 200">
+                    <path class="wave wave-1" d="M0,100 Q50,40 100,100 T200,100 T300,100 T400,100" />
+                    <path class="wave wave-2" d="M0,100 Q50,150 100,100 T200,100 T300,100 T400,100" />
+                    <path class="wave wave-3" d="M0,100 Q50,60 100,100 T200,100 T300,100 T400,100" />
+                </svg>
+
+                <svg class="hero-illustration" viewBox="0 0 300 320" xmlns="http://www.w3.org/2000/svg">
+                    <ellipse class="ill-shadow" cx="150" cy="300" rx="80" ry="14"/>
+
+                    <g class="ill-note ill-note-1">
+                        <circle cx="0" cy="0" r="7"/>
+                        <rect x="6" y="-34" width="3" height="34"/>
+                    </g>
+                    <g class="ill-note ill-note-2">
+                        <circle cx="0" cy="0" r="5"/>
+                        <rect x="4.5" y="-24" width="2.5" height="24"/>
+                    </g>
+
+                    <g class="ill-pulse">
+                        <path d="M60 150 Q30 150 30 180" />
+                        <path d="M50 150 Q15 150 15 195" />
+                    </g>
+                    <g class="ill-pulse ill-pulse-right">
+                        <path d="M240 150 Q270 150 270 180" />
+                        <path d="M250 150 Q285 150 285 195" />
+                    </g>
+
+                    <path class="ill-body" d="M95 320 L95 250 Q95 200 150 200 Q205 200 205 250 L205 320 Z"/>
+                    <rect class="ill-neck" x="135" y="185" width="30" height="30" rx="8"/>
+                    <circle class="ill-head" cx="150" cy="150" r="52"/>
+
+                    <g class="ill-hair">
+                        <circle cx="97" cy="118" r="20"/>
+                        <circle cx="90" cy="145" r="18"/>
+                        <circle cx="95" cy="172" r="16"/>
+                        <circle cx="108" cy="192" r="14"/>
+                        <circle cx="203" cy="118" r="20"/>
+                        <circle cx="210" cy="145" r="18"/>
+                        <circle cx="205" cy="172" r="16"/>
+                        <circle cx="192" cy="192" r="14"/>
+                        <circle cx="112" cy="100" r="20"/>
+                        <circle cx="150" cy="92" r="22"/>
+                        <circle cx="188" cy="100" r="20"/>
+                        <circle cx="130" cy="106" r="16"/>
+                        <circle cx="170" cy="106" r="16"/>
+                    </g>
+
+                    <path class="ill-face" d="M132 158 Q140 165 150 165 Q160 165 168 158" />
+                    <circle class="ill-face-dot" cx="128" cy="145" r="2.6"/>
+                    <circle class="ill-face-dot" cx="172" cy="145" r="2.6"/>
+
+                    <path class="ill-headband" d="M100 128 Q150 78 200 128"/>
+                    <rect class="ill-earcup" x="82" y="124" width="26" height="42" rx="12"/>
+                    <rect class="ill-earcup" x="192" y="124" width="26" height="42" rx="12"/>
+                    <rect class="ill-earcup-glow" x="88" y="132" width="14" height="26" rx="7"/>
+                    <rect class="ill-earcup-glow" x="198" y="132" width="14" height="26" rx="7"/>
+                </svg>
             </div>
 
-            <div class="hero-wave" aria-hidden="true">
-                <span style="height:9px;  animation-delay:0s"></span>
-                <span style="height:15px; animation-delay:.15s"></span>
-                <span style="height:11px; animation-delay:.3s"></span>
-                <span style="height:19px; animation-delay:.45s"></span>
-                <span style="height:13px; animation-delay:.6s"></span>
-                <span style="height:23px; animation-delay:.75s"></span>
-                <span style="height:14px; animation-delay:.9s"></span>
-                <span style="height:18px; animation-delay:1.05s"></span>
-                <span style="height:10px; animation-delay:1.2s"></span>
-                <span style="height:21px; animation-delay:1.35s"></span>
-                <span style="height:12px; animation-delay:1.5s"></span>
-                <span style="height:16px; animation-delay:1.65s"></span>
-                <span style="height:9px;  animation-delay:1.8s"></span>
-                <span style="height:20px; animation-delay:1.95s"></span>
+            <div class="hero-copy">
+                <span class="hero-eyebrow">Sua trilha sonora 24 horas</span>
+                <h1 class="hero-title">O som que move o Supermercado do Louro</h1>
             </div>
         </div>
 
@@ -103,10 +109,16 @@
                 <p class="player-status" id="statusText">Clique para iniciar</p>
                 <h2 class="player-track" id="trackName">Rádio Parada</h2>
             </div>
-            <button class="player-play-btn" id="playBtn" aria-label="Play/Pause">
-                <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                <svg class="pause-icon" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
-            </button>
+
+            <div class="play-btn-stage">
+                <span class="play-ring play-ring-1"></span>
+                <span class="play-ring play-ring-2"></span>
+                <button class="player-play-btn" id="playBtn" aria-label="Play/Pause">
+                    <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    <svg class="pause-icon" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
+                </button>
+            </div>
+
             <div class="player-controls">
                 <div class="player-volume">
                     <span>🔊</span>
