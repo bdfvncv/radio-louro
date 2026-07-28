@@ -2483,14 +2483,47 @@ async function loadGradesState() {
 // APARÊNCIA — Cor do sistema (site + personagem)
 // ─────────────────────────────────────────────────────────────
 const THEME_DEFAULTS = { green: '#0b3d2e', gold: '#c9a227' };
+const THEME_MAX_LIGHTNESS = 55; // % — acima disso o texto fica ilegível em fundo claro
+
+// Converte HEX -> HSL, limita a claridade (L) a um teto seguro, devolve HEX de novo.
+// Preserva o matiz (a "cor" escolhida) mas evita branco/tons claros demais que somem o texto.
+function clampColorLightness(hex, maxL = THEME_MAX_LIGHTNESS) {
+    hex = (hex || '').replace('#', '');
+    if (hex.length !== 6) return hex ? `#${hex}` : THEME_DEFAULTS.green;
+    const r = parseInt(hex.slice(0,2),16)/255, g = parseInt(hex.slice(2,4),16)/255, b = parseInt(hex.slice(4,6),16)/255;
+    const max = Math.max(r,g,b), min = Math.min(r,g,b);
+    let h=0, s=0; const l=(max+min)/2;
+    if(max !== min) {
+        const d = max-min;
+        s = l>0.5 ? d/(2-max-min) : d/(max+min);
+        if(max===r) h=(g-b)/d+(g<b?6:0);
+        else if(max===g) h=(b-r)/d+2;
+        else h=(r-g)/d+4;
+        h/=6;
+    }
+    const clampedL = Math.min(l*100, maxL) / 100;
+    const hue2rgb=(p,q,t)=>{ if(t<0)t+=1; if(t>1)t-=1; if(t<1/6)return p+(q-p)*6*t; if(t<1/2)return q; if(t<2/3)return p+(q-p)*(2/3-t)*6; return p; };
+    let r2,g2,b2;
+    if(s===0){ r2=g2=b2=clampedL; }
+    else {
+        const q = clampedL<0.5 ? clampedL*(1+s) : clampedL+s-clampedL*s;
+        const p = 2*clampedL-q;
+        r2=hue2rgb(p,q,h+1/3); g2=hue2rgb(p,q,h); b2=hue2rgb(p,q,h-1/3);
+    }
+    const toHex = v => Math.round(v*255).toString(16).padStart(2,'0');
+    return `#${toHex(r2)}${toHex(g2)}${toHex(b2)}`;
+}
 
 function applyThemeColors(green, gold) {
-    document.documentElement.style.setProperty('--green', green);
-    document.documentElement.style.setProperty('--gold', gold);
+    const safeGreen = clampColorLightness(green);
+    const safeGold  = clampColorLightness(gold);
+    document.documentElement.style.setProperty('--green', safeGreen);
+    document.documentElement.style.setProperty('--gold', safeGold);
     const preview = document.getElementById('themePreviewBox');
     if(preview) {
-        preview.style.background = `linear-gradient(135deg, ${green}, ${gold})`;
+        preview.style.background = `linear-gradient(135deg, ${safeGreen}, ${safeGold})`;
     }
+    return { green: safeGreen, gold: safeGold };
 }
 
 async function loadThemeColors() {
@@ -2508,15 +2541,24 @@ async function loadThemeColors() {
 }
 
 async function saveThemeColors() {
-    const green = document.getElementById('themeColorGreen')?.value || THEME_DEFAULTS.green;
-    const gold  = document.getElementById('themeColorGold')?.value  || THEME_DEFAULTS.gold;
+    const rawGreen = document.getElementById('themeColorGreen')?.value || THEME_DEFAULTS.green;
+    const rawGold  = document.getElementById('themeColorGold')?.value  || THEME_DEFAULTS.gold;
     try {
+        // Aplica e já obtém as versões seguras (com claridade limitada) das cores
+        const { green, gold } = applyThemeColors(rawGreen, rawGold);
         await supabaseAdmin.from('radio_settings').update({
             theme_color_green: green, theme_color_gold: gold,
             updated_at: new Date().toISOString()
         }).eq('id', 1);
-        applyThemeColors(green, gold);
-        alert('✅ Cores salvas! Já valem para todos os visitantes.');
+        // Reflete no seletor a cor realmente salva (caso tenha sido ajustada por segurança)
+        const inGreen = document.getElementById('themeColorGreen');
+        const inGold  = document.getElementById('themeColorGold');
+        if(inGreen) inGreen.value = green;
+        if(inGold)  inGold.value  = gold;
+        const aviso = (green !== rawGreen || gold !== rawGold)
+            ? '\n\n⚠️ Uma das cores era clara demais e ficaria ilegível — foi escurecida um pouco automaticamente, mantendo o tom escolhido.'
+            : '';
+        alert('✅ Cores salvas! Já valem para todos os visitantes.' + aviso);
     } catch(err) { alert('❌ Erro: ' + err.message); }
 }
 
