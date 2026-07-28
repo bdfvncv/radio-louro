@@ -195,13 +195,21 @@ async function loadAllData() {
             supabase.from('seasonal_settings').select('*').eq('is_active',true).maybeSingle(),
             supabase.from('seasonal_playlists').select('*').eq('type','music').eq('enabled',true).order('daily_order',{ascending:true}),
             supabase.from('seasonal_playlists').select('*').eq('type','ad').eq('enabled',true).order('play_order',{ascending:true}),
-            supabase.from('radio_settings').select('grades_enabled').eq('id',1).maybeSingle()
+            supabase.from('radio_settings').select('grades_enabled, theme_color_green, theme_color_gold').eq('id',1).maybeSingle()
         ]);
         allSchedules       = schRes.data  || [];
         backgroundPlaylist = bgRes.data   || [];
         advertisements     = adsRes.data  || [];
         timeSlots          = slotsRes.data|| [];
         gradesEnabled = settingsRes.data?.grades_enabled !== false;
+
+        // Aplica a cor do sistema (site + personagem), definida no admin
+        if(settingsRes.data?.theme_color_green) {
+            document.documentElement.style.setProperty('--green', settingsRes.data.theme_color_green);
+        }
+        if(settingsRes.data?.theme_color_gold) {
+            document.documentElement.style.setProperty('--gold', settingsRes.data.theme_color_gold);
+        }
 
         if(ssRes.data?.category) {
             activeSeasonalCat = ssRes.data.category;
