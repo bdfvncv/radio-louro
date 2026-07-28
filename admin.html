@@ -50,6 +50,7 @@
             <button class="nav-item" data-section="flash">⚡ Promoção Relâmpago</button>
             <button class="nav-item" data-section="silence">🔇 Modo Silêncio</button>
             <button class="nav-item" data-section="health">🏥 Saúde do Sistema</button>
+            <button class="nav-item" data-section="appearance">🎨 Aparência</button>
             <button class="nav-item" data-section="analytics">📊 Analytics</button>
             <button class="nav-item" data-section="emergency">🚨 Emergência</button>
             <button class="nav-item" data-section="upload">☁️ Upload Cloudinary</button>
@@ -749,6 +750,34 @@
 
                     <div id="importPreview" style="display:none;margin-top:12px;"></div>
                     <div id="importProgress" style="display:none;margin-top:10px;"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── APARÊNCIA (cor do sistema) ── -->
+        <section class="admin-section" id="section-appearance">
+            <div class="section-header">
+                <h2>🎨 Aparência</h2>
+                <p class="section-desc">Troque as cores do site e da personagem da rádio. A mudança vale para todos os visitantes, na hora.</p>
+            </div>
+
+            <div class="admin-card" style="max-width:420px;">
+                <div class="form-group">
+                    <label>Cor principal (fundo, botões, personagem):</label>
+                    <input type="color" id="themeColorGreen" value="#0b3d2e" style="width:100%;height:44px;border-radius:8px;border:1px solid #ddd;cursor:pointer;">
+                </div>
+                <div class="form-group" style="margin-top:14px;">
+                    <label>Cor de destaque (CTAs, fones da personagem):</label>
+                    <input type="color" id="themeColorGold" value="#c9a227" style="width:100%;height:44px;border-radius:8px;border:1px solid #ddd;cursor:pointer;">
+                </div>
+
+                <div id="themePreviewBox" style="margin-top:16px;padding:16px;border-radius:12px;display:flex;align-items:center;gap:10px;">
+                    <span style="color:#fff;font-weight:600;">Pré-visualização</span>
+                </div>
+
+                <div class="form-actions" style="margin-top:16px;">
+                    <button class="submit-btn" id="themeSaveBtn">💾 Salvar Cores</button>
+                    <button class="clear-btn" id="themeResetBtn">↩️ Restaurar Padrão</button>
                 </div>
             </div>
         </section>
