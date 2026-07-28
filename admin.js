@@ -84,6 +84,8 @@ function init() {
     setupGradesTabs();
     setupLocutorListeners();
     setupTTSListeners();
+    setupAppearanceListeners();
+    loadThemeColors();
     setupBulkListeners();
     setupAdminSearchListeners();
     setupEmergencyListeners();
@@ -2475,6 +2477,61 @@ async function loadGradesState() {
         btn.classList.toggle('inactive', !enabled);
         btn.textContent = enabled ? '✅ Ativadas' : '⏸️ Desativadas';
     } catch(err) { console.error(err); }
+}
+
+// ─────────────────────────────────────────────────────────────
+// APARÊNCIA — Cor do sistema (site + personagem)
+// ─────────────────────────────────────────────────────────────
+const THEME_DEFAULTS = { green: '#0b3d2e', gold: '#c9a227' };
+
+function applyThemeColors(green, gold) {
+    document.documentElement.style.setProperty('--green', green);
+    document.documentElement.style.setProperty('--gold', gold);
+    const preview = document.getElementById('themePreviewBox');
+    if(preview) {
+        preview.style.background = `linear-gradient(135deg, ${green}, ${gold})`;
+    }
+}
+
+async function loadThemeColors() {
+    try {
+        const {data} = await supabase.from('radio_settings')
+            .select('theme_color_green, theme_color_gold').eq('id',1).single();
+        const green = data?.theme_color_green || THEME_DEFAULTS.green;
+        const gold  = data?.theme_color_gold  || THEME_DEFAULTS.gold;
+        const inGreen = document.getElementById('themeColorGreen');
+        const inGold  = document.getElementById('themeColorGold');
+        if(inGreen) inGreen.value = green;
+        if(inGold)  inGold.value  = gold;
+        applyThemeColors(green, gold);
+    } catch(err) { console.error('Erro ao carregar cores do tema:', err); }
+}
+
+async function saveThemeColors() {
+    const green = document.getElementById('themeColorGreen')?.value || THEME_DEFAULTS.green;
+    const gold  = document.getElementById('themeColorGold')?.value  || THEME_DEFAULTS.gold;
+    try {
+        await supabaseAdmin.from('radio_settings').update({
+            theme_color_green: green, theme_color_gold: gold,
+            updated_at: new Date().toISOString()
+        }).eq('id', 1);
+        applyThemeColors(green, gold);
+        alert('✅ Cores salvas! Já valem para todos os visitantes.');
+    } catch(err) { alert('❌ Erro: ' + err.message); }
+}
+
+function setupAppearanceListeners() {
+    const inGreen = document.getElementById('themeColorGreen');
+    const inGold  = document.getElementById('themeColorGold');
+    // Preview ao vivo enquanto escolhe a cor, antes de salvar
+    inGreen?.addEventListener('input', ()=> applyThemeColors(inGreen.value, inGold.value));
+    inGold?.addEventListener('input',  ()=> applyThemeColors(inGreen.value, inGold.value));
+    document.getElementById('themeSaveBtn')?.addEventListener('click', saveThemeColors);
+    document.getElementById('themeResetBtn')?.addEventListener('click', ()=>{
+        if(inGreen) inGreen.value = THEME_DEFAULTS.green;
+        if(inGold)  inGold.value  = THEME_DEFAULTS.gold;
+        applyThemeColors(THEME_DEFAULTS.green, THEME_DEFAULTS.gold);
+    });
 }
 
 // ─────────────────────────────────────────────────────────────
