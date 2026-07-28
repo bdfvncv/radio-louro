@@ -164,7 +164,7 @@ a:hover { text-decoration: underline; }
 
 .hero-body {
   position: relative; z-index: 1;
-  display: flex; align-items: center; gap: 14px;
+  display: flex; align-items: flex-end; gap: 14px;
   margin-top: 16px;
 }
 
@@ -175,8 +175,8 @@ a:hover { text-decoration: underline; }
 }
 .hero-tagline strong { color: var(--green); }
 
-.hero-illustration { width: 128px; flex-shrink: 0; }
-.hero-illustration svg { width: 100%; height: auto; display: block; }
+.hero-illustration { width: 142px; flex-shrink: 0; }
+.hero-illustration svg { width: 100%; height: auto; display: block; overflow: visible; }
 
 .hero-wave {
   position: relative; z-index: 1;
@@ -225,42 +225,8 @@ a:hover { text-decoration: underline; }
   100% { opacity: 0;  transform: scale(1.25); }
 }
 
-/* personagem — corpo balançando suavemente no ritmo da música */
-.figure-sway {
-  transform-box: view-box;
-  transform-origin: 100px 205px;
-  animation: figure-bob 3.2s ease-in-out infinite;
-}
-
-@keyframes figure-bob {
-  0%, 100% { transform: translateY(0)   rotate(0deg); }
-  50%      { transform: translateY(-3px) rotate(1deg); }
-}
-
-/* braços — mãos seguram o fone, balançando como quem curte a música */
-.arm-left {
-  transform-box: view-box;
-  transform-origin: 40px 180px;
-  animation: arm-groove-left 2.4s ease-in-out infinite;
-}
-.arm-right {
-  transform-box: view-box;
-  transform-origin: 160px 180px;
-  animation: arm-groove-right 2.4s ease-in-out infinite;
-}
-
-@keyframes arm-groove-left {
-  0%, 100% { transform: rotate(-4deg); }
-  50%      { transform: rotate(7deg); }
-}
-@keyframes arm-groove-right {
-  0%, 100% { transform: rotate(4deg); }
-  50%      { transform: rotate(-7deg); }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .hero-blob, .eq-bar, .wave-ring, .live-dot,
-  .figure-sway, .arm-left, .arm-right { animation: none !important; }
+  .hero-blob, .eq-bar, .wave-ring, .live-dot { animation: none !important; }
 }
 
 /* ── Cards base ── */
