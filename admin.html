@@ -114,6 +114,7 @@
                 <div class="welcome-card" onclick="goSection('flash')"><div class="wc-icon">⚡</div><div class="wc-label">Promoção Relâmpago</div></div>
                 <div class="welcome-card" onclick="goSection('silence')"><div class="wc-icon">🔇</div><div class="wc-label">Modo Silêncio</div></div>
                 <div class="welcome-card" onclick="goSection('health')"><div class="wc-icon">🏥</div><div class="wc-label">Saúde do Sistema</div></div>
+                <div class="welcome-card" onclick="goSection('appearance')"><div class="wc-icon">🎨</div><div class="wc-label">Aparência</div></div>
                 <div class="welcome-card" onclick="goSection('analytics')">
                     <div class="wc-icon">📊</div>
                     <div class="wc-label">Analytics</div>
@@ -147,11 +148,11 @@
                 <form class="edit-form" id="createGradeForm">
                     <div class="form-group"><label>Nome da Grade:</label><input type="text" id="newGradeName" placeholder="Ex: Tarde Animada" required></div>
                     <div class="form-group"><label>Descrição / Gêneros:</label><input type="text" id="newGradeDesc" placeholder="Ex: MPB e sertanejo leve"></div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div class="form-row-2col">
                         <div class="form-group"><label>Hora de início (0–23):</label><input type="number" id="newGradeStart" min="0" max="23" value="8" required></div>
                         <div class="form-group"><label>Hora de fim (0–23):</label><input type="number" id="newGradeEnd" min="0" max="23" value="12" required></div>
                     </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div class="form-row-2col">
                         <div class="form-group"><label>Cor:</label><input type="color" id="newGradeColor" value="#006b3f"></div>
                         <div class="form-group"><label>Freq. de propagandas (a cada X músicas):</label><input type="number" id="newGradeAdFreq" min="1" max="50" value="3"></div>
                     </div>
@@ -382,7 +383,7 @@
                 <h3 class="card-title" style="color:#92400e;">📣 Chamada de Funcionário</h3>
                 <p class="section-desc" style="border-color:#f59e0b;background:#fff8e1;">Chame um funcionário pelo nome em todos os players com um clique. Digite o nome e use os botões rápidos por setor.</p>
                 <form class="edit-form" id="chamadaForm">
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div class="chamada-fields-grid">
                         <div class="form-group">
                             <label>Nome do Funcionário:</label>
                             <input type="text" id="chamadaNome" placeholder="Ex: Maria, João..." required>
@@ -403,7 +404,7 @@
 
                 <h4 style="margin:14px 0 8px;color:#92400e;font-size:13px;">⚡ Atalhos Rápidos</h4>
                 <p style="font-size:12px;color:#666;margin-bottom:10px;">Digite o nome acima e clique no setor de destino:</p>
-                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+                <div class="chamada-shortcuts-grid">
                     <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('Caixa','à gerência')">🛒 Gerência</button>
                     <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('','ao caixa central')">💰 Caixa Central</button>
                     <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('','ao açougue')">🥩 Açougue</button>
@@ -577,7 +578,7 @@
                     <div class="form-group"><label>Título:</label><input type="text" id="adTitle" placeholder="Ex: Promoção do Dia" required></div>
                     <div class="form-group"><label>Anunciante:</label><input type="text" id="adAdvertiser" placeholder="Opcional"></div>
                     <div class="form-group"><label>Frequência (a cada X músicas):</label><input type="number" id="adFrequency" value="3" min="1" max="100" required><small>Ex: 3 = toca a cada 3 músicas</small></div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div class="form-row-2col">
                         <div class="form-group"><label>Hora início (opcional):</label><input type="number" id="adStartHour" min="0" max="23" placeholder="Ex: 8"><small>Só toca a partir desta hora</small></div>
                         <div class="form-group"><label>Hora fim (opcional):</label><input type="number" id="adEndHour" min="0" max="23" placeholder="Ex: 18"><small>Para de tocar após esta hora</small></div>
                     </div>
@@ -656,7 +657,7 @@
             </div>
             <div class="admin-card">
                 <h3 class="card-title">📋 Promoções Rápidas</h3>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div class="form-row-2col form-row-2col-tight">
                     <button class="emergency-preset-btn" onclick="setFlashPreset('Desconto no A&ccedil;ougue','Aten&ccedil;&atilde;o clientes! Por tempo limitado, todo o a&ccedil;ougue com desconto especial!',15)">🥩 Açougue</button>
                     <button class="emergency-preset-btn" onclick="setFlashPreset('Promo&ccedil;&atilde;o do Dia','Aten&ccedil;&atilde;o clientes! Produtos selecionados com pre&ccedil;os especiais por tempo limitado!',20)">🏷️ Promoção do Dia</button>
                     <button class="emergency-preset-btn" onclick="setFlashPreset('Frutaria em Oferta','Aten&ccedil;&atilde;o clientes! Frutas e verduras fresquinhas com pre&ccedil;o especial agora!',15)">🍎 Frutaria</button>
@@ -688,7 +689,7 @@
                 <p style="font-size:13px;color:#666;margin-bottom:14px;">Configure horários fixos. Ex: reunião toda segunda às 08h.</p>
                 <form class="edit-form" id="silenceScheduleForm">
                     <div class="form-group"><label>Nome/Motivo:</label><input type="text" id="silenceLabel" placeholder="Ex: Reunião semanal" required></div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div class="form-row-2col">
                         <div class="form-group"><label>Início:</label><input type="time" id="silenceStart" required></div>
                         <div class="form-group"><label>Fim:</label><input type="time" id="silenceEnd" required></div>
                     </div>
