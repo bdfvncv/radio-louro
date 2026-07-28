@@ -872,6 +872,17 @@ html, body { overflow-x: hidden; }
   margin-bottom: 20px; padding-bottom: 0;
 }
 
+@media (max-width: 640px) {
+  .grades-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .grades-tabs::-webkit-scrollbar { display: none; }
+  .grade-tab { flex-shrink: 0; padding: 10px 10px; }
+}
+
 .grade-tab {
   display: flex; align-items: center; gap: 6px;
   background: none; border: none;
@@ -887,6 +898,20 @@ html, body { overflow-x: hidden; }
 
 .grade-tab-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
 .grade-tab-count { background: var(--gray-200); color: var(--gray-600); border-radius: 10px; padding: 1px 7px; font-size: .75em; font-weight: 700; }
+
+/* ═══════════════════════════════════════════════════
+   CHAMADA DE FUNCIONÁRIO
+   ═══════════════════════════════════════════════════ */
+.chamada-fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.chamada-shortcuts-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.form-row-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-row-2col-tight { gap: 8px; }
+
+@media (max-width: 640px) {
+  .chamada-fields-grid { grid-template-columns: 1fr; }
+  .chamada-shortcuts-grid { grid-template-columns: repeat(2, 1fr); }
+  .form-row-2col { grid-template-columns: 1fr; }
+}
 
 .grade-empty { padding: 40px; text-align: center; color: var(--gray-400); font-size: .9em; }
 
