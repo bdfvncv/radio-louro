@@ -85,6 +85,7 @@ a:hover { text-decoration: underline; }
   top: -320px; right: -220px;
   pointer-events: none;
 }
+.player-bg-circle-b { display: none; pointer-events: none; }
 
 .player-container {
   width: 100%;
@@ -425,6 +426,13 @@ a:hover { text-decoration: underline; }
   display: flex; align-items: center; justify-content: center;
   z-index: 1000; padding: 20px;
 }
+
+.login-desktop-wrap {
+  display: flex; align-items: center; justify-content: center;
+  gap: 48px; width: 100%; max-width: 380px;
+}
+
+.login-illustration { display: none; }
 
 .login-box {
   background: var(--white);
@@ -1664,4 +1672,34 @@ html, body { overflow-x: hidden; }
 
 @media (max-width: 768px) {
   .analytics-summary { grid-template-columns: 1fr; }
+}
+
+/* ═══════════════════════════════════════════════════
+   DESKTOP — dá mais presença ao player e ao login em telas largas,
+   mantendo a mesma linguagem visual já usada no celular
+   ═══════════════════════════════════════════════════ */
+@media (min-width: 900px) {
+
+  /* Player: cartão um pouco maior, com mais respiro */
+  .player-container { max-width: 500px; }
+  .player-body { padding: 56px 24px; }
+
+  /* Segundo círculo decorativo, espelhando o existente, preenche o espaço vazio */
+  .player-bg-circle-b {
+    display: block;
+    width: 480px; height: 480px;
+    border-radius: 50%;
+    background: var(--gold);
+    opacity: .12;
+    bottom: -260px; left: -180px; top: auto; right: auto;
+  }
+
+  /* Login: personagem ganha companhia ao lado do formulário */
+  .login-desktop-wrap { max-width: 720px; gap: 56px; }
+  .login-illustration {
+    display: block;
+    width: 220px; flex-shrink: 0;
+  }
+  .login-illustration svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .login-box { max-width: 380px; }
 }
