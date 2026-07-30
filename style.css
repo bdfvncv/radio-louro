@@ -563,7 +563,7 @@ html, body { overflow-x: hidden; }
 }
 
 /* ── Sections ── */
-.admin-section { display: none; }
+.admin-section { display: none; max-width: 1200px; margin-left: auto; margin-right: auto; width: 100%; }
 .admin-section.active { display: block; animation: fadeUp .25s ease; }
 
 @keyframes fadeUp {
