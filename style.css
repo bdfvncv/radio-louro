@@ -66,7 +66,11 @@ a:hover { text-decoration: underline; }
    ═══════════════════════════════════════════════════ */
 .player-body {
   min-height: 100vh;
-  background: linear-gradient(160deg, #0a3527 0%, #072c22 55%, #051f19 100%);
+  background:
+    radial-gradient(circle at 12% 8%,  rgba(31,138,95,.10) 0%, transparent 42%),
+    radial-gradient(circle at 88% 14%, rgba(201,162,39,.12) 0%, transparent 40%),
+    radial-gradient(circle at 50% 100%, rgba(11,61,46,.05) 0%, transparent 55%),
+    #fcfdfc;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -76,15 +80,26 @@ a:hover { text-decoration: underline; }
   overflow-x: hidden;
 }
 
+/* Textura de grão sutil — profundidade tátil, sem pesar a página (SVG inline, sem imagem externa) */
+.player-body::before {
+  content: '';
+  position: fixed; inset: 0;
+  pointer-events: none;
+  opacity: .035;
+  z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
 .player-bg-circle {
   position: fixed;
   width: 620px; height: 620px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(31,138,95,.55) 0%, rgba(31,138,95,0) 70%);
-  filter: blur(6px);
+  background: radial-gradient(circle, rgba(31,138,95,.16) 0%, rgba(31,138,95,0) 70%);
+  filter: blur(20px);
   top: -300px; right: -240px;
   animation: bg-blob-drift 15s ease-in-out infinite;
   pointer-events: none;
+  z-index: 0;
 }
 .player-bg-circle-b {
   display: block;
@@ -92,10 +107,11 @@ a:hover { text-decoration: underline; }
   position: fixed;
   width: 520px; height: 520px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(201,162,39,.4) 0%, rgba(201,162,39,0) 70%);
-  filter: blur(6px);
+  background: radial-gradient(circle, rgba(201,162,39,.14) 0%, rgba(201,162,39,0) 70%);
+  filter: blur(20px);
   bottom: -260px; left: -220px;
   animation: bg-blob-drift 19s ease-in-out infinite reverse;
+  z-index: 0;
 }
 
 @keyframes bg-blob-drift {
@@ -115,6 +131,8 @@ a:hover { text-decoration: underline; }
   gap: 14px;
   margin: 0 auto;
   padding-bottom: 32px;
+  position: relative;
+  z-index: 1;
 }
 
 /* ═══════════════════════════════════════════════════
@@ -122,12 +140,12 @@ a:hover { text-decoration: underline; }
    ═══════════════════════════════════════════════════ */
 .hero-card {
   position: relative;
-  background: rgba(255,255,255,.90);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  border: 1px solid rgba(255,255,255,.5);
+  background: rgba(255,255,255,.78);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255,255,255,.7);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 10px 34px rgba(11,61,46,.10), 0 2px 8px rgba(11,61,46,.05);
   padding: 22px 22px 18px;
   overflow: hidden;
   isolation: isolate;
@@ -279,12 +297,12 @@ body.is-playing .hero-wave span {
 .player-clock-card,
 .player-main-card,
 .player-suggest-card {
-  background: rgba(255,255,255,.90);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  border: 1px solid rgba(255,255,255,.5);
+  background: rgba(255,255,255,.78);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255,255,255,.7);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 10px 34px rgba(11,61,46,.10), 0 2px 8px rgba(11,61,46,.05);
   padding: 24px 28px;
 }
 
@@ -458,7 +476,7 @@ body.is-playing .hero-wave span {
 }
 
 .player-footer {
-  text-align: center; color: rgba(255,255,255,.55);
+  text-align: center; color: var(--gray-500);
   font-size: .78em; padding: 4px;
 }
 
