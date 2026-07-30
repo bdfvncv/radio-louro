@@ -219,6 +219,11 @@
 
     </div>
 
+    <script type="module">
+        // Motion (motion.dev) — biblioteca de animação com física de mola, sem precisar de build/React
+        import { animate, stagger } from "https://cdn.jsdelivr.net/npm/motion@11/+esm";
+        window.__motion = { animate, stagger };
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
     <script src="player.js"></script>
 </body>
