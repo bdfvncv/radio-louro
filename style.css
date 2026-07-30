@@ -66,7 +66,7 @@ a:hover { text-decoration: underline; }
    ═══════════════════════════════════════════════════ */
 .player-body {
   min-height: 100vh;
-  background: var(--gray-50);
+  background: linear-gradient(160deg, #0a3527 0%, #072c22 55%, #051f19 100%);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -78,14 +78,34 @@ a:hover { text-decoration: underline; }
 
 .player-bg-circle {
   position: fixed;
-  width: 600px; height: 600px;
+  width: 620px; height: 620px;
   border-radius: 50%;
-  background: var(--green-light);
-  opacity: .5;
-  top: -320px; right: -220px;
+  background: radial-gradient(circle, rgba(31,138,95,.55) 0%, rgba(31,138,95,0) 70%);
+  filter: blur(6px);
+  top: -300px; right: -240px;
+  animation: bg-blob-drift 15s ease-in-out infinite;
   pointer-events: none;
 }
-.player-bg-circle-b { display: none; pointer-events: none; }
+.player-bg-circle-b {
+  display: block;
+  pointer-events: none;
+  position: fixed;
+  width: 520px; height: 520px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(201,162,39,.4) 0%, rgba(201,162,39,0) 70%);
+  filter: blur(6px);
+  bottom: -260px; left: -220px;
+  animation: bg-blob-drift 19s ease-in-out infinite reverse;
+}
+
+@keyframes bg-blob-drift {
+  0%, 100% { transform: translate(0,0) scale(1); }
+  50%      { transform: translate(30px,-36px) scale(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-bg-circle, .player-bg-circle-b { animation: none; }
+}
 
 .player-container {
   width: 100%;
@@ -102,7 +122,10 @@ a:hover { text-decoration: underline; }
    ═══════════════════════════════════════════════════ */
 .hero-card {
   position: relative;
-  background: var(--white);
+  background: rgba(255,255,255,.90);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255,255,255,.5);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
   padding: 22px 22px 18px;
@@ -158,10 +181,19 @@ a:hover { text-decoration: underline; }
 .hero-live-badge .live-dot {
   width: 6px; height: 6px; border-radius: 50%;
   background: var(--gold);
-  animation: blink 1.4s infinite;
+  box-shadow: 0 0 0 0 rgba(201,162,39,.55);
+  animation: live-pulse 1.6s ease-out infinite;
 }
 
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+@keyframes live-pulse {
+  0%   { box-shadow: 0 0 0 0    rgba(201,162,39,.55); }
+  70%  { box-shadow: 0 0 0 7px  rgba(201,162,39,0); }
+  100% { box-shadow: 0 0 0 0    rgba(201,162,39,0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-live-badge .live-dot { animation: none; }
+}
 
 .hero-body {
   position: relative; z-index: 1;
@@ -192,6 +224,19 @@ a:hover { text-decoration: underline; }
   transform-box: fill-box;
   transform-origin: center bottom;
   animation: eq-pulse 2.6s ease-in-out infinite;
+  animation-play-state: paused;
+  opacity: .45;
+  transition: opacity .3s ease;
+}
+
+body.is-playing .hero-wave span {
+  animation-play-state: running;
+  animation-duration: .9s;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-wave span { animation-play-state: paused !important; }
 }
 
 /* ondas sonoras / equalizador — animação lenta, "respirando" */
@@ -234,7 +279,10 @@ a:hover { text-decoration: underline; }
 .player-clock-card,
 .player-main-card,
 .player-suggest-card {
-  background: var(--white);
+  background: rgba(255,255,255,.90);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255,255,255,.5);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
   padding: 24px 28px;
@@ -392,8 +440,10 @@ a:hover { text-decoration: underline; }
 /* ── Admin link / footer ── */
 .player-admin-link {
   display: block; text-align: center;
-  background: var(--white);
-  border: 1px solid var(--gray-200);
+  background: rgba(255,255,255,.85);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255,255,255,.5);
   color: var(--green);
   padding: 12px; border-radius: var(--radius-lg);
   font-weight: 600; font-size: .9em;
@@ -402,13 +452,13 @@ a:hover { text-decoration: underline; }
 }
 
 .player-admin-link:hover {
-  background: var(--green-light);
+  background: rgba(255,255,255,.96);
   border-color: var(--green);
   text-decoration: none;
 }
 
 .player-footer {
-  text-align: center; color: var(--gray-500);
+  text-align: center; color: rgba(255,255,255,.55);
   font-size: .78em; padding: 4px;
 }
 
@@ -1683,16 +1733,6 @@ html, body { overflow-x: hidden; }
   /* Player: cartão um pouco maior, com mais respiro */
   .player-container { max-width: 500px; }
   .player-body { padding: 56px 24px; }
-
-  /* Segundo círculo decorativo, espelhando o existente, preenche o espaço vazio */
-  .player-bg-circle-b {
-    display: block;
-    width: 480px; height: 480px;
-    border-radius: 50%;
-    background: var(--gold);
-    opacity: .12;
-    bottom: -260px; left: -180px; top: auto; right: auto;
-  }
 
   /* Login: personagem ganha companhia ao lado do formulário */
   .login-desktop-wrap { max-width: 720px; gap: 56px; }
