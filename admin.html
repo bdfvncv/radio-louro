@@ -867,21 +867,40 @@
         <section class="admin-section" id="section-appearance">
             <div class="section-header">
                 <h2>🎨 Aparência</h2>
-                <p class="section-desc">Troque as cores do site e da personagem da rádio. A mudança vale para todos os visitantes, na hora.</p>
+                <p class="section-desc">Troque as cores do site, da personagem e do texto. A mudança vale para todos os visitantes, na hora.</p>
             </div>
 
-            <div class="admin-card" style="max-width:420px;">
-                <div class="form-group">
-                    <label>Cor principal (fundo, botões, personagem):</label>
-                    <input type="color" id="themeColorGreen" value="#0b3d2e" style="width:100%;height:44px;border-radius:8px;border:1px solid #ddd;cursor:pointer;">
-                </div>
-                <div class="form-group" style="margin-top:14px;">
-                    <label>Cor de destaque (CTAs, fones da personagem):</label>
-                    <input type="color" id="themeColorGold" value="#c9a227" style="width:100%;height:44px;border-radius:8px;border:1px solid #ddd;cursor:pointer;">
+            <div class="admin-card" style="max-width:480px;">
+
+                <label style="display:block;margin-bottom:10px;font-size:.82em;font-weight:600;color:var(--gray-700);">✨ Paletas prontas — toque para aplicar:</label>
+                <div id="themePresets" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;"></div>
+
+                <hr style="border:none;border-top:1px solid var(--gray-200);margin-bottom:18px;">
+
+                <label style="display:block;margin-bottom:6px;font-size:.82em;font-weight:600;color:var(--gray-700);">Ou escolha cada cor:</label>
+                <div class="theme-swatch-row">
+                    <div class="theme-swatch">
+                        <input type="color" id="themeColorGreen" value="#0b3d2e">
+                        <span class="theme-swatch-label">Principal</span>
+                        <span class="theme-swatch-hex" id="themeColorGreenHex">#0b3d2e</span>
+                    </div>
+                    <div class="theme-swatch">
+                        <input type="color" id="themeColorGold" value="#c9a227">
+                        <span class="theme-swatch-label">Destaque</span>
+                        <span class="theme-swatch-hex" id="themeColorGoldHex">#c9a227</span>
+                    </div>
+                    <div class="theme-swatch">
+                        <input type="color" id="themeColorText" value="#2f352f">
+                        <span class="theme-swatch-label">Texto</span>
+                        <span class="theme-swatch-hex" id="themeColorTextHex">#2f352f</span>
+                    </div>
                 </div>
 
-                <div id="themePreviewBox" style="margin-top:16px;padding:16px;border-radius:12px;display:flex;align-items:center;gap:10px;">
-                    <span style="color:#fff;font-weight:600;">Pré-visualização</span>
+                <div id="themePreviewBox" class="theme-preview-mock">
+                    <div class="theme-preview-badge">● AO VIVO</div>
+                    <div class="theme-preview-heading" id="themePreviewHeading">Rádio Louro</div>
+                    <div class="theme-preview-text" id="themePreviewText">Assim vai ficar o texto do site para quem visitar.</div>
+                    <button class="theme-preview-btn" id="themePreviewBtn" type="button">🔊 Ouvir agora</button>
                 </div>
 
                 <div class="form-actions" style="margin-top:16px;">
