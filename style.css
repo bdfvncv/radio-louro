@@ -67,9 +67,9 @@ a:hover { text-decoration: underline; }
 .player-body {
   min-height: 100vh;
   background:
-    radial-gradient(circle at 12% 8%,  rgba(31,138,95,.10) 0%, transparent 42%),
-    radial-gradient(circle at 88% 14%, rgba(201,162,39,.12) 0%, transparent 40%),
-    radial-gradient(circle at 50% 100%, rgba(11,61,46,.05) 0%, transparent 55%),
+    radial-gradient(circle at 12% 8%,  color-mix(in srgb, var(--green) 10%, transparent) 0%, transparent 42%),
+    radial-gradient(circle at 88% 14%, color-mix(in srgb, var(--gold) 12%, transparent) 0%, transparent 40%),
+    radial-gradient(circle at 50% 100%, color-mix(in srgb, var(--green) 5%, transparent) 0%, transparent 55%),
     #fcfdfc;
   display: flex;
   align-items: flex-start;
@@ -94,7 +94,7 @@ a:hover { text-decoration: underline; }
   position: fixed;
   width: 620px; height: 620px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(31,138,95,.16) 0%, rgba(31,138,95,0) 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--green) 16%, transparent) 0%, transparent 70%);
   filter: blur(20px);
   top: -300px; right: -240px;
   animation: bg-blob-drift 15s ease-in-out infinite;
@@ -107,7 +107,7 @@ a:hover { text-decoration: underline; }
   position: fixed;
   width: 520px; height: 520px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(201,162,39,.14) 0%, rgba(201,162,39,0) 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--gold) 14%, transparent) 0%, transparent 70%);
   filter: blur(20px);
   bottom: -260px; left: -220px;
   animation: bg-blob-drift 19s ease-in-out infinite reverse;
