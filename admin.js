@@ -1,8 +1,6 @@
 const SUPABASE_URL        = 'https://dyzjsgfoaxyeyepoylvg.supabase.co';
 const SUPABASE_ANON_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5empzZ2ZvYXh5ZXllcG95bHZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1ODUzNjUsImV4cCI6MjA3NTE2MTM2NX0.PwmaMI04EhcTqUQioTRInyVKUlw3t1ap0lM5hI29s2I';
-const SUPABASE_SERVICE_KEY= 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5empzZ2ZvYXh5ZXllcG95bHZnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTU4NTM2NSwiZXhwIjoyMDc1MTYxMzY1fQ.rxDX7YsuxAvoMbImnk1Ovlj7YQ0WI_XwcTZUJpXKQYU';
 const YOUTUBE_API_KEY     = 'AIzaSyCcpLnZ0XHsSEx34Zvkc80FwmHiHIqS6Gs';
-const ADMIN_PASSWORD      = 'senhaDev';
 const BLOCKED_TERMS       = ['funk','rock pesado','metal','punk','rap','trap'];
 const TTS_FUNCTION_URL    = `${SUPABASE_URL}/functions/v1/tts-generate`;
 
@@ -16,6 +14,9 @@ const TTS_VOICES = {
 };
 
 // Clientes Supabase — inicializados após garantir que o CDN carregou
+// IMPORTANTE: não existe mais uma "chave mestra" no código. supabaseAdmin é
+// o MESMO cliente autenticado — as permissões vêm de estar logado de verdade
+// (Supabase Auth), não de uma chave secreta exposta no navegador.
 let supabase, supabaseAdmin;
 function initSupabaseClients() {
     if(!window.supabase) {
@@ -24,7 +25,7 @@ function initSupabaseClients() {
         return false;
     }
     supabase      = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    supabaseAdmin = window.supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+    supabaseAdmin = supabase; // mesmo cliente — a autorização vem da sessão logada, não de uma chave separada
     return true;
 }
 
@@ -94,10 +95,13 @@ function init() {
     setupNavigationListeners();
 }
 
-function checkAuth() {
-    if (sessionStorage.getItem('radio_admin_auth')==='authenticated') {
+async function checkAuth() {
+    const { data } = await supabase.auth.getSession();
+    if (data?.session) {
         showAdminPanel(); loadAllData();
-    } else { showLoginScreen(); }
+    } else {
+        showLoginScreen();
+    }
 }
 
 function showLoginScreen() {
@@ -113,15 +117,25 @@ function setupLoginListeners() {
     // Login — listener isolado para não depender do restante do init
     const loginForm = document.getElementById('loginForm');
     if(loginForm) {
-        loginForm.addEventListener('submit', e => {
+        loginForm.addEventListener('submit', async e => {
             e.preventDefault();
+            const email = document.getElementById('emailInput').value.trim();
             const pw = document.getElementById('passwordInput').value;
-            if (pw === ADMIN_PASSWORD) {
-                sessionStorage.setItem('radio_admin_auth','authenticated');
+            const submitBtn = loginForm.querySelector('button[type="submit"], .login-btn');
+            if(submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Entrando...'; }
+
+            const { error } = await supabase.auth.signInWithPassword({
+                email: email,
+                password: pw
+            });
+
+            if(submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Entrar'; }
+
+            if (!error) {
                 showAdminPanel(); loadAllData();
                 document.getElementById('loginError').classList.remove('show');
             } else {
-                document.getElementById('loginError').textContent='❌ Senha incorreta!';
+                document.getElementById('loginError').textContent='❌ E-mail ou senha incorretos!';
                 document.getElementById('loginError').classList.add('show');
                 document.getElementById('passwordInput').value='';
             }
@@ -129,8 +143,8 @@ function setupLoginListeners() {
     }
     const logoutBtn = document.getElementById('logoutBtn');
     if(logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            sessionStorage.removeItem('radio_admin_auth');
+        logoutBtn.addEventListener('click', async () => {
+            await supabase.auth.signOut();
             showLoginScreen();
             document.getElementById('passwordInput').value='';
         });
