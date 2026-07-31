@@ -2494,10 +2494,20 @@ async function loadGradesState() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// APARÊNCIA — Cor do sistema (site + personagem)
+// APARÊNCIA — Cor do sistema (site + personagem + texto)
 // ─────────────────────────────────────────────────────────────
-const THEME_DEFAULTS = { green: '#0b3d2e', gold: '#c9a227' };
+const THEME_DEFAULTS = { green: '#0b3d2e', gold: '#c9a227', text: '#2f352f' };
 const THEME_MAX_LIGHTNESS = 55; // % — acima disso o texto fica ilegível em fundo claro
+
+// Paletas prontas — combinações já testadas, para quem não quer escolher cor por cor
+const THEME_PRESETS = [
+    { name: 'Verde Louro (padrão)', green: '#0b3d2e', gold: '#c9a227', text: '#2f352f' },
+    { name: 'Azul Confiança',       green: '#0d3b66', gold: '#e0a458', text: '#22303f' },
+    { name: 'Vinho Elegante',       green: '#5c1a2b', gold: '#c98a3c', text: '#332226' },
+    { name: 'Roxo Moderno',         green: '#3a2159', gold: '#c9a227', text: '#2a2233' },
+    { name: 'Verde-água',           green: '#0f4c4c', gold: '#d4a24e', text: '#1f2f2f' },
+    { name: 'Cinza Grafite',        green: '#2b2f33', gold: '#c9a227', text: '#25282b' },
+];
 
 // Converte HEX -> HSL, limita a claridade (L) a um teto seguro, devolve HEX de novo.
 // Preserva o matiz (a "cor" escolhida) mas evita branco/tons claros demais que somem o texto.
@@ -2528,65 +2538,113 @@ function clampColorLightness(hex, maxL = THEME_MAX_LIGHTNESS) {
     return `#${toHex(r2)}${toHex(g2)}${toHex(b2)}`;
 }
 
-function applyThemeColors(green, gold) {
+function applyThemeColors(green, gold, text) {
     const safeGreen = clampColorLightness(green);
     const safeGold  = clampColorLightness(gold);
+    const safeText  = clampColorLightness(text);
     document.documentElement.style.setProperty('--green', safeGreen);
     document.documentElement.style.setProperty('--gold', safeGold);
-    const preview = document.getElementById('themePreviewBox');
-    if(preview) {
-        preview.style.background = `linear-gradient(135deg, ${safeGreen}, ${safeGold})`;
-    }
-    return { green: safeGreen, gold: safeGold };
+    document.documentElement.style.setProperty('--text-color', safeText);
+
+    // Atualiza os "chips" de hex ao lado de cada seletor
+    const hexGreen = document.getElementById('themeColorGreenHex');
+    const hexGold  = document.getElementById('themeColorGoldHex');
+    const hexText  = document.getElementById('themeColorTextHex');
+    if(hexGreen) hexGreen.textContent = safeGreen;
+    if(hexGold)  hexGold.textContent  = safeGold;
+    if(hexText)  hexText.textContent  = safeText;
+
+    // Atualiza a pré-visualização real (não é mais um gradiente genérico)
+    const heading = document.getElementById('themePreviewHeading');
+    const text2   = document.getElementById('themePreviewText');
+    const btn     = document.getElementById('themePreviewBtn');
+    if(heading) heading.style.color = safeGreen;
+    if(text2)   text2.style.color   = safeText;
+    if(btn)     btn.style.background = safeGold;
+
+    return { green: safeGreen, gold: safeGold, text: safeText };
 }
 
 async function loadThemeColors() {
     try {
         const {data} = await supabase.from('radio_settings')
-            .select('theme_color_green, theme_color_gold').eq('id',1).single();
+            .select('theme_color_green, theme_color_gold, theme_color_text').eq('id',1).single();
         const green = data?.theme_color_green || THEME_DEFAULTS.green;
         const gold  = data?.theme_color_gold  || THEME_DEFAULTS.gold;
+        const text  = data?.theme_color_text  || THEME_DEFAULTS.text;
         const inGreen = document.getElementById('themeColorGreen');
         const inGold  = document.getElementById('themeColorGold');
+        const inText  = document.getElementById('themeColorText');
         if(inGreen) inGreen.value = green;
         if(inGold)  inGold.value  = gold;
-        applyThemeColors(green, gold);
+        if(inText)  inText.value  = text;
+        applyThemeColors(green, gold, text);
     } catch(err) { console.error('Erro ao carregar cores do tema:', err); }
 }
 
 async function saveThemeColors() {
     const rawGreen = document.getElementById('themeColorGreen')?.value || THEME_DEFAULTS.green;
     const rawGold  = document.getElementById('themeColorGold')?.value  || THEME_DEFAULTS.gold;
+    const rawText  = document.getElementById('themeColorText')?.value  || THEME_DEFAULTS.text;
     try {
         // Aplica e já obtém as versões seguras (com claridade limitada) das cores
-        const { green, gold } = applyThemeColors(rawGreen, rawGold);
+        const { green, gold, text } = applyThemeColors(rawGreen, rawGold, rawText);
         await supabaseAdmin.from('radio_settings').update({
-            theme_color_green: green, theme_color_gold: gold,
+            theme_color_green: green, theme_color_gold: gold, theme_color_text: text,
             updated_at: new Date().toISOString()
         }).eq('id', 1);
-        // Reflete no seletor a cor realmente salva (caso tenha sido ajustada por segurança)
+        // Reflete nos seletores a cor realmente salva (caso tenha sido ajustada por segurança)
         const inGreen = document.getElementById('themeColorGreen');
         const inGold  = document.getElementById('themeColorGold');
+        const inText  = document.getElementById('themeColorText');
         if(inGreen) inGreen.value = green;
         if(inGold)  inGold.value  = gold;
-        const aviso = (green !== rawGreen || gold !== rawGold)
+        if(inText)  inText.value  = text;
+        const ajustou = (green !== rawGreen || gold !== rawGold || text !== rawText);
+        const aviso = ajustou
             ? '\n\n⚠️ Uma das cores era clara demais e ficaria ilegível — foi escurecida um pouco automaticamente, mantendo o tom escolhido.'
             : '';
         alert('✅ Cores salvas! Já valem para todos os visitantes.' + aviso);
     } catch(err) { alert('❌ Erro: ' + err.message); }
 }
 
+function renderThemePresets() {
+    const container = document.getElementById('themePresets');
+    if(!container) return;
+    container.innerHTML = THEME_PRESETS.map((p, i) => `
+        <div class="theme-preset-swatch" data-preset="${i}" title="${p.name}"
+             style="background:linear-gradient(135deg, ${p.green} 50%, ${p.gold} 50%);"></div>
+    `).join('');
+    container.querySelectorAll('.theme-preset-swatch').forEach(el => {
+        el.addEventListener('click', () => {
+            const p = THEME_PRESETS[parseInt(el.dataset.preset)];
+            const inGreen = document.getElementById('themeColorGreen');
+            const inGold  = document.getElementById('themeColorGold');
+            const inText  = document.getElementById('themeColorText');
+            if(inGreen) inGreen.value = p.green;
+            if(inGold)  inGold.value  = p.gold;
+            if(inText)  inText.value  = p.text;
+            applyThemeColors(p.green, p.gold, p.text);
+        });
+    });
+}
+
 function setupAppearanceListeners() {
+    renderThemePresets();
     const inGreen = document.getElementById('themeColorGreen');
     const inGold  = document.getElementById('themeColorGold');
+    const inText  = document.getElementById('themeColorText');
     // Preview ao vivo enquanto escolhe a cor, antes de salvar
-    inGreen?.addEventListener('input', ()=> applyThemeColors(inGreen.value, inGold.value));
-    inGold?.addEventListener('input',  ()=> applyThemeColors(inGreen.value, inGold.value));
+    const livePreview = () => applyThemeColors(inGreen.value, inGold.value, inText.value);
+    inGreen?.addEventListener('input', livePreview);
+    inGold?.addEventListener('input',  livePreview);
+    inText?.addEventListener('input',  livePreview);
     document.getElementById('themeSaveBtn')?.addEventListener('click', saveThemeColors);
     document.getElementById('themeResetBtn')?.addEventListener('click', ()=>{
         if(inGreen) inGreen.value = THEME_DEFAULTS.green;
         if(inGold)  inGold.value  = THEME_DEFAULTS.gold;
-        applyThemeColors(THEME_DEFAULTS.green, THEME_DEFAULTS.gold);
+        if(inText)  inText.value  = THEME_DEFAULTS.text;
+        applyThemeColors(THEME_DEFAULTS.green, THEME_DEFAULTS.gold, THEME_DEFAULTS.text);
     });
 }
 
