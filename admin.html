@@ -124,7 +124,8 @@
             <h2 class="login-title">🔐 Acesso Restrito</h2>
             <p class="login-sub">Painel Administrativo — Rádio 24H</p>
             <form id="loginForm" onsubmit="return false;">
-                <input type="password" id="passwordInput" class="login-input" placeholder="Digite a senha" required>
+                <input type="email" id="emailInput" class="login-input" placeholder="Seu e-mail" autocomplete="username" required>
+                <input type="password" id="passwordInput" class="login-input" placeholder="Digite a senha" autocomplete="current-password" required>
                 <button type="submit" class="login-btn">Entrar</button>
             </form>
             <p class="error-message" id="loginError"></p>
