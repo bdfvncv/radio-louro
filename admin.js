@@ -1,8 +1,67 @@
 const SUPABASE_URL        = 'https://dyzjsgfoaxyeyepoylvg.supabase.co';
 const SUPABASE_ANON_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5empzZ2ZvYXh5ZXllcG95bHZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1ODUzNjUsImV4cCI6MjA3NTE2MTM2NX0.PwmaMI04EhcTqUQioTRInyVKUlw3t1ap0lM5hI29s2I';
 const YOUTUBE_API_KEY     = 'AIzaSyCcpLnZ0XHsSEx34Zvkc80FwmHiHIqS6Gs';
+const CLOUDINARY_CLOUD_NAME    = 'dygbrcrr6';
+const CLOUDINARY_UPLOAD_PRESET = 'radio_louro_preset';
+
+// Envia um arquivo de áudio do dispositivo direto para o Cloudinary (sem passar
+// pelo servidor — upload "unsigned", igual ao usado pelas Edge Functions).
+// onProgress(percent) é chamado durante o envio, se fornecido.
+function uploadAudioFileToCloudinary(file, folder, onProgress) {
+    return new Promise((resolve, reject) => {
+        if (!file) { reject(new Error('Nenhum arquivo selecionado')); return; }
+        const okTypes = ['audio/mpeg','audio/mp3','audio/wav','audio/x-wav','audio/ogg','audio/mp4','audio/x-m4a'];
+        if (file.type && !okTypes.includes(file.type) && !/\.(mp3|wav|ogg|m4a)$/i.test(file.name)) {
+            reject(new Error('Formato não suportado. Use MP3, WAV, OGG ou M4A.'));
+            return;
+        }
+        if (file.size > 50 * 1024 * 1024) {
+            reject(new Error('Arquivo muito grande (máximo 50MB).'));
+            return;
+        }
+
+        const safeName = file.name.replace(/\.[^/.]+$/, '').replace(/[^a-z0-9]/gi, '_').toLowerCase().slice(0, 50);
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+        fd.append('folder', folder || 'radio_louro/uploads');
+        fd.append('public_id', `${folder || 'radio_louro/uploads'}/${safeName}_${Date.now()}`);
+        fd.append('resource_type', 'video'); // Cloudinary trata áudio como "video"
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`);
+        xhr.upload.onprogress = e => {
+            if (onProgress && e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+        };
+        xhr.onload = () => {
+            try {
+                const data = JSON.parse(xhr.responseText);
+                if (data.secure_url) resolve(data.secure_url);
+                else reject(new Error(data.error?.message || 'Upload falhou'));
+            } catch { reject(new Error('Resposta inválida do Cloudinary')); }
+        };
+        xhr.onerror = () => reject(new Error('Erro de rede durante o upload'));
+        xhr.send(fd);
+    });
+}
+
+// Apaga o arquivo correspondente no Cloudinary (silenciosamente — se falhar,
+// não impede a exclusão do registro no banco, só avisa no console)
+async function deleteFromCloudinary(audioUrl) {
+    if (!audioUrl || !audioUrl.includes('cloudinary.com')) return;
+    try {
+        await fetch(DELETE_ASSET_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-function-secret': FUNCTION_SECRET },
+            body: JSON.stringify({ audio_url: audioUrl }),
+        });
+    } catch (err) {
+        console.warn('Não foi possível apagar do Cloudinary:', err);
+    }
+}
 const BLOCKED_TERMS       = ['funk','rock pesado','metal','punk','rap','trap'];
 const TTS_FUNCTION_URL    = `${SUPABASE_URL}/functions/v1/tts-generate`;
+const DELETE_ASSET_URL    = `${SUPABASE_URL}/functions/v1/delete-cloudinary-asset`;
 
 // Vozes disponíveis (ElevenLabs — único motor)
 const TTS_VOICES = {
@@ -163,6 +222,7 @@ function setupLoginListeners() {
         document.getElementById('adsForm')?.addEventListener('submit', handleSaveAd);
         document.getElementById('testAdBtn')?.addEventListener('click', () => testAudioUrl(document.getElementById('adUrl').value));
         document.getElementById('clearAdBtn')?.addEventListener('click', handleClearAdForm);
+        document.getElementById('adFile')?.addEventListener('change', handleAdFileUpload);
     } catch(err) { console.warn('setupLoginListeners (admin forms):', err); }
 }
 
@@ -537,7 +597,7 @@ async function approveQueueItem(id) {
 
 const CONVERT_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/convert-youtube`;
 // Se configurou FUNCTION_SECRET no Supabase, coloque aqui:
-const FUNCTION_SECRET = 'minhasenhasecreta123';
+const FUNCTION_SECRET = '42dMhNTowJvqOyz62xiA3t0g9qewMnoF';
 
 async function convertYoutubeToMp3(youtubeUrl, title, onProgress) {
     try {
@@ -1513,7 +1573,12 @@ function renderGradeContent(slotId) {
             <div class="grade-subsection">
                 <h4>🎬 Vinhetas — ${slot.name}</h4>
                 <form class="edit-form" id="formSlotJingle_${slotId}">
-                    <div class="form-group"><label>URL:</label><input type="url" id="jingleUrl_${slotId}" placeholder="https://res.cloudinary.com/..." required></div>
+                    <div class="form-group">
+                        <label>🎵 Enviar arquivo do dispositivo:</label>
+                        <input type="file" id="jingleFile_${slotId}" accept="audio/*">
+                        <small id="jingleUploadStatus_${slotId}" style="display:block;margin-top:4px;color:#666;"></small>
+                    </div>
+                    <div class="form-group"><label>Ou cole a URL:</label><input type="url" id="jingleUrl_${slotId}" placeholder="https://res.cloudinary.com/..." required></div>
                     <div class="form-group"><label>Título:</label><input type="text" id="jingleTitle_${slotId}" placeholder="Ex: Vinheta Manhã 1" required></div>
                     <div class="form-group"><label>Posição:</label>
                         <select id="jinglePos_${slotId}">
@@ -1537,6 +1602,7 @@ function renderGradeContent(slotId) {
         </div>`;
     document.getElementById(`formSlotPlaylist_${slotId}`)?.addEventListener('submit',e=>handleSaveSlotTrack(e,slotId));
     document.getElementById(`formSlotJingle_${slotId}`)?.addEventListener('submit',e=>handleSaveSlotJingle(e,slotId));
+    document.getElementById(`jingleFile_${slotId}`)?.addEventListener('change', e => handleJingleFileUpload(e, slotId));
     renderSlotPlaylistTable(slotId);
 }
 
@@ -1683,6 +1749,22 @@ async function refreshSlotPlaylist(slotId) {
     renderSlotPlaylistTable(slotId); renderGradesTabs();
 }
 
+async function handleJingleFileUpload(e, slotId) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const status = document.getElementById(`jingleUploadStatus_${slotId}`);
+    const urlInput = document.getElementById(`jingleUrl_${slotId}`);
+    try {
+        const url = await uploadAudioFileToCloudinary(file, 'radio_louro/jingles', pct => {
+            if(status) status.textContent = `📤 Enviando... ${pct}%`;
+        });
+        if(urlInput) urlInput.value = url;
+        if(status) status.textContent = '✅ Arquivo enviado! URL preenchida abaixo.';
+    } catch(err) {
+        if(status) status.textContent = `❌ ${err.message}`;
+    }
+}
+
 async function handleSaveSlotJingle(e,slotId) {
     e.preventDefault();
     const url=document.getElementById(`jingleUrl_${slotId}`).value.trim();
@@ -1701,7 +1783,9 @@ async function toggleJingle(id,newStatus,slotId) {
 
 async function deleteJingle(id,slotId) {
     if(!confirm('Deletar vinheta?')) return;
+    const jingle = (slotJingles[slotId]||[]).find(j=>j.id===id);
     await supabaseAdmin.from('jingles').delete().eq('id',id);
+    if(jingle?.audio_url) deleteFromCloudinary(jingle.audio_url);
     await refreshSlotJingles(slotId);
 }
 
@@ -2167,6 +2251,22 @@ function renderAdsTable() {
     tbody.querySelectorAll('.ad-delete-btn').forEach(b=>b.addEventListener('click',()=>deleteAd(parseInt(b.dataset.id))));
 }
 
+async function handleAdFileUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const status = document.getElementById('adUploadStatus');
+    const urlInput = document.getElementById('adUrl');
+    try {
+        const url = await uploadAudioFileToCloudinary(file, 'radio_louro/ads', pct => {
+            if(status) status.textContent = `📤 Enviando... ${pct}%`;
+        });
+        if(urlInput) urlInput.value = url;
+        if(status) status.textContent = '✅ Arquivo enviado! URL preenchida abaixo.';
+    } catch(err) {
+        if(status) status.textContent = `❌ ${err.message}`;
+    }
+}
+
 async function handleSaveAd(e) {
     e.preventDefault();
     const url=document.getElementById('adUrl').value.trim();
@@ -2216,7 +2316,9 @@ async function toggleAd(id,newStatus) {
 async function deleteAd(id) {
     if(!confirm('Deletar esta propaganda?')) return;
     if(editingAdId===id) handleClearAdForm();
+    const ad = advertisements.find(a=>a.id===id);
     await supabaseAdmin.from('advertisements').delete().eq('id',id);
+    if(ad?.audio_url) deleteFromCloudinary(ad.audio_url);
     await reorderAdsAfterDelete();
     const {data}=await supabase.from('advertisements').select('*').order('play_order',{ascending:true}); advertisements=data||[]; renderAdsTable();
 }
