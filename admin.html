@@ -682,7 +682,12 @@
             <p class="section-desc">Tocadas entre músicas em todas as grades. Configure horário de veiculação para exibir apenas em períodos específicos do dia.</p>
             <div class="admin-card">
                 <form id="adsForm" class="edit-form">
-                    <div class="form-group"><label>URL do Áudio:</label><input type="url" id="adUrl" placeholder="https://res.cloudinary.com/..." required></div>
+                    <div class="form-group">
+                        <label>🎵 Enviar arquivo do dispositivo:</label>
+                        <input type="file" id="adFile" accept="audio/*">
+                        <small id="adUploadStatus" style="display:block;margin-top:4px;color:#666;"></small>
+                    </div>
+                    <div class="form-group"><label>Ou cole a URL do Áudio:</label><input type="url" id="adUrl" placeholder="https://res.cloudinary.com/..." required></div>
                     <div class="form-group"><label>Título:</label><input type="text" id="adTitle" placeholder="Ex: Promoção do Dia" required></div>
                     <div class="form-group"><label>Anunciante:</label><input type="text" id="adAdvertiser" placeholder="Opcional"></div>
                     <div class="form-group"><label>Frequência (a cada X músicas):</label><input type="number" id="adFrequency" value="3" min="1" max="100" required><small>Ex: 3 = toca a cada 3 músicas</small></div>
