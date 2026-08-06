@@ -152,6 +152,7 @@ function init() {
     setupLiveLocutorListeners();
     setupChamadaFuncionario();
     setupNavigationListeners();
+    setupAllTableFilters();
 }
 
 async function checkAuth() {
@@ -317,6 +318,24 @@ function getCheckedDestinations(container) {
 // ─────────────────────────────────────────────────────────────
 // BUSCA ADMIN
 // ─────────────────────────────────────────────────────────────
+// Liga todo campo de busca de tabela (classe .table-search-input) à sua tabela
+// mais próxima — filtra as linhas em tempo real, sem precisar de servidor.
+// Seguro chamar várias vezes (ex: toda vez que uma grade nova é renderizada).
+function setupAllTableFilters() {
+    document.querySelectorAll('.table-search-input').forEach(inp => {
+        if (inp.dataset.filterWired) return;
+        inp.dataset.filterWired = '1';
+        inp.addEventListener('input', () => {
+            const q = inp.value.trim().toLowerCase();
+            const tbody = inp.nextElementSibling?.querySelector('tbody');
+            if (!tbody) return;
+            tbody.querySelectorAll('tr').forEach(row => {
+                row.style.display = (!q || row.textContent.toLowerCase().includes(q)) ? '' : 'none';
+            });
+        });
+    });
+}
+
 function setupAdminSearchListeners() {
     const inp = document.getElementById('adminSearchInput');
     const btn = document.getElementById('adminSearchBtn');
@@ -1016,6 +1035,9 @@ function setupLocutorListeners() {
         document.getElementById('locutorTitle').value='';
         document.getElementById('locutorDesc').value='';
         document.getElementById('locutorUrl').value='';
+        editingLocutorId = null;
+        const btn = document.getElementById('locutorForm')?.querySelector('.submit-btn');
+        if(btn) btn.textContent = '💾 Salvar';
     });
     supabase.channel('locutor_admin')
         .on('postgres_changes',{event:'UPDATE',schema:'public',table:'locutor_state'}, payload=>{
@@ -1038,6 +1060,7 @@ function renderLocutorTracks() {
                 <div class="locutor-track-name">${t.title}</div>
                 ${t.description?`<div class="locutor-track-desc">${t.description}</div>`:''}
             </div>
+            <button class="btn-edit" onclick="event.stopPropagation();editLocutorTrack(${t.id})">✏️</button>
             <button class="btn-delete" onclick="event.stopPropagation();deleteLocutorTrack(${t.id})">🗑️</button>
         </div>`).join('');
     const btn=document.getElementById('locutorPlayBtn');
@@ -1086,6 +1109,8 @@ function updateLocutorUI() {
     }
 }
 
+let editingLocutorId = null;
+
 async function handleSaveLocutorTrack(e) {
     e.preventDefault();
     const title=document.getElementById('locutorTitle').value.trim();
@@ -1093,9 +1118,18 @@ async function handleSaveLocutorTrack(e) {
     const url  =document.getElementById('locutorUrl').value.trim();
     if(!title||!url){ alert('Preencha título e URL.'); return; }
     try {
-        const {error}=await supabaseAdmin.from('locutor_tracks').insert([{title,description:desc||null,audio_url:url,enabled:true}]);
-        if(error) throw error;
-        alert('✅ Locução salva!');
+        if (editingLocutorId) {
+            const {error}=await supabaseAdmin.from('locutor_tracks').update({title,description:desc||null,audio_url:url}).eq('id',editingLocutorId);
+            if(error) throw error;
+            alert('✅ Locução atualizada!');
+            editingLocutorId = null;
+            const btn = document.getElementById('locutorForm')?.querySelector('.submit-btn');
+            if(btn) btn.textContent = '💾 Salvar';
+        } else {
+            const {error}=await supabaseAdmin.from('locutor_tracks').insert([{title,description:desc||null,audio_url:url,enabled:true}]);
+            if(error) throw error;
+            alert('✅ Locução salva!');
+        }
         document.getElementById('locutorTitle').value='';
         document.getElementById('locutorDesc').value='';
         document.getElementById('locutorUrl').value='';
@@ -1104,9 +1138,23 @@ async function handleSaveLocutorTrack(e) {
     } catch(err){ alert('❌ Erro: '+err.message); }
 }
 
+function editLocutorTrack(id) {
+    const track = locutorTracks.find(t=>t.id===id);
+    if (!track) return;
+    editingLocutorId = id;
+    document.getElementById('locutorTitle').value = track.title;
+    document.getElementById('locutorDesc').value = track.description || '';
+    document.getElementById('locutorUrl').value = track.audio_url;
+    const btn = document.getElementById('locutorForm')?.querySelector('.submit-btn');
+    if (btn) btn.textContent = '💾 Salvar Alteração';
+    document.getElementById('locutorForm')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 async function deleteLocutorTrack(id) {
     if(!confirm('Deletar esta locução?')) return;
+    const track = locutorTracks.find(t=>t.id===id);
     await supabaseAdmin.from('locutor_tracks').delete().eq('id',id);
+    if(track?.audio_url) deleteFromCloudinary(track.audio_url);
     if(locutorSelectedId===id) locutorSelectedId=null;
     const {data}=await supabase.from('locutor_tracks').select('*').order('created_at',{ascending:false});
     locutorTracks=data||[]; renderLocutorTracks();
@@ -1554,7 +1602,7 @@ function renderGradeContent(slotId) {
                         <button type="button" class="clear-btn" onclick="clearSlotForm(${slotId})">🗑️ Limpar</button>
                     </div>
                 </form>
-                <div class="table-container">
+                <input type="text" class="table-search-input" placeholder="🔍 Buscar..."><div class="table-container">
                     <table class="schedule-table">
                         <thead><tr>
                             <th><input type="checkbox" class="bulk-select-all" data-table="tableSlotPlaylist_${slotId}"></th>
@@ -1604,6 +1652,7 @@ function renderGradeContent(slotId) {
     document.getElementById(`formSlotJingle_${slotId}`)?.addEventListener('submit',e=>handleSaveSlotJingle(e,slotId));
     document.getElementById(`jingleFile_${slotId}`)?.addEventListener('change', e => handleJingleFileUpload(e, slotId));
     renderSlotPlaylistTable(slotId);
+    setupAllTableFilters();
 }
 
 function renderJingleRows(list,slotId) {
@@ -1613,6 +1662,7 @@ function renderJingleRows(list,slotId) {
             <span class="jingle-row-title">${j.title}</span>
             <span class="status-badge ${j.enabled?'active':'inactive'}" style="font-size:10px;">${j.enabled?'✅':'❌'}</span>
             <div class="action-btns">
+                <button class="btn-edit" onclick="editJingle(${j.id},${slotId})">✏️</button>
                 <button class="btn-toggle" onclick="toggleJingle(${j.id},${!j.enabled},${slotId})">${j.enabled?'🔴':'🟢'}</button>
                 <button class="btn-delete" onclick="deleteJingle(${j.id},${slotId})">🗑️</button>
             </div>
@@ -1765,11 +1815,37 @@ async function handleJingleFileUpload(e, slotId) {
     }
 }
 
+let editingJingleId = null;
+
+function editJingle(id, slotId) {
+    const jingle = (slotJingles[slotId]||[]).find(j=>j.id===id);
+    if (!jingle) return;
+    editingJingleId = id;
+    document.getElementById(`jingleUrl_${slotId}`).value = jingle.audio_url;
+    document.getElementById(`jingleTitle_${slotId}`).value = jingle.title;
+    document.getElementById(`jinglePos_${slotId}`).value = jingle.position;
+    const form = document.getElementById(`formSlotJingle_${slotId}`);
+    const btn = form?.querySelector('.submit-btn');
+    if (btn) btn.textContent = '💾 Salvar Alteração';
+    form?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 async function handleSaveSlotJingle(e,slotId) {
     e.preventDefault();
     const url=document.getElementById(`jingleUrl_${slotId}`).value.trim();
     const title=document.getElementById(`jingleTitle_${slotId}`).value.trim();
     const position=document.getElementById(`jinglePos_${slotId}`).value;
+
+    if (editingJingleId) {
+        const {error}=await supabaseAdmin.from('jingles').update({position,audio_url:url,title}).eq('id',editingJingleId);
+        if(error){ alert('❌ Erro: '+error.message); return; }
+        alert('✅ Vinheta atualizada!');
+        editingJingleId = null;
+        clearJingleForm(slotId);
+        await refreshSlotJingles(slotId);
+        return;
+    }
+
     const {error}=await supabaseAdmin.from('jingles').insert([{slot_id:slotId,position,audio_url:url,title,enabled:true}]);
     if(error){ alert('❌ Erro: '+error.message); return; }
     alert('✅ Vinheta adicionada!'); clearJingleForm(slotId);
@@ -1794,6 +1870,10 @@ function clearJingleForm(slotId) {
     const t=document.getElementById(`jingleTitle_${slotId}`);
     if(u) u.value='';
     if(t) t.value='';
+    editingJingleId = null;
+    const form = document.getElementById(`formSlotJingle_${slotId}`);
+    const btn = form?.querySelector('.submit-btn');
+    if (btn) btn.textContent = '💾 Adicionar Vinheta';
 }
 
 async function refreshSlotJingles(slotId) {
@@ -1832,7 +1912,7 @@ function setupSeasonalJingleListeners() {
         if(form) {
             form.addEventListener('submit',e=>handleSaveSeasonalJingle(e,cat));
             form.querySelector('.jingle-test')?.addEventListener('click',e=>testAudioUrl(e.target.closest('form').querySelector('.jingle-url').value.trim()));
-            form.querySelector('.jingle-clear')?.addEventListener('click',e=>{ const f=e.target.closest('form'); const u=f.querySelector('.jingle-url'); const t=f.querySelector('.jingle-title'); if(u)u.value=''; if(t)t.value=''; });
+            form.querySelector('.jingle-clear')?.addEventListener('click',e=>{ const f=e.target.closest('form'); const u=f.querySelector('.jingle-url'); const t=f.querySelector('.jingle-title'); if(u)u.value=''; if(t)t.value=''; editingSeasonalJingleId=null; const b=f.querySelector('.submit-btn'); if(b)b.textContent='💾 Adicionar'; });
         }
     });
 }
@@ -1879,6 +1959,7 @@ function renderSeasonalJinglesTables() {
                 <td style="font-weight:500;">${j.title}</td>
                 <td><span class="status-badge ${j.enabled?'active':'inactive'}">${j.enabled?'✅ Ativo':'❌ Inativo'}</span></td>
                 <td><div class="action-btns">
+                    <button class="btn-edit" onclick="editSeasonalJingle(${j.id},'${cat}')">✏️</button>
                     <button class="btn-toggle" onclick="toggleSeasonalJingle(${j.id},${!j.enabled},'${cat}')">${j.enabled?'🔴':'🟢'}</button>
                     <button class="btn-delete" onclick="deleteSeasonalJingle(${j.id},'${cat}')">🗑️</button>
                 </div></td>
@@ -2018,17 +2099,47 @@ async function handleSeasonalShuffle(category,type) {
     alert('✅ Embaralhado!');
 }
 
+let editingSeasonalJingleId = null;
+
 async function handleSaveSeasonalJingle(e,category) {
     e.preventDefault();
     const form=e.target;
     const url=form.querySelector('.jingle-url').value.trim();
     const title=form.querySelector('.jingle-title').value.trim();
     const position=form.querySelector('.jingle-position').value;
+
+    if (editingSeasonalJingleId) {
+        const {error}=await supabaseAdmin.from('jingles').update({position,audio_url:url,title}).eq('id',editingSeasonalJingleId);
+        if(error){ alert('❌ Erro: '+error.message); return; }
+        alert('✅ Vinheta atualizada!');
+        editingSeasonalJingleId = null;
+        const btn = form.querySelector('.submit-btn');
+        if(btn) btn.textContent = '💾 Adicionar';
+        form.querySelector('.jingle-url').value=''; form.querySelector('.jingle-title').value='';
+        await loadSeasonalJingles(); renderSeasonalJinglesTables();
+        return;
+    }
+
     const {error}=await supabaseAdmin.from('jingles').insert([{seasonal_category:category,position,audio_url:url,title,enabled:true}]);
     if(error){ alert('❌ Erro: '+error.message); return; }
     alert('✅ Vinheta adicionada!');
     form.querySelector('.jingle-url').value=''; form.querySelector('.jingle-title').value='';
     await loadSeasonalJingles(); renderSeasonalJinglesTables();
+}
+
+function editSeasonalJingle(id, cat) {
+    const jingle = (seasonalJingles[cat]||[]).find(j=>j.id===id);
+    if (!jingle) return;
+    const names={natal:'Natal',ano_novo:'AnoNovo',pascoa:'Pascoa',sao_joao:'SaoJoao'};
+    const form = document.getElementById(`formJingle${names[cat]}`);
+    if (!form) return;
+    editingSeasonalJingleId = id;
+    form.querySelector('.jingle-url').value = jingle.audio_url;
+    form.querySelector('.jingle-title').value = jingle.title;
+    form.querySelector('.jingle-position').value = jingle.position;
+    const btn = form.querySelector('.submit-btn');
+    if (btn) btn.textContent = '💾 Salvar Alteração';
+    form.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 async function toggleSeasonalJingle(id,newStatus,cat) {
@@ -2038,7 +2149,9 @@ async function toggleSeasonalJingle(id,newStatus,cat) {
 
 async function deleteSeasonalJingle(id,cat) {
     if(!confirm('Deletar vinheta?')) return;
+    const jingle = (seasonalJingles[cat]||[]).find(j=>j.id===id);
     await supabaseAdmin.from('jingles').delete().eq('id',id);
+    if(jingle?.audio_url) deleteFromCloudinary(jingle.audio_url);
     await loadSeasonalJingles(); renderSeasonalJinglesTables();
 }
 
@@ -2378,21 +2491,21 @@ async function loadAnalytics() {
                 <div class="analytics-stat"><div class="as-num">${slotSorted.length}</div><div class="as-label">Grades ativas</div></div>
             </div>
             <h4 style="margin:20px 0 10px;color:#333;">🏆 Músicas mais tocadas</h4>
-            <div class="table-container">
+            <input type="text" class="table-search-input" placeholder="🔍 Buscar..."><div class="table-container">
                 <table class="data-table">
                     <thead><tr><th>#</th><th>Título</th><th>Artista</th><th>Grade</th><th>Reproduções</th></tr></thead>
                     <tbody>${sorted.map((t,i)=>`<tr><td style="font-weight:700;color:#006b3f;">${i+1}</td><td style="font-weight:500;">${t.title||'-'}</td><td style="color:#666;">${t.artist||'-'}</td><td style="color:#666;">${t.slot||'-'}</td><td><span style="padding:3px 10px;background:#e6f4ed;border-radius:10px;font-weight:700;color:#006b3f;">${t.count}×</span></td></tr>`).join('')}</tbody>
                 </table>
             </div>
             <h4 style="margin:20px 0 10px;color:#333;">🕐 Reproduções por grade</h4>
-            <div class="table-container">
+            <input type="text" class="table-search-input" placeholder="🔍 Buscar..."><div class="table-container">
                 <table class="data-table">
                     <thead><tr><th>Grade</th><th>Reproduções</th></tr></thead>
                     <tbody>${slotSorted.map(([slot,count])=>`<tr><td style="font-weight:500;">${slot}</td><td><span style="padding:3px 10px;background:#e3f2fd;border-radius:10px;font-weight:700;color:#1976d2;">${count}×</span></td></tr>`).join('')}</tbody>
                 </table>
             </div>
             <h4 style="margin:20px 0 10px;color:#333;">🕐 Últimas reproduções</h4>
-            <div class="table-container">
+            <input type="text" class="table-search-input" placeholder="🔍 Buscar..."><div class="table-container">
                 <table class="data-table">
                     <thead><tr><th>Título</th><th>Grade</th><th>Horário</th></tr></thead>
                     <tbody>${(recent||[]).map(r=>`<tr><td style="font-weight:500;">${r.title||'-'}</td><td style="color:#666;">${r.slot_name||'-'}</td><td style="color:#999;font-size:11px;">${new Date(r.played_at).toLocaleString('pt-BR')}</td></tr>`).join('')}</tbody>
@@ -2400,6 +2513,7 @@ async function loadAnalytics() {
             </div>
             <div style="margin-top:12px;"><button class="clear-btn" onclick="clearAnalytics()">🗑️ Limpar histórico</button></div>
         `;
+        setupAllTableFilters();
     } catch(err) {
         container.innerHTML = `<div class="grade-empty">Erro ao carregar analytics: ${err.message}</div>`;
     }
@@ -3436,7 +3550,7 @@ async function loadAdHistory() {
 
         el.innerHTML = `
             <h4 style="margin:0 0 10px;color:#333;font-size:14px;">🏆 Mais tocadas (últimas 100)</h4>
-            <div class="table-container" style="margin-bottom:16px;">
+            <input type="text" class="table-search-input" placeholder="🔍 Buscar..."><div class="table-container" style="margin-bottom:16px;">
                 <table class="data-table"><thead><tr><th>Propaganda</th><th>Anunciante</th><th>Vezes tocada</th></tr></thead>
                 <tbody>${topList.map(t=>`<tr>
                     <td style="font-weight:500;">${t.title||'-'}</td>
@@ -3445,7 +3559,7 @@ async function loadAdHistory() {
                 </tr>`).join('')}</tbody></table>
             </div>
             <h4 style="margin:0 0 10px;color:#333;font-size:14px;">🕐 Últimas reproduções</h4>
-            <div class="table-container">
+            <input type="text" class="table-search-input" placeholder="🔍 Buscar..."><div class="table-container">
                 <table class="data-table"><thead><tr><th>Propaganda</th><th>Grade</th><th>Horário</th></tr></thead>
                 <tbody>${data.slice(0,30).map(r=>`<tr>
                     <td style="font-weight:500;">${r.title||'-'}</td>
@@ -3453,6 +3567,7 @@ async function loadAdHistory() {
                     <td style="font-size:11px;color:#888;">${new Date(r.played_at).toLocaleString('pt-BR')}</td>
                 </tr>`).join('')}</tbody></table>
             </div>`;
+        setupAllTableFilters();
     } catch(err) { el.innerHTML = `<div class="grade-empty">Erro: ${err.message}</div>`; }
 }
 window.loadAdHistory = loadAdHistory;
