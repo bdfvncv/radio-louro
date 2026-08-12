@@ -1663,6 +1663,7 @@ function renderJingleRows(list,slotId) {
             <span class="status-badge ${j.enabled?'active':'inactive'}" style="font-size:10px;">${j.enabled?'✅':'❌'}</span>
             <div class="action-btns">
                 <button class="btn-edit" onclick="editJingle(${j.id},${slotId})">✏️</button>
+                <button class="btn-toggle" style="background:#17a2b8;" onclick="downloadAudio('${j.audio_url}','${j.title?.replace(/'/g,'')||'vinheta'}.mp3')">⬇️</button>
                 <button class="btn-toggle" onclick="toggleJingle(${j.id},${!j.enabled},${slotId})">${j.enabled?'🔴':'🟢'}</button>
                 <button class="btn-delete" onclick="deleteJingle(${j.id},${slotId})">🗑️</button>
             </div>
@@ -1937,6 +1938,7 @@ function renderSeasonalTable(category,type,tableId) {
             <td><span class="status-badge ${item.enabled?'active':'inactive'}">${item.enabled?'✅ Ativo':'❌ Inativo'}</span></td>
             <td><div class="action-btns">
                 <button class="btn-edit seas-edit-btn" data-id="${item.id}" data-cat="${category}" data-type="${type}">✏️</button>
+                <button class="btn-toggle" style="background:#17a2b8;" onclick="downloadAudio('${item.audio_url}','${item.title?.replace(/'/g,'')||'audio'}.mp3')">⬇️</button>
                 <button class="btn-toggle seas-toggle-btn" data-id="${item.id}" data-enabled="${item.enabled}">${item.enabled?'🔴':'🟢'}</button>
                 <button class="btn-delete seas-delete-btn" data-id="${item.id}">🗑️</button>
             </div></td>
@@ -2175,6 +2177,8 @@ function renderScheduleTable() {
             <td><span class="audio-url" style="color:${s?.audio_url_half?'#333':'#999'}" title="${s?.audio_url_half||''}">${s?.audio_url_half||'Nenhuma URL (:30)'}</span></td>
             <td><div class="action-btns">
                 <button class="btn-edit sch-edit-btn" data-hour="${hour}">✏️ Editar</button>
+                ${s?.audio_url?`<button class="btn-toggle" style="background:#17a2b8;" onclick="downloadAudio('${s.audio_url}','hora_${String(hour).padStart(2,'0')}h00.mp3')">⬇️ :00</button>`:''}
+                ${s?.audio_url_half?`<button class="btn-toggle" style="background:#17a2b8;" onclick="downloadAudio('${s.audio_url_half}','hora_${String(hour).padStart(2,'0')}h30.mp3')">⬇️ :30</button>`:''}
                 ${s?`<button class="btn-toggle sch-toggle-btn" data-id="${s.id}" data-enabled="${s.enabled}">${s.enabled?'🔴 Desativar':'🟢 Ativar'}</button><button class="btn-delete sch-delete-btn" data-id="${s.id}">🗑️ Deletar</button>`:''}
             </div></td>`;
         tr.querySelector('.sch-edit-btn')?.addEventListener('click',e=>editSchedule(parseInt(e.currentTarget.dataset.hour)));
@@ -2344,7 +2348,7 @@ function renderAdsTable() {
             : '-';
         return `<tr>
             <td style="font-weight:bold;">${ad.play_order}</td>
-            <td style="font-weight:500;">${ad.title}</td>
+            <td style="font-weight:500;">${ad.title}${ad.special_date?`<br><span style="padding:2px 7px;background:#fff3cd;border-radius:8px;font-size:10px;font-weight:bold;color:#856404;">🎉 ${new Date(ad.special_date+'T00:00:00').toLocaleDateString('pt-BR')}</span>`:''}</td>
             <td>${ad.advertiser||'-'}</td>
             <td><span style="padding:3px 8px;background:#e3f2fd;border-radius:10px;font-size:11px;font-weight:bold;color:#1976d2;">A cada ${ad.frequency}</span></td>
             <td style="font-size:12px;color:#555;">${horario}</td>
@@ -2392,6 +2396,7 @@ async function handleSaveAd(e) {
     const endHourVal=document.getElementById('adEndHour')?.value;
     const startHour=(startHourVal!=null&&startHourVal!==''&&!isNaN(parseInt(startHourVal)))?parseInt(startHourVal):null;
     const endHour  =(endHourVal!=null  &&endHourVal!==''  &&!isNaN(parseInt(endHourVal)))?  parseInt(endHourVal)  :null;
+    const specialDate = document.getElementById('adSpecialDate')?.value || null;
     if(!url||!title){ alert('Preencha URL e Título!'); return; }
     if(frequency<1||frequency>100){ alert('Frequência entre 1 e 100!'); return; }
     // Validação de horas
@@ -2399,7 +2404,7 @@ async function handleSaveAd(e) {
     if(endHour  !==null&&(endHour  <0||endHour  >23)){ alert('Hora fim inválida (0–23).'); return; }
     try {
         const payload={audio_url:url,title,advertiser:advertiser||null,frequency,play_order:order,enabled,
-            start_hour:startHour,end_hour:endHour};
+            start_hour:startHour,end_hour:endHour,special_date:specialDate};
         if(editingAdId){ await supabaseAdmin.from('advertisements').update(payload).eq('id',editingAdId); alert('✅ Atualizado!'); }
         else { await supabaseAdmin.from('advertisements').insert([payload]); alert('✅ Adicionado!'); }
         handleClearAdForm();
@@ -2416,6 +2421,8 @@ function editAd(id) {
     const sh=document.getElementById('adStartHour'); const eh=document.getElementById('adEndHour');
     if(sh) sh.value=ad.start_hour!=null?ad.start_hour:'';
     if(eh) eh.value=ad.end_hour!=null?ad.end_hour:'';
+    const sd=document.getElementById('adSpecialDate');
+    if(sd) sd.value=ad.special_date||'';
     const adBtn=document.querySelector('#adsForm .submit-btn');
     if(adBtn) adBtn.textContent='💾 Salvar Alteração';
     document.getElementById('adsForm').scrollIntoView({behavior:'smooth',block:'center'});
@@ -2437,7 +2444,7 @@ async function deleteAd(id) {
 }
 
 function handleClearAdForm() {
-    ['adUrl','adTitle','adAdvertiser','adStartHour','adEndHour'].forEach(f=>{
+    ['adUrl','adTitle','adAdvertiser','adStartHour','adEndHour','adSpecialDate'].forEach(f=>{
         const el=document.getElementById(f); if(el) el.value='';
     });
     document.getElementById('adFrequency').value='3'; document.getElementById('adOrder').value='0';
