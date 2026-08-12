@@ -607,11 +607,15 @@ function playSlotMusicTrack() {
 }
 
 function getEligibleAds() {
-    const h = new Date().getHours();
+    const now = new Date();
+    const h = now.getHours();
+    const todayStr = now.toISOString().split('T')[0]; // AAAA-MM-DD
     return advertisements.filter(ad => {
         if (!ad.enabled) return false;
         if (ad.start_hour != null && h < ad.start_hour) return false;
         if (ad.end_hour   != null && h > ad.end_hour)   return false;
+        // Propaganda de data especial só toca no dia exato configurado
+        if (ad.special_date && ad.special_date !== todayStr) return false;
         return true;
     });
 }
