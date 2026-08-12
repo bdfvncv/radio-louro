@@ -251,6 +251,33 @@
                 </div>
             </div>
             <p class="section-desc">Cada faixa horária tem sua própria playlist e vinhetas. Desativar as grades volta para a Playlist de Fundo geral.</p>
+            <details class="guide-box">
+                <summary>📖 Guia de Solicitação de Roteiros — Vinhetas</summary>
+                <div class="guide-box-content">📖 Guia de Solicitação de Roteiros — Rádio Supermercado do Louro
+Para gerar os roteiros de locução da rádio com a pontuação correta e no tom exato da loja, o pedido deve ser feito seguindo o modelo abaixo.
+
+1. Modelo de Solicitação (Como pedir)
+&quot;Preciso do roteiro de locução para a Rádio Supermercado do Louro.
+ * Nome do Bloco: [Ex: Noite de Compras / Fim de Semana]
+ * Horário: [Ex: 18h00 às 21h00]
+ * Estilo Musical: [Ex: Sertanejo, Pop, Forró, etc.]
+ * Lista de Músicas do Bloco: [Cole aqui a lista de músicas extraída do painel/sistema]
+Diretrizes obrigatórias:
+ * Pontuação perfeita para leitura natural e pausas de locução no microfone.
+ * Sem vícios ou clichês (não usar: corredores, com calma, sem pressa, balanço gostoso, alto-astral, músicas pra cima, som moderno, chegando).
+ * Escrever por extenso os nomes dos estilos (não usar siglas como MPB).
+ * Não citar ofertas de produtos específicos (como padaria) nas vinhetas musicais.
+ * Usar as músicas da própria lista como indicação de fundo em fade (volume baixo).
+ * Variar as saídas de bloco (não usar repetidamente &quot;E assim&quot; ou &quot;Chegamos ao fim&quot;).&quot;
+
+2. Estrutura de Resposta Esperada (O que a IA entrega)
+Cada bloco gerado conterá 4 vinhetas completas:
+ * 🚀 Abertura (Tocar no início do horário): Boas-vindas ao bloco com a trilha de fundo baseada na 1ª música da lista.
+ * 🎵 Meio - Opção 1 (Tocar durante o bloco): Cita os principais artistas da lista e reforça a presença do cliente.
+ * 🛒 Meio - Opção 2 (Tocar durante o bloco): Mensagem institucional leve sobre o atendimento e a experiência na loja.
+ * 🌙 Encerramento (Tocar no final do horário): Agradecimento pela companhia e transição para o próximo período.</div>
+            </details>
+            
             <div class="admin-card" id="createGradeCard" style="display:none;border:2px solid #006b3f;">
                 <h3 class="card-title">➕ Criar Nova Grade Horária</h3>
                 <form class="edit-form" id="createGradeForm">
@@ -448,6 +475,54 @@
         <!-- ── LOCUTOR / TTS ── -->
         <section class="admin-section" id="section-locutor">
             <div class="section-header"><h2>🎙️ Locutor e Promoções em Voz</h2></div>
+            <details class="guide-box">
+                <summary>📖 Guia de Locutor e Promoções</summary>
+                <div class="guide-box-content">🎙️ Guia de Locutor e Promoções — Rádio Supermercado do Louro
+Esta seção estabelece o padrão de locução da rádio e os modelos de vinhetas promocionais, garantindo uma comunicação clara, profissional e que gera resultados na loja.
+
+1. 📢 Diretrizes de Locução e Tom de Voz
+O tom da rádio é a voz do Supermercado do Louro. A locução deve seguir sempre estas diretrizes:
+Estilo de Comunicação: Claro, direto, acolhedor e dinâmico.
+Ritmo: Leitura fluida, respeitando as vírgulas e pausas marcadas no texto para uma dicção impecável no microfone.
+Intenção de Venda: Focar na economia e na facilidade para o cliente, transmitindo oportunidade e confiança (sem gritar ao microfone).
+Trilha de Fundo: Indicar sempre como &quot;Música da sua preferência&quot; em volume baixo (fade).
+
+2. 🏷️ Modelos de Vinhetas de Promoções
+Trilha de fundo: Música da sua preferência em volume baixo (fade).
+
+Opção 1: Promoção de Setor (Hortifrúti / Açougue / Padaria)
+Tom de voz: Dinâmico e convidativo.
+&quot;Atenção! Tem preço baixo e produto fresco esperando por você no setor de [Nome do Setor]!
+Aproveite a sua visita ao Supermercado do Louro para garantir itens selecionados com o menor preço da região. Passe no setor de [Nome do Setor] e encha o seu carrinho com qualidade e economia de verdade. Boas compras!&quot;
+
+Opção 2: Oferta com Preço em Destaque (Produto Específico)
+Tom de voz: Direto e objetivo.
+&quot;Economia de verdade é no Supermercado do Louro!
+Aproveite essa oferta especial: [Nome do Produto] de [Preço Original] por apenas [Preço Promocional]! É a sua chance de levar produto de qualidade pagando muito menos.
+Garanta o seu no setor de [Nome do Setor]. Supermercado do Louro, o melhor para o seu bolso!&quot;
+
+Opção 3: Chamada de Ofertas do Dia (Geral)
+Tom de voz: Acolhedor e informativo.
+&quot;Quem pesquisa, escolhe o Supermercado do Louro!
+A nossa equipe preparou uma seleção de ofertas imbatíveis espalhadas pela loja. Confira as promoções em todos os setores e faça suas escolhas com total tranquilidade.
+A gente cuida do som e dos preços, e você aproveita a economia. Boas compras!&quot;
+
+3. 📋 Como Solicitar Roteiros para o Locutor e Promoções
+Sempre que precisar de novas vinhetas de promoção ou instruções para o locutor, envie a solicitação neste formato:
+&quot;Preciso de um roteiro de promoção para a Rádio Supermercado do Louro.&quot;
+Tipo de Anúncio: [Ex: Promoção de Setor / Oferta de Produto / Ofertas do Dia]
+Produto / Setor: [Ex: Açougue / Leite Integral / Hortifrúti]
+Preço Original: [R$ XX,XX] (se houver)
+Preço Promocional: [R$ XX,XX] (se houver)
+Tom do Locutor: [Ex: Dinâmico / Vibrante / Acolhedor]
+Trilha: Música da sua preferência.
+
+📌 Regras Obrigatórias para Locução e Promoções:
+Pontuação para Locução: Manter vírgulas e pausas bem marcadas no texto para uma leitura natural.
+Sem Vícios de Linguagem: Proibido utilizar as palavras corredores, com calma, sem pressa, chegando, contate.
+Repetição Estratégica: Repetir o nome do produto e o valor promocional nos anúncios diretos para fixação do cliente.
+Trilha de Fundo: Tratar sempre como &quot;Música da sua preferência&quot;.</div>
+            </details>
 
             <!-- Locutor pré-gravado -->
             <div class="admin-card">
@@ -579,6 +654,47 @@
         <!-- ── PLAYLISTS SAZONAIS ── -->
         <section class="admin-section" id="section-seasonal">
             <div class="section-header"><h2>🎭 Playlists Temáticas Sazonais</h2></div>
+            <details class="guide-box">
+                <summary>📖 Guia de Vinhetas Temáticas Sazonais</summary>
+                <div class="guide-box-content">🎙️ Guia de Vinhetas Temáticas Sazonais — Rádio Supermercado do Louro
+As vinhetas temáticas são chamadas curtas (de 10 a 20 segundos) veiculadas entre as músicas para reforçar o clima das datas comemorativas do ano.
+
+1. 🎤 Modelos de Vinhetas para as Temáticas Fixas
+Tom de voz: Festivo, acolhedor e dinâmico. Trilha de fundo: Música da sua preferência em volume baixo (fade).
+
+🎄 Natal
+&quot;O espírito de união e celebração do Natal está no ar aqui no Supermercado do Louro!
+Aproveite a sua visita pra garantir o melhor pra sua ceia e viva momentos especiais em família. Desejamos um Feliz Natal e ótimas compras!&quot;
+
+🥂 Ano-Novo
+&quot;Ano novo, novas conquistas e a mesma parceria de sempre!
+Prepare a sua celebração de Réveillon com a gente e comece o ano novo economizando de verdade. Um feliz Ano-Novo pra você e toda a sua família!&quot;
+
+🐰 Páscoa
+&quot;A Páscoa é tempo de união, carinho e momentos especiais em família!
+Aproveite a sua presença aqui no Supermercado do Louro pra conferir as nossas opções e deixar o seu dia ainda mais doce. Uma excelente Páscoa pra você!&quot;
+
+🪗 São João
+&quot;O clima de festa e tradição tomou conta do Supermercado do Louro!
+Aproveite pra conferir a nossa loja, garantir os ingredientes das suas receitas típicas e curtir o melhor do São João com a gente. Viva São João e boas compras!&quot;
+
+2. 📋 Como Solicitar Vinhetas para uma Nova Temática
+Se surgir uma nova data ou campanha especial na loja (como Dia das Mães, Dia dos Pais, Aniversário do Mercado, Carnaval, etc.), você pode solicitar novos textos enviando esta mensagem:
+&quot;Preciso de vinhetas para uma nova temática na Rádio Supermercado do Louro.&quot;
+Nome da Temática: [Ex: Dia das Mães / Aniversário da Loja / Black Friday / Carnaval]
+Tom de voz desejado: [Ex: Acolhedor / Festivo / Animado / Promocional]
+Quantidade de vinhetas: [Ex: 2 opções curtas]
+Informação ou foco especial: [Ex: Destacar o carinho pela família / Celebrar o aniversário do mercado]
+Trilha: Música da sua preferência.
+
+📌 Regras Obrigatórias para Vinhetas Temáticas:
+Duração Curta: Texto direto e objetivo para não interromper a sequência musical.
+Pontuação para Locução: Vírgulas e pausas bem marcadas para leitura fluida no microfone.
+Sem Vícios de Linguagem: Não usar as palavras corredores, com calma, sem pressa, chegando, contate.
+Trilha de Fundo: Indicar sempre como &quot;Música da sua preferência&quot;.
+
+💡 Nota: para uma homenagem que vale só um dia específico do ano (como Dia das Mães), use o campo &quot;Data especial exclusiva&quot; na aba Propagandas / Anúncios — a mensagem entra no ar automaticamente só naquele dia e desativa sozinha no dia seguinte.</div>
+            </details>
             <p class="section-desc">Aparece em 3 blocos de 4 músicas das 08h às 20h, sem substituir a grade horária.</p>
             <div class="seasonal-tabs">
                 <button class="seasonal-tab active" data-category="natal">🎄 Natal</button>
@@ -621,6 +737,33 @@
         <!-- ── HORAS CERTAS ── -->
         <section class="admin-section" id="section-schedule">
             <div class="section-header"><h2>⏰ Editor de Horas Certas</h2></div>
+            <details class="guide-box">
+                <summary>📖 Guia de Horas Certas</summary>
+                <div class="guide-box-content">🕒 Guia de Horas Certas — Rádio Supermercado do Louro
+A vinheta de Hora Certa é veiculada de forma isolada na programação para informar o horário com clareza e precisão, sem se misturar com os anúncios ou comerciais de ofertas.
+
+1. 🎤 Formatos e Modelos de Locução (Hora Certa Isolada)
+Tom de voz: Objetivo, claro e direto.
+Trilha de fundo: Música da sua preferência em volume baixo (fade) ou sinal sonoro de hora certa.
+
+Formato 1: Hora Cheia
+&quot;Rádio Supermercado do Louro... [10] horas em ponto!&quot;
+(Exemplo de meia-noite: &quot;Rádio Supermercado do Louro... meia-noite em ponto!&quot;)
+
+Formato 2: Hora com Minutos
+&quot;Agora no Supermercado do Louro: [10] horas e [30] minutos.&quot;
+(Exemplo de 00:30: &quot;Agora no Supermercado do Louro: meia-noite e 30 minutos.&quot;)
+
+2. 📋 Como Solicitar Ajustes de Hora Certa
+Caso queira incluir vinhetas rápidas de vinculação da hora com a marca da rádio, utilize este padrão:
+&quot;Preciso de vinhetas curtas e isoladas para anúncio de Hora Certa no formato [Hora Cheia / Hora e Minutos].&quot;
+Trilha: Música da sua preferência.
+
+📌 Regras Obrigatórias para Hora Certa:
+Locução Isolada: O anúncio do horário é feito de forma independente e separada das chamadas comerciais.
+Formatos Exatos: Utilizar apenas os padrões de hora exata (ex: 12h / meia-noite) e hora com minutos (ex: 12:30 / 00:30).
+Objetividade: Leitura ultra-rápida (5 a 10 segundos) para retorno imediato à programação musical.</div>
+            </details>
             <p class="section-desc">Configure os áudios para :00 e :30 de cada hora do dia.</p>
             <div class="admin-card">
                 <form id="editForm" class="edit-form">
@@ -679,6 +822,75 @@
         <!-- ── PROPAGANDAS ── -->
         <section class="admin-section" id="section-ads">
             <div class="section-header"><h2>📢 Propagandas / Anúncios</h2></div>
+            <details class="guide-box">
+                <summary>📖 Guia de Propagandas, Avisos e Anúncios (+ Datas Especiais)</summary>
+                <div class="guide-box-content">📢 Guia de Propagandas, Avisos e Anúncios — Rádio Supermercado do Louro
+Esta seção destina-se ao cadastramento e à solicitação de anúncios promocionais, comunicados institucionais, serviços e avisos gerais da loja.
+
+1. 📢 Anúncios de Serviços e Institucionais (Sem Foco em Produtos)
+Tom de voz: Acolhedor, prestativo e claro. Trilha de fundo: Música da sua preferência em volume baixo (fade).
+
+Opção 1: Formas de Pagamento e Facilidades
+&quot;Você sabia que aqui no Supermercado do Louro facilitar o seu dia a dia é prioridade?
+Aceitamos diversos cartões de crédito, débito, alimentação e refeição, além da opção de pagamento rápido via Pix no caixa.
+Tudo pensado pra você fazer suas compras com total comodidade e praticidade. Supermercado do Louro, sempre perto de você!&quot;
+
+Opção 2: Atendimento e Equipe de Apoio
+&quot;Se você precisa de ajuda pra encontrar algum item ou tirar qualquer dúvida, fale com a nossa equipe!
+Nossos colaboradores estão prontos pra te atender com toda a atenção e dedicação que você merece.
+Conte sempre com a gente e tenha uma excelente experiência de compras aqui no Supermercado do Louro!&quot;
+
+Opção 3: Horário de Funcionamento / Aviso Geral
+&quot;Atenção para o nosso horário de atendimento!
+Estamos de portas abertas para te receber de [Dia da Semana] a [Dia da Semana], das [Horário de Abertura] às [Horário de Fechamento].
+Organize suas compras com tranquilidade e aproveite a nossa estrutura. É sempre um prazer ter você aqui no Supermercado do Louro!&quot;
+
+2. ⚡ Promoção Relâmpago e Ofertas
+Tom de voz: Vibrante, direto e ágil. Trilha de fundo: Música da sua preferência em volume baixo (fade).
+&quot;Atenção! Preparamos uma oportunidade especial pra você que está na loja agora!
+É a nossa Promoção Relâmpago no setor de [Nome do Setor]! Descontos exclusivos válidos para esta hora.
+Aproveite agora mesmo e garanta o melhor pra sua casa com economia de verdade. Supermercado do Louro, o lugar certo pra você economizar!&quot;
+
+3. 📋 Como Solicitar Novos Anúncios (Com ou Sem Produtos)
+&quot;Preciso de um anúncio do tipo [Aviso Institucional / Serviço / Cartões / Horário / Oferta de Produto].&quot;
+Assunto principal: [Ex: Aceitamos Pix / Dica de Atendimento / Horário no Feriado / Promoção do Açougue]
+Informações necessárias: [Ex: Aceitamos Pix e vale-alimentação / Domingo fechamos às 13h]
+Trilha: Música da sua preferência.
+
+📌 Regras Obrigatórias para Anúncios:
+Pontuação para Locução: Texto com vírgulas e pausas marcadas para leitura fluida no microfone.
+Sem Vícios de Linguagem: Não usar as palavras corredores, com calma, sem pressa, chegando, contate.
+Comunicação Direta: Mensagens curtas, claras e objetivas, fáceis de entender na primeira escuta.
+
+────────────────────────────────
+
+📢 Guia de Propagandas e Anúncios — Datas Especiais Programadas
+Esta modalidade é voltada para mensagens que entram no ar exclusivamente no dia da comemoração, sendo desativadas automaticamente no dia seguinte. Use o campo &quot;🎉 Data especial exclusiva&quot; no formulário acima.
+
+1. 🎤 Modelo de Texto: Dia das Mães (Exclusivo para o Dia)
+Agendamento: Exibir somente no 2º domingo de maio (Dia das Mães).
+Tom de voz: Emocionante, carinhoso, acolhedor e respeitoso.
+Trilha de fundo: Música da sua preferência em volume baixo (fade).
+&quot;Hoje o dia é todo delas!
+Neste Dia das Mães, o Supermercado do Louro deseja a todas as mães, clientes e colaboradoras, um dia repleto de amor, carinho e momentos inesquecíveis ao lado de quem vocês amam.
+Agradecemos por fazerem parte da nossa história e por espalharem tanto cuidado todos os dias. Um feliz Dia das Mães!&quot;
+
+2. 📋 Regras de Cadastro para Datas Comemorativas Específicas
+Regra de Programação (Exibição Temporária): O anúncio deve conter a data exata configurada no sistema para veiculação apenas no dia correto.
+Foco no Sentimento e Relacionamento: Anúncios de homenagens (como Dia das Mães ou Dia dos Pais) não devem focar em vendas ou produtos, mas sim na conexão emocional com o cliente.
+Trilha de Fundo: Indicar sempre como &quot;Música da sua preferência&quot;.
+
+3. 📋 Como Solicitar Anúncios para Datas com Programação Exclusiva
+&quot;Preciso de uma mensagem de homenagem para veiculação exclusiva no dia [Nome da Data, ex: Dia das Mães / Dia dos Pais / Dia do Cliente].&quot;
+Data exata de exibição: [Ex: Apenas no dia DD/MM]
+Tom de voz: [Ex: Emocionante / Acolhedor / Festivo]
+Mensagem principal: [Ex: Homenagear as mães / Agradecer a preferência dos clientes]
+Trilha: Música da sua preferência.
+
+📌 Regras Obrigatórias para Anúncios Especiais:
+Pontuação para Locução: Texto pontuado com pausas bem marcadas para uma leitura emotiva e fluida no microfone.
+Sem Vícios de Linguagem: Não usar as palavras corredores, com calma, sem pressa, chegando, contate.</div>
+            </details>
             <p class="section-desc">Tocadas entre músicas em todas as grades. Configure horário de veiculação para exibir apenas em períodos específicos do dia.</p>
             <div class="admin-card">
                 <form id="adsForm" class="edit-form">
@@ -694,6 +906,11 @@
                     <div class="form-row-2col">
                         <div class="form-group"><label>Hora início (opcional):</label><input type="number" id="adStartHour" min="0" max="23" placeholder="Ex: 8"><small>Só toca a partir desta hora</small></div>
                         <div class="form-group"><label>Hora fim (opcional):</label><input type="number" id="adEndHour" min="0" max="23" placeholder="Ex: 18"><small>Para de tocar após esta hora</small></div>
+                    </div>
+                    <div class="form-group" style="background:#fff8e1;padding:10px;border-radius:8px;border:1px solid #ffe082;">
+                        <label>🎉 Data especial exclusiva (opcional):</label>
+                        <input type="date" id="adSpecialDate">
+                        <small>Se preenchida, essa propaganda só toca nesse dia exato (ex: Dia das Mães) — desativa sozinha no dia seguinte, ignorando frequência/horário normais.</small>
                     </div>
                     <div class="form-group"><label>Ordem:</label><input type="number" id="adOrder" value="0" min="0"></div>
                     <div class="form-group checkbox-group"><label><input type="checkbox" id="adEnabled" checked> Ativo</label></div>
@@ -748,6 +965,38 @@
 
         <section class="admin-section" id="section-flash">
             <div class="section-header"><h2>⚡ Promoção Relâmpago</h2></div>
+            <details class="guide-box">
+                <summary>📖 Roteiro: Promoção Relâmpago</summary>
+                <div class="guide-box-content">⚡ ROTEIRO: PROMOÇÃO RELÂMPAGO
+Estilo de Locução: Vibrante, direto, ágil e atrativo.
+Objetivo: Chamar a atenção imediata para ofertas por tempo limitado ou estoque exclusivo.
+
+1. 📢 OPÇÃO 1 — OFERTA DE DURAÇÃO LIMITADA (Por Tempo)
+Trilha de fundo: Música da sua preferência em volume baixo (fade).
+Locutor(a): &quot;Atenção! Preparamos uma oportunidade especial pra você que está na loja agora!
+É a nossa Promoção Relâmpago! Produtos selecionados com descontos exclusivos válidos somente para esta hora. Aproveite para conferir os destaques no nosso setor de [Nome do Setor, ex: Hortifrúti / Açougue / Padaria] e garanta o melhor pra sua casa com economia de verdade.
+Aproveite agora mesmo, porque é por tempo limitado. Supermercado do Louro, o lugar certo pra você economizar!&quot;
+
+2. ⏳ OPÇÃO 2 — ESTOQUE LIMITADO (Enquanto Durar o Estoque)
+Trilha de fundo: Música da sua preferência em volume baixo (fade).
+Locutor(a): &quot;Atenção cliente! Tem preço baixo imperdível esperando por você no Supermercado do Louro!
+Acabamos de liberar uma Promoção Relâmpago com preços especiais enquanto durarem os nossos estoques. Vá até o setor de [Nome do Setor] e aproveite essa oportunidade exclusiva para abastecer o seu lar pagando muito menos.
+Garanta os seus produtos antes que acabe. Boas compras e aproveite as ofertas!&quot;
+
+3. 🎯 OPÇÃO 3 — CHAMADA RÁPIDA DE OFERTA DIRETA (Texto Curto)
+Trilha de fundo: Música da sua preferência em volume baixo (fade).
+Locutor(a): &quot;Atenção para a nossa Promoção Relâmpago!
+Somente agora no Supermercado do Louro: [Nome do Produto] de [Preço Original] por apenas [Preço Promocional]! É isso mesmo que você ouviu. [Nome do Produto] com preço especial exclusivo para este momento.
+Passe agora no setor de [Nome do Setor] e garanta o seu. Economia de verdade é no Supermercado do Louro!&quot;
+
+📌 Diretrizes obrigatórias:
+Pontuação perfeita para leitura natural e pausas de locução no microfone.
+Sem vícios ou clichês (não usar: corredores, com calma, sem pressa, balanço gostoso, alto-astral, músicas pra cima, som moderno, chegando).
+Escrever por extenso os nomes dos estilos (não usar siglas como MPB).
+Não citar ofertas de produtos específicos nas vinhetas musicais genéricas.
+Trilha de fundo: Indicar sempre como &quot;Música da sua preferência&quot;.
+Variar as saídas de bloco (não usar repetidamente &quot;E assim&quot; ou &quot;Chegamos ao fim&quot;).</div>
+            </details>
             <p class="section-desc">Anuncia uma promoção com contagem regressiva visível no player. O TTS dispara no início e avisa quando restam 2 minutos.</p>
             <div class="admin-card">
                 <div class="locutor-status-bar">
