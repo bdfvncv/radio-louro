@@ -35,7 +35,12 @@ function uploadAudioFileToCloudinary(file, folder, onProgress) {
         fd.append('file', file);
         fd.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
         fd.append('folder', folder || 'radio_louro/uploads');
-        fd.append('public_id', `${folder || 'radio_louro/uploads'}/${safeName}_${Date.now()}`);
+        // BUGFIX: antes o public_id já incluía a pasta (`${folder}/${safeName}...`) E o
+        // campo `folder` era enviado também — o Cloudinary soma os dois e duplicava o
+        // caminho (ex: radio_louro/jingles/radio_louro/jingles/arquivo.m4a). O campo
+        // `folder` sozinho já posiciona o arquivo corretamente; public_id deve conter
+        // só o nome do arquivo.
+        fd.append('public_id', `${safeName}_${Date.now()}`);
         fd.append('resource_type', 'video'); // Cloudinary trata áudio como "video"
 
         const xhr = new XMLHttpRequest();
@@ -4299,6 +4304,9 @@ async function confirmImportBackup() {
 
 window.handleImportBackup  = handleImportBackup;
 window.confirmImportBackup = confirmImportBackup;
+
+
+
 window.removeFromBlacklist = removeFromBlacklist;
 window.stopFlashPromotion  = stopFlashPromotion;
 window.loadAdHistory       = loadAdHistory;
