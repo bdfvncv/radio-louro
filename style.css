@@ -1376,15 +1376,17 @@ html, body { overflow-x: hidden; }
 .suggest-search-row { display: flex; gap: 8px; margin-bottom: 10px; }
 
 .suggest-input {
-  flex: 1; padding: 10px 14px;
+  flex: 1; min-width: 0; padding: 10px 14px;
   border: 2px solid var(--gray-200); border-radius: var(--radius-sm);
   font-size: .9em; font-family: var(--font);
   transition: border-color var(--transition);
+  box-sizing: border-box;
 }
 
 .suggest-input:focus { outline: none; border-color: var(--green); }
 
 .suggest-search-btn {
+  flex: 0 0 auto;
   background: var(--green); color: var(--white);
   border: none; padding: 10px 16px; border-radius: var(--radius-sm);
   font-weight: 700; font-size: .88em; font-family: var(--font);
@@ -1394,6 +1396,16 @@ html, body { overflow-x: hidden; }
 
 .suggest-search-btn:hover { background: var(--green-dark); }
 .suggest-search-btn:disabled { background: var(--gray-400); cursor: not-allowed; }
+
+/* BUGFIX: sem min-width:0 no input, o flex:1 não conseguia encolher no
+   celular (o placeholder longo "Nome da música ou artista..." forçava a
+   largura mínima), empurrando o botão "Buscar" pra fora da linha. Em
+   telas bem estreitas, empilha o botão embaixo em vez de espremer. */
+@media (max-width: 420px) {
+  .suggest-search-row { flex-wrap: wrap; }
+  .suggest-search-row .suggest-input { flex: 1 1 100%; }
+  .suggest-search-row .suggest-search-btn { flex: 1 1 100%; }
+}
 
 .suggest-results {
   border: 1px solid var(--gray-200); border-radius: var(--radius-md);
