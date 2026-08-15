@@ -800,6 +800,17 @@ html, body { overflow-x: hidden; }
   color: var(--text-color);
   transition: border-color var(--transition);
   background: var(--white);
+  width: 100%; box-sizing: border-box; max-width: 100%;
+}
+
+/* BUGFIX: <input type="file"> não respeita width:100% do jeito normal —
+   o texto nativo "Nenhum arquivo escolhido" não quebra linha e empurrava a
+   página inteira pra fora da tela no celular (isso que causava a aparência
+   "desproporcional" nos formulários de Vinhetas/Propagandas: tudo ficava
+   cortado à direita). Força o controle a caber na largura do container. */
+.form-group input[type="file"] {
+  width: 100%; max-width: 100%; box-sizing: border-box;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
 .form-group input:focus,
@@ -1877,4 +1888,4 @@ html, body { overflow-x: hidden; }
   }
   .login-illustration svg { width: 100%; height: auto; display: block; overflow: visible; }
   .login-box { max-width: 380px; }
-   }
+}
