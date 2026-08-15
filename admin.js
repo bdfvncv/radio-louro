@@ -1259,6 +1259,16 @@ async function dispatchTTSAudio(audioUrl, title) {
     if(testAudio) { testAudio.src=audioUrl; testAudio.play().catch(e=>console.warn('Erro ao tocar localmente:',e)); }
 }
 
+// BUGFIX: "Chamada de Funcionário" e "Promoção Relâmpago" chamavam uma
+// função `dispatchTTS` que nunca existiu (só existia `dispatchTTSAudio`,
+// que espera uma URL de áudio já pronta, não texto puro). Esta função faz
+// o passo que faltava: gera o áudio a partir do texto e só then dispara.
+async function dispatchTTS(text, title) {
+    const audioUrl = await generateTTSAudio(text, selectedTTSEngine, null, title, null);
+    if(!audioUrl) { alert('❌ Não foi possível gerar o áudio (veja o erro acima, provavelmente cota do TTS).'); return; }
+    await dispatchTTSAudio(audioUrl, title);
+}
+
 // Toca um item já salvo na biblioteca (usa o audio_url já gerado, sem gastar cota de novo)
 async function playTTSFromLib(id) {
     const item=ttsLibrary.find(t=>t.id===id);
@@ -1722,6 +1732,40 @@ function renderSlotPlaylistTable(slotId) {
     tbody.querySelectorAll('.slot-delete-btn').forEach(b=>b.addEventListener('click',()=>deleteSlotTrack(parseInt(b.dataset.id),parseInt(b.dataset.slot))));
 }
 
+// ─────────────────────────────────────────────────────────────
+// DETECÇÃO DE TÍTULO PARECIDO (avisa, não bloqueia)
+// Isso estava documentado no resumo do projeto mas nunca tinha sido
+// implementado de verdade — só existia checagem de URL idêntica.
+// ─────────────────────────────────────────────────────────────
+function normalizeForCompare(s) {
+    return (s||'').toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')   // remove acentos
+        .replace(/\(.*?\)|\[.*?\]/g,' ')                     // remove "(Official Video)", "[Ao Vivo]" etc.
+        .replace(/[^a-z0-9\s]/g,' ')
+        .replace(/\s+/g,' ').trim();
+}
+function titleSimilarity(a, b) {
+    const na = normalizeForCompare(a), nb = normalizeForCompare(b);
+    if(!na || !nb) return 0;
+    if(na === nb) return 1;
+    const wa = new Set(na.split(' ')), wb = new Set(nb.split(' '));
+    const inter = [...wa].filter(w=>wb.has(w)).length;
+    const union = new Set([...wa, ...wb]).size;
+    return union ? inter/union : 0;
+}
+// Retorna true se pode prosseguir (usuário confirmou, ou não achou nada parecido)
+async function warnIfSimilarTitle(table, title, filters) {
+    let q = supabase.from(table).select('id,title');
+    if(filters) for(const [k,v] of Object.entries(filters)) q = q.eq(k, v);
+    const {data} = await q;
+    if(!data) return true;
+    const match = data.find(row => titleSimilarity(row.title, title) >= 0.6);
+    if(match) {
+        return confirm(`⚠️ Já existe uma música com título parecido: "${match.title}"\n\nDeseja adicionar mesmo assim?`);
+    }
+    return true;
+}
+
 async function handleSaveSlotTrack(e,slotId) {
     e.preventDefault();
     const url=document.getElementById(`slotUrl_${slotId}`).value.trim();
@@ -1750,6 +1794,7 @@ async function handleSaveSlotTrack(e,slotId) {
         const {data:existing} = await supabase.from('slot_playlists')
             .select('id,title').eq('slot_id',slotId).eq('audio_url',url).maybeSingle();
         if(existing) { alert(`⚠️ Esta música já está na grade!\n"${existing.title}"`); return; }
+        if(!(await warnIfSimilarTitle('slot_playlists', title, {slot_id:slotId}))) return;
 
         // Ocupa o menor slot vago (gap deixado por deleções)
         const nextOrder = await getNextSlot('slot_playlists', 'slot_id', slotId);
@@ -1844,11 +1889,15 @@ async function handleJingleFileUpload(e, slotId) {
 }
 
 let editingJingleId = null;
+let editingJingleSlotId = null; // BUGFIX: sem isso, editar uma vinheta na Grade A e depois
+                                 // adicionar em outra Grade B (sem cancelar) sobrescrevia a
+                                 // vinheta errada — editingJingleId era compartilhado entre grades.
 
 function editJingle(id, slotId) {
     const jingle = (slotJingles[slotId]||[]).find(j=>j.id===id);
     if (!jingle) return;
     editingJingleId = id;
+    editingJingleSlotId = slotId;
     document.getElementById(`jingleUrl_${slotId}`).value = jingle.audio_url;
     document.getElementById(`jingleTitle_${slotId}`).value = jingle.title;
     document.getElementById(`jinglePos_${slotId}`).value = jingle.position;
@@ -1863,16 +1912,23 @@ async function handleSaveSlotJingle(e,slotId) {
     const url=document.getElementById(`jingleUrl_${slotId}`).value.trim();
     const title=document.getElementById(`jingleTitle_${slotId}`).value.trim();
     const position=document.getElementById(`jinglePos_${slotId}`).value;
+    if(!url||!title){ alert('Preencha URL e Título!'); return; } // faltava essa validação
 
-    if (editingJingleId) {
+    if (editingJingleId && editingJingleSlotId === slotId) {
         const {error}=await supabaseAdmin.from('jingles').update({position,audio_url:url,title}).eq('id',editingJingleId);
         if(error){ alert('❌ Erro: '+error.message); return; }
         alert('✅ Vinheta atualizada!');
-        editingJingleId = null;
+        editingJingleId = null; editingJingleSlotId = null;
         clearJingleForm(slotId);
         await refreshSlotJingles(slotId);
         return;
     }
+
+    // Verifica duplicata por URL exata e por título parecido (não existia antes)
+    const {data:existing} = await supabase.from('jingles')
+        .select('id,title').eq('slot_id',slotId).eq('audio_url',url).maybeSingle();
+    if(existing) { alert(`⚠️ Esta vinheta já está cadastrada!\n"${existing.title}"`); return; }
+    if(!(await warnIfSimilarTitle('jingles', title, {slot_id:slotId}))) return;
 
     const {error}=await supabaseAdmin.from('jingles').insert([{slot_id:slotId,position,audio_url:url,title,enabled:true}]);
     if(error){ alert('❌ Erro: '+error.message); return; }
@@ -1898,7 +1954,7 @@ function clearJingleForm(slotId) {
     const t=document.getElementById(`jingleTitle_${slotId}`);
     if(u) u.value='';
     if(t) t.value='';
-    editingJingleId = null;
+    if(editingJingleSlotId===slotId) { editingJingleId=null; editingJingleSlotId=null; }
     const form = document.getElementById(`formSlotJingle_${slotId}`);
     const btn = form?.querySelector('.submit-btn');
     if (btn) btn.textContent = '💾 Adicionar Vinheta';
@@ -1940,7 +1996,7 @@ function setupSeasonalJingleListeners() {
         if(form) {
             form.addEventListener('submit',e=>handleSaveSeasonalJingle(e,cat));
             form.querySelector('.jingle-test')?.addEventListener('click',e=>testAudioUrl(e.target.closest('form').querySelector('.jingle-url').value.trim()));
-            form.querySelector('.jingle-clear')?.addEventListener('click',e=>{ const f=e.target.closest('form'); const u=f.querySelector('.jingle-url'); const t=f.querySelector('.jingle-title'); if(u)u.value=''; if(t)t.value=''; editingSeasonalJingleId=null; const b=f.querySelector('.submit-btn'); if(b)b.textContent='💾 Adicionar'; });
+            form.querySelector('.jingle-clear')?.addEventListener('click',e=>{ const f=e.target.closest('form'); const u=f.querySelector('.jingle-url'); const t=f.querySelector('.jingle-title'); if(u)u.value=''; if(t)t.value=''; editingSeasonalJingleId=null; editingSeasonalJingleCategory=null; const b=f.querySelector('.submit-btn'); if(b)b.textContent='💾 Adicionar'; });
         }
     });
 }
@@ -2129,6 +2185,9 @@ async function handleSeasonalShuffle(category,type) {
 }
 
 let editingSeasonalJingleId = null;
+let editingSeasonalJingleCategory = null; // BUGFIX: mesmo problema do editingJingleSlotId —
+                                           // editar em "Natal" e adicionar em "Páscoa" sem
+                                           // cancelar sobrescrevia a vinheta errada.
 
 async function handleSaveSeasonalJingle(e,category) {
     e.preventDefault();
@@ -2136,18 +2195,25 @@ async function handleSaveSeasonalJingle(e,category) {
     const url=form.querySelector('.jingle-url').value.trim();
     const title=form.querySelector('.jingle-title').value.trim();
     const position=form.querySelector('.jingle-position').value;
+    if(!url||!title){ alert('Preencha URL e Título!'); return; } // faltava essa validação
 
-    if (editingSeasonalJingleId) {
+    if (editingSeasonalJingleId && editingSeasonalJingleCategory === category) {
         const {error}=await supabaseAdmin.from('jingles').update({position,audio_url:url,title}).eq('id',editingSeasonalJingleId);
         if(error){ alert('❌ Erro: '+error.message); return; }
         alert('✅ Vinheta atualizada!');
-        editingSeasonalJingleId = null;
+        editingSeasonalJingleId = null; editingSeasonalJingleCategory = null;
         const btn = form.querySelector('.submit-btn');
         if(btn) btn.textContent = '💾 Adicionar';
         form.querySelector('.jingle-url').value=''; form.querySelector('.jingle-title').value='';
         await loadSeasonalJingles(); renderSeasonalJinglesTables();
         return;
     }
+
+    // Verifica duplicata por URL exata e por título parecido (não existia antes)
+    const {data:existing} = await supabase.from('jingles')
+        .select('id,title').eq('seasonal_category',category).eq('audio_url',url).maybeSingle();
+    if(existing) { alert(`⚠️ Esta vinheta já está cadastrada!\n"${existing.title}"`); return; }
+    if(!(await warnIfSimilarTitle('jingles', title, {seasonal_category:category}))) return;
 
     const {error}=await supabaseAdmin.from('jingles').insert([{seasonal_category:category,position,audio_url:url,title,enabled:true}]);
     if(error){ alert('❌ Erro: '+error.message); return; }
@@ -2163,6 +2229,7 @@ function editSeasonalJingle(id, cat) {
     const form = document.getElementById(`formJingle${names[cat]}`);
     if (!form) return;
     editingSeasonalJingleId = id;
+    editingSeasonalJingleCategory = cat;
     form.querySelector('.jingle-url').value = jingle.audio_url;
     form.querySelector('.jingle-title').value = jingle.title;
     form.querySelector('.jingle-position').value = jingle.position;
@@ -2299,6 +2366,7 @@ async function handleSavePlaylist(e) {
             const {data:dup} = await supabase.from('background_playlist')
                 .select('id,title').eq('audio_url',url).maybeSingle();
             if(dup){ alert(`⚠️ Esta música já está na playlist!\n"${dup.title}"`); return; }
+            if(!(await warnIfSimilarTitle('background_playlist', title))) return;
 
             const nextOrder = await getNextSlot('background_playlist', null, null);
 
@@ -3065,14 +3133,14 @@ async function checkCloudinaryOrphans() {
         if(!res.ok) throw new Error(data.error || `Erro ${res.status}`);
         lastOrphans = data.orphans || [];
         if(!lastOrphans.length) {
-            statusEl.innerHTML = `✅ Nenhum arquivo órfão encontrado. (${data.totalInCloudinary||0} arquivos no Cloudinary, todos em uso)`;
+            statusEl.innerHTML = `✅ Nenhum arquivo sem uso encontrado. (${data.totalInCloudinary||0} arquivos no Cloudinary, todos em uso)`;
             return;
         }
         const totalMB = (lastOrphans.reduce((s,o)=>s+(o.bytes||0),0) / (1024*1024)).toFixed(1);
-        statusEl.innerHTML = `⚠️ ${lastOrphans.length} arquivo(s) órfão(s) encontrado(s), ~${totalMB} MB desperdiçados.`;
+        statusEl.innerHTML = `⚠️ ${lastOrphans.length} arquivo(s) sem uso encontrado(s), ~${totalMB} MB desperdiçados.`;
         listEl.innerHTML = `
             <div style="margin-bottom:10px;">
-                <button class="btn-delete" style="font-size:12px;padding:7px 14px;" onclick="deleteAllOrphans()">🗑️ Deletar todos os órfãos</button>
+                <button class="btn-delete" style="font-size:12px;padding:7px 14px;" onclick="deleteAllOrphans()">🗑️ Deletar todos os sem uso</button>
             </div>
             <div class="table-container"><table class="data-table">
                 <thead><tr><th>Arquivo</th><th>Tamanho</th><th>Criado em</th><th>Ações</th></tr></thead>
@@ -3109,14 +3177,14 @@ async function deleteOrphan(index) {
 
 async function deleteAllOrphans() {
     if(!lastOrphans.length) return;
-    if(!confirm(`Deletar TODOS os ${lastOrphans.length} arquivos órfãos do Cloudinary? Isso não pode ser desfeito.`)) return;
+    if(!confirm(`Deletar TODOS os ${lastOrphans.length} arquivos sem uso do Cloudinary? Isso não pode ser desfeito.`)) return;
     const statusEl = document.getElementById('orphansStatus');
     let done = 0;
     for(const o of lastOrphans) {
         try { await deleteFromCloudinary(o.secure_url); done++; } catch(err) { console.warn('Falha ao deletar', o.public_id, err); }
         if(statusEl) statusEl.textContent = `⏳ Deletando... ${done}/${lastOrphans.length}`;
     }
-    showToast(`✅ ${done} arquivo(s) órfão(s) deletado(s).`);
+    showToast(`✅ ${done} arquivo(s) sem uso deletado(s).`);
     checkCloudinaryOrphans();
 }
 
