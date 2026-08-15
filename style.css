@@ -774,7 +774,11 @@ html, body { overflow-x: hidden; }
 }
 
 .grades-toggle-btn.inactive {
-  border-color: var(--gray-400); color: var(--gray-500); background: var(--white);
+  border-color: var(--red); color: var(--red); background: var(--white);
+}
+
+@media (max-width: 480px) {
+  .grades-toggle-btn { font-size: .74em; padding: 8px 12px; white-space: normal; text-align: center; }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -879,6 +883,10 @@ html, body { overflow-x: hidden; }
 @media (max-width: 640px) {
   .data-table { width: auto; min-width: 640px; }
   .data-table th, .data-table td { white-space: nowrap; padding: 9px 12px; }
+  /* Propagandas tem 9 colunas (incl. 4 botões de ação) — 640px espremia tudo
+     antes de rolar. Dá mais espaço real pra cada coluna respirar. */
+  .data-table--ads { min-width: 900px; }
+  .data-table--ads .action-btns { flex-wrap: nowrap; }
 }
 
 .status-badge {
@@ -900,12 +908,22 @@ html, body { overflow-x: hidden; }
 
 .action-btns { display: flex; gap: 5px; flex-wrap: wrap; }
 
-.btn-edit   { background: var(--blue);  color: var(--white); border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: .78em; font-weight: 700; }
-.btn-toggle { background: var(--amber); color: var(--white); border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: .78em; font-weight: 700; }
-.btn-delete { background: var(--red);   color: var(--white); border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: .78em; font-weight: 700; }
-.btn-edit:hover   { opacity: .85; }
-.btn-toggle:hover { opacity: .85; }
-.btn-delete:hover { opacity: .85; }
+.btn-edit     { background: var(--blue);  color: var(--white); border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: .78em; font-weight: 700; }
+.btn-download { background: #17a2b8;      color: var(--white); border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: .78em; font-weight: 700; }
+.btn-delete   { background: var(--red);   color: var(--white); border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: .78em; font-weight: 700; }
+.btn-edit:hover, .btn-download:hover, .btn-delete:hover, .btn-toggle:hover { opacity: .85; }
+
+/* Botão de ativar/desativar: a cor SEMPRE reflete o estado atual do item
+   (verde = ativo agora / clique para desativar; vermelho = inativo agora /
+   clique para ativar). Antes ficava sempre laranja, sem indicar o estado —
+   por isso a confusão. */
+.btn-toggle {
+  border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer;
+  font-size: .78em; font-weight: 700; color: var(--white);
+  background: var(--gray-400); /* fallback se nenhum modificador for aplicado */
+}
+.btn-toggle.is-on  { background: var(--green); }
+.btn-toggle.is-off { background: var(--red); }
 
 /* ── Shuffle box ── */
 .shuffle-box {
@@ -1100,21 +1118,32 @@ html, body { overflow-x: hidden; }
 
 .jingles-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-top: 14px; }
 
-.jingle-col { background: var(--white); border-radius: var(--radius-sm); border: 1px solid var(--gray-200); overflow: hidden; }
+.jingle-col { background: var(--white); border-radius: var(--radius-sm); border: 1px solid var(--gray-200); overflow: hidden; min-width: 0; }
 
 .jingle-col-title { background: #EEEDFE; color: #534AB7; font-size: .72em; font-weight: 700; padding: 7px 10px; text-transform: uppercase; letter-spacing: .05em; }
 
 .jingle-row {
-  display: flex; align-items: center; gap: 5px;
-  padding: 7px 10px; border-bottom: 1px solid var(--gray-100); flex-wrap: wrap;
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 10px; border-bottom: 1px solid var(--gray-100); flex-wrap: wrap;
 }
 
 .jingle-row:last-child { border-bottom: none; }
-.jingle-row-title { flex: 1; font-size: .8em; color: var(--text-color); font-weight: 500; }
+.jingle-row-title {
+  flex: 1 1 100%; font-size: .82em; color: var(--text-color); font-weight: 500;
+  overflow-wrap: anywhere; line-height: 1.35;
+}
+
+/* Tablet: 3 colunas ficam apertadas antes de 640px — passa pra 2 antes disso */
+@media (max-width: 900px) {
+  .jingles-grid { grid-template-columns: repeat(2,1fr); }
+}
 
 @media (max-width: 640px) {
-  .jingle-row { flex-direction: column; align-items: stretch; gap: 6px; padding: 10px; }
-  .jingle-row .action-btns { justify-content: flex-end; }
+  .jingles-grid { grid-template-columns: 1fr; gap: 12px; }
+  .jingle-row { flex-direction: row; align-items: center; gap: 8px; padding: 10px; }
+  .jingle-row-title { flex: 1 1 auto; min-width: 0; }
+  .jingle-row .action-btns { flex: 0 0 auto; flex-wrap: nowrap; justify-content: flex-end; gap: 4px; }
+  .jingle-row .action-btns button { padding: 5px 8px; font-size: .74em; min-width: 30px; }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -1486,7 +1515,6 @@ html, body { overflow-x: hidden; }
   .bulk-bar { left: 8px; right: 8px; bottom: 8px; border-radius: var(--radius-md); }
 
   .welcome-grid { grid-template-columns: repeat(2,1fr); }
-  .jingles-grid { grid-template-columns: 1fr; }
   .tts-library-grid { grid-template-columns: 1fr; }
   .form-actions { flex-direction: column; }
   .form-actions button { width: 100%; }
@@ -1849,4 +1877,4 @@ html, body { overflow-x: hidden; }
   }
   .login-illustration svg { width: 100%; height: auto; display: block; overflow: visible; }
   .login-box { max-width: 380px; }
-}
+   }
