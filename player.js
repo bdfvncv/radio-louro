@@ -87,7 +87,6 @@ let gradesEnabled     = true;
 let currentSlot       = null;
 let slotPlaylist      = [];
 let slotCurrentIndex  = 0;
-let slotAdIndex       = 0;
 let slotTracksSinceAd = 0;
 let isGradeMode       = false;
 let lastSlotId        = null;
@@ -95,12 +94,21 @@ let lastSlotId        = null;
 // ── Vinhetas ──────────────────────────────────────────────────
 let jinglesOpening = [], jinglesMiddle = [], jinglesClosing = [];
 let isPlayingJingle = false;
-let gradeOpeningDone= false;
-let gradeMiddle1Done= false;
-let gradeMiddle2Done= false;
-let gradeStartTime  = null;
-let gradeDurationMs = 0;
+let gradeOpeningDone = false;
+let gradeMiddleDone  = [false, false]; // 1º e 2º meio, em horários FIXOS do bloco
+let gradeClosingDone = false;
+// Horários absolutos (relógio real, não "tempo restante") em que cada
+// checkpoint da grade deve acontecer — ex: bloco 07:00–09:00 vira
+// {mid1: 07:40, mid2: 08:20, end: 09:00}. Calculado sempre que a grade
+// ativa muda, e checado a cada 30s (ver checkGradeCheckpoints).
+let slotCheckpoints = null;
 let lastJingleOpening=null, lastJingleMiddle=null, lastJingleClosing=null;
+
+// ── Fila de interrupções agendadas (hora certa / vinheta do meio / vinheta
+// de encerramento) ────────────────────────────────────────────────────
+// Nada disso corta uma música no meio: só entra quando o que está tocando
+// no momento (música, propaganda ou outra vinheta) termina naturalmente.
+let pendingInterrupts = [];
 
 // ── Blocos sazonais ───────────────────────────────────────────
 let seasonalBlocksToday = [];
@@ -183,6 +191,7 @@ async function init() {
         updateClock();
         setInterval(updateClock, 1000);
         setInterval(checkHourChange, 30000);
+        setInterval(checkGradeCheckpoints, 30000);
         setInterval(checkSeasonalStatus, 10000);
         setInterval(checkSlotChange, 60000);
 
@@ -349,10 +358,15 @@ async function detectAndActivateSlot() {
     if(!slot) { isGradeMode=false; currentSlot=null; lastSlotId=null; return; }
     if(slot.id === lastSlotId) return;
     isGradeMode=true; currentSlot=slot; lastSlotId=slot.id;
-    gradeOpeningDone=false; gradeMiddle1Done=false; gradeMiddle2Done=false;
+    gradeOpeningDone=false; gradeMiddleDone=[false,false]; gradeClosingDone=false;
     const gradeStart = new Date(); gradeStart.setMinutes(0,0,0); gradeStart.setHours(slot.start_hour);
     const gradeEnd = new Date(gradeStart); gradeEnd.setHours(slot.end_hour);
-    gradeStartTime = gradeStart; gradeDurationMs = gradeEnd - gradeStart;
+    const span = gradeEnd - gradeStart;
+    slotCheckpoints = {
+        mid1: new Date(gradeStart.getTime() + span/3),
+        mid2: new Date(gradeStart.getTime() + span*2/3),
+        end:  gradeEnd,
+    };
     await loadSlotPlaylist(slot.id);
     await loadSlotJingles(slot.id);
     if(isSeasonalActive) await ensureSeasonalBlocksToday();
@@ -367,10 +381,15 @@ async function detectAndActivateSlotSilent() {
     // Só atualiza se mudou de grade — preserva slotCurrentIndex restaurado
     if(slot.id !== lastSlotId) {
         isGradeMode=true; currentSlot=slot; lastSlotId=slot.id;
-        gradeOpeningDone=false; gradeMiddle1Done=false; gradeMiddle2Done=false;
+        gradeOpeningDone=false; gradeMiddleDone=[false,false]; gradeClosingDone=false;
         const gradeStart = new Date(); gradeStart.setMinutes(0,0,0); gradeStart.setHours(slot.start_hour);
         const gradeEnd = new Date(gradeStart); gradeEnd.setHours(slot.end_hour);
-        gradeStartTime = gradeStart; gradeDurationMs = gradeEnd - gradeStart;
+        const span = gradeEnd - gradeStart;
+        slotCheckpoints = {
+            mid1: new Date(gradeStart.getTime() + span/3),
+            mid2: new Date(gradeStart.getTime() + span*2/3),
+            end:  gradeEnd,
+        };
         await loadSlotPlaylist(slot.id);
         await loadSlotJingles(slot.id);
     }
@@ -385,7 +404,7 @@ async function loadSlotPlaylist(slotId) {
         .order('daily_order', {ascending: true});
     slotPlaylist = data || [];
     if(slotCurrentIndex >= slotPlaylist.length) slotCurrentIndex = 0;
-    slotAdIndex = 0; slotTracksSinceAd = 0;
+    slotTracksSinceAd = 0;
 }
 
 async function loadSlotJingles(slotId) {
@@ -579,19 +598,68 @@ function playJingle(position, cb) {
 function startGrade() {
     if(jinglesOpening.length>0 && !gradeOpeningDone) {
         gradeOpeningDone=true;
-        playJingle('opening', ()=>{ playSlotAd(()=>{ scheduleMiddleJingles(); playSlotTrack(); }); });
+        playJingle('opening', ()=>{ playSlotAd(()=>{ playSlotTrack(); }); });
     } else {
-        playSlotAd(()=>{ scheduleMiddleJingles(); playSlotTrack(); });
+        playSlotAd(()=>{ playSlotTrack(); });
     }
 }
 
-function scheduleMiddleJingles() {
-    if(!jinglesMiddle.length) return;
-    const now=Date.now(), end=gradeStartTime.getTime()+gradeDurationMs, rem=end-now;
-    if(rem<=0) return;
-    const third=rem/3;
-    setTimeout(()=>{ if(!gradeMiddle1Done&&isGradeMode&&isPlaying){ gradeMiddle1Done=true; playJingle('middle',()=>playSlotTrack()); } }, third);
-    setTimeout(()=>{ if(!gradeMiddle2Done&&isGradeMode&&isPlaying){ gradeMiddle2Done=true; playJingle('middle',()=>playSlotTrack()); } }, third*2);
+// Verifica a cada 30s (junto com checkHourChange) se algum checkpoint FIXO
+// da grade atual (1º meio, 2º meio, encerramento) chegou. Os horários são
+// absolutos (relógio real), então funcionam do mesmo jeito independente de
+// quando a página foi aberta ou se a aba ficou em segundo plano.
+function checkGradeCheckpoints() {
+    if(!isGradeMode || !currentSlot || !slotCheckpoints) return;
+    const now = new Date();
+    if(!gradeMiddleDone[0] && now >= slotCheckpoints.mid1) {
+        gradeMiddleDone[0] = true;
+        if(jinglesMiddle.length) requestInterrupt({ type:'middleJingle' });
+    }
+    if(!gradeMiddleDone[1] && now >= slotCheckpoints.mid2) {
+        gradeMiddleDone[1] = true;
+        if(jinglesMiddle.length) requestInterrupt({ type:'middleJingle' });
+    }
+    if(!gradeClosingDone && now >= slotCheckpoints.end) {
+        gradeClosingDone = true;
+        if(jinglesClosing.length) requestInterrupt({ type:'closingJingle' });
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// FILA DE INTERRUPÇÕES (hora certa / vinhetas fixas)
+// Nunca corta o que está tocando: só entra quando termina naturalmente.
+// ─────────────────────────────────────────────────────────────
+function requestInterrupt(action) {
+    pendingInterrupts.push(action);
+    tryDrainInterrupts();
+}
+
+// Toca a próxima interrupção da fila SE não houver nada tocando agora.
+// Retorna true se consumiu (e já disparou) alguma coisa da fila.
+function tryDrainInterrupts() {
+    if(!pendingInterrupts.length) return false;
+    if(audioPlayer.src && !audioPlayer.paused && !audioPlayer.ended) return false; // algo tocando, espera
+    const action = pendingInterrupts.shift();
+    runInterrupt(action);
+    return true;
+}
+
+function runInterrupt(action) {
+    if(action.type === 'hourCerta') {
+        isPlayingHourCerta = true;
+        audioPlayer.src = action.url;
+        updateDisplay('Hora Certa', action.label);
+        if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
+    } else if(action.type === 'middleJingle') {
+        playJingle('middle', () => { if(!tryDrainInterrupts()) playSlotTrack(); });
+    } else if(action.type === 'closingJingle') {
+        playJingle('closing', () => {
+            detectAndActivateSlot().then(() => {
+                if(tryDrainInterrupts()) return;
+                if(isGradeMode) startGrade(); else playBgMusic();
+            });
+        });
+    }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -601,11 +669,20 @@ function playSlotTrack() {
     isPlayingJingle=false; isPlayingHourCerta=false; isPlayingAd=false;
     if(shouldPlaySeasonalBlock()){ const b=getNextSeasonalBlock(); if(b){ startSeasonalBlock(b); return; } }
     if(!slotPlaylist.length){ playBgMusic(); return; }
-    const freq=(advertisements[slotAdIndex%Math.max(advertisements.length,1)]?.frequency)||3;
+    const freq = getNextAdFrequency();
     if(advertisements.length>0 && slotTracksSinceAd>=freq){
         playSlotAd(()=>playSlotMusicTrack()); return;
     }
     playSlotMusicTrack();
+}
+
+// Frequência (a cada quantas músicas) do próximo anúncio na fila embaralhada
+function getNextAdFrequency() {
+    const eligible = getEligibleAds();
+    if(!eligible.length) return 3;
+    ensureAdShuffle(eligible);
+    const nextId = adShuffleOrder[adShuffleIdx];
+    return eligible.find(a => a.id === nextId)?.frequency || 3;
 }
 
 function playSlotMusicTrack() {
@@ -645,12 +722,57 @@ function getEligibleAds() {
     });
 }
 
+// Embaralha um array (Fisher-Yates)
+function shuffleArray(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
+// Rotação de propagandas: toca todas sem repetir nenhuma, na ordem
+// embaralhada da sessão; só quando todas já tocaram é que embaralha de
+// novo e recomeça — sem depender de recarregar a página ou virar o dia.
+let adShuffleOrder = [];  // array de IDs, na ordem que vão tocar
+let adShuffleIdx   = 0;
+
+function ensureAdShuffle(eligible) {
+    const eligibleIds = eligible.map(a => a.id);
+    const currentSet  = new Set(adShuffleOrder);
+    const sameSet = eligibleIds.length === adShuffleOrder.length &&
+                    eligibleIds.every(id => currentSet.has(id));
+
+    if (!sameSet) {
+        // Lista de propagandas elegíveis mudou (nova cadastrada, horário
+        // mudou o que está no ar, etc.) — reembaralha do zero.
+        adShuffleOrder = shuffleArray(eligibleIds);
+        adShuffleIdx = 0;
+        return;
+    }
+    if (adShuffleIdx >= adShuffleOrder.length) {
+        // Deu a volta completa: todas já tocaram. Embaralha de novo,
+        // evitando que a última tocada seja logo a próxima (sem repetir
+        // em sequência entre um ciclo e outro).
+        const lastPlayed = adShuffleOrder[adShuffleOrder.length - 1];
+        let next = shuffleArray(eligibleIds);
+        if (next.length > 1 && next[0] === lastPlayed) {
+            [next[0], next[1]] = [next[1], next[0]];
+        }
+        adShuffleOrder = next;
+        adShuffleIdx = 0;
+    }
+}
+
 function playSlotAd(cb) {
     const eligible = getEligibleAds();
     if(!eligible.length){ if(cb) cb(); return; }
     isPlayingAd=true; slotTracksSinceAd=0;
-    const ad = eligible[slotAdIndex % eligible.length];
-    slotAdIndex = (slotAdIndex+1) % Math.max(eligible.length,1);
+    ensureAdShuffle(eligible);
+    const adId = adShuffleOrder[adShuffleIdx];
+    const ad = eligible.find(a => a.id === adId) || eligible[0];
+    adShuffleIdx++;
     if(!ad?.audio_url){ if(cb) cb(); return; }
     audioPlayer.src=ad.audio_url; audioPlayer._adCb=cb;
     updateDisplay('📢 Propaganda', ad.title);
@@ -741,26 +863,26 @@ function playSeasonalTrack(block) {
 // ─────────────────────────────────────────────────────────────
 // HORA CERTA
 // ─────────────────────────────────────────────────────────────
+// BUGFIX: antes esta função tocava a hora certa IMEDIATAMENTE, cortando
+// qualquer música/propaganda/vinheta que estivesse no meio. Agora só
+// ENFILEIRA o pedido (requestInterrupt) — o áudio atual sempre termina
+// primeiro, e só então a hora certa entra.
 async function loadCurrentHourAudio() {
     const now=new Date(), hour=now.getHours(), min=now.getMinutes();
     try {
         const data=allSchedules.find(s=>s.hour===hour&&s.enabled);
-        if(!data){ resumeAfterHourCerta(); return; }
+        if(!data) return;
         const isExact=min<=2, isHalf=min>=30&&min<=32;
         const slotStr=isExact?`${hour}:00`:`${hour}:30`;
-        if(lastPlayedSlot===slotStr){ resumeAfterHourCerta(); return; }
+        if(lastPlayedSlot===slotStr) return;
         if(isExact&&data.audio_url?.trim()){
-            isPlayingHourCerta=true; audioPlayer.src=data.audio_url;
-            updateDisplay('Hora Certa',`${String(hour).padStart(2,'0')}:00`);
             lastPlayedSlot=slotStr;
-            if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
+            requestInterrupt({ type:'hourCerta', url:data.audio_url, label:`${String(hour).padStart(2,'0')}:00` });
         } else if(isHalf&&data.audio_url_half?.trim()){
-            isPlayingHourCerta=true; audioPlayer.src=data.audio_url_half;
-            updateDisplay('Hora Certa',`${String(hour).padStart(2,'0')}:30`);
             lastPlayedSlot=slotStr;
-            if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
-        } else { resumeAfterHourCerta(); }
-    } catch(err){ console.error(err); resumeAfterHourCerta(); }
+            requestInterrupt({ type:'hourCerta', url:data.audio_url_half, label:`${String(hour).padStart(2,'0')}:30` });
+        }
+    } catch(err){ console.error(err); }
 }
 
 // Versão silenciosa: apenas pré-carrega hora certa sem reproduzir (usada no boot)
@@ -779,10 +901,6 @@ async function loadCurrentHourAudioSilent() {
     } catch(err){ console.error(err); }
 }
 
-function resumeAfterHourCerta() {
-    if(isGradeMode&&slotPlaylist.length>0) playSlotTrack();
-    else playBgMusic();
-}
 
 // ─────────────────────────────────────────────────────────────
 // HANDLE AUDIO ENDED
@@ -817,19 +935,17 @@ async function handleAudioEnded() {
     // Hora certa
     if(isPlayingHourCerta){
         isPlayingHourCerta=false;
+        if(tryDrainInterrupts()) return; // outra interrupção (ex: vinheta) esperando na fila
         if(isGradeMode){
-            slotCurrentIndex = (slotCurrentIndex + 1) % Math.max(slotPlaylist.length, 1);
             playSlotAd(()=>playSlotTrack());
         } else {
-            const playlist = isSeasonalActive ? seasonalPlaylist : backgroundPlaylist;
-            currentBgIndex = (currentBgIndex + 1) % Math.max(playlist.length, 1);
             if((isSeasonalActive?seasonalAds:advertisements).length>0) playLegacyAd();
             else playBgMusic();
         }
         return;
     }
     // Propaganda legada
-    if(isPlayingAd&&!isGradeMode){ isPlayingAd=false; playBgMusic(); return; }
+    if(isPlayingAd&&!isGradeMode){ isPlayingAd=false; if(tryDrainInterrupts()) return; playBgMusic(); return; }
     // Música da grade
     if(isGradeMode){
         const wasLast = slotCurrentIndex >= slotPlaylist.length - 1;
@@ -840,6 +956,9 @@ async function handleAudioEnded() {
             await shufflePlaylistAfterComplete('slot_playlists', currentSlot?.id || null);
             await loadSlotPlaylist(currentSlot?.id);
         }
+        // A música TERMINOU de tocar por completo — só agora (nunca no meio
+        // dela) é que a hora certa/vinheta pendente entra, se houver alguma.
+        if(tryDrainInterrupts()) return;
         playSlotTrack(); return;
     }
     // Música legada
@@ -862,6 +981,7 @@ async function handleAudioEnded() {
             backgroundPlaylist = data || [];
         }
     }
+    if(tryDrainInterrupts()) return;
     playBgMusic();
 }
 
