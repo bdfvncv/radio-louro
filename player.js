@@ -11,7 +11,7 @@ const supabase      = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_K
 // As duas únicas escritas que o player precisa fazer (embaralhar playlist e
 // contar reprodução de propaganda) passam pela Edge Function protegida
 // "player-actions", que guarda a chave real no servidor.
-const FUNCTION_SECRET      = 'bZ8PZbcQeD8Y4UYtfoRCKp7dvMiwG1pirSmGyU8v';
+const FUNCTION_SECRET      = 'Deno@123#';
 const PLAYER_ACTIONS_URL   = `${SUPABASE_URL}/functions/v1/player-actions`;
 
 // BUGFIX: new Date().toISOString() sempre retorna a data em UTC, não a data
