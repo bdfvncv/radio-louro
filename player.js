@@ -4,9 +4,39 @@ const YOUTUBE_API_KEY   = 'AIzaSyCcpLnZ0XHsSEx34Zvkc80FwmHiHIqS6Gs';
 const BLOCKED_TERMS     = ['funk','rock pesado','metal','punk','rap','trap'];
 
 const supabase      = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-// Cliente com service key para operações internas do player (shuffle, play_count)
-const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5empzZ2ZvYXh5ZXllcG95bHZnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTU4NTM2NSwiZXhwIjoyMDc1MTYxMzY1fQ.rxDX7YsuxAvoMbImnk1Ovlj7YQ0WI_XwcTZUJpXKQYU';
-const supabaseWrite = window.supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+// SEGURANÇA: o player público NUNCA deve ter a service_role key no código
+// (ela ignora todo o RLS — se está aqui, qualquer pessoa que abrir o
+// DevTools tem acesso total de leitura/escrita/exclusão ao banco inteiro).
+// As duas únicas escritas que o player precisa fazer (embaralhar playlist e
+// contar reprodução de propaganda) passam pela Edge Function protegida
+// "player-actions", que guarda a chave real no servidor.
+const FUNCTION_SECRET      = 'bZ8PZbcQeD8Y4UYtfoRCKp7dvMiwG1pirSmGyU8v';
+const PLAYER_ACTIONS_URL   = `${SUPABASE_URL}/functions/v1/player-actions`;
+
+// BUGFIX: new Date().toISOString() sempre retorna a data em UTC, não a data
+// local. No horário do Brasil (UTC-3), entre ~21h e meia-noite o UTC já
+// virou o dia seguinte — isso fazia propagandas de "Data especial" sumirem
+// mais cedo (ou não tocarem no dia certo), e o embaralhamento diário/TTS
+// agendado se confundirem perto da virada do dia. Esta função usa sempre a
+// data LOCAL do navegador.
+function localDateStr(d = new Date()) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+async function callPlayerAction(payload) {
+    try {
+        const res = await fetch(PLAYER_ACTIONS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-function-secret': FUNCTION_SECRET },
+            body: JSON.stringify(payload),
+        });
+        if (!res.ok) console.warn('player-actions falhou:', res.status);
+    } catch (err) { console.warn('player-actions erro de rede:', err); }
+}
 
 // ── DOM — declaradas aqui, atribuídas no init ────────────────
 let audioPlayer, playBtn, volumeSlider, syncBtn;
@@ -146,7 +176,7 @@ async function init() {
         audioPlayer.volume = 0.7;
         updatePlayButtonState(false);
 
-        lastKnownDate = new Date().toISOString().split('T')[0];
+        lastKnownDate = localDateStr();
         await loadAllData();
         setupEventListeners();
         setupRealtimeSubscription();
@@ -193,7 +223,7 @@ function checkTTSSchedulePlayer() {
     const now = new Date();
     const currentDay  = String(now.getDay());
     const currentTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-    const todayKey    = now.toISOString().split('T')[0];
+    const todayKey    = localDateStr(now);
 
     ttsLibraryPlayer.forEach(item => {
         if(!item.scheduled_time || !item.scheduled_days || !item.audio_url) return;
@@ -291,13 +321,8 @@ async function shufflePlaylistAfterComplete(table, slotId) {
         }
         lastPlayedId = null; // reseta após usar
 
-        const BATCH = 50;
-        for(let i = 0; i < tracks.length; i += BATCH) {
-            const batch = tracks.slice(i, i + BATCH);
-            await Promise.all(batch.map((t, bi) =>
-                supabaseWrite.from(table).update({ daily_order: idx[i + bi] }).eq('id', t.id)
-            ));
-        }
+        const updates = tracks.map((t, i) => ({ id: t.id, daily_order: idx[i] }));
+        await callPlayerAction({ action: 'shuffle', table, updates });
     } catch(err) { console.error('Erro shuffle:', err); }
     finally { isShuffling = false; }
 }
@@ -499,7 +524,7 @@ async function logAnalytics(track, table, slotId, slotName) {
 // ─────────────────────────────────────────────────────────────
 async function ensureSeasonalBlocksToday() {
     if(!isSeasonalActive||!activeSeasonalCat) return;
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateStr();
     try {
         const {data:existing} = await supabase.from('seasonal_blocks').select('*').eq('block_date',today).eq('seasonal_category',activeSeasonalCat);
         if(existing?.length===3){ seasonalBlocksToday=existing; return; }
@@ -609,7 +634,7 @@ function playSlotMusicTrack() {
 function getEligibleAds() {
     const now = new Date();
     const h = now.getHours();
-    const todayStr = now.toISOString().split('T')[0]; // AAAA-MM-DD
+    const todayStr = localDateStr(now); // AAAA-MM-DD (fuso local)
     return advertisements.filter(ad => {
         if (!ad.enabled) return false;
         if (ad.start_hour != null && h < ad.start_hour) return false;
@@ -1189,7 +1214,7 @@ function initSuggest() {
 }
 
 async function loadSuggestCount() {
-    const id=getSuggestId(), today=new Date().toISOString().split('T')[0];
+    const id=getSuggestId(), today=localDateStr();
     try {
         const {data}=await supabase.from('suggestion_limits').select('count').eq('identifier',id).eq('suggestion_date',today).maybeSingle();
         suggestCountToday=data?.count||0; updateSuggestBadge();
@@ -1288,7 +1313,7 @@ async function handleSuggestConfirm() {
         localStorage.setItem('radio_suggest_name',name);
         const {error}=await supabase.from('music_queue').insert([{youtube_url:suggestPendingItem.url,youtube_title:suggestPendingItem.title,youtube_channel:suggestPendingItem.channel,youtube_thumbnail:suggestPendingItem.thumb,title:suggestPendingItem.title,source:'suggestion',suggested_by:name,status:'pending',conversion_status:'pending'}]);
         if(error) throw error;
-        const id=getSuggestId(), today=new Date().toISOString().split('T')[0];
+        const id=getSuggestId(), today=localDateStr();
         const {data:ex}=await supabase.from('suggestion_limits').select('id,count').eq('identifier',id).eq('suggestion_date',today).maybeSingle();
         if(ex) await supabase.from('suggestion_limits').update({count:ex.count+1}).eq('id',ex.id);
         else await supabase.from('suggestion_limits').insert([{identifier:id,suggestion_date:today,count:1}]);
@@ -1441,11 +1466,9 @@ async function logAdPlay(ad) {
             audio_url:  ad.audio_url  || null,
             slot_name:  currentSlot?.name || (isGradeMode ? 'Grade' : 'Fundo')
         }]);
-        // Atualiza contador e timestamp na tabela advertisements
-        await supabaseWrite.from('advertisements').update({
-            play_count:  (ad.play_count || 0) + 1,
-            last_played: new Date().toISOString()
-        }).eq('id', ad.id);
-        ad.play_count = (ad.play_count || 0) + 1;
+        // Atualiza contador e timestamp na tabela advertisements (via Edge Function segura)
+        const newCount = (ad.play_count || 0) + 1;
+        await callPlayerAction({ action: 'log_ad_play', ad_id: ad.id, play_count: newCount });
+        ad.play_count = newCount;
     } catch(err) { /* silencioso */ }
 }
