@@ -639,9 +639,11 @@ const CONVERT_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/convert-youtube`;
 // tts-generate, delete-cloudinary-asset, player-actions, cloudinary-orphans).
 // Precisa ser IDÊNTICO ao valor configurado em Supabase → Edge Functions →
 // Secrets → FUNCTION_SECRET, e ao valor usado em player.js.
-// Trocado nesta sessão por um valor bem mais forte (o anterior, "Deno@123#",
-// era fraco e previsível). Veja RESUMO_PROJETO.md para o passo a passo.
-const FUNCTION_SECRET = 'bZ8PZbcQeD8Y4UYtfoRCKp7dvMiwG1pirSmGyU8v';
+// Mantido como "Deno@123#" a pedido — é o valor que já está configurado no
+// Supabase. Vale lembrar que esse valor é fraco/previsível; se um dia quiser
+// trocar por algo mais forte, é só atualizar aqui, em player.js E no
+// Supabase (Edge Functions → Secrets) ao mesmo tempo.
+const FUNCTION_SECRET = 'Deno@123#';
 
 async function convertYoutubeToMp3(youtubeUrl, title, onProgress) {
     try {
