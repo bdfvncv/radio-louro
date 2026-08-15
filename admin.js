@@ -4,6 +4,16 @@ const YOUTUBE_API_KEY     = 'AIzaSyCcpLnZ0XHsSEx34Zvkc80FwmHiHIqS6Gs';
 const CLOUDINARY_CLOUD_NAME    = 'dygbrcrr6';
 const CLOUDINARY_UPLOAD_PRESET = 'radio_louro_preset';
 
+// BUGFIX: toISOString() retorna a data em UTC. No Brasil (UTC-3), perto da
+// meia-noite isso já é "amanhã", causando bugs de 1 dia em datas especiais,
+// embaralhamento e agendamentos. Sempre usar a data LOCAL do navegador.
+function localDateStr(d = new Date()) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
 // Envia um arquivo de áudio do dispositivo direto para o Cloudinary (sem passar
 // pelo servidor — upload "unsigned", igual ao usado pelas Edge Functions).
 // onProgress(percent) é chamado durante o envio, se fornecido.
@@ -430,6 +440,17 @@ function showAdminFeedback(msg, type) {
     setTimeout(()=>{el.style.display='none';},4000);
 }
 
+// SEGURANÇA: qualquer visitante anônimo do player pode enviar uma "sugestão"
+// com um nome livre (suggested_by), que cai direto aqui no admin. Sem escapar
+// isso, um nome tipo <img src=x onerror=...> executaria código arbitrário na
+// sessão logada do admin (XSS armazenado). Sempre escapar texto vindo de
+// fora antes de jogar em innerHTML.
+function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+}
+
 // ─────────────────────────────────────────────────────────────
 // FILA DE APROVAÇÃO
 // ─────────────────────────────────────────────────────────────
@@ -447,21 +468,15 @@ function renderQueueSection() {
     }
     list.innerHTML=pending.map(m=>`
         <div class="queue-card" id="qcard_${m.id}">
-            <img class="queue-thumb" src="${m.youtube_thumbnail||''}" alt="" onerror="this.style.display='none'">
+            <img class="queue-thumb" src="${escapeHtml(m.youtube_thumbnail||'')}" alt="" onerror="this.style.display='none'">
             <div class="queue-info">
-                <div class="queue-title">${m.youtube_title||m.title||'Sem título'}</div>
-                <div class="queue-meta">${m.youtube_channel||''}</div>
-                <div class="queue-source">Origem: ${m.source==='manual'?'🔗 Manual':m.source==='auto'?'🤖 Automático':`💬 ${m.suggested_by||'Funcionário'}`}</div>
+                <div class="queue-title">${escapeHtml(m.youtube_title||m.title||'Sem título')}</div>
+                <div class="queue-meta">${escapeHtml(m.youtube_channel||'')}</div>
+                <div class="queue-source">Origem: ${m.source==='manual'?'🔗 Manual':m.source==='auto'?'🤖 Automático':`💬 ${escapeHtml(m.suggested_by||'Funcionário')}`}</div>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
                     <button class="queue-preview-btn" onclick="toggleYTPreview(${m.id},'${extractVideoId(m.youtube_url)}')">▶️ Ouvir Prévia</button>
-                    <button class="queue-preview-btn" style="background:#7c3aed;color:#fff;border-color:#7c3aed;" onclick="toggleClassifier(${m.id},'${(m.youtube_title||m.title||'').replace(/'/g,"\\'").slice(0,80)}','${(m.youtube_channel||'').replace(/'/g,"\\'").slice(0,40)}')">🤖 Classificar</button>
                 </div>
                 <iframe id="ytframe_${m.id}" class="queue-yt-embed" src="" allowfullscreen allow="autoplay"></iframe>
-                <!-- Painel do classificador -->
-                <div id="classifier_${m.id}" style="display:none;margin-top:8px;">
-                    <div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:4px;">🤖 Classificação IA</div>
-                    <div class="classifier-content" data-loaded="0"></div>
-                </div>
             </div>
             <div class="queue-actions">
                 <div class="form-group" style="margin-bottom:8px;">
@@ -615,8 +630,13 @@ async function approveQueueItem(id) {
 // ─────────────────────────────────────────────────────────────
 
 const CONVERT_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/convert-youtube`;
-// Se configurou FUNCTION_SECRET no Supabase, coloque aqui:
-const FUNCTION_SECRET = 'Deno@123#';
+// Segredo compartilhado por TODAS as Edge Functions (convert-youtube,
+// tts-generate, delete-cloudinary-asset, player-actions, cloudinary-orphans).
+// Precisa ser IDÊNTICO ao valor configurado em Supabase → Edge Functions →
+// Secrets → FUNCTION_SECRET, e ao valor usado em player.js.
+// Trocado nesta sessão por um valor bem mais forte (o anterior, "Deno@123#",
+// era fraco e previsível). Veja RESUMO_PROJETO.md para o passo a passo.
+const FUNCTION_SECRET = 'bZ8PZbcQeD8Y4UYtfoRCKp7dvMiwG1pirSmGyU8v';
 
 async function convertYoutubeToMp3(youtubeUrl, title, onProgress) {
     try {
@@ -1663,8 +1683,8 @@ function renderJingleRows(list,slotId) {
             <span class="status-badge ${j.enabled?'active':'inactive'}" style="font-size:10px;">${j.enabled?'✅':'❌'}</span>
             <div class="action-btns">
                 <button class="btn-edit" onclick="editJingle(${j.id},${slotId})">✏️</button>
-                <button class="btn-toggle" style="background:#17a2b8;" onclick="downloadAudio('${j.audio_url}','${j.title?.replace(/'/g,'')||'vinheta'}.mp3')">⬇️</button>
-                <button class="btn-toggle" onclick="toggleJingle(${j.id},${!j.enabled},${slotId})">${j.enabled?'🔴':'🟢'}</button>
+                <button class="btn-download" onclick="downloadAudio('${j.audio_url}','${j.title?.replace(/'/g,'')||'vinheta'}.mp3')">⬇️</button>
+                <button class="btn-toggle ${j.enabled?'is-on':'is-off'}" onclick="toggleJingle(${j.id},${!j.enabled},${slotId})">${j.enabled?'🔴':'🟢'}</button>
                 <button class="btn-delete" onclick="deleteJingle(${j.id},${slotId})">🗑️</button>
             </div>
         </div>`).join('');
@@ -1685,8 +1705,8 @@ function renderSlotPlaylistTable(slotId) {
             <td><span class="status-badge ${t.enabled?'active':'inactive'}">${t.enabled?'✅ Ativo':'❌ Inativo'}</span></td>
             <td><div class="action-btns">
                 <button class="btn-edit slot-edit-btn" data-id="${t.id}" data-slot="${slotId}">✏️</button>
-                <button class="btn-toggle" style="background:#17a2b8;" onclick="downloadAudio('${t.audio_url}','${t.title?.replace(/'/g,'')||'audio'}.mp3')">⬇️</button>
-                <button class="btn-toggle slot-toggle-btn" data-id="${t.id}" data-enabled="${t.enabled}" data-slot="${slotId}">${t.enabled?'🔴':'🟢'}</button>
+                <button class="btn-download" onclick="downloadAudio('${t.audio_url}','${t.title?.replace(/'/g,'')||'audio'}.mp3')">⬇️</button>
+                <button class="btn-toggle slot-toggle-btn ${t.enabled?'is-on':'is-off'}" data-id="${t.id}" data-enabled="${t.enabled}" data-slot="${slotId}">${t.enabled?'🔴':'🟢'}</button>
                 <button class="btn-delete slot-delete-btn" data-id="${t.id}" data-slot="${slotId}">🗑️</button>
             </div></td>
         </tr>`).join('');
@@ -1788,7 +1808,7 @@ async function handleForceShuffleSlot(slotId) {
     if(!tracks?.length){ alert('Nenhuma música ativa.'); return; }
     const idx=[...Array(tracks.length).keys()];
     for(let i=idx.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]];}
-    const today=new Date().toISOString().split('T')[0];
+    const today=localDateStr();
     await Promise.all(tracks.map((t,i)=>supabaseAdmin.from('slot_playlists').update({daily_order:idx[i],last_shuffle_date:today}).eq('id',t.id)));
     alert('✅ Embaralhado!'); 
     await refreshSlotPlaylist(slotId);
@@ -1938,8 +1958,8 @@ function renderSeasonalTable(category,type,tableId) {
             <td><span class="status-badge ${item.enabled?'active':'inactive'}">${item.enabled?'✅ Ativo':'❌ Inativo'}</span></td>
             <td><div class="action-btns">
                 <button class="btn-edit seas-edit-btn" data-id="${item.id}" data-cat="${category}" data-type="${type}">✏️</button>
-                <button class="btn-toggle" style="background:#17a2b8;" onclick="downloadAudio('${item.audio_url}','${item.title?.replace(/'/g,'')||'audio'}.mp3')">⬇️</button>
-                <button class="btn-toggle seas-toggle-btn" data-id="${item.id}" data-enabled="${item.enabled}">${item.enabled?'🔴':'🟢'}</button>
+                <button class="btn-download" onclick="downloadAudio('${item.audio_url}','${item.title?.replace(/'/g,'')||'audio'}.mp3')">⬇️</button>
+                <button class="btn-toggle seas-toggle-btn ${item.enabled?'is-on':'is-off'}" data-id="${item.id}" data-enabled="${item.enabled}">${item.enabled?'🔴':'🟢'}</button>
                 <button class="btn-delete seas-delete-btn" data-id="${item.id}">🗑️</button>
             </div></td>
         </tr>`).join('');
@@ -1962,7 +1982,7 @@ function renderSeasonalJinglesTables() {
                 <td><span class="status-badge ${j.enabled?'active':'inactive'}">${j.enabled?'✅ Ativo':'❌ Inativo'}</span></td>
                 <td><div class="action-btns">
                     <button class="btn-edit" onclick="editSeasonalJingle(${j.id},'${cat}')">✏️</button>
-                    <button class="btn-toggle" onclick="toggleSeasonalJingle(${j.id},${!j.enabled},'${cat}')">${j.enabled?'🔴':'🟢'}</button>
+                    <button class="btn-toggle ${j.enabled?'is-on':'is-off'}" onclick="toggleSeasonalJingle(${j.id},${!j.enabled},'${cat}')">${j.enabled?'🔴':'🟢'}</button>
                     <button class="btn-delete" onclick="deleteSeasonalJingle(${j.id},'${cat}')">🗑️</button>
                 </div></td>
             </tr>`).join('');
@@ -2096,7 +2116,7 @@ async function handleSeasonalShuffle(category,type) {
     if(!tracks?.length){ alert('Nenhuma música.'); return; }
     const idx=[...Array(tracks.length).keys()];
     for(let i=idx.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]];}
-    const today=new Date().toISOString().split('T')[0];
+    const today=localDateStr();
     await Promise.all(tracks.map((t,i)=>supabaseAdmin.from('seasonal_playlists').update({daily_order:idx[i],last_shuffle_date:today}).eq('id',t.id)));
     alert('✅ Embaralhado!');
 }
@@ -2177,9 +2197,9 @@ function renderScheduleTable() {
             <td><span class="audio-url" style="color:${s?.audio_url_half?'#333':'#999'}" title="${s?.audio_url_half||''}">${s?.audio_url_half||'Nenhuma URL (:30)'}</span></td>
             <td><div class="action-btns">
                 <button class="btn-edit sch-edit-btn" data-hour="${hour}">✏️ Editar</button>
-                ${s?.audio_url?`<button class="btn-toggle" style="background:#17a2b8;" onclick="downloadAudio('${s.audio_url}','hora_${String(hour).padStart(2,'0')}h00.mp3')">⬇️ :00</button>`:''}
-                ${s?.audio_url_half?`<button class="btn-toggle" style="background:#17a2b8;" onclick="downloadAudio('${s.audio_url_half}','hora_${String(hour).padStart(2,'0')}h30.mp3')">⬇️ :30</button>`:''}
-                ${s?`<button class="btn-toggle sch-toggle-btn" data-id="${s.id}" data-enabled="${s.enabled}">${s.enabled?'🔴 Desativar':'🟢 Ativar'}</button><button class="btn-delete sch-delete-btn" data-id="${s.id}">🗑️ Deletar</button>`:''}
+                ${s?.audio_url?`<button class="btn-download" onclick="downloadAudio('${s.audio_url}','hora_${String(hour).padStart(2,'0')}h00.mp3')">⬇️ :00</button>`:''}
+                ${s?.audio_url_half?`<button class="btn-download" onclick="downloadAudio('${s.audio_url_half}','hora_${String(hour).padStart(2,'0')}h30.mp3')">⬇️ :30</button>`:''}
+                ${s?`<button class="btn-toggle sch-toggle-btn ${s.enabled?'is-on':'is-off'}" data-id="${s.id}" data-enabled="${s.enabled}">${s.enabled?'🔴 Desativar':'🟢 Ativar'}</button><button class="btn-delete sch-delete-btn" data-id="${s.id}">🗑️ Deletar</button>`:''}
             </div></td>`;
         tr.querySelector('.sch-edit-btn')?.addEventListener('click',e=>editSchedule(parseInt(e.currentTarget.dataset.hour)));
         tr.querySelector('.sch-toggle-btn')?.addEventListener('click',e=>toggleSchedule(parseInt(e.currentTarget.dataset.id),e.currentTarget.dataset.enabled!=='true'));
@@ -2246,8 +2266,8 @@ function renderPlaylistTable() {
             <td><span class="audio-url" title="${t.audio_url}">${t.audio_url}</span></td>
             <td><div class="action-btns">
                 <button class="btn-edit pl-edit-btn" data-id="${t.id}">✏️</button>
-                <button class="btn-toggle" style="background:#17a2b8;" onclick="downloadAudio('${t.audio_url}','${t.title?.replace(/'/g,'')||'audio'}.mp3')">⬇️</button>
-                <button class="btn-toggle pl-toggle-btn" data-id="${t.id}" data-enabled="${t.enabled}">${t.enabled?'🔴':'🟢'}</button>
+                <button class="btn-download" onclick="downloadAudio('${t.audio_url}','${t.title?.replace(/'/g,'')||'audio'}.mp3')">⬇️</button>
+                <button class="btn-toggle pl-toggle-btn ${t.enabled?'is-on':'is-off'}" data-id="${t.id}" data-enabled="${t.enabled}">${t.enabled?'🔴':'🟢'}</button>
                 <button class="btn-delete pl-delete-btn" data-id="${t.id}">🗑️</button>
             </div></td>
         </tr>`).join('');
@@ -2327,7 +2347,7 @@ async function handleForceShufflePlaylist() {
     if(!tracks?.length){ alert('Nenhuma música ativa.'); return; }
     const idx=[...Array(tracks.length).keys()];
     for(let i=idx.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]];}
-    const today=new Date().toISOString().split('T')[0];
+    const today=localDateStr();
     await Promise.all(tracks.map((t,i)=>supabaseAdmin.from('background_playlist').update({daily_order:idx[i],last_shuffle_date:today}).eq('id',t.id)));
     alert('✅ Embaralhado!');
     const {data}=await supabase.from('background_playlist').select('*').order('original_order',{ascending:true}); backgroundPlaylist=data||[]; renderPlaylistTable();
@@ -2348,8 +2368,13 @@ function renderAdsTable() {
             : '-';
         return `<tr>
             <td style="font-weight:bold;">${ad.play_order}</td>
-            <td style="font-weight:500;">${ad.title}${ad.special_date?`<br><span style="padding:2px 7px;background:#fff3cd;border-radius:8px;font-size:10px;font-weight:bold;color:#856404;">🎉 ${new Date(ad.special_date+'T00:00:00').toLocaleDateString('pt-BR')}</span>`:''}</td>
-            <td>${ad.advertiser||'-'}</td>
+            <td style="font-weight:500;">
+                <div style="display:flex;flex-direction:column;gap:3px;">
+                    <span>${escapeHtml(ad.title)}</span>
+                    ${ad.special_date?`<span style="display:inline-block;width:fit-content;padding:2px 7px;background:#fff3cd;border-radius:8px;font-size:10px;font-weight:bold;color:#856404;">🎉 ${new Date(ad.special_date+'T00:00:00').toLocaleDateString('pt-BR')}</span>`:''}
+                </div>
+            </td>
+            <td>${escapeHtml(ad.advertiser||'-')}</td>
             <td><span style="padding:3px 8px;background:#e3f2fd;border-radius:10px;font-size:11px;font-weight:bold;color:#1976d2;">A cada ${ad.frequency}</span></td>
             <td style="font-size:12px;color:#555;">${horario}</td>
             <td><span style="padding:3px 8px;background:#e6f4ed;border-radius:10px;font-size:11px;font-weight:bold;color:#006b3f;">${ad.play_count||0}×</span></td>
@@ -2357,8 +2382,8 @@ function renderAdsTable() {
             <td><span class="status-badge ${ad.enabled?'active':'inactive'}">${ad.enabled?'✅ Ativo':'❌ Inativo'}</span></td>
             <td><div class="action-btns">
                 <button class="btn-edit ad-edit-btn" data-id="${ad.id}">✏️</button>
-                <button class="btn-toggle" style="background:#17a2b8;" onclick="downloadAudio('${ad.audio_url}','${ad.title?.replace(/'/g,'')||'ad'}.mp3')">⬇️</button>
-                <button class="btn-toggle ad-toggle-btn" data-id="${ad.id}" data-enabled="${ad.enabled}">${ad.enabled?'🔴':'🟢'}</button>
+                <button class="btn-download" onclick="downloadAudio('${ad.audio_url}','${ad.title?.replace(/'/g,'')||'ad'}.mp3')">⬇️</button>
+                <button class="btn-toggle ad-toggle-btn ${ad.enabled?'is-on':'is-off'}" data-id="${ad.id}" data-enabled="${ad.enabled}">${ad.enabled?'🔴':'🟢'}</button>
                 <button class="btn-delete ad-delete-btn" data-id="${ad.id}">🗑️</button>
             </div></td>
         </tr>`;
@@ -2697,7 +2722,7 @@ async function toggleGrades() {
             .eq('id', 1);
         btn.classList.toggle('active', newStatus);
         btn.classList.toggle('inactive', !newStatus);
-        btn.textContent = newStatus ? '✅ Ativadas' : '⏸️ Desativadas';
+        btn.textContent = newStatus ? '✅ Ativadas — clique para desativar' : '⏸️ Desativadas — clique para ativar';
         alert(newStatus
             ? '✅ Grades horárias ativadas!'
             : '⏸️ Grades desativadas. O player usará a Playlist de Fundo.');
@@ -2712,7 +2737,7 @@ async function loadGradesState() {
         const enabled = data?.grades_enabled !== false;
         btn.classList.toggle('active', enabled);
         btn.classList.toggle('inactive', !enabled);
-        btn.textContent = enabled ? '✅ Ativadas' : '⏸️ Desativadas';
+        btn.textContent = enabled ? '✅ Ativadas — clique para desativar' : '⏸️ Desativadas — clique para ativar';
     } catch(err) { console.error(err); }
 }
 
@@ -3011,6 +3036,88 @@ async function loadCloudinaryUsage() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// ARQUIVOS ÓRFÃOS NO CLOUDINARY
+// Compara o que está armazenado no Cloudinary com o que está
+// referenciado no banco. O que sobra é "lixo" seguro de apagar.
+// ─────────────────────────────────────────────────────────────
+const ORPHANS_URL = `${SUPABASE_URL}/functions/v1/cloudinary-orphans`;
+let lastOrphans = [];
+
+async function checkCloudinaryOrphans() {
+    const statusEl = document.getElementById('orphansStatus');
+    const listEl   = document.getElementById('orphansList');
+    if(!statusEl || !listEl) return;
+    statusEl.textContent = '⏳ Verificando... isso pode levar alguns segundos.';
+    listEl.innerHTML = '';
+    try {
+        const res = await fetch(ORPHANS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-function-secret': FUNCTION_SECRET },
+        });
+        const data = await res.json();
+        if(!res.ok) throw new Error(data.error || `Erro ${res.status}`);
+        lastOrphans = data.orphans || [];
+        if(!lastOrphans.length) {
+            statusEl.innerHTML = `✅ Nenhum arquivo órfão encontrado. (${data.totalInCloudinary||0} arquivos no Cloudinary, todos em uso)`;
+            return;
+        }
+        const totalMB = (lastOrphans.reduce((s,o)=>s+(o.bytes||0),0) / (1024*1024)).toFixed(1);
+        statusEl.innerHTML = `⚠️ ${lastOrphans.length} arquivo(s) órfão(s) encontrado(s), ~${totalMB} MB desperdiçados.`;
+        listEl.innerHTML = `
+            <div style="margin-bottom:10px;">
+                <button class="btn-delete" style="font-size:12px;padding:7px 14px;" onclick="deleteAllOrphans()">🗑️ Deletar todos os órfãos</button>
+            </div>
+            <div class="table-container"><table class="data-table">
+                <thead><tr><th>Arquivo</th><th>Tamanho</th><th>Criado em</th><th>Ações</th></tr></thead>
+                <tbody>${lastOrphans.map((o,i)=>`
+                    <tr>
+                        <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(o.public_id)}">${escapeHtml(o.public_id)}</td>
+                        <td>${((o.bytes||0)/(1024*1024)).toFixed(2)} MB</td>
+                        <td>${o.created_at ? new Date(o.created_at).toLocaleDateString('pt-BR') : '-'}</td>
+                        <td><div class="action-btns">
+                            <button class="btn-toggle" style="background:#17a2b8;" onclick="testAudioUrl('${o.secure_url}')">▶️</button>
+                            <button class="btn-delete" onclick="deleteOrphan(${i})">🗑️ Deletar</button>
+                        </div></td>
+                    </tr>`).join('')}
+                </tbody>
+            </table></div>`;
+    } catch(err) {
+        statusEl.innerHTML = `❌ Erro ao verificar: ${err.message}`;
+    }
+}
+
+async function deleteOrphan(index) {
+    const o = lastOrphans[index];
+    if(!o) return;
+    if(!confirm(`Deletar permanentemente "${o.public_id}" do Cloudinary?`)) return;
+    try {
+        await deleteFromCloudinary(o.secure_url);
+        lastOrphans.splice(index, 1);
+        showToast('✅ Arquivo deletado do Cloudinary.');
+        checkCloudinaryOrphans();
+    } catch(err) {
+        alert('❌ Erro ao deletar: ' + err.message);
+    }
+}
+
+async function deleteAllOrphans() {
+    if(!lastOrphans.length) return;
+    if(!confirm(`Deletar TODOS os ${lastOrphans.length} arquivos órfãos do Cloudinary? Isso não pode ser desfeito.`)) return;
+    const statusEl = document.getElementById('orphansStatus');
+    let done = 0;
+    for(const o of lastOrphans) {
+        try { await deleteFromCloudinary(o.secure_url); done++; } catch(err) { console.warn('Falha ao deletar', o.public_id, err); }
+        if(statusEl) statusEl.textContent = `⏳ Deletando... ${done}/${lastOrphans.length}`;
+    }
+    showToast(`✅ ${done} arquivo(s) órfão(s) deletado(s).`);
+    checkCloudinaryOrphans();
+}
+
+window.checkCloudinaryOrphans = checkCloudinaryOrphans;
+window.deleteOrphan           = deleteOrphan;
+window.deleteAllOrphans       = deleteAllOrphans;
+
+// ─────────────────────────────────────────────────────────────
 // CHAMADA DE FUNCIONÁRIO POR SETOR
 // ─────────────────────────────────────────────────────────────
 const SETORES_DEFAULT = ['Caixa', 'Açougue', 'Padaria', 'Frutaria', 'Estoque', 'Gerência', 'Segurança', 'Limpeza'];
@@ -3222,7 +3329,7 @@ function renderSilenceSchedules() {
             <td style="font-size:12px;">${(s.days||[]).map(d=>dayNames[parseInt(d)]).join(', ')}</td>
             <td><span class="status-badge ${s.enabled?'active':'inactive'}">${s.enabled?'✅':'❌'}</span></td>
             <td><div class="action-btns">
-                <button class="btn-toggle" onclick="toggleSilenceSchedule(${s.id},${!s.enabled})">${s.enabled?'🔴':'🟢'}</button>
+                <button class="btn-toggle ${s.enabled?'is-on':'is-off'}" onclick="toggleSilenceSchedule(${s.id},${!s.enabled})">${s.enabled?'🔴':'🟢'}</button>
                 <button class="btn-delete" onclick="deleteSilenceSchedule(${s.id})">🗑️</button>
             </div></td>
         </tr>`).join('');
@@ -4192,114 +4299,6 @@ async function confirmImportBackup() {
 
 window.handleImportBackup  = handleImportBackup;
 window.confirmImportBackup = confirmImportBackup;
-
-
-
-// ─────────────────────────────────────────────────────────────
-// CLASSIFICADOR DE MÚSICAS — usa Claude (Anthropic API)
-// ─────────────────────────────────────────────────────────────
-const CLASSIFIER_SYSTEM = `Você é um classificador de músicas para uma rádio interna de supermercado.
-Classifique cada música enviada em exatamente 3 itens, sem texto extra além do formato pedido.
-
-Estilos disponíveis: Sertanejo Raiz/Modão, Sertanejo Romântico, Sertanejo Universitário, Feminejo, Arrocha, Seresta, Sofrência, Forró Tradicional, Forró Eletrônico, Piseiro, Xote, MPB, Regional Nordestino, Pop Nacional, Pagode.
-
-Tópicos (grades horárias):
-- Manhã do Campo (07–09h): raiz, modão, forró tradicional
-- Manhã Animada (09–12h): sertanejo leve, pagode leve, MPB
-- Hora do Almoço (12–14h): romântico, arrocha, seresta, sofrência leve
-- Tarde Variada (14–18h): universitário, feminejo, hits, sofrência, pop
-- Saída do Trabalho (18–20h): forró eletrônico, piseiro, dançantes
-- Madrugada Aleatória (20–07h): shuffle, todas — SEMPRE incluir junto ao tópico principal
-
-Playlists temáticas (0 ou mais): Natal, Ano Novo, Páscoa, São João, Românticas, Sofrência, Sertanejo Universitário, Sertanejo Raiz/Modão, Forró e Piseiro, Boteco/Churrasco, Raízes do Brasil.
-
-Regras:
-- Se a música tiver letra explícita, avise após a classificação e sugira horário mais adulto.
-- Se for fora do padrão (ex: rock, funk, rap), avise e sugira o mais próximo possível.
-- Se não tiver certeza, busque o máximo de informação antes de responder; se ainda assim faltar info, marque "pendente de revisão" e explique.
-- Se a música for claramente repetida (você já classificou ela antes nesta sessão), avise que é repetida e não reclassifique.
-
-Formato OBRIGATÓRIO de resposta (sem nenhum texto antes ou depois):
-[Música] - [Artista]
-1. Estilo: [estilo]
-2. Tópico: [principal] + Madrugada Aleatória
-3. Playlist(s): [lista separada por vírgula, ou "nenhuma"]`;
-
-// Cache da sessão para detectar repetidas
-const classifiedThisSession = new Set();
-
-async function classifyTrack(title, channel) {
-    const cacheKey = `${title}|||${channel}`.toLowerCase();
-    const isRepeat = classifiedThisSession.has(cacheKey);
-
-    const userMsg = isRepeat
-        ? `REPETIDA — já classificada antes nesta sessão:
-${title} - ${channel}`
-        : `${title} - ${channel}`;
-
-    try {
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                model:      'claude-sonnet-4-6',
-                max_tokens: 1000,
-                system:     CLASSIFIER_SYSTEM,
-                messages:   [{ role: 'user', content: userMsg }],
-            }),
-        });
-        const data = await res.json();
-        const text = (data.content || []).map(b => b.text || '').join('').trim();
-        if(!isRepeat) classifiedThisSession.add(cacheKey);
-        return text || '(sem resposta do classificador)';
-    } catch(err) {
-        return `❌ Erro ao classificar: ${err.message}`;
-    }
-}
-
-// Mostra/esconde o painel de classificação de um card
-async function toggleClassifier(id, title, channel) {
-    const panel = document.getElementById(`classifier_${id}`);
-    if(!panel) return;
-    if(panel.style.display === 'block') { panel.style.display = 'none'; return; }
-    panel.style.display = 'block';
-    const content = panel.querySelector('.classifier-content');
-    if(content.dataset.loaded === '1') return; // já carregado
-    content.innerHTML = '<div style="color:#666;font-size:12px;padding:8px;">🤖 Classificando...</div>';
-    const result = await classifyTrack(title, channel);
-    content.dataset.loaded = '1';
-    // Detecta avisos especiais para destacar
-    const hasWarning = result.toLowerCase().includes('explícita') ||
-                       result.toLowerCase().includes('fora do padrão') ||
-                       result.toLowerCase().includes('pendente de revisão') ||
-                       result.toLowerCase().includes('repetida');
-    const bgColor  = hasWarning ? '#fff8e1' : '#f0faf5';
-    const border   = hasWarning ? '#f59e0b' : '#006b3f';
-    content.innerHTML = `
-        <div style="background:${bgColor};border-left:3px solid ${border};border-radius:0 8px 8px 0;
-                    padding:10px 12px;font-size:12px;line-height:1.7;white-space:pre-wrap;font-family:inherit;">
-            ${result.replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-        </div>
-        <button class="clear-btn" style="font-size:11px;padding:4px 10px;margin-top:6px;"
-            onclick="reclassifyTrack(${id},'${title.replace(/'/g,"\'").slice(0,80)}','${(channel||'').replace(/'/g,"\'").slice(0,40)}')">
-            🔄 Reclassificar
-        </button>`;
-}
-
-async function reclassifyTrack(id, title, channel) {
-    const panel   = document.getElementById(`classifier_${id}`);
-    const content = panel?.querySelector('.classifier-content');
-    if(!content) return;
-    content.dataset.loaded = '0';
-    // Remove do cache para forçar nova classificação
-    const cacheKey = `${title}|||${channel}`.toLowerCase();
-    classifiedThisSession.delete(cacheKey);
-    await toggleClassifier(id, title, channel);
-}
-
-window.toggleClassifier  = toggleClassifier;
-window.reclassifyTrack   = reclassifyTrack;
-
 window.removeFromBlacklist = removeFromBlacklist;
 window.stopFlashPromotion  = stopFlashPromotion;
 window.loadAdHistory       = loadAdHistory;
