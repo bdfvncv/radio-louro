@@ -244,9 +244,9 @@
                 <h2>🕐 Grades Horárias</h2>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                     <button class="submit-btn" style="font-size:13px;padding:8px 16px;" onclick="showCreateGradeForm()">➕ Nova Grade</button>
-                    <div class="grades-toggle-row">
-                        <span class="grades-toggle-label">Grades ativas</span>
-                        <button class="grades-toggle-btn active" id="gradesToggleBtn" onclick="toggleGrades()">✅ Ativadas</button>
+                    <div class="grades-toggle-row" title="Liga/desliga TODAS as grades horárias de uma vez. Quando desativado, o player toca só a Playlist de Fundo.">
+                        <span class="grades-toggle-label">Grades horárias (todas)</span>
+                        <button class="grades-toggle-btn active" id="gradesToggleBtn" onclick="toggleGrades()">✅ Ativadas — clique para desativar</button>
                     </div>
                 </div>
             </div>
@@ -928,7 +928,7 @@ Sem Vícios de Linguagem: Não usar as palavras corredores, com calma, sem press
                         <button class="test-btn" style="font-size:12px;padding:7px 14px;" onclick="shuffleAdsAfterComplete().then(()=>renderAdsTable())">🎲 Embaralhar</button>
                     </div>
                 </div>
-                <input type="text" class="table-search-input" placeholder="🔍 Buscar..."><div class="table-container"><table class="data-table"><thead><tr><th>Ordem</th><th>Título</th><th>Anunciante</th><th>Freq.</th><th>Horário</th><th>Reproduções</th><th>Última vez</th><th>Status</th><th>Ações</th></tr></thead><tbody id="adsTableBody"></tbody></table></div>
+                <input type="text" class="table-search-input" placeholder="🔍 Buscar..."><div class="table-container"><table class="data-table data-table--ads"><thead><tr><th>Ordem</th><th>Título</th><th>Anunciante</th><th>Freq.</th><th>Horário</th><th>Reproduções</th><th>Última vez</th><th>Status</th><th>Ações</th></tr></thead><tbody id="adsTableBody"></tbody></table></div>
             </div>
             <div class="admin-card">
                 <div class="section-header" style="margin-bottom:8px;">
@@ -1267,6 +1267,22 @@ Variar as saídas de bloco (não usar repetidamente &quot;E assim&quot; ou &quot
                     <li>Após o upload clique no arquivo e copie a URL pública (.mp3)</li>
                     <li>Cole a URL no formulário desejado</li>
                 </ol>
+            </div>
+
+            <!-- Arquivos órfãos no Cloudinary -->
+            <div class="admin-card" style="border-left:4px solid #f59e0b;">
+                <div class="section-header" style="margin-bottom:8px;">
+                    <h3 class="card-title" style="margin:0;">🧹 Arquivos órfãos no Cloudinary</h3>
+                    <button class="submit-btn" onclick="checkCloudinaryOrphans()" style="font-size:12px;padding:7px 14px;">🔍 Verificar agora</button>
+                </div>
+                <p style="font-size:12px;color:#666;margin-bottom:10px;">
+                    Compara todo arquivo de áudio que está no Cloudinary com o que está referenciado
+                    no banco de dados. Qualquer arquivo que sobrou no Cloudinary mas não é usado em
+                    nenhuma vinheta, propaganda, música, etc. aparece aqui — normalmente lixo de itens
+                    editados/apagados que não limparam o Cloudinary corretamente.
+                </p>
+                <div id="orphansStatus" style="font-size:12px;color:#666;"></div>
+                <div id="orphansList" style="margin-top:10px;"></div>
             </div>
         </section>
 
