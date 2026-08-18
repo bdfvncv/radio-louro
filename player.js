@@ -69,8 +69,6 @@ let allSchedules      = [];
 let backgroundPlaylist= [];
 let advertisements    = [];
 let currentBgIndex    = 0;
-let currentAdIndex    = 0;
-let tracksPlayedSinceAd = 0;
 let isPlayingHourCerta= false;
 let isPlayingAd       = false;
 let lastPlayedSlot    = null;
@@ -87,7 +85,6 @@ let gradesEnabled     = true;
 let currentSlot       = null;
 let slotPlaylist      = [];
 let slotCurrentIndex  = 0;
-let slotTracksSinceAd = 0;
 let isGradeMode       = false;
 let lastSlotId        = null;
 
@@ -165,6 +162,9 @@ function animatePlayPress(el) {
 
 async function init() {
     try {
+        if('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(e => console.warn('Service worker falhou:', e));
+        }
         audioPlayer   = document.getElementById('audioPlayer');
         playBtn       = document.getElementById('playBtn');
         volumeSlider  = document.getElementById('volumeSlider');
@@ -183,6 +183,7 @@ async function init() {
 
         audioPlayer.volume = 0.7;
         updatePlayButtonState(false);
+        setupMediaSessionHandlers();
 
         lastKnownDate = localDateStr();
         await loadAllData();
@@ -404,7 +405,6 @@ async function loadSlotPlaylist(slotId) {
         .order('daily_order', {ascending: true});
     slotPlaylist = data || [];
     if(slotCurrentIndex >= slotPlaylist.length) slotCurrentIndex = 0;
-    slotTracksSinceAd = 0;
 }
 
 async function loadSlotJingles(slotId) {
@@ -598,9 +598,9 @@ function playJingle(position, cb) {
 function startGrade() {
     if(jinglesOpening.length>0 && !gradeOpeningDone) {
         gradeOpeningDone=true;
-        playJingle('opening', ()=>{ playSlotAd(()=>{ playSlotTrack(); }); });
+        playJingle('opening', ()=>{ playDueAdOrSkip(()=>{ playSlotTrack(); }); });
     } else {
-        playSlotAd(()=>{ playSlotTrack(); });
+        playDueAdOrSkip(()=>{ playSlotTrack(); });
     }
 }
 
@@ -669,20 +669,9 @@ function playSlotTrack() {
     isPlayingJingle=false; isPlayingHourCerta=false; isPlayingAd=false;
     if(shouldPlaySeasonalBlock()){ const b=getNextSeasonalBlock(); if(b){ startSeasonalBlock(b); return; } }
     if(!slotPlaylist.length){ playBgMusic(); return; }
-    const freq = getNextAdFrequency();
-    if(advertisements.length>0 && slotTracksSinceAd>=freq){
-        playSlotAd(()=>playSlotMusicTrack()); return;
-    }
+    const dueAd = getNextDueAd();
+    if(dueAd){ playSlotAd(dueAd, ()=>playSlotMusicTrack()); return; }
     playSlotMusicTrack();
-}
-
-// Frequência (a cada quantas músicas) do próximo anúncio na fila embaralhada
-function getNextAdFrequency() {
-    const eligible = getEligibleAds();
-    if(!eligible.length) return 3;
-    ensureAdShuffle(eligible);
-    const nextId = adShuffleOrder[adShuffleIdx];
-    return eligible.find(a => a.id === nextId)?.frequency || 3;
 }
 
 function playSlotMusicTrack() {
@@ -702,7 +691,7 @@ function playSlotMusicTrack() {
     playSlotMusicTrack._skipCount = 0; // reseta ao tocar com sucesso
     audioPlayer.src = track.audio_url;
     updateDisplay(currentSlot?`🎵 ${currentSlot.name}`:'Tocando agora', track.title||'Música');
-    slotTracksSinceAd++;
+    incrementAdCounters(); // conta mais 1 música pra cada propaganda elegível
     logAnalytics(track, 'slot_playlists', currentSlot?.id, currentSlot?.name);
     savePlaybackState(); // salva posição a cada troca de música
     if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
@@ -722,58 +711,49 @@ function getEligibleAds() {
     });
 }
 
-// Embaralha um array (Fisher-Yates)
-function shuffleArray(arr) {
-    const a = arr.slice();
-    for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
+// ─────────────────────────────────────────────────────────────
+// ROTAÇÃO DE PROPAGANDAS — cada propaganda tem sua PRÓPRIA frequência
+// (campo "Frequência: a cada X músicas"), contada de forma independente.
+// Quando mais de uma está pronta ao mesmo tempo, quem tem o número menor
+// no campo "Ordem" toca primeiro.
+// ─────────────────────────────────────────────────────────────
+let adPlayCounters = {}; // { [ad.id]: quantas músicas tocaram desde a última vez que essa propaganda tocou }
+
+function incrementAdCounters(adsList) {
+    (adsList || getEligibleAds()).forEach(ad => { adPlayCounters[ad.id] = (adPlayCounters[ad.id] || 0) + 1; });
 }
 
-// Rotação de propagandas: toca todas sem repetir nenhuma, na ordem
-// embaralhada da sessão; só quando todas já tocaram é que embaralha de
-// novo e recomeça — sem depender de recarregar a página ou virar o dia.
-let adShuffleOrder = [];  // array de IDs, na ordem que vão tocar
-let adShuffleIdx   = 0;
-
-function ensureAdShuffle(eligible) {
-    const eligibleIds = eligible.map(a => a.id);
-    const currentSet  = new Set(adShuffleOrder);
-    const sameSet = eligibleIds.length === adShuffleOrder.length &&
-                    eligibleIds.every(id => currentSet.has(id));
-
-    if (!sameSet) {
-        // Lista de propagandas elegíveis mudou (nova cadastrada, horário
-        // mudou o que está no ar, etc.) — reembaralha do zero.
-        adShuffleOrder = shuffleArray(eligibleIds);
-        adShuffleIdx = 0;
-        return;
-    }
-    if (adShuffleIdx >= adShuffleOrder.length) {
-        // Deu a volta completa: todas já tocaram. Embaralha de novo,
-        // evitando que a última tocada seja logo a próxima (sem repetir
-        // em sequência entre um ciclo e outro).
-        const lastPlayed = adShuffleOrder[adShuffleOrder.length - 1];
-        let next = shuffleArray(eligibleIds);
-        if (next.length > 1 && next[0] === lastPlayed) {
-            [next[0], next[1]] = [next[1], next[0]];
-        }
-        adShuffleOrder = next;
-        adShuffleIdx = 0;
-    }
+function pickDueAd(adsList) {
+    if(!adsList || !adsList.length) return null;
+    adsList.forEach(ad => { if(!(ad.id in adPlayCounters)) adPlayCounters[ad.id] = 0; });
+    const due = adsList.filter(ad => adPlayCounters[ad.id] >= (ad.frequency || 3));
+    if(!due.length) return null;
+    due.sort((a,b) => (a.play_order||0) - (b.play_order||0));
+    return due[0];
 }
 
-function playSlotAd(cb) {
-    const eligible = getEligibleAds();
-    if(!eligible.length){ if(cb) cb(); return; }
-    isPlayingAd=true; slotTracksSinceAd=0;
-    ensureAdShuffle(eligible);
-    const adId = adShuffleOrder[adShuffleIdx];
-    const ad = eligible.find(a => a.id === adId) || eligible[0];
-    adShuffleIdx++;
+function getNextDueAd() { return pickDueAd(getEligibleAds()); }
+
+// Toca a propaganda que estiver na vez (se houver alguma), senão só segue.
+// Usado nos pontos onde antes só existia "toca propaganda e chama cb depois"
+// sem estar dentro do fluxo normal de músicas (abertura da grade, depois da hora certa).
+function playDueAdOrSkip(cb) {
+    const ad = getNextDueAd();
+    if(ad) playSlotAd(ad, cb);
+    else if(cb) cb();
+}
+
+// Usado no modo Playlist de Fundo (fora de grade horária)
+function playDueLegacyAdOrSkip() {
+    const ads = isSeasonalActive ? seasonalAds : getEligibleAds();
+    const ad = pickDueAd(ads);
+    if(ad) playLegacyAd(ad); else playBgMusic();
+}
+
+function playSlotAd(ad, cb) {
     if(!ad?.audio_url){ if(cb) cb(); return; }
+    isPlayingAd=true;
+    adPlayCounters[ad.id] = 0; // essa propaganda tocou agora — zera a contagem dela
     audioPlayer.src=ad.audio_url; audioPlayer._adCb=cb;
     updateDisplay('📢 Propaganda', ad.title);
     logAdPlay(ad); // registra no histórico
@@ -786,10 +766,10 @@ function playSlotAd(cb) {
 function playBgMusic() {
     isPlayingJingle=false; isPlayingHourCerta=false; isPlayingAd=false;
     const playlist = isSeasonalActive ? seasonalPlaylist : backgroundPlaylist;
-    const ads      = isSeasonalActive ? seasonalAds      : advertisements;
+    const ads      = isSeasonalActive ? seasonalAds      : getEligibleAds();
     if(!playlist.length){ handleNoAudio(); return; }
-    const freq = (ads[currentAdIndex%Math.max(ads.length,1)]?.frequency)||3;
-    if(ads.length>0 && tracksPlayedSinceAd>=freq){ playLegacyAd(); return; }
+    const dueAd = pickDueAd(ads);
+    if(dueAd){ playLegacyAd(dueAd); return; }
     const track = playlist[currentBgIndex%playlist.length];
     if(!track?.audio_url){ handleNoAudio(); return; }
     // Pula músicas na blacklist (máx de tentativas = tamanho da playlist)
@@ -805,19 +785,16 @@ function playBgMusic() {
     playBgMusic._skipCount = 0;
     audioPlayer.src=track.audio_url;
     updateDisplay(isSeasonalActive?'🎭 Especial':'Tocando agora', track.title||'Música');
-    tracksPlayedSinceAd++;
+    incrementAdCounters(ads);
     logAnalytics(track, isSeasonalActive?'seasonal_playlists':'background_playlist', null, isSeasonalActive?activeSeasonalCat:'Fundo');
     savePlaybackState(); // salva posição a cada troca de música
     if(isPlaying) audioPlayer.play().catch(e=>console.error(e));
 }
 
-function playLegacyAd() {
-    const allAds = isSeasonalActive ? seasonalAds : getEligibleAds();
-    if(!allAds.length){ playBgMusic(); return; }
-    isPlayingAd=true; tracksPlayedSinceAd=0;
-    const ad=allAds[currentAdIndex%allAds.length];
-    currentAdIndex=(currentAdIndex+1)%Math.max(allAds.length,1);
+function playLegacyAd(ad) {
     if(!ad?.audio_url){ playBgMusic(); return; }
+    isPlayingAd=true;
+    adPlayCounters[ad.id] = 0; // essa propaganda tocou agora — zera a contagem dela
     audioPlayer.src=ad.audio_url;
     updateDisplay('📢 Propaganda', ad.title);
     logAdPlay(ad); // registra no histórico
@@ -937,10 +914,9 @@ async function handleAudioEnded() {
         isPlayingHourCerta=false;
         if(tryDrainInterrupts()) return; // outra interrupção (ex: vinheta) esperando na fila
         if(isGradeMode){
-            playSlotAd(()=>playSlotTrack());
+            playDueAdOrSkip(()=>playSlotTrack());
         } else {
-            if((isSeasonalActive?seasonalAds:advertisements).length>0) playLegacyAd();
-            else playBgMusic();
+            playDueLegacyAdOrSkip();
         }
         return;
     }
@@ -1008,14 +984,14 @@ async function checkSeasonalStatus() {
                 ]);
                 activeSeasonalCat=data.category; isSeasonalActive=true;
                 seasonalPlaylist=mRes.data||[]; seasonalAds=aRes.data||[];
-                currentBgIndex=0; currentAdIndex=0; tracksPlayedSinceAd=0;
+                currentBgIndex=0;
                 await ensureSeasonalBlocksToday();
                 if(isPlaying&&!isPlayingHourCerta&&!isGradeMode) playBgMusic();
             }
         } else if(isSeasonalActive){
             isSeasonalActive=false; activeSeasonalCat=null;
             seasonalPlaylist=[]; seasonalAds=[]; seasonalBlocksToday=[];
-            currentBgIndex=0; currentAdIndex=0; tracksPlayedSinceAd=0;
+            currentBgIndex=0;
             if(isPlaying&&!isPlayingHourCerta&&!isGradeMode) playBgMusic();
         }
     } catch(err){ console.error(err); }
@@ -1036,6 +1012,7 @@ function togglePlay() {
     animatePlayPress(playBtn);
     if(isPlaying){
         audioPlayer.pause(); isPlaying=false; updatePlayButtonState(false);
+        if('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
     } else {
         if(silenceActivePlayer) {
             updateDisplay('🔇 Silêncio', 'Rádio pausada pelo admin'); return;
@@ -1084,6 +1061,41 @@ function updateDisplay(status, track) {
         trackName.textContent = track;
         animateTrackChange(trackName);
     }
+    updateMediaSession(status, track);
+}
+
+// ─────────────────────────────────────────────────────────────
+// REPRODUÇÃO EM SEGUNDO PLANO (celular com tela bloqueada / app minimizado)
+// A Media Session API avisa o sistema operacional "isto é uma rádio
+// tocando", o que evita o navegador suspender o áudio quando a aba fica em
+// segundo plano, e mostra os controles (play/pause) na tela de bloqueio.
+// ─────────────────────────────────────────────────────────────
+function updateMediaSession(status, track) {
+    if(!('mediaSession' in navigator)) return;
+    try {
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: track || 'Rádio Louro',
+            artist: status || 'Ao vivo',
+            album: 'Rádio Louro',
+            artwork: [
+                { src: 'logo.png', sizes: '512x512', type: 'image/png' },
+            ],
+        });
+        navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    } catch(e) { /* MediaMetadata pode não existir em navegadores muito antigos */ }
+}
+
+function setupMediaSessionHandlers() {
+    if(!('mediaSession' in navigator)) return;
+    try {
+        navigator.mediaSession.setActionHandler('play', () => { if(!isPlaying) togglePlay(); });
+        navigator.mediaSession.setActionHandler('pause', () => { if(isPlaying) togglePlay(); });
+        // Rádio ao vivo não tem "próxima/anterior faixa" nem avanço/retrocesso —
+        // desativa esses botões explicitamente pra não confundir na tela de bloqueio.
+        ['previoustrack','nexttrack','seekbackward','seekforward','seekto'].forEach(action => {
+            try { navigator.mediaSession.setActionHandler(action, null); } catch(e) {}
+        });
+    } catch(e) { /* alguma ação pode não ser suportada no navegador */ }
 }
 
 async function forceSync() {
@@ -1220,7 +1232,7 @@ function playEmergencyAlert(state) {
 // LOCUTOR AO VIVO (MICROFONE)
 // ─────────────────────────────────────────────────────────────
 function initLiveLocutorListener() {
-    liveLocutorChannel = supabase.channel('live_locutor_player')
+    liveLocutorChannel = supabase.channel('live_locutor_player', { config: { private: true } })
         .on('broadcast', { event: 'live_audio_chunk' }, payload => {
             handleLiveAudioChunk(payload.payload);
         })
@@ -1286,10 +1298,10 @@ async function handleLocutorStateChange(state) {
 // ─────────────────────────────────────────────────────────────
 function initTTSListener() {
     // Escuta ambos os canais por compatibilidade
-    supabase.channel('tts_broadcast')
+    supabase.channel('tts_broadcast', { config: { private: true } })
         .on('broadcast',{event:'tts_play'},payload=>handleTTSPlay(payload.payload))
         .subscribe();
-    supabase.channel('tts_player')
+    supabase.channel('tts_player', { config: { private: true } })
         .on('broadcast',{event:'tts_play'},payload=>handleTTSPlay(payload.payload))
         .subscribe();
 }
