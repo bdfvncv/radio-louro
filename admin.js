@@ -1253,9 +1253,16 @@ function loadTTSText(id) {
 
 // Toca um áudio já gerado (URL do Cloudinary) — transmite pra todos os players e toca localmente
 async function dispatchTTSAudio(audioUrl, title) {
-    await supabase.channel('tts_broadcast').send({
-        type:'broadcast', event:'tts_play', payload:{ audio_url:audioUrl, title }
+    // Canal PRIVADO: exige que o RLS (criado no Supabase) autorize antes de
+    // aceitar a inscrição — por isso precisa se inscrever (subscribe) e
+    // esperar confirmação ANTES de mandar a mensagem, senão o envio não é
+    // validado direito.
+    const ch = supabase.channel('tts_broadcast', { config: { private: true } });
+    await new Promise(resolve => {
+        ch.subscribe(status => { if(status === 'SUBSCRIBED') resolve(); });
     });
+    await ch.send({ type:'broadcast', event:'tts_play', payload:{ audio_url:audioUrl, title } });
+    ch.unsubscribe();
     if(testAudio) { testAudio.src=audioUrl; testAudio.play().catch(e=>console.warn('Erro ao tocar localmente:',e)); }
 }
 
@@ -2723,7 +2730,7 @@ async function startLiveLocutor() {
         const source = liveAudioCtx.createMediaStreamSource(liveStream);
         liveProcessor = liveAudioCtx.createScriptProcessor(4096, 1, 1);
 
-        liveBroadcastCh = supabase.channel('live_locutor_admin');
+        liveBroadcastCh = supabase.channel('live_locutor_player', { config: { private: true } });
         await liveBroadcastCh.subscribe();
 
         await liveBroadcastCh.send({ type:'broadcast', event:'live_locutor_start', payload:{} });
