@@ -182,10 +182,44 @@ async function checkAuth() {
 function showLoginScreen() {
     loginScreen.style.display='flex'; adminPanel.style.display='none';
     document.getElementById('logoutBtn').style.display='none';
+    stopIdleTimer();
 }
 function showAdminPanel() {
     loginScreen.style.display='none'; adminPanel.style.display='block';
     document.getElementById('logoutBtn').style.display='block';
+    startIdleTimer();
+}
+
+// ─────────────────────────────────────────────────────────────
+// EXPIRAÇÃO DE SESSÃO POR INATIVIDADE (1 hora)
+// Evita que uma sessão fique aberta indefinidamente num computador/celular
+// compartilhado caso alguém esqueça de clicar em "Sair".
+// ─────────────────────────────────────────────────────────────
+const IDLE_LIMIT_MS = 60 * 60 * 1000; // 1 hora
+let idleTimer = null;
+
+function resetIdleTimer() {
+    if(adminPanel.style.display !== 'block') return; // painel fechado, nada a fazer
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(async () => {
+        await supabase.auth.signOut();
+        showLoginScreen();
+        alert('⏱️ Sua sessão expirou por inatividade (1 hora). Faça login novamente.');
+    }, IDLE_LIMIT_MS);
+}
+
+function startIdleTimer() {
+    resetIdleTimer();
+    ['mousemove','mousedown','keydown','scroll','touchstart','click'].forEach(evt =>
+        document.addEventListener(evt, resetIdleTimer, { passive: true })
+    );
+}
+
+function stopIdleTimer() {
+    clearTimeout(idleTimer); idleTimer = null;
+    ['mousemove','mousedown','keydown','scroll','touchstart','click'].forEach(evt =>
+        document.removeEventListener(evt, resetIdleTimer)
+    );
 }
 
 function setupLoginListeners() {
@@ -2608,21 +2642,21 @@ async function loadAnalytics() {
             <input type="text" class="table-search-input" placeholder="🔍 Buscar..."><div class="table-container">
                 <table class="data-table">
                     <thead><tr><th>#</th><th>Título</th><th>Artista</th><th>Grade</th><th>Reproduções</th></tr></thead>
-                    <tbody>${sorted.map((t,i)=>`<tr><td style="font-weight:700;color:#006b3f;">${i+1}</td><td style="font-weight:500;">${t.title||'-'}</td><td style="color:#666;">${t.artist||'-'}</td><td style="color:#666;">${t.slot||'-'}</td><td><span style="padding:3px 10px;background:#e6f4ed;border-radius:10px;font-weight:700;color:#006b3f;">${t.count}×</span></td></tr>`).join('')}</tbody>
+                    <tbody>${sorted.map((t,i)=>`<tr><td style="font-weight:700;color:#006b3f;">${i+1}</td><td style="font-weight:500;">${escapeHtml(t.title)||'-'}</td><td style="color:#666;">${escapeHtml(t.artist)||'-'}</td><td style="color:#666;">${escapeHtml(t.slot)||'-'}</td><td><span style="padding:3px 10px;background:#e6f4ed;border-radius:10px;font-weight:700;color:#006b3f;">${t.count}×</span></td></tr>`).join('')}</tbody>
                 </table>
             </div>
             <h4 style="margin:20px 0 10px;color:#333;">🕐 Reproduções por grade</h4>
             <input type="text" class="table-search-input" placeholder="🔍 Buscar..."><div class="table-container">
                 <table class="data-table">
                     <thead><tr><th>Grade</th><th>Reproduções</th></tr></thead>
-                    <tbody>${slotSorted.map(([slot,count])=>`<tr><td style="font-weight:500;">${slot}</td><td><span style="padding:3px 10px;background:#e3f2fd;border-radius:10px;font-weight:700;color:#1976d2;">${count}×</span></td></tr>`).join('')}</tbody>
+                    <tbody>${slotSorted.map(([slot,count])=>`<tr><td style="font-weight:500;">${escapeHtml(slot)}</td><td><span style="padding:3px 10px;background:#e3f2fd;border-radius:10px;font-weight:700;color:#1976d2;">${count}×</span></td></tr>`).join('')}</tbody>
                 </table>
             </div>
             <h4 style="margin:20px 0 10px;color:#333;">🕐 Últimas reproduções</h4>
             <input type="text" class="table-search-input" placeholder="🔍 Buscar..."><div class="table-container">
                 <table class="data-table">
                     <thead><tr><th>Título</th><th>Grade</th><th>Horário</th></tr></thead>
-                    <tbody>${(recent||[]).map(r=>`<tr><td style="font-weight:500;">${r.title||'-'}</td><td style="color:#666;">${r.slot_name||'-'}</td><td style="color:#999;font-size:11px;">${new Date(r.played_at).toLocaleString('pt-BR')}</td></tr>`).join('')}</tbody>
+                    <tbody>${(recent||[]).map(r=>`<tr><td style="font-weight:500;">${escapeHtml(r.title)||'-'}</td><td style="color:#666;">${escapeHtml(r.slot_name)||'-'}</td><td style="color:#999;font-size:11px;">${new Date(r.played_at).toLocaleString('pt-BR')}</td></tr>`).join('')}</tbody>
                 </table>
             </div>
             <div style="margin-top:12px;"><button class="clear-btn" onclick="clearAnalytics()">🗑️ Limpar histórico</button></div>
