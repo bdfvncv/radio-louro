@@ -1,0 +1,29 @@
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "geolocation=(), camera=(), payment=(), usb=(), microphone=(self)"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://res.cloudinary.com https://*.ytimg.com https://*.supabase.co; media-src 'self' https://res.cloudinary.com blob: data:; connect-src 'self' https://dyzjsgfoaxyeyepoylvg.supabase.co wss://dyzjsgfoaxyeyepoylvg.supabase.co https://api.cloudinary.com https://www.googleapis.com https://api.cobalt.liubquanti.click https://cobaltapi.kittycat.boo https://dog.kittycat.boo https://kitty.tame.gg https://rue-cobalt.xenon.zone; frame-src https://www.youtube.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
+        }
+      ]
+    }
+  ]
+}
