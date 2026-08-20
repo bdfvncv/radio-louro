@@ -8,6 +8,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="icon" type="image/png" href="logo.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#006b3f">
+    <link rel="apple-touch-icon" href="logo.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body class="player-body">
 
@@ -182,7 +187,7 @@
                 </div>
                 <button class="player-sync-btn" id="syncBtn">🔄 Sincronizar</button>
             </div>
-            <audio id="audioPlayer" preload="auto"></audio>
+            <audio id="audioPlayer" preload="auto" playsinline></audio>
         </div>
 
         <!-- SUGERIR MÚSICA -->
@@ -221,10 +226,12 @@
 
     <script type="module">
         // Motion (motion.dev) — biblioteca de animação com física de mola, sem precisar de build/React
-        import { animate, stagger } from "https://cdn.jsdelivr.net/npm/motion@11/+esm";
+        import { animate, stagger } from "https://cdn.jsdelivr.net/npm/motion@11.18.2/+esm";
         window.__motion = { animate, stagger };
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"
+            integrity="sha384-4gGeyPSquYHrZEJmJCQzoCNHpg6DDGf2QladEfZjglbzKQ9rnJtLT7kDFMJS3LIN"
+            crossorigin="anonymous"></script>
     <script src="player.js"></script>
 </body>
 </html>
