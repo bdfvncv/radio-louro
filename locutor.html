@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎙️ Painel do Locutor — Rádio Louro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="logo.png">
+</head>
+<body class="admin-body">
+
+<!-- ── LOGIN (só senha) ── -->
+<div class="login-overlay" id="loginScreen">
+    <div class="login-desktop-wrap">
+        <div class="login-illustration" aria-hidden="true">
+            <svg viewBox="180 40 320 500" xmlns="http://www.w3.org/2000/svg">
+                <title>Personagem com microfone</title>
+                <style>
+                .char-sway{transform-box:fill-box;transform-origin:340px 300px;animation:char-sway 3.4s ease-in-out infinite}
+                .char-note{transform-box:fill-box;animation:char-noteFloat 3s ease-in-out infinite}
+                .char-note.n2{animation-delay:.6s}
+                .char-note.n3{animation-delay:1.2s}
+                @keyframes char-sway{0%,100%{transform:rotate(-1deg)}50%{transform:rotate(1deg)}}
+                @keyframes char-noteFloat{0%{opacity:0;transform:translateY(0)}20%{opacity:1}80%{opacity:1}100%{opacity:0;transform:translateY(-30px)}}
+                @media (prefers-reduced-motion: reduce) { .char-sway,.char-note{animation:none !important} }
+                [fill="#0b3d2e"] { fill: var(--green, #0b3d2e); }
+                [fill="#c9a227"] { fill: var(--gold, #c9a227); }
+                [fill="#1f8a5f"] { fill: var(--green-mid, #1f8a5f); }
+                </style>
+                <ellipse cx="340" cy="516" rx="90" ry="14" fill="#0b3d2e" opacity=".08"/>
+                <g class="char-sway">
+                    <rect x="300" y="330" width="80" height="28" rx="14" fill="#0b3d2e"/>
+                    <rect x="306" y="340" width="32" height="86" rx="16" fill="#0b3d2e"/>
+                    <circle cx="322" cy="426" r="16" fill="#0b3d2e"/>
+                    <rect x="342" y="340" width="32" height="80" rx="16" fill="#0b3d2e"/>
+                    <circle cx="358" cy="420" r="16" fill="#0b3d2e"/>
+                    <path d="M296 200 C286 225 290 250 302 272 C308 285 303 300 300 315 C298 325 297 333 298 340 L382 340 C383 333 382 325 380 315 C377 300 372 285 378 272 C390 250 394 225 384 200 C368 188 312 188 296 200 Z" fill="#c9a227"/>
+                    <ellipse cx="340" cy="128" rx="46" ry="50" fill="#a9673f"/>
+                    <rect x="322" y="168" width="36" height="34" rx="10" fill="#a9673f"/>
+                    <!-- microfone -->
+                    <rect x="328" y="90" width="24" height="46" rx="12" fill="#2f352f"/>
+                    <rect x="336" y="136" width="8" height="20" fill="#2f352f"/>
+                    <rect x="320" y="154" width="40" height="6" rx="3" fill="#2f352f"/>
+                    <path d="M312 108 a28 28 0 0 0 56 0" fill="none" stroke="#2f352f" stroke-width="5" stroke-linecap="round"/>
+                </g>
+                <g class="char-note" fill="#c9a227">
+                    <circle cx="470" cy="150" r="7"/><rect x="474" y="100" width="4" height="52"/>
+                    <path d="M478 100 q16 -4 16 10 q-8 -4 -16 0 Z"/>
+                </g>
+                <g class="char-note n2" fill="#1f8a5f">
+                    <circle cx="210" cy="180" r="6"/><rect x="213" y="138" width="3.5" height="44"/>
+                </g>
+                <g class="char-note n3" fill="#c9a227">
+                    <circle cx="440" cy="230" r="5.5"/><rect x="442" y="192" width="3" height="40"/>
+                </g>
+            </svg>
+        </div>
+        <div class="login-box">
+            <img src="logo.png" alt="Logo" class="login-logo">
+            <h2 class="login-title">🎙️ Painel do Locutor</h2>
+            <p class="login-sub">Acesso restrito — Rádio 24H</p>
+            <form id="loginForm" onsubmit="return false;">
+                <input type="password" id="passwordInput" class="login-input" placeholder="Digite a senha" autocomplete="current-password" required>
+                <button type="submit" class="login-btn">Entrar</button>
+            </form>
+            <p class="error-message" id="loginError"></p>
+            <a href="index.html" class="back-link">← Voltar ao Player</a>
+        </div>
+    </div>
+</div>
+
+<!-- ── PAINEL RESTRITO ── -->
+<div class="locutor-panel-wrap" id="locutorPanel" style="display:none;">
+    <header class="locutor-panel-header">
+        <div class="locutor-panel-brand">
+            <img src="logo.png" alt="" class="locutor-panel-logo">
+            <div>
+                <h1>🎙️ Painel do Locutor</h1>
+                <span>Rádio 24H — acesso restrito</span>
+            </div>
+        </div>
+        <button class="sidebar-logout" id="logoutBtn">← Sair</button>
+    </header>
+
+    <main class="locutor-panel-main">
+
+        <!-- ═══ ALERTA DE EMERGÊNCIA ═══ -->
+        <section class="admin-card locutor-panel-section">
+            <div class="section-header"><h2>🚨 Alerta de Emergência</h2></div>
+            <p class="section-desc">Dispara um alerta imediato em todos os players. A música pausa e o alerta toca em loop até você encerrar.</p>
+
+            <div class="admin-card" style="box-shadow:none;border:1px solid var(--gray-200);">
+                <div class="emergency-status-bar">
+                    <div class="locutor-indicator" id="emergencyIndicator"></div>
+                    <div class="locutor-status-text" id="emergencyStatusText">Alerta inativo</div>
+                    <button class="emergency-btn" id="emergencyBtn">🚨 Disparar Alerta</button>
+                </div>
+            </div>
+
+            <div class="admin-card" style="box-shadow:none;border:1px solid var(--gray-200);">
+                <h3 class="card-title">⚙️ Configurar Alerta</h3>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label>Tipo de alerta:</label>
+                    <div style="display:flex;gap:12px;margin-top:6px;flex-wrap:wrap;">
+                        <label style="font-weight:normal;font-size:13px;display:flex;align-items:center;gap:6px;">
+                            <input type="radio" name="emergencyType" id="emergencyUseTTS" value="tts" checked
+                                onchange="document.getElementById('emergencyTTSGroup').style.display='block';document.getElementById('emergencyAudioGroup').style.display='none';">
+                            🗣️ Voz (TTS)
+                        </label>
+                        <label style="font-weight:normal;font-size:13px;display:flex;align-items:center;gap:6px;">
+                            <input type="radio" name="emergencyType" id="emergencyUseAudio" value="audio"
+                                onchange="document.getElementById('emergencyTTSGroup').style.display='none';document.getElementById('emergencyAudioGroup').style.display='block';">
+                            🎵 Áudio pré-gravado
+                        </label>
+                    </div>
+                </div>
+                <div id="emergencyTTSGroup">
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label>Mensagem de emergência:</label>
+                        <textarea id="emergencyMessage" class="tts-textarea" placeholder="Ex: Atenção clientes, por favor se dirijam às saídas com calma." maxlength="300" style="min-height:70px;"></textarea>
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label>Voz:</label>
+                        <select id="emergencyVoice" class="tts-voice-select" style="width:100%;">
+                            <option value="Brazilian Portuguese Female">Feminina (Português BR)</option>
+                            <option value="Brazilian Portuguese Male">Masculina (Português BR)</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="emergencyAudioGroup" style="display:none;">
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label>URL do áudio (Cloudinary):</label>
+                        <input type="url" id="emergencyAudioUrl" class="suggest-input" placeholder="https://res.cloudinary.com/...">
+                    </div>
+                </div>
+                <div class="admin-subcard" style="background:#fff5f5;border-color:#fecaca;">
+                    <p style="font-size:12px;color:#991b1b;line-height:1.6;">⚠️ <strong>Atenção:</strong> Ao disparar, TODOS os players pausam imediatamente e o alerta toca em loop. Só encerre quando a situação estiver resolvida.</p>
+                </div>
+            </div>
+
+            <div class="admin-card" style="box-shadow:none;border:1px solid var(--gray-200);">
+                <h3 class="card-title">📋 Mensagens Rápidas</h3>
+                <div class="emergency-presets">
+                    <button class="emergency-preset-btn" onclick="setEmergencyMessage('Atenção clientes! Por favor, se dirijam às saídas com calma e tranquilidade. Obrigado.')">🚪 Evacuação</button>
+                    <button class="emergency-preset-btn" onclick="setEmergencyMessage('Atenção! Solicitamos que todos os clientes permaneçam em seus locais por alguns instantes. Agradecemos a compreensão.')">⏸️ Permaneçam</button>
+                    <button class="emergency-preset-btn" onclick="setEmergencyMessage('Atenção! O Supermercado do Louro estará encerrando suas atividades em 15 minutos. Por favor, finalizem suas compras.')">🔒 Fechamento</button>
+                    <button class="emergency-preset-btn" onclick="setEmergencyMessage('Atenção clientes! Há uma criança perdida na loja. Se encontrar, por favor leve ao caixa central. Obrigado.')">👶 Criança perdida</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ PROMOÇÃO RELÂMPAGO ═══ -->
+        <section class="admin-card locutor-panel-section">
+            <div class="section-header"><h2>⚡ Promoção Relâmpago</h2></div>
+            <p class="section-desc">Anuncia uma promoção com contagem regressiva visível no player. O TTS dispara no início e avisa quando restam 2 minutos.</p>
+
+            <div class="admin-card" style="box-shadow:none;border:1px solid var(--gray-200);">
+                <div class="locutor-status-bar">
+                    <div class="locutor-indicator" id="flashIndicator"></div>
+                    <div style="flex:1;">
+                        <div class="locutor-status-text" id="flashStatusText">Nenhuma promoção ativa</div>
+                        <div id="flashCountdown" style="font-size:20px;font-weight:700;color:#f59e0b;display:none;font-variant-numeric:tabular-nums;"></div>
+                    </div>
+                    <button class="emergency-btn" id="flashStopBtn" style="display:none;background:#dc3545;">⏹ Encerrar</button>
+                </div>
+            </div>
+
+            <div class="admin-card" style="box-shadow:none;border:1px solid var(--gray-200);">
+                <h3 class="card-title">⚡ Disparar Promoção</h3>
+                <form class="edit-form" id="flashForm">
+                    <div class="form-group"><label>Título:</label><input type="text" id="flashTitle" placeholder="Ex: Desconto no açougue!" required></div>
+                    <div class="form-group"><label>Texto para voz (TTS):</label><textarea id="flashText" class="tts-textarea" style="min-height:60px;" placeholder="Ex: Atenção clientes! Por 15 minutos, todo o açougue com 20% de desconto. Aproveite!" required></textarea></div>
+                    <div class="form-group"><label>Duração (minutos):</label><input type="number" id="flashDuration" value="15" min="1" max="120"><small>Contagem regressiva visível no player</small></div>
+                    <div class="form-actions"><button type="submit" class="submit-btn" style="background:#f59e0b;">⚡ Disparar Agora</button></div>
+                </form>
+            </div>
+
+            <div class="admin-card" style="box-shadow:none;border:1px solid var(--gray-200);">
+                <h3 class="card-title">📋 Promoções Rápidas</h3>
+                <div class="form-row-2col form-row-2col-tight">
+                    <button class="emergency-preset-btn" onclick="setFlashPreset('Desconto no Açougue','Atenção clientes! Por tempo limitado, todo o açougue com desconto especial!',15)">🥩 Açougue</button>
+                    <button class="emergency-preset-btn" onclick="setFlashPreset('Promoção do Dia','Atenção clientes! Produtos selecionados com preços especiais por tempo limitado!',20)">🏷️ Promoção do Dia</button>
+                    <button class="emergency-preset-btn" onclick="setFlashPreset('Frutaria em Oferta','Atenção clientes! Frutas e verduras fresquinhas com preço especial agora!',15)">🍎 Frutaria</button>
+                    <button class="emergency-preset-btn" onclick="setFlashPreset('Padaria Especial','Atenção clientes! Pão fresquinho com desconto especial na padaria!',10)">🍞 Padaria</button>
+                </div>
+            </div>
+
+            <div class="admin-card" style="box-shadow:none;border:1px solid var(--gray-200);">
+                <div class="section-header" style="margin-bottom:8px;"><h3 class="card-title" style="margin:0;">📊 Histórico</h3><button class="submit-btn" onclick="loadFlashHistory()" style="font-size:12px;padding:7px 14px;">🔄 Atualizar</button></div>
+                <input type="text" class="table-search-input" placeholder="🔍 Buscar..."><div class="table-container"><table class="data-table"><thead><tr><th>Título</th><th>Duração</th><th>Disparada em</th><th>Encerrada em</th></tr></thead><tbody id="flashHistoryBody"><tr><td colspan="4" style="text-align:center;padding:20px;color:#999;">Nenhum histórico.</td></tr></tbody></table></div>
+            </div>
+        </section>
+
+        <!-- ═══ LOCUTOR E PROMOÇÕES EM VOZ ═══ -->
+        <section class="admin-card locutor-panel-section">
+            <div class="section-header"><h2>🎙️ Locutor e Promoções em Voz</h2></div>
+
+            <div class="admin-card" style="box-shadow:none;border:1px solid var(--gray-200);">
+                <h3 class="card-title">🎙️ Botão Locutor</h3>
+                <p class="section-desc">Selecione uma locução, aperte o botão e a música pausa em todos os players automaticamente.</p>
+                <div class="locutor-status-bar">
+                    <div class="locutor-indicator" id="locutorIndicator"></div>
+                    <div class="locutor-status-text" id="locutorStatusText">Locutor inativo</div>
+                    <button class="locutor-play-btn" id="locutorPlayBtn" disabled>🎙️ Iniciar</button>
+                </div>
+                <div class="locutor-tracks-list" id="locutorTracksList"><div style="color:#999;font-size:13px;padding:10px;">Nenhuma locução cadastrada.</div></div>
+                <div class="admin-subcard">
+                    <h4>➕ Adicionar Locução</h4>
+                    <form class="edit-form" id="locutorForm">
+                        <div class="form-group"><label>Título:</label><input type="text" id="locutorTitle" placeholder="Ex: Promoção de Segunda" required></div>
+                        <div class="form-group"><label>Descrição:</label><input type="text" id="locutorDesc" placeholder="Opcional"></div>
+                        <div class="form-group">
+                            <label>🎵 Enviar arquivo do dispositivo:</label>
+                            <input type="file" id="locutorFile" accept="audio/*">
+                            <small id="locutorFileStatus"></small>
+                        </div>
+                        <div class="form-group"><label>Ou cole a URL do áudio:</label><input type="url" id="locutorUrl" placeholder="https://res.cloudinary.com/..."></div>
+                        <div class="form-actions">
+                            <button type="submit" class="submit-btn">💾 Salvar</button>
+                            <button type="button" class="test-btn" id="locutorTestBtn">▶️ Testar</button>
+                            <button type="button" class="clear-btn" id="locutorClearBtn">🗑️ Limpar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="admin-card" style="box-shadow:none;border:1px solid var(--gray-200);">
+                <h3 class="card-title">🎙️ Locutor Ao Vivo (Microfone)</h3>
+                <p class="section-desc">Fale diretamente pelo microfone do seu dispositivo. O áudio vai em tempo real para todos os players abertos.</p>
+                <div class="locutor-status-bar">
+                    <div class="locutor-indicator" id="liveLocutorIndicator"></div>
+                    <div class="locutor-status-text" id="liveLocutorStatus">Inativo</div>
+                    <button class="locutor-play-btn" id="liveLocutorBtn">🎙️ Iniciar ao vivo</button>
+                </div>
+                <div class="section-desc" style="margin-top:8px;margin-bottom:0;">⚠️ O navegador pedirá permissão para acessar o microfone. Funciona melhor no Chrome/Edge.</div>
+            </div>
+
+            <div class="admin-card" style="box-shadow:none;border-left:4px solid #f59e0b;background:#fffbf0;">
+                <h3 class="card-title" style="color:#92400e;">📣 Chamada de Funcionário</h3>
+                <p class="section-desc" style="border-color:#f59e0b;background:#fff8e1;">Chame um funcionário pelo nome em todos os players com um clique.</p>
+                <form class="edit-form" id="chamadaForm">
+                    <div class="chamada-fields-grid">
+                        <div class="form-group"><label>Nome do Funcionário:</label><input type="text" id="chamadaNome" placeholder="Ex: Maria, João..." required></div>
+                        <div class="form-group"><label>Setor do Funcionário:</label><input type="text" id="chamadaSetor" placeholder="Ex: Caixa, Açougue..." required></div>
+                    </div>
+                    <div class="form-group"><label>Comparecer a (opcional):</label><input type="text" id="chamadaDestino" placeholder="Ex: Gerência, Caixa 3, Estoque..."></div>
+                    <div class="form-actions"><button type="submit" class="submit-btn" style="background:#f59e0b;">📣 Chamar Agora</button></div>
+                </form>
+                <h4 style="margin:14px 0 8px;color:#92400e;font-size:13px;">⚡ Atalhos Rápidos</h4>
+                <p style="font-size:12px;color:#666;margin-bottom:10px;">Digite o nome acima e clique no setor de destino:</p>
+                <div class="chamada-shortcuts-grid">
+                    <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('Caixa','à gerência')">🛒 Gerência</button>
+                    <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('','ao caixa central')">💰 Caixa Central</button>
+                    <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('','ao açougue')">🥩 Açougue</button>
+                    <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('','à padaria')">🍞 Padaria</button>
+                    <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('','à frutaria')">🍎 Frutaria</button>
+                    <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('','ao estoque')">📦 Estoque</button>
+                    <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('','à segurança')">🔒 Segurança</button>
+                    <button class="emergency-preset-btn" style="border-color:#f59e0b;" onclick="chamadaRapida('','à limpeza')">🧹 Limpeza</button>
+                </div>
+            </div>
+
+            <div class="admin-card" style="box-shadow:none;border:1px solid var(--gray-200);">
+                <h3 class="card-title">📢 Promoções em Voz (TTS)</h3>
+                <p class="section-desc">Digite o texto e dispare com voz em todos os players, via ElevenLabs.</p>
+                <div id="elevenLabsUsageBar" style="margin-bottom:12px;padding:10px 14px;background:#f0faf5;border-radius:8px;border:1px solid #a7d9bb;">
+                    <span style="font-size:12px;color:#666;">Carregando consumo ElevenLabs...</span>
+                </div>
+                <div class="tts-compose">
+                    <div class="form-group"><label>Título:</label><input type="text" id="ttsTitleInput" placeholder="Ex: Promoção de Quinta"></div>
+                    <div class="form-group"><label>Categoria:</label>
+                        <select id="ttsCategoryInput">
+                            <option value="promocao">🏷️ Promoção</option>
+                            <option value="aviso">📣 Aviso</option>
+                            <option value="saudacao">👋 Saudação</option>
+                            <option value="encerramento">🌙 Encerramento</option>
+                            <option value="geral">📝 Geral</option>
+                        </select>
+                    </div>
+                    <div class="tts-voice-row" style="flex-direction:column;align-items:flex-start;gap:8px;">
+                        <span class="tts-voice-label">🎙️ Voz (ElevenLabs):</span>
+                        <select class="tts-voice-select" id="ttsVoiceSelect" style="width:100%;"></select>
+                    </div>
+                    <textarea class="tts-textarea" id="ttsTextInput" placeholder="Digite o texto que será lido em voz alta..." maxlength="500"></textarea>
+                    <div class="tts-char-count"><span id="ttsCharCount">0</span>/500</div>
+                    <div class="form-actions">
+                        <button class="tts-play-btn" id="ttsPlayNowBtn">🔊 Gerar e Tocar Agora</button>
+                    </div>
+                    <div class="form-actions" style="margin-top:8px;">
+                        <button class="submit-btn" id="ttsSaveBtn">💾 Gerar e Salvar na Biblioteca</button>
+                        <button class="clear-btn" id="ttsClearBtn">🗑️ Limpar</button>
+                    </div>
+                </div>
+                <h4 style="margin:16px 0 10px;color:#333;">📚 Biblioteca</h4>
+                <div class="tts-library-grid" id="ttsLibraryGrid"><div style="color:#999;font-size:13px;padding:10px;">Carregando...</div></div>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<audio id="testAudio" style="display:none;"></audio>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"
+        integrity="sha384-4gGeyPSquYHrZEJmJCQzoCNHpg6DDGf2QladEfZjglbzKQ9rnJtLT7kDFMJS3LIN"
+        crossorigin="anonymous"></script>
+<script src="locutor.js"></script>
+</body>
+</html>
