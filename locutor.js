@@ -14,7 +14,7 @@ const CLOUDINARY_UPLOAD_PRESET = 'radio_louro_preset';
 // E-mail fixo da conta "locutor" no Supabase Auth — a pessoa que usa esse
 // painel só digita a senha, nunca vê nem precisa saber desse e-mail.
 // Você (admin principal) cria essa conta no painel do Supabase.
-const LOCUTOR_FIXED_EMAIL = 'locutor@radio-louro.app';
+const LOCUTOR_FIXED_EMAIL = 'locutor@radiolouro.interno';
 
 const FUNCTION_SECRET   = 'Deno@123#';
 const TTS_FUNCTION_URL  = `${SUPABASE_URL}/functions/v1/tts-generate`;
@@ -51,7 +51,16 @@ async function handleLogin() {
         if (error) throw error;
         showPanel();
     } catch (err) {
-        errEl.textContent = 'Senha incorreta.';
+        // Mostra o motivo real (ajuda a diagnosticar: senha errada vs.
+        // conta não confirmada vs. conta não existe com esse e-mail)
+        const msg = (err.message || '').toLowerCase();
+        if (msg.includes('email not confirmed')) {
+            errEl.textContent = 'Conta ainda não confirmada. Peça pro admin confirmar o e-mail no Supabase (Authentication → Users → editar usuário → Auto Confirm).';
+        } else if (msg.includes('invalid login credentials')) {
+            errEl.textContent = 'Senha incorreta (ou a conta ainda não foi criada no Supabase).';
+        } else {
+            errEl.textContent = 'Erro ao entrar: ' + (err.message || 'desconhecido');
+        }
         errEl.classList.add('show');
     }
 }
