@@ -459,8 +459,12 @@ body.is-playing .hero-wave span {
 }
 
 /* ── Admin link / footer ── */
+.player-links-row {
+  display: flex; gap: 10px;
+}
+
 .player-admin-link {
-  display: block; text-align: center;
+  display: block; text-align: center; flex: 1;
   background: rgba(255,255,255,.85);
   backdrop-filter: blur(16px) saturate(160%);
   -webkit-backdrop-filter: blur(16px) saturate(160%);
@@ -476,6 +480,10 @@ body.is-playing .hero-wave span {
   background: rgba(255,255,255,.96);
   border-color: var(--green);
   text-decoration: none;
+}
+
+.player-locutor-link {
+  color: #7c3aed; /* roxo — diferencia visualmente do link de admin */
 }
 
 .player-footer {
@@ -1405,6 +1413,7 @@ html, body { overflow-x: hidden; }
   .suggest-search-row { flex-wrap: wrap; }
   .suggest-search-row .suggest-input { flex: 1 1 100%; }
   .suggest-search-row .suggest-search-btn { flex: 1 1 100%; }
+  .player-links-row { flex-direction: column; }
 }
 
 .suggest-results {
@@ -1900,4 +1909,34 @@ html, body { overflow-x: hidden; }
   }
   .login-illustration svg { width: 100%; height: auto; display: block; overflow: visible; }
   .login-box { max-width: 380px; }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   PAINEL RESTRITO DO LOCUTOR (locutor.html)
+   Reaproveita quase todo o design system do admin — só o cabeçalho e o
+   layout de seções em coluna única são específicos daqui.
+───────────────────────────────────────────────────────────── */
+.locutor-panel-wrap { max-width: 900px; margin: 0 auto; padding: 0 0 60px; }
+
+.locutor-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; background: var(--white); border-bottom: 1px solid var(--gray-200);
+  position: sticky; top: 0; z-index: 20;
+}
+.locutor-panel-brand { display: flex; align-items: center; gap: 12px; }
+.locutor-panel-logo { width: 40px; height: 40px; object-fit: contain; border-radius: 8px; }
+.locutor-panel-brand h1 { font-size: 1.05em; color: var(--green); margin: 0; line-height: 1.2; }
+.locutor-panel-brand span { font-size: .78em; color: var(--gray-500); }
+
+.locutor-panel-main { padding: 20px 16px; display: flex; flex-direction: column; gap: 20px; }
+
+.locutor-panel-section { padding: 20px; }
+.locutor-panel-section > .section-header h2 { font-size: 1.15em; }
+.locutor-panel-section .admin-card { margin-top: 14px; padding: 16px; }
+
+@media (max-width: 640px) {
+  .locutor-panel-header { padding: 12px 14px; }
+  .locutor-panel-brand h1 { font-size: .95em; }
+  .locutor-panel-main { padding: 14px 10px; gap: 14px; }
+  .locutor-panel-section { padding: 14px; }
 }
