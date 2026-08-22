@@ -123,7 +123,7 @@ let emergencyActive = false;
 
 async function loadEmergencyState() {
     try {
-        const {data} = await supabase.from('emergency_state').select('*').eq('id',1).single();
+        const {data} = await supabase.from('emergency_alert').select('*').eq('id',1).single();
         if(!data) return;
         emergencyActive = data.is_active;
         renderEmergencyUI(data);
@@ -143,18 +143,25 @@ function renderEmergencyUI(state) {
         if(ind) ind.classList.remove('active');
         if(txt) txt.textContent = 'Alerta inativo';
     }
+    if(state?.tts_text != null) { const el=document.getElementById('emergencyMessage'); if(el) el.value = state.tts_text; }
+    if(state?.audio_url != null) { const el=document.getElementById('emergencyAudioUrl'); if(el) el.value = state.audio_url; }
+    if(state?.repeat_interval_sec != null) { const el=document.getElementById('emergencyRepeatSec'); if(el) el.value = state.repeat_interval_sec; }
+    if(state?.mode === 'audio') {
+        const r = document.getElementById('emergencyUseAudio');
+        if(r) { r.checked = true; document.getElementById('emergencyTTSGroup').style.display='none'; document.getElementById('emergencyAudioGroup').style.display='block'; }
+    }
 }
 async function toggleEmergency() {
     const newStatus = !emergencyActive;
     const message   = document.getElementById('emergencyMessage')?.value.trim();
     const audioUrl  = document.getElementById('emergencyAudioUrl')?.value.trim();
     const useTTS    = document.querySelector('input[name="emergencyType"]:checked')?.value !== 'audio';
-    const voice     = document.getElementById('emergencyVoice')?.value || 'Brazilian Portuguese Female';
+    const repeatSec = parseInt(document.getElementById('emergencyRepeatSec')?.value, 10) || 30;
     if(newStatus && !message && !audioUrl) { alert('Preencha a mensagem de texto ou a URL do áudio de emergência.'); return; }
     try {
-        await supabase.from('emergency_state').update({
-            is_active: newStatus, message: message || null, audio_url: audioUrl || null,
-            use_tts: useTTS, voice: voice,
+        await supabase.from('emergency_alert').update({
+            is_active: newStatus, tts_text: message || null, audio_url: audioUrl || null,
+            mode: useTTS ? 'tts' : 'audio', repeat_interval_sec: repeatSec,
             activated_at: newStatus ? new Date().toISOString() : null,
             updated_at: new Date().toISOString()
         }).eq('id', 1);
@@ -655,7 +662,7 @@ function setupAllListeners() {
     // Emergência
     document.getElementById('emergencyBtn')?.addEventListener('click', toggleEmergency);
     supabase.channel('emergency_locutor')
-        .on('postgres_changes', {event:'UPDATE', schema:'public', table:'emergency_state'},
+        .on('postgres_changes', {event:'UPDATE', schema:'public', table:'emergency_alert'},
             payload => { emergencyActive = payload.new.is_active; renderEmergencyUI(payload.new); })
         .subscribe();
 
