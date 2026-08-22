@@ -148,8 +148,24 @@
 
     <main class="locutor-panel-main">
 
+        <!-- ═══ ABAS ═══ -->
+        <div class="locutor-tabs">
+            <button class="locutor-tab active" data-tab="emergency">
+                <span class="locutor-tab-icon">🚨</span>
+                <span class="locutor-tab-label">Emergência</span>
+            </button>
+            <button class="locutor-tab" data-tab="flash">
+                <span class="locutor-tab-icon">⚡</span>
+                <span class="locutor-tab-label">Promoção Relâmpago</span>
+            </button>
+            <button class="locutor-tab" data-tab="locutor">
+                <span class="locutor-tab-icon">🎙️</span>
+                <span class="locutor-tab-label">Locutor e Voz</span>
+            </button>
+        </div>
+
         <!-- ═══ ALERTA DE EMERGÊNCIA ═══ -->
-        <section class="admin-card locutor-panel-section">
+        <section class="admin-card locutor-panel-section locutor-tab-panel" id="tabpanel-emergency">
             <div class="section-header"><h2>🚨 Alerta de Emergência</h2></div>
             <p class="section-desc">Dispara um alerta imediato em todos os players. A música pausa e o alerta toca em loop até você encerrar.</p>
 
@@ -213,7 +229,7 @@
         </section>
 
         <!-- ═══ PROMOÇÃO RELÂMPAGO ═══ -->
-        <section class="admin-card locutor-panel-section">
+        <section class="admin-card locutor-panel-section locutor-tab-panel" id="tabpanel-flash" style="display:none;">
             <div class="section-header"><h2>⚡ Promoção Relâmpago</h2></div>
             <p class="section-desc">Anuncia uma promoção com contagem regressiva visível no player. O TTS dispara no início e avisa quando restam 2 minutos.</p>
 
@@ -255,7 +271,7 @@
         </section>
 
         <!-- ═══ LOCUTOR E PROMOÇÕES EM VOZ ═══ -->
-        <section class="admin-card locutor-panel-section">
+        <section class="admin-card locutor-panel-section locutor-tab-panel" id="tabpanel-locutor" style="display:none;">
             <div class="section-header"><h2>🎙️ Locutor e Promoções em Voz</h2></div>
 
             <div class="admin-card" style="box-shadow:none;border:1px solid var(--gray-200);">
