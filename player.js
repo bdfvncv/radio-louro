@@ -160,8 +160,61 @@ function animatePlayPress(el) {
     animate(el, { scale: [0.88, 1] }, { type: 'spring', stiffness: 400, damping: 15 });
 }
 
+// ─────────────────────────────────────────────────────────────
+// LICENÇA
+// Se a data de validade passou, o player para de funcionar por completo
+// e mostra um aviso — em vez de simplesmente continuar tocando de graça.
+// ─────────────────────────────────────────────────────────────
+async function checkLicense() {
+    try {
+        const { data } = await supabase.from('license_info').select('*').eq('id', 1).single();
+        if(!data) return true; // tabela não existe ainda nesse projeto — não bloqueia
+        if(new Date(data.expires_at) < new Date()) {
+            showLicenseExpiredScreen(data.company_name);
+            return false;
+        }
+        // Confere de novo periodicamente, caso a licença vença com a página já aberta
+        if(!window._licenseInterval) {
+            window._licenseInterval = setInterval(async () => {
+                const { data: fresh } = await supabase.from('license_info').select('*').eq('id',1).single();
+                if(fresh && new Date(fresh.expires_at) < new Date()) {
+                    clearInterval(window._licenseInterval);
+                    if(isPlaying) { audioPlayer.pause(); isPlaying=false; }
+                    showLicenseExpiredScreen(fresh.company_name);
+                }
+            }, 5 * 60 * 1000); // a cada 5 minutos
+        }
+        return true;
+    } catch(err) {
+        console.warn('Checagem de licença falhou (seguindo normalmente):', err);
+        return true; // erro de rede/tabela não bloqueia o player
+    }
+}
+
+function showLicenseExpiredScreen(companyName) {
+    document.body.innerHTML = `
+        <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;
+                    background:#0b3d2e;color:#fff;font-family:'Sora',sans-serif;text-align:center;padding:24px;">
+            <div style="max-width:420px;">
+                <div style="font-size:52px;margin-bottom:16px;">🔒</div>
+                <h1 style="font-size:22px;margin-bottom:12px;">Licença expirada</h1>
+                <p style="font-size:15px;opacity:.85;line-height:1.6;">
+                    O acesso da${companyName ? ' <strong>' + companyName + '</strong>' : ' sua empresa'}
+                    a este sistema de rádio expirou.
+                </p>
+                <p style="font-size:14px;opacity:.7;margin-top:16px;">
+                    Entre em contato com o suporte para renovar.
+                </p>
+            </div>
+        </div>`;
+}
+
 async function init() {
     try {
+        // Checagem de licença: se venceu, mostra aviso e para tudo aqui.
+        const licenseOk = await checkLicense();
+        if(!licenseOk) return;
+
         if('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js').catch(e => console.warn('Service worker falhou:', e));
         }
