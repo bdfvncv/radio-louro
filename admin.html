@@ -1211,13 +1211,7 @@ Variar as saídas de bloco (não usar repetidamente &quot;E assim&quot; ou &quot
                     <div class="form-group" style="margin-bottom:12px;">
                         <label>Mensagem de emergência:</label>
                         <textarea id="emergencyMessage" class="tts-textarea" placeholder="Ex: Atenção clientes, por favor se dirijam às saídas com calma." maxlength="300" style="min-height:70px;"></textarea>
-                    </div>
-                    <div class="form-group" style="margin-bottom:12px;">
-                        <label>Voz:</label>
-                        <select id="emergencyVoice" class="tts-voice-select" style="width:100%;">
-                            <option value="Brazilian Portuguese Female">Feminina (Português BR)</option>
-                            <option value="Brazilian Portuguese Male">Masculina (Português BR)</option>
-                        </select>
+                        <small>A voz usada é a do próprio navegador de cada player (não precisa escolher voz aqui).</small>
                     </div>
                 </div>
 
@@ -1226,6 +1220,12 @@ Variar as saídas de bloco (não usar repetidamente &quot;E assim&quot; ou &quot
                         <label>URL do áudio (Cloudinary):</label>
                         <input type="url" id="emergencyAudioUrl" class="suggest-input" placeholder="https://res.cloudinary.com/...">
                     </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label>Repetir a cada (segundos):</label>
+                    <input type="number" id="emergencyRepeatSec" value="30" min="5" max="600" style="width:100%;">
+                    <small>De quanto em quanto tempo o alerta toca de novo, enquanto estiver ativo.</small>
                 </div>
 
                 <div class="admin-subcard" style="background:#fff5f5;border-color:#fecaca;">
