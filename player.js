@@ -1173,7 +1173,7 @@ function setupRealtimeSubscription() {
 // ─────────────────────────────────────────────────────────────
 function initEmergencyListener() {
     supabase.channel('emergency_player')
-        .on('postgres_changes', {event:'UPDATE', schema:'public', table:'emergency_state'},
+        .on('postgres_changes', {event:'UPDATE', schema:'public', table:'emergency_alert'},
             payload => handleEmergencyChange(payload.new))
         .subscribe();
 }
@@ -1185,7 +1185,7 @@ async function handleEmergencyChange(state) {
             audioPlayer.pause();
             playerPausedByEmergency = true;
         }
-        updateDisplay('🚨 ALERTA', state.message || 'Atenção!');
+        updateDisplay('🚨 ALERTA', state.tts_text || 'Atenção!');
         playEmergencyAlert(state);
     } else if(!state.is_active && emergencyActive) {
         emergencyActive = false;
@@ -1215,14 +1215,17 @@ function speakTTS(text, onEnd) {
 }
 
 function playEmergencyAlert(state) {
+    // Intervalo de repetição vem do banco (repeat_interval_sec) — antes era
+    // fixo em 1-2 segundos, ignorando essa configuração.
+    const repeatMs = Math.max((state.repeat_interval_sec || 30), 3) * 1000;
     const doPlay = () => {
         if(!emergencyActive) return;
-        if(state.use_tts !== false && state.message) {
-            speakTTS(state.message, () => { if(emergencyActive) setTimeout(doPlay, 2000); });
+        if(state.mode !== 'audio' && state.tts_text) {
+            speakTTS(state.tts_text, () => { if(emergencyActive) setTimeout(doPlay, repeatMs); });
         } else if(state.audio_url) {
             emergencyAudioEl.src = state.audio_url;
             emergencyAudioEl.play().catch(e => console.error(e));
-            emergencyAudioEl.onended = () => { if(emergencyActive) setTimeout(doPlay, 1000); };
+            emergencyAudioEl.onended = () => { if(emergencyActive) setTimeout(doPlay, repeatMs); };
         }
     };
     doPlay();
