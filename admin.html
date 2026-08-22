@@ -149,6 +149,7 @@
             <button class="nav-item" data-section="grades">🕐 Grades Horárias</button>
             <button class="nav-item" data-section="youtube">🎬 Adicionar Músicas</button>
             <button class="nav-item" data-section="queue">⏳ Fila de Aprovação <span class="nav-badge" id="navQueueBadge" style="display:none;">0</span></button>
+            <button class="nav-item" data-section="central-inbox">📥 Painel Central <span class="nav-badge" id="navInboxBadge" style="display:none;">0</span></button>
             <button class="nav-item" data-section="locutor">🎙️ Locutor / TTS</button>
             <button class="nav-item" data-section="seasonal">🎭 Playlists Sazonais</button>
             <button class="nav-item" data-section="schedule">⏰ Horas Certas</button>
@@ -1244,6 +1245,21 @@ Variar as saídas de bloco (não usar repetidamente &quot;E assim&quot; ou &quot
             </div>
         </section>
 
+        <!-- ── PAINEL CENTRAL — CAIXA DE ENTRADA ── -->
+        <section class="admin-section" id="section-central-inbox">
+            <div class="section-header">
+                <h2>📥 Painel Central</h2>
+            </div>
+            <p class="section-desc">
+                Itens que chegaram do painel central (se você faz parte de uma rede de rádios).
+                Nada entra automaticamente na sua grade — você decide onde encaixar cada item.
+            </p>
+            <div class="admin-card">
+                <div id="centralInboxStatus" style="font-size:13px;color:#666;margin-bottom:10px;">Carregando...</div>
+                <div id="centralInboxList"></div>
+            </div>
+        </section>
+
         <!-- ── UPLOAD CLOUDINARY ── -->
         <section class="admin-section" id="section-upload">
             <div class="section-header">
@@ -1306,4 +1322,4 @@ Variar as saídas de bloco (não usar repetidamente &quot;E assim&quot; ou &quot
 <!-- ResponsiveVoice removido — admin usa Web Speech API nativa -->
 <script src="admin.js"></script>
 </body>
-</html>
+    </html>
