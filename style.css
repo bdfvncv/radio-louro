@@ -1928,15 +1928,34 @@ html, body { overflow-x: hidden; }
 .locutor-panel-brand h1 { font-size: 1.05em; color: var(--green); margin: 0; line-height: 1.2; }
 .locutor-panel-brand span { font-size: .78em; color: var(--gray-500); }
 
-.locutor-panel-main { padding: 20px 16px; display: flex; flex-direction: column; gap: 20px; }
+.locutor-panel-main { padding: 20px 16px; display: flex; flex-direction: column; gap: 20px; max-width: 900px; margin: 0 auto; width: 100%; box-sizing: border-box; }
 
 .locutor-panel-section { padding: 20px; }
 .locutor-panel-section > .section-header h2 { font-size: 1.15em; }
 .locutor-panel-section .admin-card { margin-top: 14px; padding: 16px; }
+
+/* ── Abas do painel do locutor ── */
+.locutor-tabs {
+  display: flex; gap: 8px; background: var(--white);
+  border-radius: var(--radius-lg); padding: 6px;
+  box-shadow: var(--shadow-sm); position: sticky; top: 8px; z-index: 5;
+}
+.locutor-tab {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 10px 8px; border: none; background: transparent; border-radius: var(--radius-md);
+  cursor: pointer; color: var(--gray-500); font-family: var(--font);
+  transition: background var(--transition), color var(--transition);
+}
+.locutor-tab:hover { background: var(--gray-50); }
+.locutor-tab.active { background: var(--green); color: var(--white); }
+.locutor-tab-icon { font-size: 1.3em; line-height: 1; }
+.locutor-tab-label { font-size: .74em; font-weight: 700; text-align: center; line-height: 1.2; }
 
 @media (max-width: 640px) {
   .locutor-panel-header { padding: 12px 14px; }
   .locutor-panel-brand h1 { font-size: .95em; }
   .locutor-panel-main { padding: 14px 10px; gap: 14px; }
   .locutor-panel-section { padding: 14px; }
+  .locutor-tabs { top: 4px; }
+  .locutor-tab-label { font-size: .68em; }
 }
