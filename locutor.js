@@ -658,7 +658,24 @@ function testAudioUrl(url) {
 // ─────────────────────────────────────────────────────────────
 // LISTENERS
 // ─────────────────────────────────────────────────────────────
+function setupLocutorTabs() {
+    const tabs   = document.querySelectorAll('.locutor-tab');
+    const panels = document.querySelectorAll('.locutor-tab-panel');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const target = 'tabpanel-' + tab.dataset.tab;
+            panels.forEach(p => { p.style.display = (p.id === target) ? '' : 'none'; });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    });
+}
+
 function setupAllListeners() {
+    // Abas
+    setupLocutorTabs();
+
     // Emergência
     document.getElementById('emergencyBtn')?.addEventListener('click', toggleEmergency);
     supabase.channel('emergency_locutor')
