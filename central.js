@@ -15,13 +15,16 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let clients = [];
 let clientsSearchTerm = '';
+let catalogItems = [];
+let catalogSearchTerm = '';
+let sendModalItem = null;
 
 // ─────────────────────────────────────────────────────────────
 // LOGIN
 // ─────────────────────────────────────────────────────────────
 async function checkAuth() {
     const { data } = await supabase.auth.getSession();
-    if (data?.session) { showPanel(); loadClients(); }
+    if (data?.session) { showPanel(); loadClients(); loadCatalog(); }
     else showLogin();
 }
 
@@ -42,7 +45,7 @@ async function handleLogin() {
     try {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        showPanel(); loadClients();
+        showPanel(); loadClients(); loadCatalog();
     } catch (err) {
         errEl.textContent = 'E-mail ou senha incorretos.';
         errEl.classList.add('show');
@@ -265,6 +268,141 @@ window.editClient = editClient;
 window.deleteClient = deleteClient;
 
 // ─────────────────────────────────────────────────────────────
+// CATÁLOGO CENTRAL
+// ─────────────────────────────────────────────────────────────
+async function loadCatalog() {
+    const { data, error } = await supabase.from('catalog_items').select('*').order('created_at', { ascending: false });
+    if (error) { console.error(error); return; }
+    catalogItems = data || [];
+    renderCatalog();
+}
+
+async function handleCatalogSubmit(e) {
+    e.preventDefault();
+    const type = document.getElementById('catalogType').value;
+    const category = document.getElementById('catalogCategory').value.trim();
+    const title = document.getElementById('catalogTitle').value.trim();
+    const audioUrl = document.getElementById('catalogUrl').value.trim();
+    if (!title || !audioUrl) { alert('Preencha título e URL do áudio.'); return; }
+
+    try {
+        const { error } = await supabase.from('catalog_items').insert([{
+            type, title, audio_url: audioUrl, category: category || null,
+        }]);
+        if (error) throw error;
+        document.getElementById('catalogForm').reset();
+        showToast('✅ Adicionado ao catálogo!');
+        await loadCatalog();
+    } catch (err) { alert('❌ Erro: ' + err.message); }
+}
+
+async function deleteCatalogItem(id) {
+    if (!confirm('Remover este item do catálogo central?')) return;
+    await supabase.from('catalog_items').delete().eq('id', id);
+    showToast('🗑️ Removido do catálogo.');
+    await loadCatalog();
+}
+
+function renderCatalog() {
+    const listEl = document.getElementById('catalogList');
+    const term = catalogSearchTerm.toLowerCase();
+    const filtered = catalogItems.filter(i => i.title.toLowerCase().includes(term));
+    const typeLabel = { music: '🎵 Música', jingle: '🎬 Vinheta', ad: '📢 Propaganda' };
+
+    if (!filtered.length) {
+        listEl.innerHTML = `<div style="text-align:center;padding:24px;color:#999;">${catalogItems.length ? 'Nenhum item encontrado.' : 'Catálogo vazio — adicione o primeiro item acima.'}</div>`;
+        return;
+    }
+
+    listEl.innerHTML = filtered.map(item => `
+        <div class="catalog-item">
+            <div class="catalog-item-info">
+                <span class="catalog-item-type">${typeLabel[item.type] || item.type}</span>
+                <div class="catalog-item-title">${escapeHtml(item.title)}</div>
+                ${item.category ? `<div class="catalog-item-category">${escapeHtml(item.category)}</div>` : ''}
+            </div>
+            <div class="action-btns">
+                <button class="btn-toggle" style="background:#17a2b8;" onclick="testAudioUrl('${item.audio_url}')">▶️</button>
+                <button class="btn-edit" onclick="openSendModal(${item.id})">📤 Enviar</button>
+                <button class="btn-delete" onclick="deleteCatalogItem(${item.id})">🗑️</button>
+            </div>
+        </div>`).join('');
+}
+
+function testAudioUrl(url) {
+    if (!url) { alert('Nenhuma URL de áudio.'); return; }
+    new Audio(url).play().catch(e => alert('❌ Não foi possível tocar: ' + e.message));
+}
+
+// ─────────────────────────────────────────────────────────────
+// MODAL DE ENVIO — escolhe empresas e dispara pra cada uma via content-sync
+// ─────────────────────────────────────────────────────────────
+function openSendModal(itemId) {
+    sendModalItem = catalogItems.find(i => i.id === itemId);
+    if (!sendModalItem) return;
+    document.getElementById('sendModalTitle').textContent = `📤 Enviar: ${sendModalItem.title}`;
+    document.getElementById('sendResults').innerHTML = '';
+    document.getElementById('sendSelectAll').checked = false;
+
+    const boxEl = document.getElementById('sendClientsCheckboxes');
+    if (!clients.length) {
+        boxEl.innerHTML = '<p style="color:#999;font-size:13px;">Nenhuma empresa cadastrada ainda.</p>';
+    } else {
+        boxEl.innerHTML = clients.map(c => `
+            <label class="send-client-row">
+                <input type="checkbox" class="send-client-checkbox" value="${c.id}">
+                ${escapeHtml(c.name)}
+            </label>`).join('');
+    }
+    document.getElementById('sendModalOverlay').style.display = 'flex';
+}
+
+function closeSendModal() {
+    document.getElementById('sendModalOverlay').style.display = 'none';
+    sendModalItem = null;
+}
+
+async function confirmSend() {
+    const checked = [...document.querySelectorAll('.send-client-checkbox:checked')].map(cb => parseInt(cb.value, 10));
+    if (!checked.length) { alert('Marque pelo menos uma empresa.'); return; }
+    if (!sendModalItem) return;
+
+    const resultsEl = document.getElementById('sendResults');
+    resultsEl.innerHTML = '⏳ Enviando...';
+    const results = [];
+
+    for (const clientId of checked) {
+        const client = clients.find(c => c.id === clientId);
+        if (!client) continue;
+        try {
+            const res = await fetch(`${client.supabase_url}/functions/v1/content-sync`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-sync-secret': client.sync_secret },
+                body: JSON.stringify({
+                    type: sendModalItem.type, title: sendModalItem.title,
+                    audio_url: sendModalItem.audio_url, category: sendModalItem.category,
+                    central_id: sendModalItem.id,
+                }),
+            });
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({}));
+                throw new Error(body.error || `Erro ${res.status}`);
+            }
+            results.push(`✅ ${client.name}`);
+        } catch (err) {
+            results.push(`❌ ${client.name}: ${err.message}`);
+        }
+    }
+
+    resultsEl.innerHTML = results.map(r => `<div>${escapeHtml(r)}</div>`).join('');
+    showToast('Envio concluído — confira o resultado por empresa.');
+}
+
+window.openSendModal = openSendModal;
+window.deleteCatalogItem = deleteCatalogItem;
+window.testAudioUrl = testAudioUrl;
+
+// ─────────────────────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -275,6 +413,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('clientSearchInput').addEventListener('input', e => {
         clientsSearchTerm = e.target.value; renderClients();
     });
+    document.getElementById('catalogForm').addEventListener('submit', handleCatalogSubmit);
+    document.getElementById('catalogSearchInput').addEventListener('input', e => {
+        catalogSearchTerm = e.target.value; renderCatalog();
+    });
+    document.getElementById('sendSelectAll').addEventListener('change', e => {
+        document.querySelectorAll('.send-client-checkbox').forEach(cb => cb.checked = e.target.checked);
+    });
+    document.getElementById('sendConfirmBtn').addEventListener('click', confirmSend);
+    document.getElementById('sendCancelBtn').addEventListener('click', closeSendModal);
     // Recalcula os temporizadores a cada minuto, sem precisar recarregar a página
     setInterval(() => { renderClients(); renderSummary(); }, 60 * 1000);
 });
