@@ -171,12 +171,51 @@ function init() {
 }
 
 async function checkAuth() {
+    const licenseOk = await checkLicense();
+    if(!licenseOk) return;
     const { data } = await supabase.auth.getSession();
     if (data?.session) {
         showAdminPanel(); loadAllData();
     } else {
         showLoginScreen();
     }
+}
+
+// ─────────────────────────────────────────────────────────────
+// LICENÇA — mesma lógica do player.js. Se venceu, nem a tela de
+// login aparece: mostra só o aviso de licença expirada.
+// ─────────────────────────────────────────────────────────────
+async function checkLicense() {
+    try {
+        const { data } = await supabase.from('license_info').select('*').eq('id', 1).single();
+        if(!data) return true; // tabela não existe ainda nesse projeto — não bloqueia
+        if(new Date(data.expires_at) < new Date()) {
+            showLicenseExpiredScreen(data.company_name);
+            return false;
+        }
+        return true;
+    } catch(err) {
+        console.warn('Checagem de licença falhou (seguindo normalmente):', err);
+        return true;
+    }
+}
+
+function showLicenseExpiredScreen(companyName) {
+    document.body.innerHTML = `
+        <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;
+                    background:#0b3d2e;color:#fff;font-family:'Sora',sans-serif;text-align:center;padding:24px;">
+            <div style="max-width:420px;">
+                <div style="font-size:52px;margin-bottom:16px;">🔒</div>
+                <h1 style="font-size:22px;margin-bottom:12px;">Licença expirada</h1>
+                <p style="font-size:15px;opacity:.85;line-height:1.6;">
+                    O acesso da${companyName ? ' <strong>' + companyName + '</strong>' : ' sua empresa'}
+                    ao painel administrativo expirou.
+                </p>
+                <p style="font-size:14px;opacity:.7;margin-top:16px;">
+                    Entre em contato com o suporte para renovar.
+                </p>
+            </div>
+        </div>`;
 }
 
 function showLoginScreen() {
@@ -3825,7 +3864,135 @@ async function extendedLoadAllData() {
     loadElevenLabsUsage('elevenLabsUsageBar'); // medidor ElevenLabs
     setInterval(checkSeasonalAutoActivation, 600000); // a cada 10min
     checkSeasonalAutoActivation(); // verifica imediatamente ao carregar
+    await loadCentralInbox();
+    setupCentralInboxRealtime();
 }
+
+// ─────────────────────────────────────────────────────────────
+// PAINEL CENTRAL — CAIXA DE ENTRADA
+// Itens empurrados pelo painel central do revendedor (se houver). Nunca
+// aplicados automaticamente — o admin local decide onde encaixar cada um.
+// ─────────────────────────────────────────────────────────────
+let centralInboxItems = [];
+
+async function loadCentralInbox() {
+    try {
+        const { data, error } = await supabase.from('central_sync_inbox')
+            .select('*').eq('applied', false).order('received_at', { ascending: false });
+        if (error) throw error; // tabela pode não existir ainda nesse projeto
+        centralInboxItems = data || [];
+        renderCentralInbox();
+    } catch (err) {
+        // Tabela ainda não criada nesse projeto — seção fica vazia, sem erro visível
+        const statusEl = document.getElementById('centralInboxStatus');
+        if (statusEl) statusEl.textContent = 'Nenhum painel central conectado a este projeto ainda.';
+    }
+}
+
+function setupCentralInboxRealtime() {
+    supabase.channel('central_inbox_admin')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'central_sync_inbox' },
+            () => loadCentralInbox())
+        .subscribe();
+}
+
+function renderCentralInbox() {
+    const statusEl = document.getElementById('centralInboxStatus');
+    const listEl   = document.getElementById('centralInboxList');
+    const badge    = document.getElementById('navInboxBadge');
+    if (!listEl) return;
+
+    if (badge) {
+        badge.textContent = centralInboxItems.length;
+        badge.style.display = centralInboxItems.length ? 'inline-block' : 'none';
+    }
+
+    if (!centralInboxItems.length) {
+        if (statusEl) statusEl.textContent = '✅ Nenhum item novo pra revisar.';
+        listEl.innerHTML = '';
+        return;
+    }
+
+    if (statusEl) statusEl.textContent = `${centralInboxItems.length} item(ns) aguardando revisão:`;
+
+    const typeLabel = { music: '🎵 Música', jingle: '🎬 Vinheta', ad: '📢 Propaganda' };
+
+    listEl.innerHTML = centralInboxItems.map(item => `
+        <div class="admin-subcard" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <div style="flex:1;min-width:220px;">
+                <div style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;">${typeLabel[item.type] || item.type}</div>
+                <div style="font-weight:600;">${escapeHtml(item.title)}</div>
+                <div style="font-size:11px;color:#999;">Recebido em ${new Date(item.received_at).toLocaleString('pt-BR')}</div>
+            </div>
+            <div class="action-btns">
+                <button class="btn-toggle" style="background:#17a2b8;" onclick="testAudioUrl('${item.audio_url}')">▶️</button>
+                ${item.type === 'music'
+                    ? `<button class="btn-edit" onclick="applyCentralInboxItem(${item.id})">➕ Playlist de Fundo</button>`
+                    : item.type === 'ad'
+                    ? `<button class="btn-edit" onclick="applyCentralInboxItem(${item.id})">➕ Propagandas</button>`
+                    : `<button class="btn-edit" onclick="applyCentralInboxJingle(${item.id})">➕ Escolher grade...</button>`
+                }
+                <button class="btn-delete" onclick="dismissCentralInboxItem(${item.id})">🗑️ Ignorar</button>
+            </div>
+        </div>`).join('');
+}
+
+async function applyCentralInboxItem(id) {
+    const item = centralInboxItems.find(i => i.id === id);
+    if (!item) return;
+    try {
+        if (item.type === 'music') {
+            const nextOrder = backgroundPlaylist.length
+                ? Math.max(...backgroundPlaylist.map(t => t.original_order || 0)) + 1 : 0;
+            await supabaseAdmin.from('background_playlist').insert([{
+                title: item.title, audio_url: item.audio_url,
+                original_order: nextOrder, daily_order: nextOrder, enabled: true,
+            }]);
+        } else if (item.type === 'ad') {
+            const nextOrder = advertisements.length
+                ? Math.max(...advertisements.map(a => a.play_order || 0)) + 1 : 0;
+            await supabaseAdmin.from('advertisements').insert([{
+                title: item.title, audio_url: item.audio_url,
+                frequency: 3, play_order: nextOrder, enabled: true,
+            }]);
+        }
+        await supabaseAdmin.from('central_sync_inbox').update({ applied: true }).eq('id', id);
+        showToast('✅ Item aplicado!');
+        await loadAllData();
+        await loadCentralInbox();
+    } catch (err) { alert('❌ Erro: ' + err.message); }
+}
+
+async function applyCentralInboxJingle(id) {
+    const item = centralInboxItems.find(i => i.id === id);
+    if (!item) return;
+    if (!visibleSlots().length) { alert('Cadastre uma Grade Horária primeiro.'); return; }
+    const options = visibleSlots().map(s => `${s.id} = ${s.name}`).join('\n');
+    const slotId = prompt(`Em qual grade adicionar essa vinheta?\n\n${options}\n\nDigite o número da grade:`);
+    if (!slotId) return;
+    const position = prompt('Posição: digite "opening", "middle" ou "closing"', 'middle');
+    if (!position || !['opening', 'middle', 'closing'].includes(position)) { alert('Posição inválida.'); return; }
+    try {
+        await supabaseAdmin.from('jingles').insert([{
+            slot_id: parseInt(slotId, 10), position, title: item.title,
+            audio_url: item.audio_url, enabled: true,
+        }]);
+        await supabaseAdmin.from('central_sync_inbox').update({ applied: true }).eq('id', id);
+        showToast('✅ Vinheta adicionada!');
+        await loadSlotData();
+        await loadCentralInbox();
+    } catch (err) { alert('❌ Erro: ' + err.message); }
+}
+
+async function dismissCentralInboxItem(id) {
+    if (!confirm('Ignorar este item? Ele não vai mais aparecer na lista.')) return;
+    await supabaseAdmin.from('central_sync_inbox').update({ applied: true }).eq('id', id);
+    await loadCentralInbox();
+}
+
+window.applyCentralInboxItem  = applyCentralInboxItem;
+window.applyCentralInboxJingle = applyCentralInboxJingle;
+window.dismissCentralInboxItem = dismissCentralInboxItem;
 
 // ── Novos globais ────────────────────────────────────────────
 window.saveSeasonalAutoConfig  = saveSeasonalAutoConfig;
