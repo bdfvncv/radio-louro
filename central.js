@@ -8,8 +8,8 @@
 // ═════════════════════════════════════════════════════════════
 
 // ⚠️ TROQUE PELOS DADOS DO SEU PROJETO CENTRAL (criado só pra isso):
-const SUPABASE_URL      = 'https://SEU-PROJETO-CENTRAL.supabase.co';
-const SUPABASE_ANON_KEY = 'SUA_CHAVE_ANON_AQUI';
+const SUPABASE_URL      = 'https:https://pywaparoutgpcrizpjlt.supabase.co/rest/v1/';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5d2FwYXJvdXRncGNyaXpwamx0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1NDk4MzksImV4cCI6MjEwMzEyNTgzOX0.qlnkr_VHH1L_h32pAsymm3VMcsVEAOjgxsWTmHRPW5o';
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
