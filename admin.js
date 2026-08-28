@@ -3915,26 +3915,61 @@ function renderCentralInbox() {
 
     if (statusEl) statusEl.textContent = `${centralInboxItems.length} item(ns) aguardando revisão:`;
 
-    const typeLabel = { music: '🎵 Música', jingle: '🎬 Vinheta', ad: '📢 Propaganda' };
+    const typeLabel = { music: '🎵 Música', jingle: '🎬 Vinheta', ad: '📢 Propaganda', flash: '⚡ Promoção Relâmpago', tts_message: '🔊 Mensagem de Voz' };
 
-    listEl.innerHTML = centralInboxItems.map(item => `
-        <div class="admin-subcard" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:8px;">
+    listEl.innerHTML = centralInboxItems.map(item => {
+        const isLive = item.type === 'flash' || item.type === 'tts_message';
+        return `
+        <div class="admin-subcard" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:8px;${isLive?'border-left:4px solid #f59e0b;':''}">
             <div style="flex:1;min-width:220px;">
-                <div style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;">${typeLabel[item.type] || item.type}</div>
+                <div style="font-size:11px;font-weight:700;color:${isLive?'#b45309':'#7c3aed'};text-transform:uppercase;">${typeLabel[item.type] || item.type}</div>
                 <div style="font-weight:600;">${escapeHtml(item.title)}</div>
+                ${item.type === 'tts_message' ? `<div style="font-size:12px;color:#666;margin-top:2px;">"${escapeHtml(item.extra?.text || '')}"</div>` : ''}
+                ${item.type === 'flash' ? `<div style="font-size:12px;color:#666;margin-top:2px;">"${escapeHtml(item.extra?.text || '')}" — ${item.extra?.duration_min || 15} min</div>` : ''}
                 <div style="font-size:11px;color:#999;">Recebido em ${new Date(item.received_at).toLocaleString('pt-BR')}</div>
             </div>
             <div class="action-btns">
-                <button class="btn-toggle" style="background:#17a2b8;" onclick="testAudioUrl('${item.audio_url}')">▶️</button>
+                ${item.audio_url ? `<button class="btn-toggle" style="background:#17a2b8;" onclick="testAudioUrl('${item.audio_url}')">▶️</button>` : ''}
                 ${item.type === 'music'
                     ? `<button class="btn-edit" onclick="applyCentralInboxItem(${item.id})">➕ Playlist de Fundo</button>`
                     : item.type === 'ad'
                     ? `<button class="btn-edit" onclick="applyCentralInboxItem(${item.id})">➕ Propagandas</button>`
-                    : `<button class="btn-edit" onclick="applyCentralInboxJingle(${item.id})">➕ Escolher grade...</button>`
+                    : item.type === 'jingle'
+                    ? `<button class="btn-edit" onclick="applyCentralInboxJingle(${item.id})">➕ Escolher grade...</button>`
+                    : item.type === 'flash'
+                    ? `<button class="btn-edit" style="background:#f59e0b;" onclick="applyCentralInboxFlash(${item.id})">🚀 Disparar Agora</button>`
+                    : `<button class="btn-edit" style="background:#f59e0b;" onclick="applyCentralInboxTTS(${item.id})">🔊 Gerar e Disparar</button>`
                 }
                 <button class="btn-delete" onclick="dismissCentralInboxItem(${item.id})">🗑️ Ignorar</button>
             </div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
+}
+
+async function applyCentralInboxFlash(id) {
+    const item = centralInboxItems.find(i => i.id === id);
+    if (!item) return;
+    if (!confirm(`Disparar a promoção "${item.title}" agora mesmo, em todos os players?`)) return;
+    document.getElementById('flashTitle').value = item.title;
+    document.getElementById('flashText').value = item.extra?.text || '';
+    document.getElementById('flashDuration').value = item.extra?.duration_min || 15;
+    try {
+        await handleFlashSubmit({ preventDefault(){} });
+        await supabaseAdmin.from('central_sync_inbox').update({ applied: true }).eq('id', id);
+        await loadCentralInbox();
+    } catch (err) { alert('❌ Erro: ' + err.message); }
+}
+
+async function applyCentralInboxTTS(id) {
+    const item = centralInboxItems.find(i => i.id === id);
+    if (!item) return;
+    if (!confirm(`Gerar áudio e tocar "${item.title}" agora mesmo, em todos os players?`)) return;
+    try {
+        await dispatchTTS(item.extra?.text || item.title, item.title);
+        await supabaseAdmin.from('central_sync_inbox').update({ applied: true }).eq('id', id);
+        showToast('✅ Disparado!');
+        await loadCentralInbox();
+    } catch (err) { alert('❌ Erro: ' + err.message); }
 }
 
 async function applyCentralInboxItem(id) {
@@ -3992,6 +4027,8 @@ async function dismissCentralInboxItem(id) {
 
 window.applyCentralInboxItem  = applyCentralInboxItem;
 window.applyCentralInboxJingle = applyCentralInboxJingle;
+window.applyCentralInboxFlash = applyCentralInboxFlash;
+window.applyCentralInboxTTS   = applyCentralInboxTTS;
 window.dismissCentralInboxItem = dismissCentralInboxItem;
 
 // ── Novos globais ────────────────────────────────────────────
